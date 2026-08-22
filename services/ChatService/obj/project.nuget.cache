@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "HEhuI3Rnkr8=",
+  "success": true,
+  "projectFilePath": "/home/mikalz/DA/SCDC/services/ChatService/ChatService.csproj",
+  "expectedPackageFiles": [
+    "/home/mikalz/.nuget/packages/microsoft.aspnetcore.openapi/10.0.11/microsoft.aspnetcore.openapi.10.0.11.nupkg.sha512",
+    "/home/mikalz/.nuget/packages/microsoft.openapi/2.7.5/microsoft.openapi.2.7.5.nupkg.sha512"
+  ],
+  "logs": []
+}
