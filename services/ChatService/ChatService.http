@@ -1,6 +1,65 @@
 @ChatService_HostAddress = http://localhost:5026
 
-GET {{ChatService_HostAddress}}/weatherforecast/
+GET {{ChatService_HostAddress}}/api/v1/health
+Accept: application/json
+
+###
+
+POST {{ChatService_HostAddress}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "username": "alice",
+  "displayName": "Alice",
+  "password": "correct horse battery staple"
+}
+
+###
+
+POST {{ChatService_HostAddress}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "login": "alice",
+  "password": "correct horse battery staple"
+}
+
+###
+
+@accessToken = replace-with-access-token
+
+GET {{ChatService_HostAddress}}/api/v1/servers
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+###
+
+POST {{ChatService_HostAddress}}/api/v1/servers
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "SCDC Community"
+}
+
+###
+
+@channelId = replace-with-channel-id
+
+POST {{ChatService_HostAddress}}/api/v1/channels/{{channelId}}/messages
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "clientMessageId": "01993f22-23f4-7000-8000-000000000001",
+  "content": "Hello, world!"
+}
+
+###
+
+GET {{ChatService_HostAddress}}/api/v1/channels/{{channelId}}/messages?limit=50
+Authorization: Bearer {{accessToken}}
 Accept: application/json
 
 ###

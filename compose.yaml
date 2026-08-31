@@ -1,0 +1,35 @@
+services:
+  chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ChatDatabase: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
+      Jwt__SigningKey: local-compose-signing-key-change-before-production-2026
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "5026:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_chat
+      POSTGRES_USER: scdc
+      POSTGRES_PASSWORD: scdc_dev
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scdc -d scdc_chat"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - scdc-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  scdc-postgres-data:
