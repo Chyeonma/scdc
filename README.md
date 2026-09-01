@@ -52,8 +52,7 @@ PostgreSQL schema va du lieu minh hoa nam tai:
 - `database/postgres/seed.sql`
 - `database/postgres/README.md`
 
-SQL hien la source of truth. Backend khong tu chay EF migration. Cac migration
-lich su cua ChatService cu da bi xoa.
+SQL hien la source of truth. Backend khong tu chay EF migration.
 
 ## Build va chay local
 
