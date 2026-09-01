@@ -1,6 +1,7 @@
 .
 ├── art.txt
 ├── compose.yaml
+├── Dockerfile
 ├── README.md
 ├── SCDC.slnx
 └── services
@@ -151,6 +152,7 @@
     │   │   ├── ServersController.cs
     │   │   └── UsersController.cs
     │   ├── docs
+    │   │   ├── art-com.md
     │   │   └── minimum-api.md
     │   ├── obj
     │   │   ├── ChatService.csproj.nuget.dgspec.json
@@ -417,4 +419,4 @@
         └── Security
             └── IdentityPasswordService.cs
 
-127 directories, 291 files
+127 directories, 293 files

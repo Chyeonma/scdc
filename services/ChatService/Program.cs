@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using ChatService.Common.Auth;
 using ChatService.Common.Errors;
+using ChatService.Common.OpenApi;
 using ChatService.Common.Realtime;
 using ChatService.Infrastructure;
 using ChatService.Infrastructure.Authentication;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,7 +105,24 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "SCDC ChatService API",
+        Version = "v1",
+        Description = "API for authentication, servers, channels and realtime messaging."
+    });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Enter the access token returned by register or login."
+    });
+    options.OperationFilter<AuthorizeOperationFilter>();
+    options.DocumentFilter<AuthorizeDocumentFilter>();
+});
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -135,7 +154,15 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SCDC ChatService API v1");
+        options.DocumentTitle = "SCDC ChatService API";
+        options.EnablePersistAuthorization();
+        options.EnableTryItOutByDefault();
+        options.DisplayRequestDuration();
+    });
 }
 
 if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))

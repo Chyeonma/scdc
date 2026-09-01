@@ -2,7 +2,7 @@ services:
   chat-service:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: services/ChatService/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ChatDatabase: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
@@ -13,6 +13,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  web-client:
+    build:
+      context: ./clients/WebClient
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      chat-service:
+        condition: service_started
     restart: unless-stopped
 
   postgres:
@@ -29,7 +40,7 @@ services:
       timeout: 3s
       retries: 10
     volumes:
-      - scdc-postgres-data:/var/lib/postgresql/data
+      - scdc-postgres-data:/var/lib/postgresql
 
 volumes:
   scdc-postgres-data:
