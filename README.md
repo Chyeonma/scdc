@@ -3,6 +3,8 @@
 SCDC dang duoc xay lai theo modular monolith. Backend hien tai la foundation
 sach, chua trien khai lai cac tinh nang nghiep vu cu.
 
+Tai lieu tong quan: [`docs/architecture/overview.md`](docs/architecture/overview.md).
+
 ## Cau truc backend
 
 ```text
