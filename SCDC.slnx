@@ -1,8 +1,12 @@
 <Solution>
   <Folder Name="/services/">
-    <Project Path="services/ChatService/ChatService.csproj" />
-    <Project Path="services/ChatService.Application/ChatService.Application.csproj" />
-    <Project Path="services/ChatService.Domain/ChatService.Domain.csproj" />
-    <Project Path="services/ChatService.Infrastructure/ChatService.Infrastructure.csproj" />
+    <Project Path="services/SCDC.Api/SCDC.Api.csproj" />
+    <Project Path="services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
+    <Project Path="services/SCDC.Contracts/SCDC.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/services/Modules/">
+    <Project Path="services/Modules/Identity/SCDC.Identity.csproj" />
+    <Project Path="services/Modules/Community/SCDC.Community.csproj" />
+    <Project Path="services/Modules/Messaging/SCDC.Messaging.csproj" />
   </Folder>
 </Solution>

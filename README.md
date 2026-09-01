@@ -1,131 +1,99 @@
 # SCDC
 
-## Web client
+SCDC dang duoc xay lai theo modular monolith. Backend hien tai la foundation
+sach, chua trien khai lai cac tinh nang nghiep vu cu.
 
-Web client độc lập nằm tại `clients/WebClient`, sử dụng React, Vite và SignalR.
-Chạy toàn bộ hệ thống bằng Docker hoặc Podman Compose:
+## Cau truc backend
+
+```text
+services/
+├── SCDC.Api                 API host, middleware, Swagger va health
+├── SCDC.BuildingBlocks      Kieu va abstraction dung chung
+├── SCDC.Contracts           Contract giao tiep giua cac module
+└── Modules/
+    ├── Identity             Tai khoan va xac thuc
+    ├── Community            Server, member, channel va permission
+    └── Messaging            Chat space, message va realtime
+```
+
+Chi `SCDC.Api` la executable. Ba module la class library duoc host nap trong
+cung mot process.
+
+Huong dependency:
+
+```text
+SCDC.Api -> Identity, Community, Messaging
+Identity, Community, Messaging -> BuildingBlocks, Contracts
+```
+
+Ba module khong tham chieu truc tiep nhau. Giao tiep cheo module di qua
+`SCDC.Contracts`.
+
+## Thu tu trien khai
+
+Moi tinh nang duoc lam theo vertical slice:
+
+```text
+contract -> domain rule -> application handler -> persistence -> endpoint -> test
+```
+
+Thu tu module:
+
+1. Identity: register, verify email, login, session, refresh, logout.
+2. Community: server, membership, channel, role va permission.
+3. Messaging: chat space, send/history message, outbox va SignalR.
+4. Moderation se duoc them khi ba module cot loi da on dinh.
+
+## Database
+
+PostgreSQL schema va du lieu minh hoa nam tai:
+
+- `database/postgres/schema.sql`
+- `database/postgres/seed.sql`
+- `database/postgres/README.md`
+
+SQL hien la source of truth. Backend khong tu chay EF migration. Cac migration
+lich su cua ChatService cu da bi xoa.
+
+## Build va chay local
+
+```bash
+dotnet restore SCDC.slnx
+dotnet build SCDC.slnx --no-restore
+dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
+```
+
+- API: `http://localhost:5026`
+- Health: `http://localhost:5026/api/v1/health`
+- Swagger: `http://localhost:5026/swagger`
+
+Health response liet ke cac module da duoc host nap va database schema ma module
+se huu.
+
+## Podman Compose
 
 ```bash
 podman compose up -d --build
 ```
 
-Sau khi các container khởi động:
+- Web client: `http://localhost:3000`
+- API: `http://localhost:5026`
+- PostgreSQL: `localhost:5432`
 
-- Web client: `http://localhost:3000`.
-- ChatService API: `http://localhost:5026`.
-- Swagger UI: `http://localhost:5026/swagger`.
+Script trong `database/postgres` chi tu dong chay khi PostgreSQL khoi tao mot
+data volume moi. Web client cu van duoc giu lai nhung cac luong dang nhap/chat
+se chua hoat dong cho den khi cac vertical slice moi duoc trien khai.
 
-Trên web client, đăng ký hoặc đăng nhập, sau đó chọn **+** và nhập username của
-người muốn trò chuyện. Client tạo một phòng có channel `general` và thêm user đó
-qua membership API. Tin nhắn được đồng bộ realtime bằng SignalR, với polling định
-kỳ làm phương án dự phòng.
-
-Chạy frontend ở chế độ phát triển có hot reload:
-
-```bash
-cd clients/WebClient
-npm install
-npm run dev
-```
-
-Vite dev server chạy tại `http://localhost:3000` và proxy API/SignalR sang
-ChatService ở `http://localhost:5026`.
-
-## Kiến trúc
-
-ChatService được tách thành bốn project theo Layered Architecture:
+## DBeaver
 
 ```text
-ChatService.Domain          Domain model, không phụ thuộc project khác
-        ↑
-ChatService.Application     DTO, application service và các port/interface
-        ↑
-ChatService.Infrastructure  EF Core, repository, JWT, password và outbox worker
-        ↑
-ChatService                 API, controller, middleware và SignalR adapter
+Host: localhost
+Port: 5432
+Database: scdc_chat
+Username: scdc
+Password: scdc_dev
+SSL mode: disable
 ```
 
-Chiều tham chiếu thực tế:
-
-- `Application -> Domain`.
-- `Infrastructure -> Application + Domain`.
-- `ChatService -> Application + Infrastructure`.
-- Domain không tham chiếu Application, Infrastructure hoặc API.
-
-Build toàn bộ solution:
-
-```bash
-dotnet build SCDC.slnx
-```
-
-## Chạy ChatService local
-
-Yêu cầu: .NET 10 SDK và Docker/Podman có PostgreSQL 18.
-
-```bash
-docker compose up -d postgres
-dotnet tool restore
-dotnet run --project services/ChatService/ChatService.csproj --launch-profile http
-```
-
-Ở môi trường Development, migration được áp dụng khi service khởi động. API chạy tại
-`http://localhost:5026`, Swagger UI tại `/swagger`, OpenAPI JSON tại
-`/swagger/v1/swagger.json`, SignalR Hub tại `/hubs/chat`.
-
-Để thử endpoint cần xác thực trong Swagger, gọi `POST /api/v1/auth/register` hoặc
-`POST /api/v1/auth/login`, sao chép `accessToken`, chọn **Authorize** và nhập token.
-Swagger tự thêm prefix `Bearer` và lưu token trong phiên làm việc của trình duyệt.
-
-## Chạy bằng Docker Compose
-
-Build API image và chạy cả ChatService lẫn PostgreSQL:
-
-```bash
-docker compose up --build
-```
-
-API được publish tại `http://localhost:5026`. Docker image dùng multi-stage build,
-chỉ chứa ASP.NET runtime và chạy bằng non-root user của image .NET. Dockerfile
-của backend nằm tại `services/ChatService/Dockerfile`; build context vẫn là thư
-mục gốc để truy cập đủ bốn project của ChatService.
-
-## Kết nối PostgreSQL bằng DBeaver
-
-Khi PostgreSQL đang chạy qua Compose, tạo một connection mới trong DBeaver với
-driver **PostgreSQL** và các thông số dành cho máy host:
-
-| Thuộc tính | Giá trị |
-|---|---|
-| Host | `localhost` |
-| Port | `5432` |
-| Database | `scdc_chat` |
-| Username | `scdc` |
-| Password | `scdc_dev` |
-| Schema mặc định | `public` |
-| SSL mode | `disable` |
-
-JDBC URL tương ứng:
-
-```text
-jdbc:postgresql://localhost:5432/scdc_chat
-```
-
-Các thông tin này chỉ dành cho môi trường development. Nếu DBeaver cũng chạy
-trong cùng mạng Compose thay vì chạy trên máy host, dùng hostname `postgres`.
-
-Khi tạo migration mới:
-
-```bash
-dotnet ef migrations add <MigrationName> \
-  --project services/ChatService.Infrastructure/ChatService.Infrastructure.csproj \
-  --startup-project services/ChatService.Infrastructure/ChatService.Infrastructure.csproj \
-  --output-dir Data/Migrations
-```
-
-Không sử dụng signing key và mật khẩu PostgreSQL trong `appsettings.Development.json`
-cho production. Production phải cấp `ConnectionStrings__ChatDatabase` và
-`Jwt__SigningKey` qua secret manager hoặc environment variables.
-
-## Tài liệu
-
-- [ChatService Minimum API](services/ChatService/docs/minimum-api.md)
+Schema nghiep vu: `identity`, `community`, `messaging`, `moderation`, `audit`
+va `integration`.
