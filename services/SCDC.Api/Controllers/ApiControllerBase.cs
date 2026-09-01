@@ -20,12 +20,24 @@ public abstract class ApiControllerBase : ControllerBase
             ? Ok(result.Value)
             : ApiErrorMapper.ToObjectResult(result.Error, HttpContext);
 
-    protected ActionResult<TValue> FromCreatedResult<TValue>(
+    protected ActionResult<TValue> FromCreatedAtActionResult<TValue>(
         Result<TValue> result,
         string actionName,
         object? routeValues = null) =>
         result.IsSuccess
             ? CreatedAtAction(actionName, routeValues, result.Value)
+            : ApiErrorMapper.ToObjectResult(result.Error, HttpContext);
+
+    protected ActionResult<TValue> FromCreatedResult<TValue>(
+        Result<TValue> result,
+        string location) =>
+        result.IsSuccess
+            ? Created(location, result.Value)
+            : ApiErrorMapper.ToObjectResult(result.Error, HttpContext);
+
+    protected ActionResult<TValue> FromAcceptedResult<TValue>(Result<TValue> result) =>
+        result.IsSuccess
+            ? Accepted(result.Value)
             : ApiErrorMapper.ToObjectResult(result.Error, HttpContext);
 
     protected IActionResult FromNoContentResult(Result result) =>

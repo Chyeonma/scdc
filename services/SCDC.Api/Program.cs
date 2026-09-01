@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
 using SCDC.Api.Errors;
+using SCDC.Api.OpenApi;
 using SCDC.Modules.Community;
 using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
@@ -36,8 +37,20 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "Modular-monolith foundation for Identity, Community and Messaging."
+        Description = "SCDC modular monolith. Identity v1 is active; Community and Messaging are at foundation stage."
     });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Paste the access token returned by POST /api/v1/auth/login."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document, null)] = []
+    });
+    options.OperationFilter<AuthenticationOperationFilter>();
 });
 
 var app = builder.Build();
@@ -45,6 +58,8 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {

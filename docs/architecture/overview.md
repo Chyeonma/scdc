@@ -28,22 +28,22 @@ Phần đã có:
 - Module registration cho Identity, Community và Messaging.
 - Health endpoint và Swagger UI trong môi trường Development.
 - Quy ước `Result<T>`, `ProblemDetails` và global exception handling.
+- Identity v1 persistence, JWT authentication và authorization middleware.
+- API register/verify/login/refresh/logout, profile, session và password lifecycle.
 - PostgreSQL schema, constraint, index, trigger, view và seed data.
 - React WebClient cơ bản, được phục vụ qua Nginx.
 - Dockerfile và Podman/Docker Compose cho API, WebClient và PostgreSQL.
-- Integration test cho response thành công, validation, 404, 500 và Swagger.
+- Integration test cho response foundation, Swagger và Identity lifecycle trên PostgreSQL.
 
 Phần chưa có:
 
-- Entity và persistence mapping trong backend.
-- API đăng ký, đăng nhập, đăng xuất và quản lý profile.
 - API server, membership, channel và permission.
 - API tin nhắn và SignalR Hub.
-- Authentication/authorization middleware.
 - Worker xử lý outbox và các integration event.
+- MFA, external login và email delivery worker.
 
-Vì vậy, endpoint nghiệp vụ chưa xuất hiện trong Swagger là trạng thái đúng ở
-giai đoạn foundation hiện tại.
+Swagger hiện có endpoint Identity v1. Community và Messaging mới chỉ đăng ký
+module nên chưa có endpoint nghiệp vụ.
 
 ## 3. Mục tiêu thiết kế
 
@@ -221,11 +221,12 @@ Identity sở hữu vòng đời tài khoản:
 - Session, refresh-token rotation và logout.
 - MFA và security state.
 
-Identity sở hữu schema `identity` và dự kiến cung cấp `IUserDirectory` cho các
-module khác.
+Identity sở hữu schema `identity` và cung cấp `IUserDirectory` cho các module
+khác.
 
-Thứ tự triển khai: register → verify email → login → refresh → logout → current
-user/profile → password reset/MFA.
+Identity v1 đã có register, verify email, login, refresh rotation/reuse
+detection, logout/session management, current user/profile và password recovery.
+MFA và external login thuộc Identity v2.
 
 ### 6.5. Community module
 
@@ -424,8 +425,7 @@ Chiến lược kiểm thử dự kiến:
 | Architecture test | Ngăn module tham chiếu trực tiếp lẫn nhau |
 
 Bộ test hiện có tại [`tests/SCDC.Api.Tests`](../../tests/SCDC.Api.Tests) kiểm tra
-response foundation và Swagger. Database integration test sẽ được thêm cùng
-vertical slice đầu tiên có persistence.
+response foundation, Swagger và toàn bộ Identity v1 lifecycle trên PostgreSQL.
 
 ## 13. Deployment và cấu hình
 
@@ -468,20 +468,16 @@ chỉ vì số lượng bảng hoặc class tăng.
 ## 15. Thứ tự triển khai tiếp theo
 
 ```text
-1. Identity persistence foundation
-2. Register user
-3. Verify email
-4. Login, session và refresh-token rotation
-5. Logout và current user
-6. Community server/membership/channel
-7. Messaging send/history
-8. Outbox và SignalR
-9. Moderation, audit consumer và hardening
+1. Email delivery/outbox worker và hardening Identity
+2. Community server/membership/channel
+3. Messaging send/history
+4. SignalR delivery
+5. Moderation, audit consumer và hardening
 ```
 
 Mỗi bước phải bao gồm contract, rule, handler, persistence, endpoint, Swagger và
-test. Bước tiếp theo trực tiếp của dự án là kết nối Identity với PostgreSQL và
-hoàn thành vertical slice đăng ký người dùng.
+test. Identity v1 đã hoàn tất luồng backend trong môi trường Development; bước
+tiếp theo là email delivery hoặc bắt đầu Community tùy ưu tiên sản phẩm.
 
 ## 16. Quy tắc khi mở rộng dự án
 

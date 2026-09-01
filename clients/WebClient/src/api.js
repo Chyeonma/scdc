@@ -168,13 +168,19 @@ export async function login(credentials) {
 }
 
 export async function register(account) {
-  const auth = await api('/auth/register', {
+  return api('/auth/register', {
     method: 'POST',
     body: account,
     auth: false,
   })
-  emitSession(auth)
-  return auth
+}
+
+export async function verifyEmail(token) {
+  return api('/auth/verify-email', {
+    method: 'POST',
+    body: { token },
+    auth: false,
+  })
 }
 
 export async function logout() {

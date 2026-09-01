@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace SCDC.Api.Errors;
@@ -12,6 +13,7 @@ internal static class ProblemDetailsServiceCollectionExtensions
                 ApiProblemDetailsFactory.Enrich(context.ProblemDetails, context.HttpContext);
         });
         services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddSingleton<IAuthorizationMiddlewareResultHandler, ApiAuthorizationResultHandler>();
         services.Configure<ApiBehaviorOptions>(options =>
         {
             options.InvalidModelStateResponseFactory = actionContext =>

@@ -1,9 +1,11 @@
 # SCDC
 
 SCDC dang duoc xay lai theo modular monolith. Backend hien tai la foundation
-sach, chua trien khai lai cac tinh nang nghiep vu cu.
+sach; Identity v1 da duoc trien khai, Community va Messaging dang o foundation.
 
 Tai lieu tong quan: [`docs/architecture/overview.md`](docs/architecture/overview.md).
+
+Tai lieu Identity v1: [`docs/identity/identity-v1.md`](docs/identity/identity-v1.md).
 
 ## Cau truc backend
 
@@ -41,7 +43,8 @@ contract -> domain rule -> application handler -> persistence -> endpoint -> tes
 
 Thu tu module:
 
-1. Identity: register, verify email, login, session, refresh, logout.
+1. Identity: da co register, verify email, login, session, refresh, logout,
+   profile va password lifecycle.
 2. Community: server, membership, channel, role va permission.
 3. Messaging: chat space, send/history message, outbox va SignalR.
 4. Moderation se duoc them khi ba module cot loi da on dinh.

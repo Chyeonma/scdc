@@ -6,6 +6,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
+      Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
     ports:
       - "5026:8080"
     depends_on:

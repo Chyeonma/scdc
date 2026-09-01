@@ -18,6 +18,7 @@ import {
   logout,
   register,
   sessionStore,
+  verifyEmail,
 } from './api.js'
 
 function Logo({ compact = false }) {
@@ -89,13 +90,21 @@ function AuthScreen({ notify }) {
     setError('')
 
     try {
-      await register({
+      const registration = await register({
         email: form.get('email').trim(),
         username: form.get('username').trim(),
         displayName: form.get('displayName').trim(),
         password: form.get('password'),
       })
-      notify('success', 'Tài khoản đã được tạo.')
+
+      if (registration.developmentVerificationToken) {
+        await verifyEmail(registration.developmentVerificationToken)
+        notify('success', 'Tài khoản đã được tạo và xác thực. Bạn có thể đăng nhập.')
+      } else {
+        notify('success', 'Tài khoản đã được tạo. Hãy kiểm tra email để xác thực.')
+      }
+
+      setMode('login')
     } catch (requestError) {
       setError(requestError.message)
     } finally {
