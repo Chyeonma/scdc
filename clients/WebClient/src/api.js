@@ -1,78 +1,76 @@
-const API_ROOT = '/api/v1'
-const SESSION_KEY = 'scdc.chat.session.v1'
+const API_ROOT = '/api/v1';
+const SESSION_KEY = 'scdc.chat.session.v1';
 
-const listeners = new Set()
-let refreshPromise = null
-let session = readStoredSession()
+const listeners = new Set();
+let refreshPromise = null;
+let session = readStoredSession();
 
 function readStoredSession() {
   try {
-    const value = window.localStorage.getItem(SESSION_KEY)
-    return value ? JSON.parse(value) : null
+    const value = window.localStorage.getItem(SESSION_KEY);
+    return value ? JSON.parse(value) : null;
   } catch {
-    return null
+    return null;
   }
 }
 
-function emitSession(nextSession) {
-  session = nextSession
-
+export function emitSession(nextSession) {
+  session = nextSession;
   try {
     if (nextSession) {
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession))
+      window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
     } else {
-      window.localStorage.removeItem(SESSION_KEY)
+      window.localStorage.removeItem(SESSION_KEY);
     }
   } catch {
-    // The app can still work for the current page when storage is unavailable.
+    // Storage might be restricted
   }
-
-  listeners.forEach((listener) => listener())
+  listeners.forEach((listener) => listener());
 }
 
 export const sessionStore = {
   getSnapshot: () => session,
   subscribe(listener) {
-    listeners.add(listener)
-    return () => listeners.delete(listener)
+    listeners.add(listener);
+    return () => listeners.delete(listener);
   },
   clear: () => emitSession(null),
-}
+};
 
 export class ApiError extends Error {
   constructor(message, status, problem = null) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.problem = problem
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.problem = problem;
   }
 }
 
 async function readError(response) {
-  let problem = null
-
+  let problem = null;
   try {
-    problem = await response.json()
+    problem = await response.json();
   } catch {
-    // The fallback below is used for empty or non-JSON responses.
+    // Fallback for non-json
   }
 
   const validationMessage = problem?.errors
     ? Object.values(problem.errors).flat().filter(Boolean).join(' ')
-    : null
+    : null;
+
   const message =
     validationMessage ||
     problem?.detail ||
     problem?.title ||
-    `Yêu cầu thất bại (${response.status}).`
+    `Yêu cầu thất bại (${response.status}).`;
 
-  return new ApiError(message, response.status, problem)
+  return new ApiError(message, response.status, problem);
 }
 
 async function refreshSession() {
   if (!session?.refreshToken) {
-    emitSession(null)
-    return null
+    emitSession(null);
+    return null;
   }
 
   if (!refreshPromise) {
@@ -83,37 +81,36 @@ async function refreshSession() {
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw await readError(response)
+          throw await readError(response);
         }
-
-        const tokens = await response.json()
-        const nextSession = { ...session, ...tokens }
-        emitSession(nextSession)
-        return nextSession
+        const tokens = await response.json();
+        const nextSession = { ...session, ...tokens };
+        emitSession(nextSession);
+        return nextSession;
       })
       .catch((error) => {
-        emitSession(null)
-        throw error
+        emitSession(null);
+        throw error;
       })
       .finally(() => {
-        refreshPromise = null
-      })
+        refreshPromise = null;
+      });
   }
 
-  return refreshPromise
+  return refreshPromise;
 }
 
 export async function getAccessToken() {
   if (!session) {
-    return ''
+    return '';
   }
 
-  const expiresAt = Date.parse(session.accessTokenExpiresAt)
+  const expiresAt = Date.parse(session.accessTokenExpiresAt);
   if (Number.isFinite(expiresAt) && expiresAt - Date.now() < 30_000) {
-    await refreshSession()
+    await refreshSession();
   }
 
-  return session?.accessToken ?? ''
+  return session?.accessToken ?? '';
 }
 
 export async function api(path, options = {}) {
@@ -123,15 +120,16 @@ export async function api(path, options = {}) {
     auth = true,
     retry = true,
     signal,
-  } = options
-  const headers = { Accept: 'application/json' }
+  } = options;
+
+  const headers = { Accept: 'application/json' };
 
   if (body !== undefined) {
-    headers['Content-Type'] = 'application/json'
+    headers['Content-Type'] = 'application/json';
   }
 
   if (auth && session?.accessToken) {
-    headers.Authorization = `Bearer ${session.accessToken}`
+    headers.Authorization = `Bearer ${session.accessToken}`;
   }
 
   const response = await fetch(`${API_ROOT}${path}`, {
@@ -139,32 +137,33 @@ export async function api(path, options = {}) {
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
-  })
+  });
 
   if (response.status === 401 && auth && retry && session?.refreshToken) {
-    await refreshSession()
-    return api(path, { ...options, retry: false })
+    await refreshSession();
+    return api(path, { ...options, retry: false });
   }
 
   if (!response.ok) {
-    throw await readError(response)
+    throw await readError(response);
   }
 
   if (response.status === 204) {
-    return null
+    return null;
   }
 
-  return response.json()
+  return response.json();
 }
 
+// Authentication & Identity API Calls
 export async function login(credentials) {
   const auth = await api('/auth/login', {
     method: 'POST',
     body: credentials,
     auth: false,
-  })
-  emitSession(auth)
-  return auth
+  });
+  emitSession(auth);
+  return auth;
 }
 
 export async function register(account) {
@@ -172,7 +171,7 @@ export async function register(account) {
     method: 'POST',
     body: account,
     auth: false,
-  })
+  });
 }
 
 export async function verifyEmail(token) {
@@ -180,21 +179,72 @@ export async function verifyEmail(token) {
     method: 'POST',
     body: { token },
     auth: false,
-  })
+  });
+}
+
+export async function forgotPassword(email) {
+  return api('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+    auth: false,
+  });
+}
+
+export async function resetPassword(token, newPassword) {
+  return api('/auth/reset-password', {
+    method: 'POST',
+    body: { token, newPassword },
+    auth: false,
+  });
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  return api('/auth/change-password', {
+    method: 'POST',
+    body: { currentPassword, newPassword },
+  });
+}
+
+export async function getSessions() {
+  return api('/auth/sessions');
+}
+
+export async function revokeSession(sessionId) {
+  return api(`/auth/sessions/${sessionId}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function logout() {
-  const refreshToken = session?.refreshToken
-
+  const refreshToken = session?.refreshToken;
   try {
     if (refreshToken) {
       await api('/auth/logout', {
         method: 'POST',
         body: { refreshToken },
         auth: false,
-      })
+      });
     }
   } finally {
-    emitSession(null)
+    emitSession(null);
   }
+}
+
+export async function logoutAll() {
+  try {
+    await api('/auth/logout-all', { method: 'POST' });
+  } finally {
+    emitSession(null);
+  }
+}
+
+export async function getMe() {
+  return api('/users/me');
+}
+
+export async function updateMe(profile) {
+  return api('/users/me', {
+    method: 'PATCH',
+    body: profile,
+  });
 }

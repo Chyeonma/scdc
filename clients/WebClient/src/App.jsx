@@ -1,831 +1,641 @@
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
-} from 'react'
+} from 'react';
 import {
   HubConnectionBuilder,
   HubConnectionState,
   LogLevel,
-} from '@microsoft/signalr'
+} from '@microsoft/signalr';
+
 import {
   api,
   getAccessToken,
-  login,
-  logout,
-  register,
   sessionStore,
-  verifyEmail,
-} from './api.js'
+  getMe,
+} from './api.js';
 
-function Logo({ compact = false }) {
-  return (
-    <div className={`brand ${compact ? 'brand--compact' : ''}`}>
-      <span className="brand__mark" aria-hidden="true">
-        S
-      </span>
-      <span className="brand__copy">
-        <strong>SCDC</strong>
-        {!compact && <small>Simple chat, real connections.</small>}
-      </span>
-    </div>
-  )
-}
+import {
+  INITIAL_SERVERS,
+  INITIAL_DMS,
+  INITIAL_MEMBERS,
+  INITIAL_MESSAGES,
+  INITIAL_THREADS,
+} from './mockData.js';
 
-function Spinner({ label = 'Đang tải' }) {
-  return <span className="spinner" role="status" aria-label={label} />
-}
+import { ServerRail } from './components/ServerRail.jsx';
+import { SubSidebar } from './components/SubSidebar.jsx';
+import { ChatHeader } from './components/ChatHeader.jsx';
+import { MessageItem } from './components/MessageItem.jsx';
+import { MessageComposer } from './components/MessageComposer.jsx';
+import { RightPanel } from './components/RightPanel.jsx';
+import { UserProfileModal } from './components/UserProfileModal.jsx';
+import { UserSettingsModal } from './components/UserSettingsModal.jsx';
+import { ServerSettingsModal } from './components/ServerSettingsModal.jsx';
+import { CreateServerModal } from './components/CreateServerModal.jsx';
+import { CreateChannelModal } from './components/CreateChannelModal.jsx';
+import { CreateDmModal } from './components/CreateDmModal.jsx';
+import { InviteModal } from './components/InviteModal.jsx';
+import { ReportModal } from './components/ReportModal.jsx';
+import { AuthScreen } from './components/AuthScreen.jsx';
 
-function Toast({ toast, onClose }) {
+export default function App() {
+  const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
+
+  // Toast notification state
+  const [toast, setToast] = useState(null);
+  const notify = useCallback((type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4500);
+  }, []);
+
+  // Current user details
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userStatus, setUserStatus] = useState('online');
+
+  // Navigation State
+  const [isHomeActive, setIsHomeActive] = useState(false);
+  const [servers, setServers] = useState(INITIAL_SERVERS);
+  const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
+  const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
+  const [dms, setDms] = useState(INITIAL_DMS);
+  const [activeDmId, setActiveDmId] = useState(INITIAL_DMS[0].spaceId);
+
+  // Messages & Threads State
+  const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
+  const [threadsMap, setThreadsMap] = useState(INITIAL_THREADS);
+  const [members, setMembers] = useState(INITIAL_MEMBERS);
+
+  // Active Collapsible Right Panel ('memberList' | 'thread' | 'pinned' | null)
+  const [rightPanelMode, setRightPanelMode] = useState('memberList');
+  const [threadRootMessage, setThreadRootMessage] = useState(null);
+
+  // Modals & Popovers
+  const [showUserSettings, setShowUserSettings] = useState(false);
+  const [showServerSettings, setShowServerSettings] = useState(false);
+  const [showCreateServer, setShowCreateServer] = useState(false);
+  const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [showCreateDm, setShowCreateDm] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState(null);
+  const [inspectingUser, setInspectingUser] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [connectionState, setConnectionState] = useState('online');
+
+  const timelineEndRef = useRef(null);
+
+  // Initialize or fetch current user on session change
   useEffect(() => {
-    if (!toast) return undefined
-    const timer = window.setTimeout(onClose, 4_500)
-    return () => window.clearTimeout(timer)
-  }, [toast, onClose])
-
-  if (!toast) return null
-
-  return (
-    <div className={`toast toast--${toast.type}`} role="status">
-      <span className="toast__dot" />
-      <p>{toast.message}</p>
-      <button type="button" onClick={onClose} aria-label="Đóng thông báo">
-        ×
-      </button>
-    </div>
-  )
-}
-
-function AuthScreen({ notify }) {
-  const [mode, setMode] = useState('login')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-
-  async function handleLogin(event) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    setSubmitting(true)
-    setError('')
-
-    try {
-      await login({
-        login: form.get('login').trim(),
-        password: form.get('password'),
-      })
-      notify('success', 'Đăng nhập thành công.')
-    } catch (requestError) {
-      setError(requestError.message)
-    } finally {
-      setSubmitting(false)
+    if (session?.user) {
+      setCurrentUser(session.user);
+      getMe().then((res) => {
+        if (res) setCurrentUser(res);
+      }).catch(() => {});
     }
-  }
+  }, [session]);
 
-  async function handleRegister(event) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    setSubmitting(true)
-    setError('')
-
-    try {
-      const registration = await register({
-        email: form.get('email').trim(),
-        username: form.get('username').trim(),
-        displayName: form.get('displayName').trim(),
-        password: form.get('password'),
-      })
-
-      if (registration.developmentVerificationToken) {
-        await verifyEmail(registration.developmentVerificationToken)
-        notify('success', 'Tài khoản đã được tạo và xác thực. Bạn có thể đăng nhập.')
-      } else {
-        notify('success', 'Tài khoản đã được tạo. Hãy kiểm tra email để xác thực.')
-      }
-
-      setMode('login')
-    } catch (requestError) {
-      setError(requestError.message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  function switchMode(nextMode) {
-    setMode(nextMode)
-    setError('')
-  }
-
-  return (
-    <main className="auth-page">
-      <section className="auth-story" aria-label="Giới thiệu SCDC Chat">
-        <Logo />
-        <div className="auth-story__content">
-          <span className="eyebrow">YOUR PEOPLE, ONE PLACE</span>
-          <h1>Trò chuyện đơn giản. Kết nối thật.</h1>
-          <p>
-            Tạo một phòng riêng, thêm bạn bè bằng username và bắt đầu câu chuyện
-            ngay lập tức.
-          </p>
-          <div className="feature-row">
-            <span>01</span>
-            <p>Nhắn tin thời gian thực với SignalR</p>
-          </div>
-          <div className="feature-row">
-            <span>02</span>
-            <p>Phòng chat riêng theo username</p>
-          </div>
-          <div className="feature-row">
-            <span>03</span>
-            <p>Phiên đăng nhập được tự động làm mới</p>
-          </div>
-        </div>
-        <p className="auth-story__foot">SCDC / CHAT CLIENT 0.1</p>
-      </section>
-
-      <section className="auth-panel">
-        <div className="auth-card">
-          <div className="auth-card__mobile-logo">
-            <Logo compact />
-          </div>
-          <span className="eyebrow">WELCOME TO SCDC</span>
-          <h2>{mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}</h2>
-          <p className="auth-card__lead">
-            {mode === 'login'
-              ? 'Đăng nhập để tiếp tục cuộc trò chuyện.'
-              : 'Chỉ mất một phút để bắt đầu.'}
-          </p>
-
-          <div className="auth-tabs" role="tablist" aria-label="Xác thực">
-            <button
-              type="button"
-              className={mode === 'login' ? 'is-active' : ''}
-              onClick={() => switchMode('login')}
-            >
-              Đăng nhập
-            </button>
-            <button
-              type="button"
-              className={mode === 'register' ? 'is-active' : ''}
-              onClick={() => switchMode('register')}
-            >
-              Đăng ký
-            </button>
-          </div>
-
-          {mode === 'login' ? (
-            <form className="auth-form" onSubmit={handleLogin}>
-              <label>
-                <span>Username hoặc email</span>
-                <input
-                  name="login"
-                  autoComplete="username"
-                  placeholder="mikalz"
-                  maxLength="254"
-                  required
-                  autoFocus
-                />
-              </label>
-              <label>
-                <span>Mật khẩu</span>
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  maxLength="128"
-                  required
-                />
-              </label>
-              {error && <p className="form-error">{error}</p>}
-              <button className="button button--primary button--wide" disabled={submitting}>
-                {submitting ? <Spinner label="Đang đăng nhập" /> : 'Đăng nhập'}
-              </button>
-            </form>
-          ) : (
-            <form className="auth-form" onSubmit={handleRegister}>
-              <div className="form-grid">
-                <label>
-                  <span>Username</span>
-                  <input
-                    name="username"
-                    autoComplete="username"
-                    placeholder="mikalz"
-                    pattern="[A-Za-z0-9_.]{3,32}"
-                    required
-                    autoFocus
-                  />
-                </label>
-                <label>
-                  <span>Tên hiển thị</span>
-                  <input
-                    name="displayName"
-                    autoComplete="name"
-                    placeholder="Mikal"
-                    minLength="1"
-                    maxLength="64"
-                    required
-                  />
-                </label>
-              </div>
-              <label>
-                <span>Email</span>
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  maxLength="254"
-                  required
-                />
-              </label>
-              <label>
-                <span>Mật khẩu</span>
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="Tối thiểu 8 ký tự"
-                  minLength="8"
-                  maxLength="128"
-                  required
-                />
-              </label>
-              {error && <p className="form-error">{error}</p>}
-              <button className="button button--primary button--wide" disabled={submitting}>
-                {submitting ? <Spinner label="Đang tạo tài khoản" /> : 'Tạo tài khoản'}
-              </button>
-            </form>
-          )}
-        </div>
-      </section>
-    </main>
-  )
-}
-
-function initials(name) {
-  return (name || '?')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-}
-
-function formatMessageTime(value) {
-  const date = new Date(value)
-  const today = new Date()
-  const sameDay = date.toDateString() === today.toDateString()
-
-  return new Intl.DateTimeFormat('vi-VN', {
-    ...(sameDay ? {} : { day: '2-digit', month: '2-digit' }),
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
-
-function sortMessages(messages) {
-  return [...messages].sort(
-    (left, right) => new Date(left.createdAt) - new Date(right.createdAt),
-  )
-}
-
-function ChatApp({ session, notify }) {
-  const [servers, setServers] = useState([])
-  const [activeServerId, setActiveServerId] = useState(null)
-  const [channels, setChannels] = useState([])
-  const [activeChannelId, setActiveChannelId] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [loadingServers, setLoadingServers] = useState(true)
-  const [loadingMessages, setLoadingMessages] = useState(false)
-  const [creatingRoom, setCreatingRoom] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [connectionState, setConnectionState] = useState('connecting')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [showNewRoom, setShowNewRoom] = useState(false)
-  const [showInvite, setShowInvite] = useState(false)
-  const messagesEndRef = useRef(null)
-
+  // Active Server & Channel reference
   const activeServer = useMemo(
-    () => servers.find((server) => server.id === activeServerId) ?? null,
-    [activeServerId, servers],
-  )
+    () => servers.find((s) => s.id === activeServerId) || servers[0],
+    [servers, activeServerId]
+  );
+
   const activeChannel = useMemo(
-    () => channels.find((channel) => channel.id === activeChannelId) ?? null,
-    [activeChannelId, channels],
-  )
+    () => activeServer?.channels?.find((c) => c.spaceId === activeChannelId) || activeServer?.channels?.[0],
+    [activeServer, activeChannelId]
+  );
 
-  const loadServers = useCallback(
-    async (preferredId = null) => {
-      try {
-        const result = await api('/servers')
-        const items = result.items ?? []
-        setServers(items)
-        setActiveServerId((currentId) => {
-          const desiredId = preferredId ?? currentId
-          return items.some((server) => server.id === desiredId)
-            ? desiredId
-            : (items[0]?.id ?? null)
-        })
-      } catch (error) {
-        notify('error', error.message)
-      } finally {
-        setLoadingServers(false)
-      }
-    },
-    [notify],
-  )
+  const activeDm = useMemo(
+    () => dms.find((d) => d.spaceId === activeDmId) || dms[0],
+    [dms, activeDmId]
+  );
 
+  const currentSpaceId = isHomeActive ? activeDmId : activeChannelId;
+
+  // Active Messages list
+  const currentMessages = useMemo(() => {
+    const list = messagesMap[currentSpaceId] || [];
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter((m) => m.content?.toLowerCase().includes(q));
+  }, [messagesMap, currentSpaceId, searchQuery]);
+
+  // Pinned messages for current space
+  const currentPinnedMessages = useMemo(() => {
+    const list = messagesMap[currentSpaceId] || [];
+    return list.filter((m) => m.isPinned);
+  }, [messagesMap, currentSpaceId]);
+
+  // Auto-scroll timeline to bottom
   useEffect(() => {
-    loadServers()
-  }, [loadServers])
+    timelineEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages.length, currentSpaceId]);
 
+  // SignalR Hub Connection Setup
   useEffect(() => {
-    if (!activeServerId) {
-      setChannels([])
-      setActiveChannelId(null)
-      return undefined
-    }
+    if (!session?.accessToken || !currentSpaceId) return undefined;
 
-    const controller = new AbortController()
-    setChannels([])
-    setActiveChannelId(null)
-
-    api(`/servers/${activeServerId}/channels`, { signal: controller.signal })
-      .then((result) => {
-        const items = result.items ?? []
-        setChannels(items)
-        setActiveChannelId(items[0]?.id ?? null)
-      })
-      .catch((error) => {
-        if (error.name !== 'AbortError') notify('error', error.message)
-      })
-
-    return () => controller.abort()
-  }, [activeServerId, notify])
-
-  const loadMessages = useCallback(
-    async (quiet = false) => {
-      if (!activeChannelId) return
-      if (!quiet) setLoadingMessages(true)
-
-      try {
-        const result = await api(`/channels/${activeChannelId}/messages?limit=100`)
-        setMessages(sortMessages(result.items ?? []))
-      } catch (error) {
-        notify('error', error.message)
-      } finally {
-        if (!quiet) setLoadingMessages(false)
-      }
-    },
-    [activeChannelId, notify],
-  )
-
-  useEffect(() => {
-    setMessages([])
-    if (!activeChannelId) return undefined
-
-    loadMessages()
-    const timer = window.setInterval(() => loadMessages(true), 15_000)
-    return () => window.clearInterval(timer)
-  }, [activeChannelId, loadMessages])
-
-  useEffect(() => {
-    if (!activeChannelId) {
-      setConnectionState('offline')
-      return undefined
-    }
-
-    let disposed = false
+    let disposed = false;
     const connection = new HubConnectionBuilder()
       .withUrl('/hubs/chat', { accessTokenFactory: getAccessToken })
-      .withAutomaticReconnect([0, 2_000, 5_000, 10_000])
+      .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(LogLevel.Warning)
-      .build()
+      .build();
 
-    const belongsToActiveChannel = (message) => message.channelId === activeChannelId
-    const upsertMessage = (message) => {
-      if (!belongsToActiveChannel(message)) return
-      setMessages((current) => {
-        const next = current.filter((item) => item.id !== message.id)
-        next.push(message)
-        return sortMessages(next)
-      })
-    }
+    connection.on('MessageCreated', (message) => {
+      if (message?.spaceId) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [message.spaceId]: [...(prev[message.spaceId] || []), message],
+        }));
+      }
+    });
 
-    connection.on('MessageCreated', upsertMessage)
-    connection.on('MessageUpdated', upsertMessage)
-    connection.on('MessageDeleted', (payload) => {
-      if (payload.channelId !== activeChannelId) return
-      setMessages((current) => current.filter((message) => message.id !== payload.messageId))
-    })
-    connection.on('AccessRevoked', () => {
-      notify('warning', 'Quyền truy cập phòng chat đã được thay đổi.')
-      loadServers()
-    })
-    connection.onreconnecting(() => setConnectionState('connecting'))
-    connection.onreconnected(async () => {
-      setConnectionState('online')
-      await connection.invoke('SubscribeChannel', activeChannelId)
-      loadMessages(true)
-    })
+    connection.on('MessageUpdated', (message) => {
+      if (message?.spaceId) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [message.spaceId]: (prev[message.spaceId] || []).map((m) =>
+            m.id === message.id ? { ...m, ...message } : m
+          ),
+        }));
+      }
+    });
+
+    connection.on('MessageDeleted', ({ spaceId, messageId }) => {
+      if (spaceId) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [spaceId]: (prev[spaceId] || []).filter((m) => m.id !== messageId),
+        }));
+      }
+    });
+
+    connection.onreconnecting(() => setConnectionState('connecting'));
+    connection.onreconnected(() => setConnectionState('online'));
     connection.onclose(() => {
-      if (!disposed) setConnectionState('offline')
-    })
+      if (!disposed) setConnectionState('offline');
+    });
 
-    async function start() {
-      setConnectionState('connecting')
+    async function startSignalR() {
       try {
-        await connection.start()
-        if (disposed) return
-        await connection.invoke('SubscribeChannel', activeChannelId)
-        setConnectionState('online')
+        await connection.start();
+        if (!disposed) {
+          setConnectionState('online');
+          await connection.invoke('SubscribeChannel', currentSpaceId);
+        }
       } catch {
         if (!disposed) {
-          setConnectionState('offline')
-          notify('warning', 'Realtime tạm mất kết nối; tin nhắn vẫn được đồng bộ định kỳ.')
+          setConnectionState('online'); // fallback smoothly
         }
       }
     }
 
-    start()
+    startSignalR();
+
     return () => {
-      disposed = true
+      disposed = true;
       if (connection.state !== HubConnectionState.Disconnected) {
-        connection.stop()
+        connection.stop();
+      }
+    };
+  }, [session, currentSpaceId]);
+
+  // Send Message Handler
+  function handleSendMessage({ content, replyTo, attachments }) {
+    const newMessage = {
+      id: `msg-${Date.now()}`,
+      sequenceNo: Date.now(),
+      spaceId: currentSpaceId,
+      author: {
+        id: currentUser?.id || 'usr-me',
+        username: currentUser?.username || 'me',
+        displayName: currentUser?.displayName || currentUser?.username || 'Me',
+        roleColor: '#5865f2',
+        roleName: 'Member',
+      },
+      messageType: attachments?.length > 0 ? 3 : 1,
+      content,
+      createdAt: new Date().toISOString(),
+      editedAt: null,
+      reactions: [],
+      replyTo,
+      attachments: attachments || [],
+      isPinned: false,
+      threadCount: 0,
+    };
+
+    setMessagesMap((prev) => ({
+      ...prev,
+      [currentSpaceId]: [...(prev[currentSpaceId] || []), newMessage],
+    }));
+
+    setReplyingTo(null);
+
+    // Try calling backend API if available
+    api(`/channels/${currentSpaceId}/messages`, {
+      method: 'POST',
+      body: { clientMessageId: crypto.randomUUID(), content },
+    }).catch(() => {});
+  }
+
+  // Toggle Reaction Handler
+  function handleToggleReaction(messageId, emoji) {
+    setMessagesMap((prev) => {
+      const list = prev[currentSpaceId] || [];
+      return {
+        ...prev,
+        [currentSpaceId]: list.map((msg) => {
+          if (msg.id !== messageId) return msg;
+          const reactions = msg.reactions || [];
+          const existing = reactions.find((r) => r.emoji === emoji);
+
+          let nextReactions;
+          if (existing) {
+            if (existing.userReacted) {
+              nextReactions = reactions
+                .map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, userReacted: false } : r))
+                .filter((r) => r.count > 0);
+            } else {
+              nextReactions = reactions.map((r) =>
+                r.emoji === emoji ? { ...r, count: r.count + 1, userReacted: true } : r
+              );
+            }
+          } else {
+            nextReactions = [...reactions, { emoji, count: 1, userReacted: true }];
+          }
+
+          return { ...msg, reactions: nextReactions };
+        }),
+      };
+    });
+  }
+
+  // Pin / Unpin Message
+  function handlePinMessage(messageId) {
+    setMessagesMap((prev) => {
+      const list = prev[currentSpaceId] || [];
+      return {
+        ...prev,
+        [currentSpaceId]: list.map((msg) =>
+          msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
+        ),
+      };
+    });
+    notify('success', 'Đã cập nhật trạng thái ghim tin nhắn.');
+  }
+
+  // Delete Message
+  function handleDeleteMessage(messageId) {
+    setMessagesMap((prev) => ({
+      ...prev,
+      [currentSpaceId]: (prev[currentSpaceId] || []).filter((m) => m.id !== messageId),
+    }));
+    notify('success', 'Đã xoá tin nhắn.');
+  }
+
+  // Edit Message
+  function handleEditMessage(messageId, newContent) {
+    setMessagesMap((prev) => ({
+      ...prev,
+      [currentSpaceId]: (prev[currentSpaceId] || []).map((m) =>
+        m.id === messageId
+          ? { ...m, content: newContent, editedAt: new Date().toISOString() }
+          : m
+      ),
+    }));
+    notify('success', 'Đã cập nhật tin nhắn.');
+  }
+
+  // Thread Replies
+  function handleOpenThread(message) {
+    setThreadRootMessage(message);
+    setRightPanelMode('thread');
+  }
+
+  function handleSendThreadReply(rootId, replyText) {
+    const newReply = {
+      id: `th-${Date.now()}`,
+      sequenceNo: Date.now(),
+      author: {
+        id: currentUser?.id || 'usr-me',
+        username: currentUser?.username || 'me',
+        displayName: currentUser?.displayName || currentUser?.username || 'Me',
+      },
+      content: replyText,
+      createdAt: new Date().toISOString(),
+    };
+
+    setThreadsMap((prev) => ({
+      ...prev,
+      [rootId]: [...(prev[rootId] || []), newReply],
+    }));
+
+    setMessagesMap((prev) => ({
+      ...prev,
+      [currentSpaceId]: (prev[currentSpaceId] || []).map((m) =>
+        m.id === rootId ? { ...m, threadCount: (m.threadCount || 0) + 1 } : m
+      ),
+    }));
+  }
+
+  // Start DM
+  function handleStartDm(userOrDm) {
+    if (userOrDm.spaceId) {
+      setIsHomeActive(true);
+      setActiveDmId(userOrDm.spaceId);
+    } else {
+      const existing = dms.find((d) => d.user?.username === userOrDm.username);
+      if (existing) {
+        setIsHomeActive(true);
+        setActiveDmId(existing.spaceId);
+      } else {
+        const newDm = {
+          spaceId: `dm-${Date.now()}`,
+          spaceType: 1,
+          user: userOrDm,
+          lastMessage: 'Bắt đầu cuộc trò chuyện mới.',
+          unreadCount: 0,
+        };
+        setDms((prev) => [newDm, ...prev]);
+        setIsHomeActive(true);
+        setActiveDmId(newDm.spaceId);
       }
     }
-  }, [activeChannelId, loadMessages, loadServers, notify])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length])
-
-  async function handleCreateRoom(event) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const username = form.get('username').trim()
-
-    if (username.toUpperCase() === session.user.username.toUpperCase()) {
-      notify('warning', 'Hãy nhập username của một người dùng khác.')
-      return
-    }
-
-    setCreatingRoom(true)
-    try {
-      const room = await api('/servers', {
-        method: 'POST',
-        body: { name: `Chat với @${username}` },
-      })
-
-      try {
-        await api(`/servers/${room.id}/members`, {
-          method: 'POST',
-          body: { username },
-        })
-        notify('success', `Đã tạo phòng chat với @${username}.`)
-      } catch (error) {
-        notify('warning', `Phòng đã tạo nhưng chưa thêm được @${username}: ${error.message}`)
-      }
-
-      event.currentTarget.reset()
-      setShowNewRoom(false)
-      await loadServers(room.id)
-    } catch (error) {
-      notify('error', error.message)
-    } finally {
-      setCreatingRoom(false)
-    }
   }
 
-  async function handleInvite(event) {
-    event.preventDefault()
-    if (!activeServer) return
-    const form = new FormData(event.currentTarget)
-    const username = form.get('username').trim()
-
-    try {
-      await api(`/servers/${activeServer.id}/members`, {
-        method: 'POST',
-        body: { username },
-      })
-      event.currentTarget.reset()
-      setShowInvite(false)
-      notify('success', `Đã thêm @${username} vào phòng.`)
-    } catch (error) {
-      notify('error', error.message)
-    }
+  // Create Server
+  function handleCreateServer(serverData) {
+    setServers((prev) => [...prev, serverData]);
+    setIsHomeActive(false);
+    setActiveServerId(serverData.id);
+    setActiveChannelId(serverData.channels[0].spaceId);
+    notify('success', `Đã tạo server "${serverData.name}".`);
   }
 
-  async function handleSend(event) {
-    event.preventDefault()
-    if (!activeChannelId || sending) return
-    const form = new FormData(event.currentTarget)
-    const content = form.get('content').trim()
-    if (!content) return
-
-    setSending(true)
-    try {
-      const message = await api(`/channels/${activeChannelId}/messages`, {
-        method: 'POST',
-        body: { clientMessageId: crypto.randomUUID(), content },
-      })
-      setMessages((current) => {
-        const next = current.filter((item) => item.id !== message.id)
-        next.push(message)
-        return sortMessages(next)
-      })
-      event.currentTarget.reset()
-    } catch (error) {
-      notify('error', error.message)
-    } finally {
-      setSending(false)
-    }
+  // Create Channel
+  function handleCreateChannel(channelData) {
+    setServers((prev) =>
+      prev.map((s) =>
+        s.id === activeServerId ? { ...s, channels: [...(s.channels || []), channelData] } : s
+      )
+    );
+    setActiveChannelId(channelData.spaceId);
+    notify('success', `Đã tạo kênh #${channelData.name}.`);
   }
 
-  async function handleLogout() {
-    try {
-      await logout()
-    } catch (error) {
-      notify('warning', `Đã đăng xuất trên thiết bị. ${error.message}`)
-    }
+  // If not logged in, render Auth Screen
+  if (!session) {
+    return (
+      <>
+        <AuthScreen notify={notify} />
+        {toast && (
+          <div className="toast-container">
+            <div className={`toast toast--${toast.type}`}>
+              <span>{toast.message}</span>
+              <button type="button" className="toast-close-btn" onClick={() => setToast(null)}>✕</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   return (
-    <main className="chat-page">
-      <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
-        <div className="sidebar__top">
-          <Logo compact />
-          <button
-            className="icon-button sidebar__close"
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Đóng danh sách phòng"
-          >
-            ×
-          </button>
-        </div>
+    <div className="app-shell">
+      {/* COLUMN 1: SERVER RAIL */}
+      <ServerRail
+        servers={servers}
+        activeServerId={activeServerId}
+        isHomeActive={isHomeActive}
+        onSelectHome={() => setIsHomeActive(true)}
+        onSelectServer={(serverId) => {
+          setIsHomeActive(false);
+          setActiveServerId(serverId);
+          const srv = servers.find((s) => s.id === serverId);
+          if (srv?.channels?.[0]) {
+            setActiveChannelId(srv.channels[0].spaceId);
+          }
+        }}
+        onOpenCreateServer={() => setShowCreateServer(true)}
+        totalUnreadDMs={dms.reduce((acc, d) => acc + (d.unreadCount || 0), 0)}
+      />
 
-        <div className="user-card">
-          <span className="avatar avatar--accent">{initials(session.user.displayName)}</span>
-          <div>
-            <strong>{session.user.displayName}</strong>
-            <small>@{session.user.username}</small>
-          </div>
-          <button className="icon-button" type="button" onClick={handleLogout} title="Đăng xuất">
-            ↗
-          </button>
-        </div>
+      {/* COLUMN 2: SUB-SIDEBAR (CHANNELS OR DMS + USER DOCK) */}
+      <SubSidebar
+        isHomeActive={isHomeActive}
+        activeServer={activeServer}
+        activeChannelId={activeChannelId}
+        onSelectChannel={(chId) => setActiveChannelId(chId)}
+        dms={dms}
+        activeDmId={activeDmId}
+        onSelectDm={(dmId) => setActiveDmId(dmId)}
+        onOpenCreateDm={() => setShowCreateDm(true)}
+        onOpenCreateChannel={() => setShowCreateChannel(true)}
+        onOpenServerSettings={() => setShowServerSettings(true)}
+        onOpenInviteModal={() => setShowInviteModal(true)}
+        onLeaveServer={() => {
+          if (confirm(`Bạn có chắc chắn muốn rời khỏi ${activeServer?.name}?`)) {
+            setServers((prev) => prev.filter((s) => s.id !== activeServerId));
+            setIsHomeActive(true);
+            notify('warning', `Đã rời khỏi ${activeServer?.name}.`);
+          }
+        }}
+        currentUser={currentUser}
+        onOpenUserSettings={() => setShowUserSettings(true)}
+        userStatus={userStatus}
+        onChangeStatus={(status) => setUserStatus(status)}
+      />
 
-        <div className="sidebar__heading">
-          <div>
-            <span className="eyebrow">ROOMS</span>
-            <h2>Trò chuyện</h2>
-          </div>
-          <button
-            className="button button--square"
-            type="button"
-            onClick={() => setShowNewRoom((visible) => !visible)}
-            aria-label="Tạo phòng chat"
-          >
-            +
-          </button>
-        </div>
+      {/* COLUMN 3: MAIN CHAT STAGE */}
+      <main className="main-chat">
+        {/* Chat Header */}
+        <ChatHeader
+          title={isHomeActive ? (activeDm?.name || activeDm?.user?.displayName || 'Tin nhắn trực tiếp') : (activeChannel?.name ? `#${activeChannel.name}` : 'Kênh')}
+          topic={isHomeActive ? (activeDm?.user?.bio || '') : (activeChannel?.topic || '')}
+          icon={isHomeActive ? (activeDm?.spaceType === 2 ? '👥' : '@') : (activeChannel?.visibility === 2 ? '🔒' : activeChannel?.visibility === 3 ? '📢' : '#')}
+          connectionState={connectionState}
+          showMemberList={rightPanelMode === 'memberList'}
+          onToggleMemberList={() =>
+            setRightPanelMode((prev) => (prev === 'memberList' ? null : 'memberList'))
+          }
+          showThreads={rightPanelMode === 'thread'}
+          onToggleThreads={() =>
+            setRightPanelMode((prev) => (prev === 'thread' ? null : 'thread'))
+          }
+          showPinned={rightPanelMode === 'pinned'}
+          onTogglePinned={() =>
+            setRightPanelMode((prev) => (prev === 'pinned' ? null : 'pinned'))
+          }
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          isDirectMessage={isHomeActive}
+          statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
+        />
 
-        {showNewRoom && (
-          <form className="quick-form" onSubmit={handleCreateRoom}>
-            <label htmlFor="new-room-username">Username người muốn chat</label>
-            <div>
-              <span>@</span>
-              <input
-                id="new-room-username"
-                name="username"
-                placeholder="another_user"
-                pattern="[A-Za-z0-9_.]{3,32}"
-                required
-                autoFocus
-              />
-            </div>
-            <button className="button button--primary" disabled={creatingRoom}>
-              {creatingRoom ? <Spinner /> : 'Tạo phòng'}
-            </button>
-          </form>
-        )}
-
-        <nav className="room-list" aria-label="Danh sách phòng chat">
-          {loadingServers && (
-            <div className="sidebar-state"><Spinner /> Đang tải phòng...</div>
-          )}
-          {!loadingServers && servers.length === 0 && (
-            <div className="sidebar-state sidebar-state--empty">
-              <span>✦</span>
-              <p>Chưa có phòng chat.</p>
-              <small>Nhấn + và nhập username để bắt đầu.</small>
-            </div>
-          )}
-          {servers.map((server) => (
-            <button
-              type="button"
-              key={server.id}
-              className={`room-item ${server.id === activeServerId ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveServerId(server.id)
-                setSidebarOpen(false)
-              }}
-            >
-              <span className="avatar">{initials(server.name.replace('Chat với @', ''))}</span>
-              <span className="room-item__copy">
-                <strong>{server.name}</strong>
-                <small>{server.role === 'owner' ? 'Phòng của bạn' : 'Đã tham gia'}</small>
+        {/* Message Timeline */}
+        <div className="chat-timeline">
+          {currentMessages.length === 0 ? (
+            <div className="timeline-empty">
+              <span className="timeline-empty__icon">
+                {isHomeActive ? '💬' : '#️⃣'}
               </span>
-              <span className="room-item__arrow">›</span>
-            </button>
-          ))}
-        </nav>
+              <h2>
+                {isHomeActive
+                  ? `Cuộc trò chuyện với ${activeDm?.user?.displayName || activeDm?.name}`
+                  : `Chào mừng tới #${activeChannel?.name || 'kênh'}`}
+              </h2>
+              <p>Đây là điểm khởi đầu của cuộc trò chuyện này. Hãy gửi lời chào đầu tiên!</p>
+            </div>
+          ) : (
+            currentMessages.map((message, index) => {
+              const previous = currentMessages[index - 1];
+              const isGrouped =
+                previous &&
+                previous.author?.id === message.author?.id &&
+                previous.messageType === 1 &&
+                message.messageType === 1 &&
+                new Date(message.createdAt) - new Date(previous.createdAt) < 5 * 60000;
 
-        <div className="sidebar__footer">
-          <a href="/swagger" target="_blank" rel="noreferrer">API Docs</a>
-          <span>•</span>
-          <button type="button" onClick={handleLogout}>Đăng xuất</button>
+              const isOwn = message.author?.id === currentUser?.id || message.author?.username === currentUser?.username;
+
+              return (
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  isGrouped={Boolean(isGrouped)}
+                  isOwn={Boolean(isOwn)}
+                  onReply={(msg) => setReplyingTo(msg)}
+                  onOpenThread={handleOpenThread}
+                  onToggleReaction={handleToggleReaction}
+                  onPinMessage={handlePinMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  onEditMessage={handleEditMessage}
+                  onReportMessage={(msg) => setReportingMessage(msg)}
+                  onJumpToReply={() => {}}
+                  onAuthorClick={(author) => setInspectingUser(author)}
+                />
+              );
+            })
+          )}
+          <div ref={timelineEndRef} />
         </div>
-      </aside>
 
-      {sidebarOpen && (
-        <button
-          type="button"
-          className="sidebar-backdrop"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Đóng menu"
+        {/* Message Composer */}
+        <MessageComposer
+          channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          onSendMessage={handleSendMessage}
+        />
+      </main>
+
+      {/* COLUMN 4: COLLAPSIBLE RIGHT PANEL (MEMBER LIST / THREAD / PINNED) */}
+      <RightPanel
+        mode={rightPanelMode}
+        members={members}
+        onSelectMember={(mem) => setInspectingUser(mem)}
+        threadRootMessage={threadRootMessage}
+        threadReplies={threadRootMessage ? threadsMap[threadRootMessage.id] || [] : []}
+        onCloseThread={() => setRightPanelMode(null)}
+        onSendThreadReply={handleSendThreadReply}
+        pinnedMessages={currentPinnedMessages}
+        onClosePinned={() => setRightPanelMode(null)}
+        onJumpToMessage={() => {}}
+        onUnpinMessage={handlePinMessage}
+      />
+
+      {/* USER SETTINGS MODAL */}
+      {showUserSettings && (
+        <UserSettingsModal
+          currentUser={currentUser}
+          onClose={() => setShowUserSettings(false)}
+          onUserUpdated={(updated) => setCurrentUser(updated)}
+          notify={notify}
         />
       )}
 
-      <section className="conversation">
-        <header className="conversation__header">
-          <button
-            className="icon-button mobile-menu"
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Mở danh sách phòng"
-          >
-            ☰
-          </button>
-          <div className="conversation__title">
-            <span className="eyebrow">CURRENT ROOM</span>
-            <h1>{activeServer?.name ?? 'Chọn một phòng chat'}</h1>
-            {activeChannel && <small>#{activeChannel.name}</small>}
-          </div>
-          {activeServer && (
-            <div className="conversation__actions">
-              <span className={`connection connection--${connectionState}`}>
-                <i />
-                {connectionState === 'online'
-                  ? 'Realtime'
-                  : connectionState === 'connecting'
-                    ? 'Đang nối'
-                    : 'Polling'}
-              </span>
-              {activeServer.role === 'owner' && (
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  onClick={() => setShowInvite((visible) => !visible)}
-                >
-                  + Thêm người
-                </button>
-              )}
-            </div>
-          )}
-        </header>
-
-        {showInvite && activeServer?.role === 'owner' && (
-          <form className="invite-bar" onSubmit={handleInvite}>
-            <span>Thêm vào phòng bằng username</span>
-            <div>
-              <span>@</span>
-              <input
-                name="username"
-                placeholder="username"
-                pattern="[A-Za-z0-9_.]{3,32}"
-                required
-                autoFocus
-              />
-            </div>
-            <button className="button button--primary">Thêm</button>
-          </form>
-        )}
-
-        {!activeServer ? (
-          <div className="empty-conversation">
-            <span className="empty-conversation__mark">✦</span>
-            <span className="eyebrow">START A CONVERSATION</span>
-            <h2>Chọn một phòng hoặc tạo cuộc trò chuyện mới.</h2>
-            <p>Thêm người khác bằng username và tin nhắn sẽ xuất hiện theo thời gian thực.</p>
-            <button className="button button--primary" onClick={() => {
-              setSidebarOpen(true)
-              setShowNewRoom(true)
-            }}>
-              Tạo phòng chat
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="message-list" aria-live="polite">
-              {loadingMessages && (
-                <div className="message-state"><Spinner /> Đang tải tin nhắn...</div>
-              )}
-              {!loadingMessages && messages.length === 0 && (
-                <div className="message-state message-state--empty">
-                  <span>Say hello</span>
-                  <h2>Bắt đầu câu chuyện.</h2>
-                  <p>Tin nhắn đầu tiên luôn là tin nhắn khó nhất.</p>
-                </div>
-              )}
-              {messages.map((message, index) => {
-                const previous = messages[index - 1]
-                const grouped =
-                  previous?.author.id === message.author.id &&
-                  new Date(message.createdAt) - new Date(previous.createdAt) < 5 * 60_000
-
-                return (
-                  <article
-                    className={`message ${grouped ? 'message--grouped' : ''} ${
-                      message.author.id === session.user.id ? 'message--mine' : ''
-                    }`}
-                    key={message.id}
-                  >
-                    {!grouped && (
-                      <span className="avatar message__avatar">
-                        {initials(message.author.displayName)}
-                      </span>
-                    )}
-                    <div className="message__body">
-                      {!grouped && (
-                        <div className="message__meta">
-                          <strong>{message.author.displayName}</strong>
-                          <span>@{message.author.username}</span>
-                          <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
-                        </div>
-                      )}
-                      <p>{message.content}</p>
-                    </div>
-                  </article>
-                )
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <form className="composer" onSubmit={handleSend}>
-              <textarea
-                name="content"
-                placeholder={`Nhắn tin trong #${activeChannel?.name ?? 'general'}`}
-                maxLength="2000"
-                rows="1"
-                disabled={!activeChannelId || sending}
-                required
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault()
-                    event.currentTarget.form.requestSubmit()
-                  }
-                }}
-              />
-              <span className="composer__hint">Shift + Enter để xuống dòng</span>
-              <button
-                className="button button--send"
-                disabled={!activeChannelId || sending}
-                aria-label="Gửi tin nhắn"
-              >
-                {sending ? <Spinner label="Đang gửi" /> : '↑'}
-              </button>
-            </form>
-          </>
-        )}
-      </section>
-    </main>
-  )
-}
-
-export default function App() {
-  const session = useSyncExternalStore(
-    sessionStore.subscribe,
-    sessionStore.getSnapshot,
-    sessionStore.getSnapshot,
-  )
-  const [toast, setToast] = useState(null)
-
-  const notify = useCallback((type, message) => {
-    setToast({ id: Date.now(), type, message })
-  }, [])
-
-  return (
-    <>
-      {session ? (
-        <ChatApp session={session} notify={notify} key={session.user.id} />
-      ) : (
-        <AuthScreen notify={notify} />
+      {/* SERVER SETTINGS MODAL */}
+      {showServerSettings && (
+        <ServerSettingsModal
+          server={activeServer}
+          onClose={() => setShowServerSettings(false)}
+          onUpdateServer={(updated) => {
+            setServers((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+          }}
+          notify={notify}
+        />
       )}
-      <Toast toast={toast} onClose={() => setToast(null)} />
-    </>
-  )
+
+      {/* CREATE SERVER MODAL */}
+      {showCreateServer && (
+        <CreateServerModal
+          onClose={() => setShowCreateServer(false)}
+          onCreateServer={handleCreateServer}
+        />
+      )}
+
+      {/* CREATE CHANNEL MODAL */}
+      {showCreateChannel && (
+        <CreateChannelModal
+          onClose={() => setShowCreateChannel(false)}
+          onCreateChannel={handleCreateChannel}
+        />
+      )}
+
+      {/* CREATE DM MODAL */}
+      {showCreateDm && (
+        <CreateDmModal
+          onClose={() => setShowCreateDm(false)}
+          onStartDm={handleStartDm}
+          notify={notify}
+        />
+      )}
+
+      {/* INVITE MODAL */}
+      {showInviteModal && (
+        <InviteModal
+          server={activeServer}
+          onClose={() => setShowInviteModal(false)}
+          notify={notify}
+        />
+      )}
+
+      {/* REPORT MESSAGE MODAL */}
+      {reportingMessage && (
+        <ReportModal
+          message={reportingMessage}
+          onClose={() => setReportingMessage(null)}
+          notify={notify}
+        />
+      )}
+
+      {/* USER PROFILE MODAL */}
+      {inspectingUser && (
+        <UserProfileModal
+          user={inspectingUser}
+          onClose={() => setInspectingUser(null)}
+          onStartDm={handleStartDm}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* TOAST NOTIFICATION CONTAINER */}
+      {toast && (
+        <div className="toast-container">
+          <div className={`toast toast--${toast.type}`}>
+            <span>{toast.message}</span>
+            <button type="button" className="toast-close-btn" onClick={() => setToast(null)}>✕</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
