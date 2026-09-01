@@ -13,17 +13,7 @@ builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 
 builder.Services.AddControllers();
-builder.Services.AddProblemDetails(options =>
-{
-    options.CustomizeProblemDetails = context =>
-    {
-        context.ProblemDetails.Instance ??= context.HttpContext.Request.Path.Value;
-        context.ProblemDetails.Extensions.TryAdd(
-            "traceId",
-            context.HttpContext.TraceIdentifier);
-    };
-});
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddApiProblemDetails();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SCDC.Api.Errors;
 using SCDC.BuildingBlocks.Application;
 
 namespace SCDC.Api.Controllers;
@@ -11,6 +12,7 @@ public sealed class HealthController(
 {
     [HttpGet]
     [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
     public ActionResult<HealthResponse> Get()
     {
         var moduleStates = modules

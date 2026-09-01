@@ -9,4 +9,7 @@
     <Project Path="services/Modules/Community/SCDC.Community.csproj" />
     <Project Path="services/Modules/Messaging/SCDC.Messaging.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SCDC.Api.Tests/SCDC.Api.Tests.csproj" />
+  </Folder>
 </Solution>

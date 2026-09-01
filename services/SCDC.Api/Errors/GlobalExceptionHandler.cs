@@ -18,18 +18,17 @@ internal sealed class GlobalExceptionHandler(
             httpContext.Request.Method,
             httpContext.Request.Path);
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        var descriptor = ApiErrorDefaults.Unexpected;
+        httpContext.Response.StatusCode = descriptor.Status;
+
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Type = "https://scdc.dev/problems/internal-server-error",
-                Title = "An unexpected error occurred.",
-                Status = StatusCodes.Status500InternalServerError,
-                Detail = "An unexpected error occurred while processing the request."
-            }
+            ProblemDetails = ApiProblemDetailsFactory.Create(
+                httpContext,
+                descriptor,
+                "An unexpected error occurred while processing the request.")
         });
     }
 }

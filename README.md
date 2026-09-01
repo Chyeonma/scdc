@@ -69,6 +69,19 @@ dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
 Health response liet ke cac module da duoc host nap va database schema ma module
 se huu.
 
+## API response
+
+Response thanh cong tra ve DTO dung kieu voi status `200`, `201` hoac `204`.
+Loi API dung `ProblemDetails` va luon co `errorCode`, `traceId`. Validation error
+co them dictionary `errors` theo ten field.
+
+Application handler tra ve `Result` hoac `Result<T>` va khong phu thuoc HTTP.
+API host anh xa error type thanh `400`, `401`, `403`, `404`, `409`, `429` hoac
+`503`. Status `500` chi duoc tao boi global exception handler va khong tra stack
+trace hay chi tiet exception cho client.
+
+Tai lieu chi tiet: [`docs/api/error-handling.md`](docs/api/error-handling.md).
+
 ## Podman Compose
 
 ```bash
