@@ -373,7 +373,7 @@ internal sealed class RegistrationService(
             {
                 "ux_users_normalized_username" => IdentityErrors.UsernameTaken,
                 "ux_user_emails_normalized_email" => IdentityErrors.EmailTaken,
-                _ => Error.Conflict("Identity.RegistrationConflict", "The account conflicts with existing data.")
+                _ => IdentityErrors.RegistrationConflict
             };
             return true;
         }

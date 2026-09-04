@@ -79,25 +79,13 @@ internal sealed class UserAccountService(
             command.CurrentPassword);
         if (currentPasswordResult == PasswordVerificationResult.Failed)
         {
-            return Result.Failure(new ValidationError(
-                "Identity.CurrentPasswordInvalid",
-                "The current password is invalid.",
-                new Dictionary<string, string[]>
-                {
-                    ["currentPassword"] = ["The current password is invalid."]
-                }));
+            return Result.Failure(IdentityErrors.CurrentPasswordInvalid);
         }
 
         if (VerifyPassword(user, user.PasswordCredential.PasswordHash, command.NewPassword)
             != PasswordVerificationResult.Failed)
         {
-            return Result.Failure(new ValidationError(
-                "Identity.PasswordUnchanged",
-                "The new password must be different from the current password.",
-                new Dictionary<string, string[]>
-                {
-                    ["newPassword"] = ["The new password must be different from the current password."]
-                }));
+            return Result.Failure(IdentityErrors.PasswordUnchanged);
         }
 
         var now = timeProvider.GetUtcNow();
