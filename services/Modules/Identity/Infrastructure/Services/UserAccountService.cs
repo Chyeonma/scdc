@@ -62,6 +62,8 @@ internal sealed class UserAccountService(
             return Result.Failure(validationError);
         }
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(command.UserId, cancellationToken);
         var user = await dbContext.Users
             .Include(item => item.PasswordCredential)
             .Include(item => item.SecurityState)
@@ -106,6 +108,16 @@ internal sealed class UserAccountService(
             IdentityData.RevokeSession(session, now, "password_changed");
         }
 
+        var resetTokens = await dbContext.AccountTokens
+            .Where(token => token.UserId == user.Id
+                && token.Purpose == AccountTokenPurpose.ResetPassword
+                && token.ConsumedAt == null)
+            .ToListAsync(cancellationToken);
+        foreach (var token in resetTokens)
+        {
+            token.ConsumedAt = now;
+        }
+
         dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
             user.Id,
             "password_changed",
@@ -120,6 +132,7 @@ internal sealed class UserAccountService(
             new { user_id = user.Id, reason = "password_changed" }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success();
     }
 

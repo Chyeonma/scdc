@@ -56,8 +56,13 @@ export function UserSettingsModal({
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await updateMe({ displayName, bio, timezone });
-      onUserUpdated?.({ ...currentUser, displayName, bio, timezone });
+      const updatedUser = await updateMe({
+        displayName,
+        bio,
+        locale: currentUser?.locale || 'vi-VN',
+        timezone,
+      });
+      onUserUpdated?.(updatedUser);
       notify?.('success', 'Đã cập nhật hồ sơ thành công.');
     } catch (err) {
       notify?.('error', err.message || 'Không thể cập nhật hồ sơ.');

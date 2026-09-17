@@ -183,6 +183,12 @@ Phát JWT access token
 `Modules:Identity:MaxFailedLoginAttempts`, account bị khóa tạm thời tới
 `locked_until` và API trả `429`. Đăng nhập thành công reset failed count.
 
+Login, thay đổi mật khẩu, cấp reset token và các thao tác thay đổi session lấy
+khóa `FOR NO KEY UPDATE` trên cùng bản ghi `identity.users` trong transaction,
+trước khi đọc credential/token/session. Vì vậy các lần đăng nhập sai đồng thời
+không mất lượt đếm; session từ login đồng thời cũng không bị bỏ sót khi thu hồi
+sau change/reset password. Khóa chỉ áp dụng cho tài khoản đang được xử lý.
+
 Response đăng nhập:
 
 ```json
@@ -241,6 +247,13 @@ Nếu Token A đã dùng nhưng xuất hiện lại, hệ thống xem đây là 
 
 Client phải thay refresh token cũ bằng token mới sau mỗi lần refresh.
 
+WebClient dùng [Web Locks](https://developer.mozilla.org/en-US/docs/Web/API/LockManager/request)
+để điều phối refresh giữa các tab và đọc lại session từ `localStorage` sau khi
+lấy khóa. Sự kiện `storage` đồng bộ token và logout; response refresh đến muộn
+không khôi phục session đã đăng xuất hoặc ghi đè lần đăng nhập mới.
+Web Locks cần secure context (HTTPS hoặc localhost). Khi không có Web Locks,
+client giữ session riêng trong bộ nhớ từng tab, nên tải lại trang cần đăng nhập lại.
+
 ## 9. Logout và session
 
 - `logout`: refresh token xác định session cần revoke; endpoint có tính
@@ -276,6 +289,7 @@ User phải gửi current password và new password. Thành công sẽ:
 - Cập nhật hash và tăng `password_version`.
 - Tạo security stamp mới.
 - Revoke toàn bộ session.
+- Vô hiệu hóa các reset token đã cấp và chưa sử dụng trong cùng transaction.
 - Ghi audit và outbox event.
 
 Client phải đăng nhập lại sau khi đổi mật khẩu.
@@ -380,3 +394,10 @@ Test dọn audit, outbox và user sau khi kết thúc. Chạy bằng:
 ```bash
 dotnet test SCDC.slnx --configuration Release
 ```
+
+`IdentityConcurrencyTests` kiểm tra login đồng thời với change/reset password
+theo cả hai thứ tự, lockout khi nhiều request sai đồng thời, reset token cũ sau
+khi đổi mật khẩu và reset token chỉ được dùng một lần khi có nhiều request.
+
+Test session frontend chạy bằng `npm test` trong `clients/WebClient`, sử dụng
+hai môi trường JavaScript độc lập để mô phỏng các tab dùng chung storage và khóa.

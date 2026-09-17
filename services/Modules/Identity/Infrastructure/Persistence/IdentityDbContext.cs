@@ -17,6 +17,23 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
+    public async Task LockUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("A user lock requires an active transaction.");
+        }
+
+        // Acquire this lock before reading credentials, tokens or sessions. All security
+        // mutations use the same order so their decisions see the previous committed state.
+        await Database.SqlQuery<Guid>($"""
+            SELECT id AS "Value"
+            FROM identity.users
+            WHERE id = {userId}
+            FOR NO KEY UPDATE
+            """).ToListAsync(cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureUser(modelBuilder);

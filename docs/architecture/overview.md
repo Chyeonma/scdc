@@ -1,495 +1,287 @@
-# Tổng quan và kiến trúc dự án SCDC
+# Tổng quan & Thiết kế Kiến trúc Hệ thống SCDC
 
-Tài liệu này mô tả mục tiêu, cách tổ chức source code, ranh giới module, thiết kế
-dữ liệu và luồng xử lý của SCDC. Nội dung phân biệt rõ phần **đã có** và phần
-**dự kiến triển khai**, để kiến trúc mục tiêu không bị nhầm với trạng thái hiện
-tại của ứng dụng.
+Tài liệu này mô tả chi tiết tầm nhìn sản phẩm, nguyên lý kiến trúc, ranh giới miền nghiệp vụ (Bounded Contexts), thiết kế dữ liệu, luồng xử lý và lộ trình chuyển đổi từ **Modular Monolith** sang **Microservices** của nền tảng **SCDC**.
+
+---
 
 ## 1. Tổng quan sản phẩm
 
-SCDC là nền tảng giao tiếp thời gian thực, hướng tới các chức năng chính:
+**SCDC** là một nền tảng giao tiếp thời gian thực (Real-time Communication Platform) đa nền tảng, lấy cảm hứng từ Discord và Slack, phục vụ nhu cầu trao đổi thông tin, xây dựng cộng đồng và làm việc nhóm.
 
-- Đăng ký, xác thực và quản lý tài khoản người dùng.
-- Tạo server, quản lý thành viên, channel, role và permission.
-- Trò chuyện trực tiếp, trò chuyện nhóm và trò chuyện trong channel.
-- Tin nhắn, attachment, reaction, mention và trạng thái đã đọc.
-- Realtime bằng SignalR.
-- Moderation, audit bảo mật và phát sự kiện tin cậy.
+### Các năng lực nghiệp vụ cốt lõi:
+- **Xác thực & Danh tính (Identity):** Đăng ký, xác thực email, đăng nhập bảo mật với JWT, quản lý phiên đăng nhập đa thiết bị, cơ chế xoay vòng Refresh Token chống chiếm đoạt phiên, tự động khóa tài khoản khi đăng nhập sai nhiều lần.
+- **Không gian Cộng đồng (Community):** Mô hình Server/Guild, phân loại kênh (Text Channel, Voice Channel, Category), hệ thống phân quyền ma trận Bitwise (Role Permissions) và cơ chế ghi đè quyền linh hoạt theo kênh (Channel Overrides).
+- **Hệ thống Tin nhắn (Messaging):** Nhắn tin trực tiếp (DM 1-1), trò chuyện nhóm (Group Chat) và trò chuyện trong kênh cộng đồng. Hỗ trợ đầy đủ tương tác: sửa/xóa tin nhắn, ghim tin nhắn (Pin), thả biểu cảm (Reaction), luồng thảo luận phụ (Thread).
+- **Truy xuất hiệu năng cao:** Phân trang lịch sử tin nhắn bằng con trỏ (**Cursor-based Pagination**) đảm bảo phản hồi tức thì với cơ sở dữ liệu hàng chục triệu bản ghi.
+- **Giao tiếp Thời gian thực (Real-time):** Truyền tải tin nhắn, chỉ báo đang gõ (typing), trạng thái online/offline (Presence) tức thì thông qua **ASP.NET Core SignalR** kết hợp **Redis Backplane**.
+- **Lưu trữ tệp phân tán:** Cơ chế tải lên trực tiếp thông qua **MinIO / S3 Presigned URL**, kết hợp worker nền tự động nén ảnh và sinh thumbnail.
+- **Thoại & Video nhóm:** Điều phối phòng thoại WebRTC thông qua **LiveKit SFU Server**.
+- **Bảo mật & Kiểm toán:** Ghi nhật ký bảo mật (Security Audit) bất biến (Append-only) và đảm bảo tính nhất quán dữ liệu bằng mẫu **Transactional Outbox**.
 
-Backend đang được xây mới theo kiến trúc **modular monolith**. Database
-PostgreSQL đã được thiết kế hoàn chỉnh trước để quan sát luồng dữ liệu; code
-nghiệp vụ sẽ được triển khai dần theo từng vertical slice.
+---
 
-## 2. Trạng thái hiện tại
+## 2. Chiến lược kiến trúc: "Monolith First"
 
-Phần đã có:
-
-- Solution .NET 10 gồm API host, BuildingBlocks, Contracts và ba module lõi.
-- Module registration cho Identity, Community và Messaging.
-- Health endpoint và Swagger UI trong môi trường Development.
-- Quy ước `Result<T>`, `ProblemDetails` và global exception handling.
-- Identity v1 persistence, JWT authentication và authorization middleware.
-- API register/verify/login/refresh/logout, profile, session và password lifecycle.
-- PostgreSQL schema, constraint, index, trigger, view và seed data.
-- React WebClient cơ bản, được phục vụ qua Nginx.
-- Dockerfile và Podman/Docker Compose cho API, WebClient và PostgreSQL.
-- Integration test cho response foundation, Swagger và Identity lifecycle trên PostgreSQL.
-
-Phần chưa có:
-
-- API server, membership, channel và permission.
-- API tin nhắn và SignalR Hub.
-- Worker xử lý outbox và các integration event.
-- MFA, external login và email delivery worker.
-
-Swagger hiện có endpoint Identity v1. Community và Messaging mới chỉ đăng ký
-module nên chưa có endpoint nghiệp vụ.
-
-## 3. Mục tiêu thiết kế
-
-Kiến trúc hướng tới các mục tiêu sau:
-
-1. Ranh giới nghiệp vụ rõ ràng giữa tài khoản, cộng đồng và chat.
-2. Một ứng dụng dễ chạy và debug trong giai đoạn phát triển.
-3. Module không phụ thuộc trực tiếp vào implementation của module khác.
-4. Luồng dữ liệu có transaction và constraint đáng tin cậy.
-5. API nhất quán, dễ quan sát và dễ kiểm thử.
-6. Có đường nâng cấp sang service độc lập nếu quy mô thực sự yêu cầu.
-
-Các nguyên tắc được ưu tiên:
-
-- Bắt đầu đơn giản với một deployable backend.
-- Tách theo business capability, không tách theo controller/service/repository ở
-  cấp toàn solution.
-- Chỉ tạo abstraction khi có ranh giới hoặc nhu cầu sử dụng thực tế.
-- Mỗi tính năng được hoàn thiện xuyên suốt thay vì tạo hàng loạt class rỗng.
-- Database constraint bảo vệ tính toàn vẹn dữ liệu, không chỉ dựa vào code.
-
-## 4. Sơ đồ hệ thống
-
-```mermaid
-flowchart LR
-    Browser[Trình duyệt]
-    Web[React WebClient\nNginx]
-    Api[SCDC.Api\nASP.NET Core]
-    Identity[Identity module]
-    Community[Community module]
-    Messaging[Messaging module]
-    Db[(PostgreSQL\nscdc_chat)]
-
-    Browser --> Web
-    Web -->|HTTP/JSON| Api
-    Browser -.->|SignalR trong tương lai| Api
-    Api --> Identity
-    Api --> Community
-    Api --> Messaging
-    Identity -->|identity schema| Db
-    Community -->|community schema| Db
-    Messaging -->|messaging schema| Db
-```
-
-Trong môi trường local, ba tiến trình chính được quản lý bởi
-[`compose.yaml`](../../compose.yaml):
-
-| Thành phần | Cổng host | Vai trò |
-|---|---:|---|
-| WebClient | `3000` | Giao diện React được Nginx phục vụ |
-| SCDC.Api | `5026` | HTTP API, Swagger và sau này là SignalR |
-| PostgreSQL | `5432` | Database `scdc_chat` |
-
-## 5. Cấu trúc repository
+Dự án áp dụng triệt để nguyên lý kiến trúc kinh điển **Monolith First** do *Martin Fowler* khởi xướng:
 
 ```text
-SCDC/
-├── clients/
-│   └── WebClient/                 React, Vite, Nginx
-├── database/
-│   └── postgres/                  schema.sql, seed.sql, tài liệu database
-├── docs/
-│   ├── api/                       Quy ước HTTP/API
-│   └── architecture/              Tài liệu kiến trúc
-├── services/
-│   ├── SCDC.Api/                  Executable và HTTP adapter
-│   ├── SCDC.BuildingBlocks/       Primitive dùng chung
-│   ├── SCDC.Contracts/            Contract giao tiếp giữa module
-│   └── Modules/
-│       ├── Identity/
-│       ├── Community/
-│       └── Messaging/
-├── tests/
-│   └── SCDC.Api.Tests/            Unit và HTTP integration test
-├── compose.yaml
-└── SCDC.slnx
+GIAI ĐOẠN 1: MODULAR MONOLITH                       GIAI ĐOẠN 2: DISTRIBUTED MICROSERVICES
+(Phát triển nhanh - Ranh giới chặt chẽ)             (Bóc tách độc lập - Scaleout ngang)
+
+       ┌─────────────────────────┐               ┌──────────────────────────────────────┐
+       │        SCDC.Api         │               │      API Gateway (YARP / Reverse)    │
+       │ ┌──────────┬──────────┐ │               └───┬──────────────┬────────────────┬──┘
+       │ │ Identity │Community │ │                   │              │                │
+       │ ├──────────┴──────────┤ │      ───►         ▼              ▼                ▼
+       │ │      Messaging      │ │           ┌──────────────┐┌──────────────┐┌──────────────┐
+       │ └─────────────────────┘ │           │ Identity.Api ││Community.Api ││Messaging.Api │
+       └─────────────────────────┘           └──────────────┘└──────────────┘└──────────────┘
 ```
 
-## 6. Kiến trúc backend
+### Tại sao chọn Monolith First?
+1. **Kiểm soát ranh giới trước khi phân tán:** Xây dựng hệ thống phân tán ngay từ đầu khi chưa hiểu rõ ràng ranh giới nghiệp vụ rất dễ tạo ra "Monolith phân tán" (Distributed Monolith) — biến thể kiến trúc tồi tệ nhất, gánh toàn bộ nhược điểm của cả hai mô hình.
+2. **Tối ưu tốc độ phát triển:** Ở giai đoạn đầu, các thành viên phát triển nghiệp vụ trong cùng một solution, debug in-memory trực tiếp, không bị cản trở bởi lỗi mạng, độ trễ RPC, hay lỗi cấu hình hạ tầng.
+3. **Sẵn sàng bóc tách 100%:** Mã nguồn được tổ chức thành các Class Library độc lập, database được phân chia schema riêng biệt, giao tiếp chéo chỉ đi qua interface tại `SCDC.Contracts`. Việc bóc tách sang Microservices độc lập chỉ là bài toán cấu hình host và đổi tầng vận chuyển (Transport Layer) mà không phải sửa logic nghiệp vụ.
 
-Backend là một modular monolith: ba module nghiệp vụ chạy trong cùng process và
-được build thành cùng một API image, nhưng vẫn có ranh giới source code và data
-ownership riêng.
+---
+
+## 3. Ranh giới miền nghiệp vụ (Bounded Contexts)
+
+Hệ thống được phân chia thành các Bounded Context độc lập, mỗi context sở hữu toàn bộ logic nghiệp vụ và dữ liệu của riêng mình:
+
+```mermaid
+classDiagram
+    class IdentityContext {
+        +User
+        +UserProfile
+        +UserEmail
+        +AuthSession
+        +RefreshToken
+        +AccountToken
+    }
+
+    class CommunityContext {
+        +Server
+        +ServerMember
+        +Channel
+        +Role
+        +Permission
+        +ChannelOverride
+    }
+
+    class MessagingContext {
+        +Space
+        +Message
+        +Attachment
+        +Reaction
+        +PinnedMessage
+        +SignalRConnection
+    }
+
+    class FileContext {
+        +PresignedUrl
+        +ThumbnailWorker
+        +MinIOBucket
+    }
+
+    IdentityContext ..> CommunityContext : Cung cấp User Identity
+    IdentityContext ..> MessagingContext : Cung cấp User Identity
+    CommunityContext ..> MessagingContext : Kiểm tra quyền qua IChannelAccessChecker
+    FileContext ..> MessagingContext : Cung cấp Attachment Metadata
+```
+
+### 3.1. Identity Context (Schema: `identity`)
+- **Trách nhiệm:** Vòng đời tài khoản người dùng, chứng thực danh tính, phiên làm việc (Session) và bảo mật.
+- **Thực thể chính:** `User`, `UserProfile`, `UserEmail`, `PasswordCredential`, `UserSecurityState`, `AuthSession`, `RefreshToken`, `AccountToken`.
+- **Hợp đồng xuất bản:** `IUserDirectory` (cho phép các module khác tra cứu thông tin cơ bản của User theo ID).
+- **Trạng thái:** Đã hoàn thành phiên bản v1 (đầy đủ JWT, Refresh rotation chống reuse, Lockout, Password recovery).
+
+### 3.2. Community Context (Schema: `community`)
+- **Trách nhiệm:** Quản lý không gian máy chủ, cấu trúc phòng ban, thành viên và ủy quyền (Authorization).
+- **Thực thể chính:** `Server`, `ServerMember`, `Channel`, `Role`, `Permission`, `RolePermission`, `MemberRole`, `ChannelRoleOverride`, `ChannelUserOverride`, `Invite`, `Ban`.
+- **Hợp đồng xuất bản:** `IChannelAccessChecker` (kiểm tra quyền của user đối với một channel cụ thể dựa trên ma trận Role và Overrides).
+
+### 3.3. Messaging Context (Schema: `messaging`)
+- **Trách nhiệm:** Quản lý nội dung hội thoại, lịch sử tin nhắn và phân phối sự kiện thời gian thực.
+- **Thực thể chính:** `Space` (DM, Group, Channel Space), `Message`, `MessageEdit`, `Attachment`, `Reaction`, `Mention`, `Receipt`, `PinnedMessage`, `UserBlock`.
+- **Hợp đồng xuất bản:** `IRealtimeAccessRevoker` (yêu cầu ngắt kết nối realtime của user khi bị ban/kick khỏi server).
+
+### 3.4. File & Media Context (MinIO / S3)
+- **Trách nhiệm:** Tiếp nhận tệp tin, hình ảnh, tài liệu và xử lý hậu kỳ (nén ảnh, sinh thumbnail) mà không gây tải cho API chính.
+- **Cơ chế:** Sử dụng mô hình **Presigned URL** trực tiếp với kho lưu trữ đối tượng MinIO.
+
+### 3.5. Hạ tầng chéo (Cross-cutting Concerns)
+- **`audit.security_events`:** Nhật ký bảo mật bất biến (Append-only), ghi vết các hành vi nhạy cảm (đổi pass, login thất bại, phát hiện token reuse).
+- **`integration.outbox_events`:** Transactional Outbox ghi nhận các sự kiện cần phát đi bất đồng bộ (gửi email, push notification).
+- **`integration.inbox_events`:** Idempotent Consumer đảm bảo không xử lý lặp sự kiện khi tích hợp message broker.
+
+---
+
+## 4. Kiến trúc Microservices mục tiêu
+
+Sau khi các module hoàn tất logic nghiệp vụ, hệ thống được cấu hình thành cụm Microservices độc lập:
 
 ```mermaid
 flowchart TD
-    Api[SCDC.Api]
-    Identity[SCDC.Identity]
-    Community[SCDC.Community]
-    Messaging[SCDC.Messaging]
-    Contracts[SCDC.Contracts]
-    BuildingBlocks[SCDC.BuildingBlocks]
+    Client[WebClient / React Nginx]
+    Gateway[API Gateway / YARP\nPort 5000]
 
-    Api --> Identity
-    Api --> Community
-    Api --> Messaging
-    Api --> Contracts
-    Api --> BuildingBlocks
-    Identity --> Contracts
-    Identity --> BuildingBlocks
-    Community --> Contracts
-    Community --> BuildingBlocks
-    Messaging --> Contracts
-    Messaging --> BuildingBlocks
+    subgraph Services[Cụm Microservices]
+        IdentitySvc[SCDC.Identity.Api\nPort 5001]
+        CommunitySvc[SCDC.Community.Api\nPort 5002]
+        MessagingSvc[SCDC.Messaging.Api\nPort 5003]
+        FileSvc[SCDC.File.Api\nPort 5004]
+        WorkerSvc[SCDC.Workers\nBackground Process]
+    end
+
+    subgraph DataStore[Hạ tầng Lưu trữ & Message Bus]
+        Postgres[(PostgreSQL 18)]
+        Redis[(Redis 7)]
+        MinIO[(MinIO Object Storage)]
+    end
+
+    Client -->|HTTP / HTTPS| Gateway
+    Client -->|WSS Realtime| Gateway
+    Gateway -->|Proxy: /api/v1/auth, /api/v1/users| IdentitySvc
+    Gateway -->|Proxy: /api/v1/servers, /api/v1/channels| CommunitySvc
+    Gateway -->|Proxy: /api/v1/messages, /hub/chat| MessagingSvc
+    Gateway -->|Proxy: /api/v1/files| FileSvc
+
+    IdentitySvc -->|identity schema| Postgres
+    CommunitySvc -->|community schema| Postgres
+    MessagingSvc -->|messaging schema| Postgres
+    MessagingSvc <-->|SignalR Backplane| Redis
+    FileSvc --> MinIO
+    WorkerSvc -->|Outbox Poll / AMQP| Postgres
 ```
 
-Quy tắc dependency:
+### 4.1. API Gateway (YARP - Yet Another Reverse Proxy)
+- **Vị trí:** Đóng vai trò cổng đón traffic Internet duy nhất tại cổng `5000`.
+- **Trách nhiệm:**
+  - Định tuyến (Routing) đường dẫn request tới các Microservice tương ứng.
+  - Quản lý CORS tập trung, tránh lỗi cross-origin giữa các service nội bộ.
+  - Chuyển tiếp kết nối WebSocket (`Upgrade: websocket`) tới Messaging Service an toàn.
+  - Giới hạn tốc độ truy cập (Rate Limiting) bảo vệ các service phía sau.
 
-- `SCDC.Api` được phép tham chiếu tất cả module để lắp ráp ứng dụng.
-- Module chỉ tham chiếu `SCDC.BuildingBlocks` và `SCDC.Contracts`.
-- Identity, Community và Messaging không tham chiếu trực tiếp lẫn nhau.
-- Contracts không tham chiếu implementation của bất kỳ module nào.
-- BuildingBlocks không chứa business rule riêng của một module.
+### 4.2. Giao tiếp giữa các Dịch vụ (Inter-service Communication)
+- **Đồng bộ (Synchronous):** Khi Messaging Service cần kiểm tra quyền truy cập channel của một user, nó gọi sang Community Service.
+  - Trong Modular Monolith: Gọi in-memory qua interface `IChannelAccessChecker`.
+  - Trong Microservices: Cài đặt `ChannelAccessCheckerHttpClient : IChannelAccessChecker` gọi qua HTTP nội bộ `http://community-service:5002`. Code nghiệp vụ của Messaging không hề thay đổi.
+- **Bất đồng bộ (Asynchronous):** Sự kiện cần xử lý ngầm (gửi email xác thực, tạo thumbnail) được ghi vào `integration.outbox_events` trong cùng một Database Transaction, sau đó Worker nền sẽ đọc và xử lý, đảm bảo tính nhất quán cuối cùng (Eventual Consistency).
 
-### 6.1. SCDC.Api
+---
 
-[`SCDC.Api`](../../services/SCDC.Api) là executable duy nhất và là composition
-root của backend.
+## 5. Kiến trúc Real-time & SignalR
 
-Trách nhiệm:
-
-- Khởi tạo ASP.NET Core và dependency injection.
-- Nạp Identity, Community và Messaging.
-- Cấu hình controller, CORS, Swagger và middleware.
-- Chuyển `Result<T>` thành HTTP response.
-- Chuẩn hóa validation và `ProblemDetails`.
-- Bắt exception ngoài dự kiến.
-- Chứa HTTP adapter/controller mỏng cho các use case.
-
-API không nên chứa business rule hoặc truy vấn SQL. Controller chỉ nhận request,
-gọi application handler và ánh xạ kết quả sang HTTP.
-
-### 6.2. SCDC.BuildingBlocks
-
-[`SCDC.BuildingBlocks`](../../services/SCDC.BuildingBlocks) chứa primitive kỹ
-thuật nhỏ, ổn định và thực sự dùng chung.
-
-Hiện có:
-
-- `IModuleDescriptor` để health endpoint quan sát module đã nạp.
-- `Result`, `Result<T>`, `Error`, `ValidationError` và `ErrorType`.
-
-Có thể bổ sung sau khi phát sinh nhu cầu thực tế:
-
-- Base entity hoặc aggregate root.
-- Domain event abstraction.
-- Clock/current-user abstraction.
-- Transaction abstraction.
-
-Không đưa entity như `User`, `Server`, `Channel` hoặc `Message` vào project này.
-
-### 6.3. SCDC.Contracts
-
-[`SCDC.Contracts`](../../services/SCDC.Contracts) là bề mặt giao tiếp ổn định
-giữa các module.
-
-Contract đã chuẩn bị:
-
-| Contract | Module cung cấp dự kiến | Mục đích |
-|---|---|---|
-| `IUserDirectory` | Identity | Tra cứu user summary theo ID/username |
-| `IChannelAccessChecker` | Community | Kiểm tra quyền đọc/gửi trong channel |
-| `IRealtimeAccessRevoker` | Messaging | Thu hồi quyền truy cập realtime |
-
-Contract chỉ chứa interface và DTO tối thiểu. Không đưa EF entity, DbContext,
-HTTP type hoặc implementation vào đây.
-
-### 6.4. Identity module
-
-Identity sở hữu vòng đời tài khoản:
-
-- User, profile và email.
-- Password credential và external identity.
-- Xác thực email, reset password và account token.
-- Session, refresh-token rotation và logout.
-- MFA và security state.
-
-Identity sở hữu schema `identity` và cung cấp `IUserDirectory` cho các module
-khác.
-
-Identity v1 đã có register, verify email, login, refresh rotation/reuse
-detection, logout/session management, current user/profile và password recovery.
-MFA và external login thuộc Identity v2.
-
-### 6.5. Community module
-
-Community sở hữu cấu trúc cộng đồng và authorization trong server:
-
-- Server và member.
-- Invite và ban.
-- Channel metadata.
-- Role, permission và member role.
-- Permission override theo role hoặc user.
-
-Community sở hữu schema `community` và dự kiến cung cấp
-`IChannelAccessChecker`.
-
-### 6.6. Messaging module
-
-Messaging sở hữu nội dung và trạng thái trò chuyện:
-
-- Chat space, direct conversation và group conversation.
-- Membership/state riêng của conversation.
-- Message, edit, attachment, reaction và mention.
-- Receipt, pin, block và lịch sử tin nhắn.
-- SignalR connection và realtime delivery trong tương lai.
-
-Messaging sở hữu schema `messaging` và dự kiến cung cấp
-`IRealtimeAccessRevoker`.
-
-## 7. Cấu trúc bên trong một module
-
-Thư mục chỉ được tạo khi có source thực tế. Cấu trúc mục tiêu của một module:
-
-```text
-Modules/Identity/
-├── Domain/
-│   └── Users/                     Entity, value object, domain rule
-├── Application/
-│   └── Authentication/
-│       └── Register/              Command, handler, validation, DTO
-├── Infrastructure/
-│   ├── Persistence/               DbContext mapping, repository
-│   └── Security/                  Password hashing, token implementation
-├── IdentityModule.cs              Dependency registration
-└── SCDC.Identity.csproj
-```
-
-HTTP controller nằm trong `SCDC.Api`, được tổ chức theo module tương ứng. Cách
-này giữ module nghiệp vụ không phụ thuộc vào ASP.NET presentation và phù hợp với
-hướng dependency hiện tại.
-
-Ví dụ một vertical slice hoàn chỉnh:
-
-```text
-API contract
-→ request validation
-→ application handler
-→ domain rule
-→ persistence
-→ Result<T>
-→ HTTP response
-→ integration test
-```
-
-Không tạo toàn bộ entity, repository hoặc CRUD trước. Mỗi slice phải chạy được
-từ request tới database và có test trước khi chuyển sang slice tiếp theo.
-
-## 8. Luồng xử lý request
+Hệ thống sử dụng **ASP.NET Core SignalR** làm giải pháp giao tiếp hai chiều thời gian thực:
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant A as SCDC.Api Controller
-    participant H as Application Handler
-    participant D as Domain
-    participant P as Persistence
-    participant DB as PostgreSQL
+    autonumber
+    actor Alice as Client Alice
+    participant Hub as SignalR ChatHub
+    participant MsgSvc as Messaging Service
+    participant Redis as Redis Backplane
+    actor Bob as Client Bob
 
-    C->>A: HTTP request
-    A->>A: Model validation
-    A->>H: Command/Query
-    H->>D: Kiểm tra domain rule
-    H->>P: Đọc/ghi dữ liệu
-    P->>DB: SQL trong schema sở hữu
-    DB-->>P: Data/result
-    P-->>H: Entity/DTO
-    H-->>A: Result<T>
-    A-->>C: DTO hoặc ProblemDetails
+    Alice->>Hub: Kết nối WSS kèm JWT Bearer
+    Hub->>Hub: Xác thực Token & Ghi nhận ConnectionId
+    Alice->>Hub: JoinChannel(channelId)
+    Hub->>Hub: Thêm Alice vào Group(channelId)
+
+    Alice->>MsgSvc: POST /api/v1/messages (Nội dung chat)
+    MsgSvc->>MsgSvc: Lưu Database PostgreSQL
+    MsgSvc->>Hub: IHubContext.Clients.Group(channelId).SendAsync("ReceiveMessage", dto)
+    Hub->>Redis: Publish event tới Redis Backplane
+    Redis->>Hub: Broadcast tới tất cả instance SignalR
+    Hub-->>Bob: Push tin nhắn tức thời xuống màn hình Bob
 ```
 
-Nguyên tắc:
+### Các ưu điểm vượt trội:
+1. **Quản lý nhóm tự động (Group Management):** SignalR cung cấp sẵn khái niệm `Group`, mỗi `channel_id` là một group riêng. Tin nhắn chỉ gửi tới những client đang mở kênh đó.
+2. **Khả năng Scale-out với Redis Backplane:** Khi hệ thống có nhiều instance `Messaging Service`, Redis Pub/Sub đóng vai trò cầu nối chuyển tiếp tin nhắn giữa các máy chủ để client kết nối ở server nào cũng nhận được tin nhắn.
+3. **Quản lý kết nối & Heartbeat:** Tự động gửi ping định kỳ để phát hiện ngắt kết nối và hỗ trợ client tự động kết nối lại (Auto-reconnect).
 
-- Controller không quyết định business rule.
-- Handler không biết HTTP status code.
-- Domain không biết database hoặc framework.
-- Infrastructure triển khai persistence và external service.
-- API host là nơi duy nhất ánh xạ lỗi nghiệp vụ sang HTTP.
+---
 
-Chi tiết response và error handling nằm tại
-[`docs/api/error-handling.md`](../api/error-handling.md).
+## 6. Kiến trúc Lưu trữ Tệp (Presigned URL Pattern)
 
-## 9. Kiến trúc database
+Để tránh tình trạng server backend bị nghẽn băng thông và I/O khi người dùng tải lên hình ảnh hoặc tài liệu dung lượng lớn, SCDC áp dụng mô hình **MinIO Presigned URL**:
 
-SCDC sử dụng một PostgreSQL database `scdc_chat`, chia schema theo domain.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Trình duyệt (React)
+    participant Api as File Service
+    participant MinIO as MinIO Object Storage
+    participant Msg as Messaging Service
 
-| Schema | Owner/phạm vi |
-|---|---|
-| `identity` | Identity: account, credential, session, token, MFA |
-| `community` | Community: server, member, channel, role, permission |
-| `messaging` | Messaging: conversation, message và read state |
-| `moderation` | Report và moderation action; module sẽ bổ sung sau |
-| `audit` | Security event append-only |
-| `integration` | Outbox và inbox idempotency |
-| `common` | Function/trigger dùng chung ở mức database |
+    Client->>Api: POST /api/v1/files/upload-url (fileName, fileSize, mimeType)
+    Api->>Api: Validate kích thước (<25MB) và định dạng cho phép
+    Api->>MinIO: Ký URL tải lên tạm thời (Presigned PUT URL, hiệu lực 15 phút)
+    Api-->>Client: Trả về { uploadUrl, fileUrl, fileId }
+    
+    Client->>MinIO: PUT [uploadUrl] (Đẩy trực tiếp luồng file lên MinIO)
+    MinIO-->>Client: 200 OK (Upload thành công)
 
-[`database/postgres/schema.sql`](../../database/postgres/schema.sql) là source
-of truth hiện tại. Backend không tự chạy EF migration. Script tạo schema chỉ tự
-động chạy khi PostgreSQL khởi tạo data volume mới.
-
-### 9.1. Schema ownership
-
-- Module được phép đọc/ghi trực tiếp schema mà nó sở hữu.
-- Dữ liệu của module khác được truy cập qua contract khi đi qua application
-  code.
-- View phục vụ quan sát và vận hành, không trở thành dependency nghiệp vụ ngầm.
-- Audit và integration là hạ tầng chéo, chỉ được ghi theo quy ước riêng.
-
-Database hiện có cross-schema foreign key để bảo vệ tính toàn vẹn dữ liệu. Đây
-là lựa chọn có chủ ý cho modular monolith: transaction và constraint mạnh hơn,
-đổi lại việc tách thành database/service độc lập sau này sẽ cần migration dữ
-liệu và thay foreign key bằng contract/event.
-
-### 9.2. Giao tiếp đồng bộ và bất đồng bộ
-
-Giao tiếp đồng bộ trong cùng process đi qua interface tại `SCDC.Contracts`.
-Ví dụ Messaging tra cứu user thông qua `IUserDirectory` thay vì tham chiếu
-Identity repository.
-
-Các tác vụ không cần hoàn thành trong request sẽ dùng transactional outbox:
-
-```text
-Business transaction
-    ├── cập nhật bảng nghiệp vụ
-    └── ghi integration.outbox_events
-             ↓
-        background worker
-             ↓
-        integration handler / realtime delivery
+    Client->>Msg: POST /api/v1/messages (Kèm fileId / fileUrl vừa upload)
+    Msg->>Msg: Lưu tin nhắn kèm Attachment vào CSDL
 ```
 
-`integration.inbox_events` được dùng để chống xử lý event lặp. Worker và event
-handler chưa được triển khai ở trạng thái hiện tại.
+---
 
-## 10. API và xử lý lỗi
+## 7. Thiết kế Cơ sở dữ liệu (PostgreSQL 18)
 
-Response thành công trả DTO đúng kiểu:
+CSDL `scdc_chat` tuân thủ nguyên tắc **Database Schema-per-Service**:
 
-- `200` khi trả dữ liệu.
-- `201` khi tạo resource.
-- `204` khi không cần body.
+| Schema | Phạm vi sở hữu | Bảng tiêu biểu |
+|---|---|---|
+| `identity` | Identity Service | `users`, `user_profiles`, `user_emails`, `password_credentials`, `user_security_states`, `auth_sessions`, `refresh_tokens`, `account_tokens` |
+| `community` | Community Service | `servers`, `server_members`, `channels`, `roles`, `permissions`, `role_permissions`, `member_roles`, `channel_role_overrides`, `channel_user_overrides`, `invites`, `bans` |
+| `messaging` | Messaging Service | `spaces`, `direct_conversations`, `group_conversations`, `messages`, `message_edits`, `attachments`, `reactions`, `mentions`, `receipts`, `pinned_messages`, `user_blocks` |
+| `moderation` | Moderation Service | `message_reports`, `actions` |
+| `audit` | Toàn hệ thống | `security_events` (Append-only audit log) |
+| `integration` | Hạ tầng tích hợp | `outbox_events` (Transactional Outbox), `inbox_events` (Idempotent Consumer) |
+| `common` | Dùng chung | Các trigger cập nhật `updated_at`, hàm tiện ích CSDL |
 
-Response lỗi sử dụng `application/problem+json`, có `errorCode` ổn định và
-`traceId`. Application trả `Result<T>` và không phụ thuộc vào HTTP. Exception
-ngoài dự kiến được xử lý tập trung, ghi log và trả `500` không chứa thông tin
-nhạy cảm.
+File [database/postgres/schema.sql](../../database/postgres/schema.sql) là **Single Source of Truth** của toàn bộ CSDL.
 
-Controller nghiệp vụ sẽ kế thừa `ApiControllerBase` để dùng cùng response
-convention trong runtime và Swagger.
+---
 
-## 11. Security boundary
+## 8. Quy chuẩn API & Xử lý lỗi
 
-Security được đặt chủ yếu trong Identity nhưng authorization cần sự phối hợp:
+Hệ thống áp dụng chuẩn công nghiệp nghiêm ngặt cho toàn bộ giao tiếp HTTP:
+1. **Result Pattern:** Tầng Application trả về kiểu `Result` hoặc `Result<T>` thay vì ném ngoại lệ (`throw Exception`) đối với các lỗi nghiệp vụ dự kiến (sai mật khẩu, không tìm thấy tài nguyên, trùng email).
+2. **RFC 7807 ProblemDetails:** Toàn bộ response lỗi trả về định dạng `application/problem+json` với:
+   - `errorCode`: Mã lỗi ổn định dạng `{Module}.{ErrorName}` (ví dụ: `Identity.InvalidCredentials`).
+   - `traceId`: Mã định danh đối soát log backend.
+   - `errors`: Danh sách chi tiết lỗi validation theo từng trường.
+3. **Bảo mật phản hồi lỗi:** Tuyệt đối không trả về stack trace, SQL query hay connection string cho client. Lỗi bất thường `500` được chặn và chuẩn hóa bởi `GlobalExceptionHandler`.
 
-- Identity xác định user/session hợp lệ.
-- Community xác định quyền trong server/channel.
-- Messaging chỉ gửi hoặc đọc message sau khi quyền đã được xác nhận.
-- Khi session, membership hoặc permission bị thu hồi, realtime access cũng phải
-  được thu hồi.
+---
 
-Password và token chỉ lưu dạng hash phù hợp; dữ liệu mẫu trong `seed.sql` chỉ để
-quan sát quan hệ và không dùng để đăng nhập. Secret không được ghi vào log hoặc
-trả trong `ProblemDetails`.
+## 9. Chiến lược Kiểm thử & Đảm bảo chất lượng
 
-Chi tiết authentication, token transport và authorization policy sẽ được chốt
-khi triển khai vertical slice Identity; tài liệu này không giả định những phần
-chưa được code.
+| Cấp độ | Mục tiêu kiểm thử | Công cụ |
+|---|---|---|
+| **Unit Test** | Kiểm tra logic nghiệp vụ, tính toán ma trận phân quyền Bitwise, xử lý `Result<T>`. | xUnit, FluentAssertions |
+| **Integration Test** | Kiểm tra toàn bộ vòng đời tài khoản Identity v1 từ HTTP Endpoint xuống PostgreSQL thật. | `Microsoft.AspNetCore.Mvc.Testing`, Npgsql |
+| **Load Testing (Stress Test)** | Giả lập 1.000 - 5.000 người dùng đồng thời gửi tin nhắn để đo đạc Throughput và độ trễ P99. | k6, Grafana |
+| **Contract Verification** | Kiểm tra tương thích DTO và Interface giữa các module. | .NET Roslyn Analyzers |
 
-## 12. Kiểm thử
+---
 
-Chiến lược kiểm thử dự kiến:
+## 10. Triển khai & Vận hành (DevOps)
 
-| Loại test | Phạm vi |
-|---|---|
-| Unit test | Domain rule, value object, `Result` và handler độc lập |
-| Application test | Use case với dependency được thay thế có kiểm soát |
-| API integration test | Routing, model binding, status, JSON và middleware |
-| Database integration test | Mapping, constraint, transaction và query thật |
-| Architecture test | Ngăn module tham chiếu trực tiếp lẫn nhau |
+### 10.1. Môi trường Local Development
+Được quản lý thông qua [compose.yaml](../../compose.yaml) với cấu hình đồng bộ:
+- `postgres`: PostgreSQL 18-alpine, cấu hình sẵn healthcheck và volume dữ liệu.
+- `chat-service`: API Host build đa tầng (Multi-stage build) trên nền .NET 10.
+- `web-client`: Ứng dụng React build tĩnh và phục vụ qua máy chủ Nginx.
 
-Bộ test hiện có tại [`tests/SCDC.Api.Tests`](../../tests/SCDC.Api.Tests) kiểm tra
-response foundation, Swagger và toàn bộ Identity v1 lifecycle trên PostgreSQL.
-
-## 13. Deployment và cấu hình
-
-Một backend image chứa toàn bộ ba module. Đây là một deployment unit, không phải
-ba microservice.
-
-```text
-scdc-web-client     React/Nginx
-scdc-chat-service   SCDC.Api + các module
-scdc-postgres       PostgreSQL
-```
-
-Cấu hình thay đổi theo môi trường được truyền qua `appsettings` và environment
-variable. Connection string trong Compose dành cho local development; môi
-trường production phải sử dụng secret management thay vì commit credential.
-
-Swagger chỉ được bật khi `ASPNETCORE_ENVIRONMENT=Development`. Health endpoint
-có thể dùng để kiểm tra API host đã nạp đủ module.
-
-## 14. Vì sao chọn modular monolith
-
-Ưu điểm ở giai đoạn hiện tại:
-
-- Một lệnh build và một backend container.
-- Debug luồng xuyên module đơn giản.
-- Transaction PostgreSQL trực tiếp và nhất quán.
-- Không cần message broker hoặc distributed tracing ngay từ đầu.
-- Ranh giới module vẫn rõ để kiểm soát độ phức tạp.
-
-Trade-off:
-
-- Tất cả module scale và deploy cùng nhau.
-- Bug hoặc tải cao ở một module có thể ảnh hưởng process chung.
-- Shared database và cross-schema foreign key làm việc tách service tốn công.
-
-Chỉ cân nhắc tách service khi có bằng chứng vận hành cụ thể như nhu cầu scale độc
-lập, ownership theo team, isolation hoặc deployment cadence khác nhau. Không tách
-chỉ vì số lượng bảng hoặc class tăng.
-
-## 15. Thứ tự triển khai tiếp theo
-
-```text
-1. Email delivery/outbox worker và hardening Identity
-2. Community server/membership/channel
-3. Messaging send/history
-4. SignalR delivery
-5. Moderation, audit consumer và hardening
-```
-
-Mỗi bước phải bao gồm contract, rule, handler, persistence, endpoint, Swagger và
-test. Identity v1 đã hoàn tất luồng backend trong môi trường Development; bước
-tiếp theo là email delivery hoặc bắt đầu Community tùy ưu tiên sản phẩm.
-
-## 16. Quy tắc khi mở rộng dự án
-
-Trước khi merge một tính năng mới, kiểm tra:
-
-- Tính năng đã được đặt đúng module chưa?
-- Module có tham chiếu trực tiếp module khác không?
-- Business rule có bị đặt trong controller hoặc repository không?
-- Truy cập dữ liệu có tuân theo schema ownership không?
-- Handler có trả `Result<T>` cho lỗi nghiệp vụ dự kiến không?
-- Response lỗi có đúng `ProblemDetails` và error code convention không?
-- Swagger có mô tả đủ success/error response không?
-- Transaction, idempotency và concurrency đã được cân nhắc chưa?
-- Có test ở mức phù hợp với rủi ro của thay đổi không?
-- Tài liệu kiến trúc hoặc API có cần cập nhật không?
+### 10.2. Lộ trình Mở rộng Cloud-Native (Kubernetes)
+Hệ thống sẵn sàng đóng gói thành các manifest Kubernetes:
+- **Deployments & Pods:** Mỗi Microservice chạy trong một Deployment riêng, hỗ trợ cấu hình Replicas và Horizontal Pod Autoscaler (HPA).
+- **ConfigMaps & Secrets:** Tách biệt cấu hình môi trường và chuỗi kết nối nhạy cảm.
+- **Ingress-NGINX:** Đóng vai trò Ingress Controller điều hướng traffic bên ngoài vào cụm Pods.
+- **CI/CD Pipeline:** Tự động hóa kiểm thử và đóng gói Docker image qua GitHub Actions mỗi khi có Pull Request được merge vào nhánh `main`.
