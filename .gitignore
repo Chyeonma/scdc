@@ -54,3 +54,4 @@ Thumbs.db
 compose.override.yaml
 docker-compose.override.yml
 .docker-data/
+docs/
