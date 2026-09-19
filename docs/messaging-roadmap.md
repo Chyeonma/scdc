@@ -110,11 +110,13 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P1-T01 — Tạo hoặc lấy DM [BE, DB]
 
-- [ ] **P1-T01.1** Thêm domain/application/persistence tối thiểu cho `spaces`, `direct_conversations`, `space_members`, `space_user_states` khi slice cần.
-- [ ] **P1-T01.2** Tra cứu người nhận qua `IUserDirectory`; kiểm tra tồn tại và rule P0; lấy người gửi từ identity đã xác thực.
-- [ ] **P1-T01.3** Chuẩn hóa cặp UUID theo thứ tự tương thích PostgreSQL và unique constraint `(user_low_id, user_high_id)`.
-- [ ] **P1-T01.4** Tạo space, direct conversation và hai membership trong một transaction; xử lý hai request đồng thời bằng trả cùng DM, không để space mồ côi.
-- [ ] **P1-T01.5** Mở endpoint tạo/lấy DM và truy vấn chi tiết có kiểm tra thành viên.
+Đầu ra ngày 19/09/2026: vertical slice DM với `POST /api/v1/conversations/direct`, `GET /api/v1/spaces/{spaceId}`, persistence Messaging và integration test A/B/C. Runtime test chờ PostgreSQL test container theo P0-T03.
+
+- [x] **P1-T01.1** Thêm domain/application/persistence tối thiểu cho `spaces`, `direct_conversations`, `space_members`, `space_user_states` khi slice cần.
+- [x] **P1-T01.2** Tra cứu người nhận qua `IUserDirectory`; kiểm tra tồn tại và rule P0; lấy người gửi từ identity đã xác thực.
+- [x] **P1-T01.3** Chuẩn hóa cặp UUID theo thứ tự tương thích PostgreSQL và unique constraint `(user_low_id, user_high_id)`.
+- [x] **P1-T01.4** Tạo space, direct conversation và hai membership trong một transaction; xử lý hai request đồng thời bằng trả cùng DM, không để space mồ côi.
+- [x] **P1-T01.5** Mở endpoint tạo/lấy DM và truy vấn chi tiết có kiểm tra thành viên.
 
 **Nghiệm thu:** A mở DM với B và B mở với A nhận cùng `spaceId`; C không đọc được; không tạo DM với chính mình.
 
