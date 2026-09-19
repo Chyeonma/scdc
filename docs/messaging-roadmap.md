@@ -98,9 +98,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P0-T03 — Điều kiện chạy và dữ liệu kiểm thử [DB, QA]
 
-- [ ] **P0-T03.1** Chuẩn bị tài khoản thật qua Identity và fixture database riêng cho test chat; seed password/token hiện chỉ để minh họa.
-- [ ] **P0-T03.2** Chốt cách cập nhật SQL cho database đã có dữ liệu. Không chạy lại `schema.sql` để nâng cấp vì script có `DROP SCHEMA`.
-- [ ] **P0-T03.3** Chuẩn bị tình huống test hai người dùng và user thứ ba không có quyền; thêm người thứ ba vào nhóm ở P4.
+Đầu ra ngày 19/09/2026: [Fixture Messaging v1](messaging/testing-fixtures.md), `appsettings.Testing.json` và `compose.test.yaml`. Hoàn tất điều kiện test riêng và thiết kế actor/migration; runtime test Messaging bắt đầu từ P1/P2. PR nối tiếp P0-T02 khi dependency chưa merge.
+
+- [x] **P0-T03.1** Chuẩn bị tài khoản thật qua Identity và fixture database riêng cho test chat; seed password/token hiện chỉ để minh họa.
+- [x] **P0-T03.2** Chốt cách cập nhật SQL cho database đã có dữ liệu. Không chạy lại `schema.sql` để nâng cấp vì script có `DROP SCHEMA`.
+- [x] **P0-T03.3** Chuẩn bị tình huống test hai người dùng và user thứ ba không có quyền; thêm người thứ ba vào nhóm ở P4.
 
 **Nghiệm thu:** có thể lặp lại kịch bản test độc lập mà không ảnh hưởng dữ liệu đang sử dụng.
 
