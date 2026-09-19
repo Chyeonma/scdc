@@ -85,12 +85,14 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P0-T02 — Contract API, dữ liệu và sự kiện [BE, FE, DB]
 
-- [ ] **P0-T02.1** Chốt route dùng chung `/api/v1/spaces/{spaceId}/messages` cho DM/group/channel; cập nhật client đang gọi `/channels/...` khi triển khai P2.
-- [ ] **P0-T02.2** Chốt `MessageDto`, `SpaceSummaryDto`, cursor, request gửi tin và error code theo `Result<T>`/`ProblemDetails` hiện có.
-- [ ] **P0-T02.3** Truyền `sequenceNo` kiểu chuỗi thập phân qua JSON để tránh mất chính xác `bigint` trên JavaScript; chốt cách so sánh ở FE.
-- [ ] **P0-T02.4** Chốt event envelope gồm `eventId`, `eventType`, `spaceId`, `occurredAt`, payload và version khi cần; phân biệt event ID với message ID.
-- [ ] **P0-T02.5** Chốt ownership: Identity cung cấp user/session; Community cung cấp channel permission; Messaging sở hữu message và membership DM/group.
-- [ ] **P0-T02.6** Đánh giá contract còn thiếu: cấp chat space cho channel, quyền quản lý tin, session bị thu hồi. Interface hiện tại chỉ có `CanRead`/`CanSend` và revoke theo user/space.
+Đầu ra ngày 19/09/2026: [Contract Messaging v1](messaging/contracts.md). Hoàn tất ở mức thiết kế API/DTO/cursor/event và contract liên module; các mở rộng được ghi rõ chưa triển khai. PR nối tiếp P0-T01 khi dependency chưa merge.
+
+- [x] **P0-T02.1** Chốt route dùng chung `/api/v1/spaces/{spaceId}/messages` cho DM/group/channel; cập nhật client đang gọi `/channels/...` khi triển khai P2.
+- [x] **P0-T02.2** Chốt `MessageDto`, `SpaceSummaryDto`, cursor, request gửi tin và error code theo `Result<T>`/`ProblemDetails` hiện có.
+- [x] **P0-T02.3** Truyền `sequenceNo` kiểu chuỗi thập phân qua JSON để tránh mất chính xác `bigint` trên JavaScript; chốt cách so sánh ở FE.
+- [x] **P0-T02.4** Chốt event envelope gồm `eventId`, `eventType`, `spaceId`, `occurredAt`, payload và version khi cần; phân biệt event ID với message ID.
+- [x] **P0-T02.5** Chốt ownership: Identity cung cấp user/session; Community cung cấp channel permission; Messaging sở hữu message và membership DM/group.
+- [x] **P0-T02.6** Đánh giá contract còn thiếu: cấp chat space cho channel, quyền quản lý tin, session bị thu hồi. Interface hiện tại chỉ có `CanRead`/`CanSend` và revoke theo user/space.
 
 **Nghiệm thu:** có ví dụ request/response/event, không để FE suy đoán DTO từ mock; mọi mở rộng contract được ghi rõ là đề xuất mới.
 
