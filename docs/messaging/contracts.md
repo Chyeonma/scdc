@@ -21,6 +21,7 @@ Một route message dùng chung DM/group/channel; `spaceId` không mặc nhiên 
 
 | Use case | Method + route sau prefix | Request | Thành công | Slice |
 |---|---|---|---|---|
+| Tra cứu chính xác người nhận DM | `GET /conversations/direct/recipient?username=...` | Query `username`, không hỗ trợ tìm kiếm gần đúng/toàn bộ user | `200` UserSummaryDto | P1 |
 | Tạo/lấy DM | `POST /conversations/direct` | `{recipientUserId}` | Mới: `201` + SpaceSummaryDto và Location `/api/v1/spaces/{id}`; có sẵn: `200` cùng DTO | P1 |
 | Danh sách hội thoại | `GET /spaces?limit=50&cursor=...` | Query, cursor tùy chọn | `200` SpacePageDto | P1 |
 | Chi tiết space | `GET /spaces/{spaceId}` | Không body | `200` SpaceSummaryDto | P1 |
