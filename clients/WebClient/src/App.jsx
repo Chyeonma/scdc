@@ -14,14 +14,16 @@ import {
 
 import {
   api,
+  createDirectConversation,
+  findDirectRecipient,
   getAccessToken,
+  getSpaces,
   sessionStore,
   getMe,
 } from './api.js';
 
 import {
   INITIAL_SERVERS,
-  INITIAL_DMS,
   INITIAL_MEMBERS,
   INITIAL_MESSAGES,
   INITIAL_THREADS,
@@ -58,12 +60,13 @@ export default function App() {
   const [userStatus, setUserStatus] = useState('online');
 
   // Navigation State
-  const [isHomeActive, setIsHomeActive] = useState(false);
+  const [isHomeActive, setIsHomeActive] = useState(true);
   const [servers, setServers] = useState(INITIAL_SERVERS);
   const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
   const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
-  const [dms, setDms] = useState(INITIAL_DMS);
-  const [activeDmId, setActiveDmId] = useState(INITIAL_DMS[0].spaceId);
+  const [dms, setDms] = useState([]);
+  const [activeDmId, setActiveDmId] = useState(null);
+  const [inboxState, setInboxState] = useState('loading');
 
   // Messages & Threads State
   const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
@@ -100,6 +103,41 @@ export default function App() {
       }).catch(() => {});
     }
   }, [session]);
+
+  const toDm = useCallback((space) => ({
+    ...space,
+    spaceId: space.id,
+    user: space.peer,
+  }), []);
+
+  const loadInbox = useCallback(async () => {
+    if (!session?.accessToken) return;
+
+    setInboxState('loading');
+    try {
+      const page = await getSpaces();
+      const nextDms = (page.items || []).map(toDm);
+      setDms(nextDms);
+      setActiveDmId((current) => nextDms.some((dm) => dm.spaceId === current)
+        ? current
+        : (nextDms[0]?.spaceId || null));
+      setInboxState('ready');
+    } catch {
+      setInboxState('error');
+    }
+  }, [session?.accessToken, toDm]);
+
+  useEffect(() => {
+    if (!session?.accessToken) {
+      setDms([]);
+      setActiveDmId(null);
+      setInboxState('ready');
+      return;
+    }
+
+    setIsHomeActive(true);
+    loadInbox();
+  }, [session?.accessToken, loadInbox]);
 
   // Active Server & Channel reference
   const activeServer = useMemo(
@@ -346,28 +384,27 @@ export default function App() {
     }));
   }
 
-  // Start DM
-  function handleStartDm(userOrDm) {
-    if (userOrDm.spaceId) {
-      setIsHomeActive(true);
-      setActiveDmId(userOrDm.spaceId);
-    } else {
-      const existing = dms.find((d) => d.user?.username === userOrDm.username);
-      if (existing) {
-        setIsHomeActive(true);
-        setActiveDmId(existing.spaceId);
-      } else {
-        const newDm = {
-          spaceId: `dm-${Date.now()}`,
-          spaceType: 1,
-          user: userOrDm,
-          lastMessage: 'Bắt đầu cuộc trò chuyện mới.',
-          unreadCount: 0,
-        };
-        setDms((prev) => [newDm, ...prev]);
-        setIsHomeActive(true);
-        setActiveDmId(newDm.spaceId);
+  async function handleStartDm(username) {
+    const recipient = await findDirectRecipient(username);
+    const space = toDm(await createDirectConversation(recipient.id));
+    setDms((previous) => [space, ...previous.filter((dm) => dm.spaceId !== space.spaceId)]);
+    setActiveDmId(space.spaceId);
+    setIsHomeActive(true);
+  }
+
+  async function handleSelectDm(spaceId) {
+    try {
+      const space = toDm(await api(`/spaces/${spaceId}`));
+      setDms((previous) => previous.map((dm) => dm.spaceId === spaceId ? space : dm));
+      setActiveDmId(spaceId);
+    } catch (error) {
+      if (error?.status === 403 || error?.status === 404) {
+        setDms((previous) => previous.filter((dm) => dm.spaceId !== spaceId));
+        setActiveDmId((current) => current === spaceId ? null : current);
+        notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
+        return;
       }
+      notify('error', error?.message || 'Không thể mở cuộc trò chuyện.');
     }
   }
 
@@ -436,8 +473,10 @@ export default function App() {
         onSelectChannel={(chId) => setActiveChannelId(chId)}
         dms={dms}
         activeDmId={activeDmId}
-        onSelectDm={(dmId) => setActiveDmId(dmId)}
+        onSelectDm={handleSelectDm}
         onOpenCreateDm={() => setShowCreateDm(true)}
+        inboxState={inboxState}
+        onRetryInbox={loadInbox}
         onOpenCreateChannel={() => setShowCreateChannel(true)}
         onOpenServerSettings={() => setShowServerSettings(true)}
         onOpenInviteModal={() => setShowInviteModal(true)}
@@ -534,6 +573,7 @@ export default function App() {
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
+          disabled={isHomeActive}
         />
       </main>
 
@@ -622,7 +662,7 @@ export default function App() {
         <UserProfileModal
           user={inspectingUser}
           onClose={() => setInspectingUser(null)}
-          onStartDm={handleStartDm}
+          onStartDm={(user) => handleStartDm(user.username)}
           currentUser={currentUser}
         />
       )}

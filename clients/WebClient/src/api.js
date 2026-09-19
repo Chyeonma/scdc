@@ -248,3 +248,22 @@ export async function updateMe(profile) {
     body: profile,
   });
 }
+
+export function getSpaces({ limit = 50, cursor, includeHidden = false, signal } = {}) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (cursor) query.set('cursor', cursor);
+  if (includeHidden) query.set('includeHidden', 'true');
+  return api(`/spaces?${query}`, { signal });
+}
+
+export function findDirectRecipient(username, { signal } = {}) {
+  const query = new URLSearchParams({ username });
+  return api(`/conversations/direct/recipient?${query}`, { signal });
+}
+
+export function createDirectConversation(recipientUserId) {
+  return api('/conversations/direct', {
+    method: 'POST',
+    body: { recipientUserId },
+  });
+}

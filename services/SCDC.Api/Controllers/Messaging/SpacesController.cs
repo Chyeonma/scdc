@@ -9,6 +9,24 @@ namespace SCDC.Api.Controllers.Messaging;
 [Route("api/v1/spaces")]
 public sealed class SpacesController(IDirectConversationService directConversationService) : ApiControllerBase
 {
+    [HttpGet]
+    [ProducesResponseType<SpacePageDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<SpacePageDto>> List(
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        [FromQuery] bool includeHidden,
+        CancellationToken cancellationToken)
+    {
+        var result = await directConversationService.ListAsync(
+            new ListSpacesQuery(
+                User.GetUserId(),
+                limit ?? 50,
+                cursor,
+                includeHidden),
+            cancellationToken);
+        return FromResult(result);
+    }
+
     [HttpGet("{spaceId:guid}")]
     [ProducesResponseType<SpaceSummaryDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<SpaceSummaryDto>> GetById(
