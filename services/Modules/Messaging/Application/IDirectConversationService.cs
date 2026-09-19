@@ -12,4 +12,13 @@ public interface IDirectConversationService
         Guid actorUserId,
         Guid spaceId,
         CancellationToken cancellationToken);
+
+    Task<Result<SpacePageDto>> ListAsync(
+        ListSpacesQuery query,
+        CancellationToken cancellationToken);
+
+    Task<Result<SCDC.Contracts.Identity.UserSummary>> FindRecipientByUsernameAsync(
+        Guid actorUserId,
+        string username,
+        CancellationToken cancellationToken);
 }

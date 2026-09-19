@@ -71,8 +71,7 @@ export function UserProfileModal({
                 type="button"
                 className="btn btn--primary btn--full"
                 onClick={() => {
-                  onStartDm?.(user);
-                  onClose();
+                  Promise.resolve(onStartDm?.(user)).then(onClose).catch(() => {});
                 }}
               >
                 💬 Gửi tin nhắn trực tiếp

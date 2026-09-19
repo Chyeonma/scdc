@@ -136,6 +136,71 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         }
     }
 
+    [Fact]
+    public async Task Inbox_is_paged_and_only_lists_the_callers_direct_conversations()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("InboxA");
+            var actorB = await CreateActorAsync("InboxB");
+            var actorC = await CreateActorAsync("InboxC");
+            actors.AddRange([actorA, actorB, actorC]);
+
+            await CreateDirectConversationAsync(actorA, actorB);
+            await CreateDirectConversationAsync(actorA, actorC);
+
+            var firstPage = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                "/api/v1/spaces?limit=1",
+                actorA.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, firstPage.StatusCode);
+            var firstPageBody = await firstPage.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(1, firstPageBody.GetProperty("items").GetArrayLength());
+            Assert.True(firstPageBody.GetProperty("hasMore").GetBoolean());
+            var nextCursor = firstPageBody.GetProperty("nextCursor").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(nextCursor));
+
+            var secondPage = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/spaces?limit=1&cursor={Uri.EscapeDataString(nextCursor!)}",
+                actorA.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, secondPage.StatusCode);
+            var secondPageBody = await secondPage.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(1, secondPageBody.GetProperty("items").GetArrayLength());
+            Assert.False(secondPageBody.GetProperty("hasMore").GetBoolean());
+
+            var inboxIds = new[]
+                {
+                    firstPageBody.GetProperty("items")[0].GetProperty("id").GetGuid(),
+                    secondPageBody.GetProperty("items")[0].GetProperty("id").GetGuid()
+                };
+            Assert.Equal(2, inboxIds.Distinct().Count());
+
+            var recipient = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/conversations/direct/recipient?username={actorB.Username}",
+                actorA.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, recipient.StatusCode);
+            var recipientBody = await recipient.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(actorB.UserId, recipientBody.GetProperty("id").GetGuid());
+            Assert.Equal(actorB.Username, recipientBody.GetProperty("username").GetString());
+
+            var actorBInbox = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                "/api/v1/spaces?limit=100",
+                actorB.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, actorBInbox.StatusCode);
+            var actorBItems = (await actorBInbox.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items");
+            Assert.Single(actorBItems.EnumerateArray());
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
     private async Task<TestActor> CreateActorAsync(string label)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -187,6 +252,16 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         }
 
         return await _client.SendAsync(request);
+    }
+
+    private async Task CreateDirectConversationAsync(TestActor actor, TestActor recipient)
+    {
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Post,
+            "/api/v1/conversations/direct",
+            actor.AccessToken,
+            new { recipientUserId = recipient.UserId });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     private async Task<(int DirectConversations, int ActiveMembers, int UserStates)> GetDirectConversationCountsAsync(Guid spaceId)

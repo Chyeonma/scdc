@@ -11,6 +11,19 @@ namespace SCDC.Api.Controllers.Messaging;
 [Route("api/v1/conversations")]
 public sealed class ConversationsController(IDirectConversationService directConversationService) : ApiControllerBase
 {
+    [HttpGet("direct/recipient")]
+    [ProducesResponseType<SCDC.Contracts.Identity.UserSummary>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<SCDC.Contracts.Identity.UserSummary>> FindDirectRecipient(
+        [FromQuery, Required, StringLength(32, MinimumLength = 3)] string username,
+        CancellationToken cancellationToken)
+    {
+        var result = await directConversationService.FindRecipientByUsernameAsync(
+            User.GetUserId(),
+            username,
+            cancellationToken);
+        return FromResult(result);
+    }
+
     [HttpPost("direct")]
     [ProducesResponseType<SpaceSummaryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<SpaceSummaryDto>(StatusCodes.Status201Created)]

@@ -31,4 +31,12 @@ public static class MessagingErrors
     public static readonly Error DirectConversationConflict = Error.Conflict(
         "Messaging.DirectConversationConflict",
         "The direct conversation could not be created.");
+
+    public static readonly Error InvalidCursor = Error.Validation(
+        "Messaging.InvalidCursor",
+        "The conversation cursor is invalid.");
+
+    public static readonly Error InvalidPageSize = Error.Validation(
+        "Messaging.InvalidPageSize",
+        "The conversation page size must be between 1 and 100.");
 }
