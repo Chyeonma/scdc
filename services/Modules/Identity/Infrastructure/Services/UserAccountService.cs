@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SCDC.BuildingBlocks.Application.Results;
+using SCDC.Contracts.Messaging;
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure.Persistence;
@@ -10,7 +11,8 @@ namespace SCDC.Modules.Identity.Infrastructure.Services;
 internal sealed class UserAccountService(
     IdentityDbContext dbContext,
     IPasswordHasher<User> passwordHasher,
-    TimeProvider timeProvider) : IUserAccountService
+    TimeProvider timeProvider,
+    IRealtimeSessionRevoker realtimeSessionRevoker) : IUserAccountService
 {
     private const string PasswordAlgorithm = "aspnetcore-identity-v3";
 
@@ -120,6 +122,7 @@ internal sealed class UserAccountService(
             new { user_id = user.Id, reason = "password_changed" }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await realtimeSessionRevoker.RevokeUserAsync(command.UserId, cancellationToken);
         return Result.Success();
     }
 

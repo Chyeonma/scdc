@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SCDC.BuildingBlocks.Application.Results;
+using SCDC.Contracts.Messaging;
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure.Persistence;
@@ -14,7 +15,8 @@ internal sealed class AuthenticationService(
     IPasswordHasher<User> passwordHasher,
     ITokenService tokenService,
     IOptions<IdentityOptions> options,
-    TimeProvider timeProvider) : IAuthenticationService
+    TimeProvider timeProvider,
+    IRealtimeSessionRevoker realtimeSessionRevoker) : IAuthenticationService
 {
     private const string PasswordAlgorithm = "aspnetcore-identity-v3";
     private readonly IdentityOptions _options = options.Value;
@@ -244,6 +246,10 @@ internal sealed class AuthenticationService(
             now,
             new { session_id = token.SessionId }));
         await dbContext.SaveChangesAsync(cancellationToken);
+        await realtimeSessionRevoker.RevokeSessionAsync(
+            token.Session.UserId,
+            token.SessionId,
+            cancellationToken);
         return Result.Success();
     }
 
@@ -270,6 +276,7 @@ internal sealed class AuthenticationService(
             now,
             new { session_count = sessions.Count }));
         await dbContext.SaveChangesAsync(cancellationToken);
+        await realtimeSessionRevoker.RevokeUserAsync(userId, cancellationToken);
         return Result.Success();
     }
 
@@ -327,6 +334,8 @@ internal sealed class AuthenticationService(
                 new { session_id = session.Id }));
             await dbContext.SaveChangesAsync(cancellationToken);
         }
+
+        await realtimeSessionRevoker.RevokeSessionAsync(userId, sessionId, cancellationToken);
 
         return Result.Success();
     }

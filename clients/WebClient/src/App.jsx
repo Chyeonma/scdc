@@ -259,33 +259,31 @@ export default function App() {
       .configureLogging(LogLevel.Warning)
       .build();
 
-    connection.on('MessageCreated', (message) => {
-      if (message?.spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [message.spaceId]: [...(prev[message.spaceId] || []), message],
-        }));
-      }
-    });
+    connection.on('RealtimeEvent', (event) => {
+      if (event?.schemaVersion !== 1) return;
 
-    connection.on('MessageUpdated', (message) => {
-      if (message?.spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [message.spaceId]: (prev[message.spaceId] || []).map((m) =>
-            m.id === message.id ? { ...m, ...message } : m
-          ),
-        }));
+      if (event.eventType === 'MessageCreated') {
+        void loadInbox();
+        if (event.spaceId === currentSpaceId) {
+          void loadHistory(event.spaceId);
+        }
+        return;
       }
-    });
 
-    connection.on('MessageDeleted', ({ spaceId, messageId }) => {
-      if (spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [spaceId]: (prev[spaceId] || []).filter((m) => m.id !== messageId),
-        }));
+      if (event.eventType === 'SpaceUpdated') {
+        void loadInbox();
+        return;
       }
+
+      if (event.eventType === 'SpaceAccessRevoked' && event.spaceId) {
+        setMessagesMap((previous) => ({ ...previous, [event.spaceId]: [] }));
+        setDms((previous) => previous.filter((dm) => dm.spaceId !== event.spaceId));
+        setActiveDmId((active) => active === event.spaceId ? null : active);
+        notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
+        return;
+      }
+
+      if (event.eventType === 'SessionRevoked') sessionStore.clear();
     });
 
     connection.onreconnecting(() => setConnectionState('connecting'));
@@ -298,12 +296,17 @@ export default function App() {
       try {
         await connection.start();
         if (!disposed) {
+          const subscription = await connection.invoke('SubscribeSpace', currentSpaceId);
+          if (!subscription?.ok) {
+            setConnectionState('offline');
+            notify('warning', subscription?.error?.message || 'Không thể đăng ký nhận tin nhắn realtime.');
+            return;
+          }
           setConnectionState('online');
-          await connection.invoke('SubscribeChannel', currentSpaceId);
         }
       } catch {
         if (!disposed) {
-          setConnectionState('online'); // fallback smoothly
+          setConnectionState('offline');
         }
       }
     }
@@ -312,11 +315,14 @@ export default function App() {
 
     return () => {
       disposed = true;
-      if (connection.state !== HubConnectionState.Disconnected) {
-        connection.stop();
-      }
+      void (async () => {
+        if (connection.state === HubConnectionState.Connected) {
+          await connection.invoke('UnsubscribeSpace', currentSpaceId).catch(() => {});
+        }
+        if (connection.state !== HubConnectionState.Disconnected) await connection.stop();
+      })();
     };
-  }, [session, currentSpaceId]);
+  }, [currentSpaceId, loadHistory, loadInbox, notify, session?.accessToken]);
 
   const handleSendMessage = useCallback(async ({ content, clientMessageId }) => {
     const sent = await sendDirectMessage({

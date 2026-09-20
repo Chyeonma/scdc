@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
+using SCDC.Contracts.Messaging;
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure.Persistence;
@@ -15,7 +16,8 @@ internal sealed class RegistrationService(
     IPasswordHasher<User> passwordHasher,
     ITokenService tokenService,
     IOptions<IdentityOptions> options,
-    TimeProvider timeProvider) : IRegistrationService
+    TimeProvider timeProvider,
+    IRealtimeSessionRevoker realtimeSessionRevoker) : IRegistrationService
 {
     private const string PasswordAlgorithm = "aspnetcore-identity-v3";
     private readonly IdentityOptions _options = options.Value;
@@ -359,6 +361,7 @@ internal sealed class RegistrationService(
             new { user_id = accountToken.UserId, reason = "password_reset" }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await realtimeSessionRevoker.RevokeUserAsync(accountToken.UserId, cancellationToken);
         return Result.Success();
     }
 

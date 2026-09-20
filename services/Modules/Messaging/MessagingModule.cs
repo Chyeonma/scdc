@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SCDC.BuildingBlocks.Application;
+using SCDC.Contracts.Messaging;
 using SCDC.Modules.Messaging.Application;
+using SCDC.Modules.Messaging.Hubs;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
 using SCDC.Modules.Messaging.Infrastructure.Services;
 
@@ -24,6 +26,14 @@ public static class MessagingModule
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddSingleton<MessageRateLimiter>();
         services.AddScoped<IMessageService, MessageService>();
+        services.AddScoped<IRealtimeSpaceAccess, RealtimeSpaceAccess>();
+        services.AddSingleton<RealtimeConnectionRegistry>();
+        services.AddSingleton<MessagingRealtimeAccessRevoker>();
+        services.AddSingleton<IRealtimeAccessRevoker>(provider =>
+            provider.GetRequiredService<MessagingRealtimeAccessRevoker>());
+        services.AddSingleton<IRealtimeSessionRevoker>(provider =>
+            provider.GetRequiredService<MessagingRealtimeAccessRevoker>());
+        services.AddScoped<IRealtimeMessagePublisher, MessagingRealtimePublisher>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

@@ -48,6 +48,7 @@ public static class IdentityModule
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IIdentitySessionValidator, IdentitySessionValidator>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -71,6 +72,19 @@ public static class IdentityModule
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnMessageReceived = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/hubs/chat"))
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            if (!string.IsNullOrWhiteSpace(accessToken))
+                            {
+                                context.Token = accessToken;
+                            }
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = ValidateSessionAsync
                 };
             });
@@ -92,21 +106,13 @@ public static class IdentityModule
             return;
         }
 
-        var dbContext = context.HttpContext.RequestServices.GetRequiredService<IdentityDbContext>();
-        var timeProvider = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
-        var now = timeProvider.GetUtcNow();
-        var isActive = await dbContext.AuthSessions
-            .AsNoTracking()
-            .AnyAsync(session => session.Id == sessionId
-                && session.UserId == userId
-                && session.RevokedAt == null
-                && session.ExpiresAt > now
-                && session.User.Status == UserStatus.Active
-                && session.User.SecurityState != null
-                && session.User.SecurityState.SecurityStamp == securityStamp,
-                context.HttpContext.RequestAborted);
-
-        if (!isActive)
+        var validator = context.HttpContext.RequestServices.GetRequiredService<IIdentitySessionValidator>();
+        var validation = await validator.ValidateAsync(
+            userId,
+            sessionId,
+            securityStamp,
+            context.HttpContext.RequestAborted);
+        if (!validation.IsValid)
         {
             context.Fail("The session is no longer active.");
         }
