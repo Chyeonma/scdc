@@ -45,6 +45,8 @@ import { CreateDmModal } from './components/CreateDmModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
+import { useDirectMessageSender } from './hooks/useDirectMessageSender.js';
+import { mergeMessages } from './messaging/messageState.js';
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
@@ -99,6 +101,10 @@ export default function App() {
   const timelineEndRef = useRef(null);
   const historyRequestRef = useRef(null);
   const restoreScrollRef = useRef(null);
+  const { send: sendDirectMessage, retry: retryDirectMessage } = useDirectMessageSender({
+    currentUser: currentUser || session?.user,
+    setMessagesMap,
+  });
 
   // Initialize or fetch current user on session change
   useEffect(() => {
@@ -187,13 +193,13 @@ export default function App() {
       if (historyRequestRef.current !== controller) return;
 
       setMessagesMap((previous) => {
-        const existing = isOlderPage ? (previous[spaceId] || []) : [];
-        const byId = new Map(existing.map((message) => [message.id, message]));
-        (page.items || []).forEach((message) => byId.set(message.id, message));
+        const existing = previous[spaceId] || [];
+        const retained = isOlderPage
+          ? existing
+          : existing.filter((message) => message.deliveryState === 'pending' || message.deliveryState === 'failed');
         return {
           ...previous,
-          [spaceId]: [...byId.values()].sort((left, right) =>
-            BigInt(left.sequenceNo) < BigInt(right.sequenceNo) ? -1 : BigInt(left.sequenceNo) > BigInt(right.sequenceNo) ? 1 : 0),
+          [spaceId]: mergeMessages(retained, page.items || []),
         };
       });
       setNextBeforeBySpace((previous) => ({ ...previous, [spaceId]: page.nextBeforeSequence }));
@@ -312,43 +318,23 @@ export default function App() {
     };
   }, [session, currentSpaceId]);
 
-  // Send Message Handler
-  function handleSendMessage({ content, replyTo, attachments }) {
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      sequenceNo: Date.now(),
+  const handleSendMessage = useCallback(async ({ content, clientMessageId }) => {
+    const sent = await sendDirectMessage({
       spaceId: currentSpaceId,
-      author: {
-        id: currentUser?.id || 'usr-me',
-        username: currentUser?.username || 'me',
-        displayName: currentUser?.displayName || currentUser?.username || 'Me',
-        roleColor: '#5865f2',
-        roleName: 'Member',
-      },
-      messageType: attachments?.length > 0 ? 3 : 1,
       content,
-      createdAt: new Date().toISOString(),
-      editedAt: null,
-      reactions: [],
-      replyTo,
-      attachments: attachments || [],
-      isPinned: false,
-      threadCount: 0,
-    };
-
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: [...(prev[currentSpaceId] || []), newMessage],
-    }));
-
+      clientMessageId,
+    });
     setReplyingTo(null);
+    return sent;
+  }, [currentSpaceId, sendDirectMessage]);
 
-    // Try calling backend API if available
-    api(`/channels/${currentSpaceId}/messages`, {
-      method: 'POST',
-      body: { clientMessageId: crypto.randomUUID(), content },
-    }).catch(() => {});
-  }
+  const handleRetryMessage = useCallback(async (message) => {
+    try {
+      await retryDirectMessage(message);
+    } catch {
+      // The failed message keeps the ProblemDetails text and remains retryable.
+    }
+  }, [retryDirectMessage]);
 
   // Toggle Reaction Handler
   function handleToggleReaction(messageId, emoji) {
@@ -649,7 +635,9 @@ export default function App() {
                   message={message}
                   isGrouped={Boolean(isGrouped)}
                   isOwn={Boolean(isOwn)}
-                  onReply={(msg) => setReplyingTo(msg)}
+                  onReply={isHomeActive ? undefined : (msg) => setReplyingTo(msg)}
+                  onRetryMessage={isHomeActive ? handleRetryMessage : undefined}
+                  allowReply={!isHomeActive}
                   onOpenThread={handleOpenThread}
                   onToggleReaction={handleToggleReaction}
                   onPinMessage={handlePinMessage}
@@ -667,11 +655,13 @@ export default function App() {
 
         {/* Message Composer */}
         <MessageComposer
+          key={isHomeActive ? activeDmId : activeChannelId}
           channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
-          replyingTo={replyingTo}
+          replyingTo={isHomeActive ? null : replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
-          disabled={isHomeActive}
+          directMessageMode={isHomeActive}
+          disabled={!isHomeActive || !activeDmId}
         />
       </main>
 
