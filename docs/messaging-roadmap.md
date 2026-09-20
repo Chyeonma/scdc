@@ -133,12 +133,12 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P2-T01 — Gửi text, transaction và idempotency [BE, DB]
 
-- [ ] **P2-T01.1** Map `messages`; validate nội dung, loại tin và trạng thái space; kiểm tra quyền ở server cho từng request.
-- [ ] **P2-T01.2** Bắt buộc `clientMessageId` cho message từ user, dùng unique index `(space_id, author_user_id, client_message_id)`.
-- [ ] **P2-T01.3** Retry cùng ID và cùng payload trả lại message đã lưu; cùng ID khác payload trả conflict theo contract.
-- [ ] **P2-T01.4** Cùng transaction: ghi message, cập nhật last-message projection và ghi `integration.outbox_events`; P3 mới thực hiện phát event.
-- [ ] **P2-T01.5** Chốt cơ chế tuần tự hóa ghi trong cùng space trước khi cấp sequence, ví dụ khóa hàng space; test transaction commit lệch thứ tự để cursor không bỏ sót tin.
-- [ ] **P2-T01.6** Giới hạn tần suất/kích thước request, trả lỗi có `errorCode`; không nhận `authorUserId` từ client làm danh tính gửi.
+- [x] **P2-T01.1** Map `messages`; validate nội dung, loại tin và trạng thái space; kiểm tra quyền ở server cho từng request.
+- [x] **P2-T01.2** Bắt buộc `clientMessageId` cho message từ user, dùng unique index `(space_id, author_user_id, client_message_id)`.
+- [x] **P2-T01.3** Retry cùng ID và cùng payload trả lại message đã lưu; cùng ID khác payload trả conflict theo contract.
+- [x] **P2-T01.4** Cùng transaction: ghi message, cập nhật last-message projection và ghi `integration.outbox_events`; P3 mới thực hiện phát event.
+- [x] **P2-T01.5** Chốt cơ chế tuần tự hóa ghi trong cùng space trước khi cấp sequence, ví dụ khóa hàng space; test transaction commit lệch thứ tự để cursor không bỏ sót tin.
+- [x] **P2-T01.6** Giới hạn tần suất/kích thước request, trả lỗi có `errorCode`; không nhận `authorUserId` từ client làm danh tính gửi.
 
 **Nghiệm thu:** gửi đồng thời/retry không tạo tin trùng; rollback không để lại message hoặc outbox riêng lẻ; last message đúng khi gửi đồng thời.
 

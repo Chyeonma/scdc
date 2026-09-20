@@ -201,6 +201,93 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         }
     }
 
+    [Fact]
+    public async Task Sending_a_message_is_idempotent_and_updates_the_space_and_outbox_together()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("SendA");
+            var actorB = await CreateActorAsync("SendB");
+            actors.AddRange([actorA, actorB]);
+
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            var clientMessageId = Guid.NewGuid();
+            var firstSend = await SendAuthorizedAsync(
+                HttpMethod.Post,
+                $"/api/v1/spaces/{spaceId}/messages",
+                actorA.AccessToken,
+                new { clientMessageId, messageType = 1, content = "  First\r\nmessage  " });
+            Assert.Equal(HttpStatusCode.Created, firstSend.StatusCode);
+            var firstMessage = await firstSend.Content.ReadFromJsonAsync<JsonElement>();
+            var messageId = firstMessage.GetProperty("id").GetGuid();
+            Assert.Equal("First\nmessage", firstMessage.GetProperty("content").GetString());
+            Assert.Equal(clientMessageId, firstMessage.GetProperty("clientMessageId").GetGuid());
+
+            var retry = await SendAuthorizedAsync(
+                HttpMethod.Post,
+                $"/api/v1/spaces/{spaceId}/messages",
+                actorA.AccessToken,
+                new { clientMessageId, messageType = 1, content = "  First\r\nmessage  " });
+            Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+            var retryMessage = await retry.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(messageId, retryMessage.GetProperty("id").GetGuid());
+
+            var conflictingRetry = await SendAuthorizedAsync(
+                HttpMethod.Post,
+                $"/api/v1/spaces/{spaceId}/messages",
+                actorA.AccessToken,
+                new { clientMessageId, messageType = 1, content = "Changed payload" });
+            Assert.Equal(HttpStatusCode.Conflict, conflictingRetry.StatusCode);
+            var conflictProblem = await conflictingRetry.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal("Messaging.IdempotencyConflict", conflictProblem.GetProperty("errorCode").GetString());
+
+            var state = await GetMessagePersistenceAsync(spaceId, messageId);
+            Assert.Equal(1, state.Messages);
+            Assert.Equal(1, state.MessageCreatedOutboxEvents);
+            Assert.Equal(messageId, state.LastMessageId);
+            Assert.Equal(firstMessage.GetProperty("sequenceNo").GetString(), state.LastMessageSequence);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_sends_are_serialized_and_leave_the_latest_sequence_as_the_space_projection()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("SequenceA");
+            var actorB = await CreateActorAsync("SequenceB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+
+            var sends = await Task.WhenAll(
+                SendAuthorizedAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages", actorA.AccessToken,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "First concurrent send" }),
+                SendAuthorizedAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages", actorB.AccessToken,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "Second concurrent send" }));
+            Assert.All(sends, response => Assert.Equal(HttpStatusCode.Created, response.StatusCode));
+
+            var messages = await Task.WhenAll(sends.Select(response => response.Content.ReadFromJsonAsync<JsonElement>()));
+            var latest = messages
+                .OrderBy(message => long.Parse(message.GetProperty("sequenceNo").GetString()!))
+                .Last();
+            var state = await GetMessagePersistenceAsync(spaceId, latest.GetProperty("id").GetGuid());
+            Assert.Equal(2, state.Messages);
+            Assert.Equal(2, state.MessageCreatedOutboxEvents);
+            Assert.Equal(latest.GetProperty("id").GetGuid(), state.LastMessageId);
+            Assert.Equal(latest.GetProperty("sequenceNo").GetString(), state.LastMessageSequence);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
     private async Task<TestActor> CreateActorAsync(string label)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -254,7 +341,7 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         return await _client.SendAsync(request);
     }
 
-    private async Task CreateDirectConversationAsync(TestActor actor, TestActor recipient)
+    private async Task<Guid> CreateDirectConversationAsync(TestActor actor, TestActor recipient)
     {
         var response = await SendAuthorizedAsync(
             HttpMethod.Post,
@@ -262,6 +349,35 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
             actor.AccessToken,
             new { recipientUserId = recipient.UserId });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return body.GetProperty("id").GetGuid();
+    }
+
+    private async Task<(int Messages, int MessageCreatedOutboxEvents, Guid? LastMessageId, string? LastMessageSequence)>
+        GetMessagePersistenceAsync(Guid spaceId, Guid messageId)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>()
+            .GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Test database connection is missing.");
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT
+                (SELECT count(*) FROM messaging.messages WHERE space_id = @space_id),
+                (SELECT count(*) FROM integration.outbox_events WHERE space_id = @space_id AND event_type = 'Messaging.MessageCreated'),
+                (SELECT last_message_id FROM messaging.spaces WHERE id = @space_id),
+                (SELECT last_message_sequence::text FROM messaging.spaces WHERE id = @space_id)
+            """,
+            connection);
+        command.Parameters.AddWithValue("space_id", spaceId);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        return (
+            reader.GetInt32(0),
+            reader.GetInt32(1),
+            reader.IsDBNull(2) ? null : reader.GetGuid(2),
+            reader.IsDBNull(3) ? null : reader.GetString(3));
     }
 
     private async Task<(int DirectConversations, int ActiveMembers, int UserStates)> GetDirectConversationCountsAsync(Guid spaceId)
@@ -302,6 +418,8 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
 
         foreach (var sql in new[]
                  {
+                     "DELETE FROM integration.outbox_events WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@user_ids))",
+                     "DELETE FROM messaging.messages WHERE author_user_id = ANY(@user_ids)",
                      "DELETE FROM messaging.space_user_states WHERE user_id = ANY(@user_ids)",
                      "DELETE FROM messaging.user_blocks WHERE blocker_user_id = ANY(@user_ids) OR blocked_user_id = ANY(@user_ids)",
                      "DELETE FROM messaging.direct_conversations WHERE user_low_id = ANY(@user_ids) OR user_high_id = ANY(@user_ids)",

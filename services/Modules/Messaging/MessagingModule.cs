@@ -22,6 +22,8 @@ public static class MessagingModule
 
         services.AddDbContext<MessagingDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IDirectConversationService, DirectConversationService>();
+        services.AddSingleton<MessageRateLimiter>();
+        services.AddScoped<IMessageService, MessageService>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

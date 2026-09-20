@@ -11,6 +11,8 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
     public DbSet<SpaceMember> SpaceMembers => Set<SpaceMember>();
     public DbSet<SpaceUserState> SpaceUserStates => Set<SpaceUserState>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +21,8 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         ConfigureSpaceMember(modelBuilder);
         ConfigureSpaceUserState(modelBuilder);
         ConfigureUserBlock(modelBuilder);
+        ConfigureMessage(modelBuilder);
+        ConfigureOutbox(modelBuilder);
     }
 
     private static void ConfigureSpace(ModelBuilder modelBuilder)
@@ -92,5 +96,49 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(block => block.BlockerUserId).HasColumnName("blocker_user_id");
         entity.Property(block => block.BlockedUserId).HasColumnName("blocked_user_id");
         entity.Property(block => block.CreatedAt).HasColumnName("created_at");
+    }
+
+    private static void ConfigureMessage(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Message>();
+        entity.ToTable("messages", "messaging");
+        entity.HasKey(message => message.Id);
+        entity.Property(message => message.Id).HasColumnName("id");
+        entity.Property(message => message.SequenceNo).HasColumnName("sequence_no").ValueGeneratedOnAdd();
+        entity.Property(message => message.SpaceId).HasColumnName("space_id");
+        entity.Property(message => message.AuthorUserId).HasColumnName("author_user_id");
+        entity.Property(message => message.ClientMessageId).HasColumnName("client_message_id");
+        entity.Property(message => message.MessageType).HasColumnName("message_type").HasConversion<short>();
+        entity.Property(message => message.Content).HasColumnName("content");
+        entity.Property(message => message.IdempotencyPayloadHash)
+            .HasColumnName("idempotency_payload_hash")
+            .HasMaxLength(64);
+        entity.Property(message => message.Version).HasColumnName("version");
+        entity.Property(message => message.CreatedAt).HasColumnName("created_at");
+        entity.Property(message => message.EditedAt).HasColumnName("edited_at");
+        entity.Property(message => message.DeletedAt).HasColumnName("deleted_at");
+        entity.HasIndex(message => new { message.SpaceId, message.AuthorUserId, message.ClientMessageId })
+            .HasDatabaseName("ux_messages_client_id")
+            .IsUnique()
+            .HasFilter("author_user_id IS NOT NULL AND client_message_id IS NOT NULL");
+    }
+
+    private static void ConfigureOutbox(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<OutboxEvent>();
+        entity.ToTable("outbox_events", "integration");
+        entity.HasKey(item => item.Id);
+        entity.Property(item => item.Id).HasColumnName("id");
+        entity.Property(item => item.EventType).HasColumnName("event_type").HasMaxLength(100);
+        entity.Property(item => item.AggregateType).HasColumnName("aggregate_type").HasMaxLength(50);
+        entity.Property(item => item.AggregateId).HasColumnName("aggregate_id");
+        entity.Property(item => item.AggregateVersion).HasColumnName("aggregate_version");
+        entity.Property(item => item.SpaceId).HasColumnName("space_id");
+        entity.Property(item => item.Payload).HasColumnName("payload").HasColumnType("jsonb");
+        entity.Property(item => item.OccurredAt).HasColumnName("occurred_at");
+        entity.Property(item => item.AvailableAt).HasColumnName("available_at");
+        entity.Property(item => item.PublishedAt).HasColumnName("published_at");
+        entity.Property(item => item.AttemptCount).HasColumnName("attempt_count");
+        entity.Property(item => item.LastError).HasColumnName("last_error");
     }
 }

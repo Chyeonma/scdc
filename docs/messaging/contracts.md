@@ -62,7 +62,7 @@ Ví dụ gửi Text vào space `01990000-0000-7300-8000-000000000001`:
 
 **Idempotency:** key là `(spaceId, actorUserId, clientMessageId)`. Fingerprint gồm nội dung sau chuẩn hóa, message type, reply/thread ID và tập attachment ID chuẩn hóa theo UUID (không duplicate). Cùng key khác fingerprint trả `Messaging.IdempotencyConflict`. Cùng key cùng fingerprint trả bản ghi hiện hành, kể cả tombstone nếu đã xóa, không tạo outbox/event mới. Quyền hiện hành và block được kiểm tra trước retry lookup; retry không vượt quyền vừa bị thu hồi.
 
-Fingerprint **không được tính lại từ content hiện hành** vì tin có thể đã sửa/xóa. P2 cần cột hash payload gốc hoặc bảng idempotency riêng, cùng transaction với message; schema hiện chỉ có unique index, chưa có hash này. Giữ hash không chứa plaintext cùng tombstone; chuẩn hóa có version để nâng cấp không phá retry. Attachment upload ID trở thành attachment ID khi gắn message; mapping/staging chưa có và thuộc P7.
+Fingerprint **không được tính lại từ content hiện hành** vì tin có thể đã sửa/xóa. P2 lưu SHA-256 của payload gốc ở `messages.idempotency_payload_hash` cùng transaction với message, space projection và outbox; hash không chứa plaintext cùng tombstone. Text v1 canonical hóa message type và content đã chuẩn hóa; reply/thread/attachment sẽ được thêm vào canonical payload khi slice tương ứng được triển khai. Attachment upload ID trở thành attachment ID khi gắn message; mapping/staging chưa có và thuộc P7.
 
 ## 3. DTO cốt lõi — P0-T02.2/.3
 
@@ -315,7 +315,7 @@ Các chữ ký trên là mô tả, **chưa thêm file C# hay registration**. DTO
 
 | Thiếu hiện tại | Task tiếp nhận | Điều kiện trước nghiệm thu |
 |---|---|---|
-| Original send fingerprint chưa có trong messages | P2-T01 | Hash/version canonicalization cùng transaction; retry sau edit/delete đúng |
+| Original send fingerprint trong messages | P2-T01 | Đã lưu SHA-256 payload text canonical cùng transaction; P6/P7 phải mở rộng canonical payload trước khi nhận reply/thread/attachment |
 | Serialization bigint chưa áp dụng DTO | P2 | OpenAPI field string có pattern/range; test roundtrip giá trị >2^53 |
 | Lock ordering/cursor watermark chưa có | P2 | Tất cả writer cùng cơ chế, test commit đảo thứ tự/rollback |
 | DTO/query và FE mapping vẫn mock | P1–P3 | Route spaces, optimistic key cố định, listener dùng reference event |
