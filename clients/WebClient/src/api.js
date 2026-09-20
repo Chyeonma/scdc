@@ -281,3 +281,10 @@ export function getMessageHistory(spaceId, {
   if (throughSequence !== undefined) query.set('throughSequence', throughSequence);
   return api(`/spaces/${spaceId}/messages?${query}`, { signal });
 }
+
+export function sendMessage(spaceId, { clientMessageId, content }) {
+  return api(`/spaces/${spaceId}/messages`, {
+    method: 'POST',
+    body: { clientMessageId, messageType: 1, content },
+  });
+}

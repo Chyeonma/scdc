@@ -1013,6 +1013,34 @@ button:disabled {
   color: var(--text-muted);
 }
 
+.message__delivery {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.message__delivery--pending {
+  color: var(--text-muted);
+}
+
+.message__delivery--sent {
+  color: var(--green);
+}
+
+.message__delivery--failed {
+  margin: 6px 0 0;
+  color: var(--red);
+}
+
+.message__delivery--failed button {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .pinned-badge {
   font-size: 0.68rem;
   color: var(--amber);

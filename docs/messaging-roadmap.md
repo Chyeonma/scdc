@@ -154,11 +154,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P2-T03 — Composer thật và trạng thái gửi [FE, QA]
 
-- [ ] **P2-T03.1** Một message đang soạn có một `clientMessageId` cố định cho mọi lần retry; bỏ cách sinh ID khác nhau cho tin tạm/request.
-- [ ] **P2-T03.2** Hiển thị pending/sent/failed, retry và giữ nội dung khi lỗi; trạng thái sent nghĩa là server đã lưu, không đồng nghĩa người nhận đã đọc.
-- [ ] **P2-T03.3** Hợp nhất tin tạm với DTO server; không dùng `Date.now()` làm thứ tự tin đã xác nhận.
-- [ ] **P2-T03.4** Bỏ cơ chế nuốt lỗi gửi tin; hiện thông báo từ `ProblemDetails`; tạm ẩn/vô hiệu hóa attachment/reply ở luồng thật đến khi slice tương ứng hoàn thành.
-- [ ] **P2-T03.5** Tách state gọi API/message khỏi `App.jsx` ở mức cần thiết; giữ mock chỉ cho demo tách biệt, không trộn vào hội thoại thật.
+- [x] **P2-T03.1** Một message đang soạn có một `clientMessageId` cố định cho mọi lần retry; bỏ cách sinh ID khác nhau cho tin tạm/request.
+- [x] **P2-T03.2** Hiển thị pending/sent/failed, retry và giữ nội dung khi lỗi; trạng thái sent nghĩa là server đã lưu, không đồng nghĩa người nhận đã đọc.
+- [x] **P2-T03.3** Hợp nhất tin tạm với DTO server; không dùng `Date.now()` làm thứ tự tin đã xác nhận.
+- [x] **P2-T03.4** Bỏ cơ chế nuốt lỗi gửi tin; hiện thông báo từ `ProblemDetails`; tạm ẩn/vô hiệu hóa attachment/reply ở luồng thật đến khi slice tương ứng hoàn thành.
+- [x] **P2-T03.5** Tách state gọi API/message khỏi `App.jsx` ở mức cần thiết; giữ mock chỉ cho demo tách biệt, không trộn vào hội thoại thật.
 
 **Nghiệm thu:** API lỗi không hiện tin như đã gửi thành công; mất phản hồi sau commit rồi retry vẫn chỉ có một tin.
 

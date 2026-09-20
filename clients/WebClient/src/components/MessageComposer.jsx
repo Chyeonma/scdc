@@ -1,22 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+import { createClientMessageId } from '../messaging/messageState.js';
+
 export function MessageComposer({
   channelName,
   replyingTo,
   onCancelReply,
   onSendMessage,
   typingUsers = [],
+  directMessageMode = false,
   disabled = false,
 }) {
   const [content, setContent] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const clientMessageIdRef = useRef(null);
+  const lastSubmissionContentRef = useRef(null);
 
   const emojiList = ['😀', '😂', '😍', '🔥', '👍', '❤️', '🎉', '🚀', '💯', '👏', '🥳', '😎', '💡', '✅', '⚡', '✨'];
 
-  // Auto-resize textarea based on input
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -24,164 +29,164 @@ export function MessageComposer({
     }
   }, [content]);
 
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void handleSubmit();
     }
   }
 
-  function handleSubmit() {
+  function handleContentChange(nextContent) {
+    if (lastSubmissionContentRef.current !== null
+      && nextContent.trim() !== lastSubmissionContentRef.current) {
+      clientMessageIdRef.current = null;
+      lastSubmissionContentRef.current = null;
+    }
+    setContent(nextContent);
+  }
+
+  async function handleSubmit() {
     const trimmed = content.trim();
-    if ((!trimmed && attachedFiles.length === 0) || disabled) return;
+    if ((!trimmed && attachedFiles.length === 0) || disabled || isSending) return;
 
-    onSendMessage({
-      content: trimmed,
-      replyTo: replyingTo ? {
-        id: replyingTo.id,
-        authorName: replyingTo.author?.displayName || replyingTo.author?.username || 'User',
-        content: replyingTo.content?.slice(0, 80) || 'Đính kèm',
-      } : null,
-      attachments: attachedFiles.map((file, idx) => ({
-        id: `att-${Date.now()}-${idx}`,
-        name: file.name,
-        sizeBytes: file.size,
-        mimeType: file.type || 'application/octet-stream',
-      }))
-    });
+    const clientMessageId = directMessageMode
+      ? (clientMessageIdRef.current || createClientMessageId())
+      : undefined;
+    if (directMessageMode) {
+      clientMessageIdRef.current = clientMessageId;
+      lastSubmissionContentRef.current = trimmed;
+    }
 
-    setContent('');
-    setAttachedFiles([]);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+    setIsSending(true);
+    try {
+      await onSendMessage({
+        content: trimmed,
+        clientMessageId,
+        replyTo: replyingTo ? {
+          id: replyingTo.id,
+          authorName: replyingTo.author?.displayName || replyingTo.author?.username || 'User',
+          content: replyingTo.content?.slice(0, 80) || 'Đính kèm',
+        } : null,
+        attachments: attachedFiles.map((file, index) => ({
+          id: `att-${Date.now()}-${index}`,
+          name: file.name,
+          sizeBytes: file.size,
+          mimeType: file.type || 'application/octet-stream',
+        })),
+      });
+      setContent('');
+      setAttachedFiles([]);
+      clientMessageIdRef.current = null;
+      lastSubmissionContentRef.current = null;
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    } catch {
+      // The parent stores the ProblemDetails text on the failed local message.
+      // Keep this draft untouched so retry uses its stable clientMessageId.
+    } finally {
+      setIsSending(false);
     }
   }
 
-  function handleFileSelect(e) {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      setAttachedFiles((prev) => [...prev, ...files]);
-    }
-    e.target.value = '';
+  function handleFileSelect(event) {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) setAttachedFiles((previous) => [...previous, ...files]);
+    event.target.value = '';
   }
 
   function removeFile(index) {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+    setAttachedFiles((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
   }
 
   function handleAddEmoji(emoji) {
-    setContent((prev) => prev + emoji);
+    handleContentChange(content + emoji);
     setShowEmojiPicker(false);
     textareaRef.current?.focus();
   }
 
+  const composerDisabled = disabled || isSending;
+
   return (
     <div className="composer-container">
-      {/* Replying-to Banner */}
-      {replyingTo && (
+      {!directMessageMode && replyingTo && (
         <div className="reply-context-bar">
           <span className="reply-context-bar__text">
             Đang trả lời <strong>@{replyingTo.author?.displayName || replyingTo.author?.username}</strong>:
             <em> "{replyingTo.content?.slice(0, 60)}..."</em>
           </span>
-          <button
-            type="button"
-            className="reply-context-bar__close"
-            onClick={onCancelReply}
-            title="Huỷ trả lời"
-          >
-            ✕
-          </button>
+          <button type="button" className="reply-context-bar__close" onClick={onCancelReply} title="Huỷ trả lời">✕</button>
         </div>
       )}
 
-      {/* Attached Files Preview */}
-      {attachedFiles.length > 0 && (
+      {!directMessageMode && attachedFiles.length > 0 && (
         <div className="composer-attachments">
-          {attachedFiles.map((file, idx) => (
-            <div className="composer-attachment-chip" key={idx}>
+          {attachedFiles.map((file, index) => (
+            <div className="composer-attachment-chip" key={`${file.name}-${index}`}>
               <span>📎 {file.name} ({(file.size / 1024).toFixed(0)}KB)</span>
-              <button type="button" onClick={() => removeFile(idx)}>✕</button>
+              <button type="button" onClick={() => removeFile(index)}>✕</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Main Composer Box */}
       <div className="composer-box">
-        {/* File Attachment Button */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-          multiple
-        />
-        <button
-          type="button"
-          className="composer-btn composer-btn--attach"
-          onClick={() => fileInputRef.current?.click()}
-          title="Đính kèm tệp / ảnh"
-          disabled={disabled}
-        >
-          ➕
-        </button>
+        {!directMessageMode && (
+          <>
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} multiple />
+            <button
+              type="button"
+              className="composer-btn composer-btn--attach"
+              onClick={() => fileInputRef.current?.click()}
+              title="Đính kèm tệp / ảnh"
+              disabled={composerDisabled}
+            >
+              ➕
+            </button>
+          </>
+        )}
 
-        {/* Textarea */}
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(event) => handleContentChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Gửi tin nhắn vào #${channelName || 'kênh'}`}
           rows={1}
-          disabled={disabled}
+          disabled={composerDisabled}
           className="composer-input"
         />
 
-        {/* Emoji Picker Trigger */}
         <div className="composer-actions">
           <button
             type="button"
             className="composer-btn"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             title="Chọn Emoji"
+            disabled={composerDisabled}
           >
             😀
           </button>
-
-          {/* Send Button */}
           <button
             type="button"
             className="composer-btn composer-btn--send"
-            onClick={handleSubmit}
-            disabled={(!content.trim() && attachedFiles.length === 0) || disabled}
+            onClick={() => void handleSubmit()}
+            disabled={(!content.trim() && attachedFiles.length === 0) || composerDisabled}
             title="Gửi tin nhắn (Enter)"
           >
-            ↑
+            {isSending ? '…' : '↑'}
           </button>
         </div>
 
-        {/* Emoji Picker Popover */}
-        {showEmojiPicker && (
+        {showEmojiPicker && !composerDisabled && (
           <div className="emoji-popover">
             <div className="emoji-popover__grid">
               {emojiList.map((emoji) => (
-                <button
-                  type="button"
-                  key={emoji}
-                  className="emoji-btn"
-                  onClick={() => handleAddEmoji(emoji)}
-                >
-                  {emoji}
-                </button>
+                <button type="button" key={emoji} className="emoji-btn" onClick={() => handleAddEmoji(emoji)}>{emoji}</button>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer info & Typing Indicator */}
       <div className="composer-footer">
         {typingUsers.length > 0 ? (
           <span className="typing-indicator">

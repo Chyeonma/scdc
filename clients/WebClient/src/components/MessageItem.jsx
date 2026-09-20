@@ -48,6 +48,8 @@ export function MessageItem({
   isGrouped = false,
   isOwn = false,
   onReply,
+  onRetryMessage,
+  allowReply = true,
   onOpenThread,
   onToggleReaction,
   onPinMessage,
@@ -84,7 +86,7 @@ export function MessageItem({
 
   return (
     <article
-      className={`message ${isGrouped ? 'message--grouped' : ''} ${isOwn ? 'message--own' : ''} ${message.isPinned ? 'message--pinned' : ''}`}
+      className={`message ${isGrouped ? 'message--grouped' : ''} ${isOwn ? 'message--own' : ''} ${message.isPinned ? 'message--pinned' : ''} ${message.deliveryState ? `message--${message.deliveryState}` : ''}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         setShowActions(false);
@@ -140,6 +142,12 @@ export function MessageItem({
               <time className="message__timestamp" dateTime={message.createdAt}>
                 {formatTime(message.createdAt)}
               </time>
+              {isOwn && message.deliveryState === 'pending' && (
+                <span className="message__delivery message__delivery--pending">Đang gửi…</span>
+              )}
+              {isOwn && message.deliveryState === 'sent' && (
+                <span className="message__delivery message__delivery--sent">Đã gửi</span>
+              )}
               {message.isPinned && <span className="pinned-badge" title="Đã ghim">📌 Đã ghim</span>}
             </div>
           )}
@@ -170,6 +178,22 @@ export function MessageItem({
             <div className="message__content">
               {renderFormattedContent(message.content)}
               {message.editedAt && <span className="edited-tag">(đã chỉnh sửa)</span>}
+            </div>
+          )}
+
+          {isGrouped && isOwn && message.deliveryState === 'pending' && (
+            <span className="message__delivery message__delivery--pending">Đang gửi…</span>
+          )}
+          {isGrouped && isOwn && message.deliveryState === 'sent' && (
+            <span className="message__delivery message__delivery--sent">Đã gửi</span>
+          )}
+
+          {isOwn && message.deliveryState === 'failed' && (
+            <div className="message__delivery message__delivery--failed" role="alert">
+              <span>{message.sendError || 'Không thể gửi tin nhắn.'}</span>
+              {onRetryMessage && (
+                <button type="button" onClick={() => onRetryMessage(message)}>Gửi lại</button>
+              )}
             </div>
           )}
 
@@ -250,14 +274,16 @@ export function MessageItem({
             ))}
           </div>
 
-          <button
-            type="button"
-            className="action-btn"
-            onClick={() => onReply?.(message)}
-            title="Trả lời tin nhắn (Reply)"
-          >
-            ↩
-          </button>
+          {allowReply && (
+            <button
+              type="button"
+              className="action-btn"
+              onClick={() => onReply?.(message)}
+              title="Trả lời tin nhắn (Reply)"
+            >
+              ↩
+            </button>
+          )}
           <button
             type="button"
             className="action-btn"
