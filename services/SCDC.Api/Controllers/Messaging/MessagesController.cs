@@ -10,6 +10,28 @@ namespace SCDC.Api.Controllers.Messaging;
 [Route("api/v1/spaces/{spaceId:guid}/messages")]
 public sealed class MessagesController(IMessageService messageService) : ApiControllerBase
 {
+    [HttpGet]
+    [ProducesResponseType<MessagePageDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessagePageDto>> GetHistory(
+        Guid spaceId,
+        [FromQuery] int? limit,
+        [FromQuery] string? beforeSequence,
+        [FromQuery] string? afterSequence,
+        [FromQuery] string? throughSequence,
+        CancellationToken cancellationToken)
+    {
+        var result = await messageService.GetHistoryAsync(
+            new GetMessagesQuery(
+                User.GetUserId(),
+                spaceId,
+                limit ?? 50,
+                beforeSequence,
+                afterSequence,
+                throughSequence),
+            cancellationToken);
+        return FromResult(result);
+    }
+
     [HttpPost]
     [ProducesResponseType<MessageDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<MessageDto>(StatusCodes.Status201Created)]

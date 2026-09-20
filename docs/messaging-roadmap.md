@@ -144,11 +144,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P2-T02 — History và cursor [BE, DB, FE]
 
-- [ ] **P2-T02.1** API lấy lịch sử theo `beforeSequence`, có `limit` tối đa và cursor trang tiếp theo; tận dụng index `(space_id, sequence_no DESC)`.
-- [ ] **P2-T02.2** Bổ sung chế độ tải bù `afterSequence` có phân trang, chốt quy tắc không dùng đồng thời before/after.
-- [ ] **P2-T02.3** Kiểm tra quyền trước truy vấn; xác định tombstone cho tin đã xóa; không trả nội dung đã xóa trong DTO thường.
-- [ ] **P2-T02.4** FE tải trang đầu, cuộn lên tải thêm, giữ vị trí cuộn và hủy/bỏ kết quả request cũ khi đổi space.
-- [ ] **P2-T02.5** Kiểm thử khoảng trống sequence, page boundary và gửi tin trong khi đang tải lịch sử.
+- [x] **P2-T02.1** API lấy lịch sử theo `beforeSequence`, có `limit` tối đa và cursor trang tiếp theo; tận dụng index `(space_id, sequence_no DESC)`.
+- [x] **P2-T02.2** Bổ sung chế độ tải bù `afterSequence` có phân trang, chốt quy tắc không dùng đồng thời before/after.
+- [x] **P2-T02.3** Kiểm tra quyền trước truy vấn; xác định tombstone cho tin đã xóa; không trả nội dung đã xóa trong DTO thường.
+- [x] **P2-T02.4** FE tải trang đầu, cuộn lên tải thêm, giữ vị trí cuộn và hủy/bỏ kết quả request cũ khi đổi space.
+- [x] **P2-T02.5** Kiểm thử khoảng trống sequence, page boundary và gửi tin trong khi đang tải lịch sử.
 
 **Nghiệm thu:** lịch sử sắp xếp ổn định, không trùng hoặc bỏ sót tin trong các kịch bản trên; refresh vẫn có dữ liệu.
 

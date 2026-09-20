@@ -17,6 +17,7 @@ import {
   createDirectConversation,
   findDirectRecipient,
   getAccessToken,
+  getMessageHistory,
   getSpaces,
   sessionStore,
   getMe,
@@ -67,6 +68,8 @@ export default function App() {
   const [dms, setDms] = useState([]);
   const [activeDmId, setActiveDmId] = useState(null);
   const [inboxState, setInboxState] = useState('loading');
+  const [historyState, setHistoryState] = useState('idle');
+  const [nextBeforeBySpace, setNextBeforeBySpace] = useState({});
 
   // Messages & Threads State
   const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
@@ -92,7 +95,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [connectionState, setConnectionState] = useState('online');
 
+  const timelineRef = useRef(null);
   const timelineEndRef = useRef(null);
+  const historyRequestRef = useRef(null);
+  const restoreScrollRef = useRef(null);
 
   // Initialize or fetch current user on session change
   useEffect(() => {
@@ -157,6 +163,60 @@ export default function App() {
 
   const currentSpaceId = isHomeActive ? activeDmId : activeChannelId;
 
+  const loadHistory = useCallback(async (spaceId, beforeSequence = null) => {
+    if (!spaceId || !session?.accessToken) return;
+
+    historyRequestRef.current?.abort();
+    const controller = new AbortController();
+    historyRequestRef.current = controller;
+    const isOlderPage = Boolean(beforeSequence);
+    if (isOlderPage && timelineRef.current) {
+      restoreScrollRef.current = {
+        spaceId,
+        height: timelineRef.current.scrollHeight,
+        top: timelineRef.current.scrollTop,
+      };
+    }
+    setHistoryState('loading');
+    try {
+      const page = await getMessageHistory(spaceId, {
+        limit: 50,
+        beforeSequence: beforeSequence || undefined,
+        signal: controller.signal,
+      });
+      if (historyRequestRef.current !== controller) return;
+
+      setMessagesMap((previous) => {
+        const existing = isOlderPage ? (previous[spaceId] || []) : [];
+        const byId = new Map(existing.map((message) => [message.id, message]));
+        (page.items || []).forEach((message) => byId.set(message.id, message));
+        return {
+          ...previous,
+          [spaceId]: [...byId.values()].sort((left, right) =>
+            BigInt(left.sequenceNo) < BigInt(right.sequenceNo) ? -1 : BigInt(left.sequenceNo) > BigInt(right.sequenceNo) ? 1 : 0),
+        };
+      });
+      setNextBeforeBySpace((previous) => ({ ...previous, [spaceId]: page.nextBeforeSequence }));
+      setHistoryState('ready');
+    } catch (error) {
+      if (error?.name === 'AbortError' || historyRequestRef.current !== controller) return;
+      restoreScrollRef.current = null;
+      if (error?.status === 403 || error?.status === 404) {
+        setDms((previous) => previous.filter((dm) => dm.spaceId !== spaceId));
+        setActiveDmId((current) => current === spaceId ? null : current);
+        notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
+      } else {
+        setHistoryState('error');
+      }
+    }
+  }, [notify, session?.accessToken]);
+
+  useEffect(() => {
+    if (!isHomeActive || !activeDmId || !session?.accessToken) return undefined;
+    loadHistory(activeDmId);
+    return () => historyRequestRef.current?.abort();
+  }, [activeDmId, isHomeActive, loadHistory, session?.accessToken]);
+
   // Active Messages list
   const currentMessages = useMemo(() => {
     const list = messagesMap[currentSpaceId] || [];
@@ -171,8 +231,14 @@ export default function App() {
     return list.filter((m) => m.isPinned);
   }, [messagesMap, currentSpaceId]);
 
-  // Auto-scroll timeline to bottom
+  // Preserve viewport while prepending older history; otherwise show the newest page.
   useEffect(() => {
+    const restore = restoreScrollRef.current;
+    if (restore?.spaceId === currentSpaceId && timelineRef.current) {
+      timelineRef.current.scrollTop = timelineRef.current.scrollHeight - restore.height + restore.top;
+      restoreScrollRef.current = null;
+      return;
+    }
     timelineEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length, currentSpaceId]);
 
@@ -520,8 +586,39 @@ export default function App() {
         />
 
         {/* Message Timeline */}
-        <div className="chat-timeline">
+        <div
+          className="chat-timeline"
+          ref={timelineRef}
+          onScroll={(event) => {
+            if (!isHomeActive || event.currentTarget.scrollTop > 32 || historyState === 'loading') return;
+            const nextBefore = nextBeforeBySpace[activeDmId];
+            if (nextBefore) loadHistory(activeDmId, nextBefore);
+          }}
+        >
+          {isHomeActive && historyState === 'loading' && currentMessages.length > 0 && (
+            <p className="timeline-history-state">Đang tải tin nhắn cũ hơn...</p>
+          )}
+          {isHomeActive && historyState === 'error' && (
+            <div className="timeline-history-state">
+              <p>Không thể tải lịch sử tin nhắn.</p>
+              <button type="button" className="btn btn--secondary" onClick={() => loadHistory(activeDmId)}>
+                Thử lại
+              </button>
+            </div>
+          )}
+          {isHomeActive && nextBeforeBySpace[activeDmId] && currentMessages.length > 0 && historyState !== 'loading' && (
+            <button
+              type="button"
+              className="btn btn--secondary timeline-load-older"
+              onClick={() => loadHistory(activeDmId, nextBeforeBySpace[activeDmId])}
+            >
+              Tải tin nhắn cũ hơn
+            </button>
+          )}
           {currentMessages.length === 0 ? (
+            isHomeActive && historyState === 'loading' ? (
+              <div className="timeline-empty"><p>Đang tải lịch sử tin nhắn...</p></div>
+            ) : (
             <div className="timeline-empty">
               <span className="timeline-empty__icon">
                 {isHomeActive ? '💬' : '#️⃣'}
@@ -533,6 +630,7 @@ export default function App() {
               </h2>
               <p>Đây là điểm khởi đầu của cuộc trò chuyện này. Hãy gửi lời chào đầu tiên!</p>
             </div>
+            )
           ) : (
             currentMessages.map((message, index) => {
               const previous = currentMessages[index - 1];
