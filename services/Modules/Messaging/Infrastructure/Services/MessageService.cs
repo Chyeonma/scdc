@@ -147,6 +147,99 @@ internal sealed class MessageService(
         return Result.Success(new SendMessageResult(ToDto(message, actor), Created: true));
     }
 
+    public async Task<Result<MessagePageDto>> GetHistoryAsync(
+        GetMessagesQuery query,
+        CancellationToken cancellationToken)
+    {
+        if (query.ActorUserId == Guid.Empty || query.SpaceId == Guid.Empty || query.Limit is < 1 or > 100)
+        {
+            return Result.Failure<MessagePageDto>(MessagingErrors.InvalidMessage);
+        }
+
+        if (!TryParseCursor(query.BeforeSequence, allowZero: false, out var before)
+            || !TryParseCursor(query.AfterSequence, allowZero: true, out var after)
+            || !TryParseCursor(query.ThroughSequence, allowZero: true, out var through)
+            || (before is not null && after is not null)
+            || (through is not null && after is null)
+            || (after is not null && through is not null && after > through))
+        {
+            return Result.Failure<MessagePageDto>(MessagingErrors.InvalidMessageCursor);
+        }
+
+        var actor = await userDirectory.FindByIdAsync(query.ActorUserId, cancellationToken);
+        if (actor is null)
+        {
+            return Result.Failure<MessagePageDto>(MessagingErrors.AccountUnavailable);
+        }
+
+        var canRead = await (
+            from space in dbContext.Spaces.AsNoTracking()
+            join member in dbContext.SpaceMembers.AsNoTracking() on space.Id equals member.SpaceId
+            where space.Id == query.SpaceId
+                  && space.Status != SpaceStatus.Deleted
+                  && space.SpaceType == SpaceType.Direct
+                  && member.UserId == query.ActorUserId
+                  && member.MembershipStatus == SpaceMembershipStatus.Active
+            select space.Id)
+            .AnyAsync(cancellationToken);
+        if (!canRead)
+        {
+            return Result.Failure<MessagePageDto>(MessagingErrors.ResourceNotFound);
+        }
+
+        var highWatermark = await dbContext.Messages
+            .AsNoTracking()
+            .Where(message => message.SpaceId == query.SpaceId)
+            .Select(message => (long?)message.SequenceNo)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        if (after is not null)
+        {
+            var throughSequence = through ?? highWatermark;
+            var rows = await dbContext.Messages
+                .AsNoTracking()
+                .Where(message => message.SpaceId == query.SpaceId
+                                  && message.SequenceNo > after
+                                  && message.SequenceNo <= throughSequence)
+                .OrderBy(message => message.SequenceNo)
+                .Take(query.Limit + 1)
+                .ToListAsync(cancellationToken);
+            var hasMore = rows.Count > query.Limit;
+            var pageRows = rows.Take(query.Limit).ToArray();
+            var items = await ToDtosAsync(pageRows, cancellationToken);
+            return Result.Success(new MessagePageDto(
+                items,
+                hasMore,
+                NextBeforeSequence: null,
+                NextAfterSequence: hasMore ? ToSequence(pageRows[^1].SequenceNo) : null,
+                HighWatermark: ToSequence(throughSequence)));
+        }
+
+        var historyQuery = dbContext.Messages
+            .AsNoTracking()
+            .Where(message => message.SpaceId == query.SpaceId);
+        if (before is not null)
+        {
+            historyQuery = historyQuery.Where(message => message.SequenceNo < before);
+        }
+
+        var historyRows = await historyQuery
+            .OrderByDescending(message => message.SequenceNo)
+            .Take(query.Limit + 1)
+            .ToListAsync(cancellationToken);
+        var historyHasMore = historyRows.Count > query.Limit;
+        var historyPageRows = historyRows.Take(query.Limit)
+            .OrderBy(message => message.SequenceNo)
+            .ToArray();
+        var historyItems = await ToDtosAsync(historyPageRows, cancellationToken);
+        return Result.Success(new MessagePageDto(
+            historyItems,
+            historyHasMore,
+            NextBeforeSequence: historyHasMore ? ToSequence(historyPageRows[0].SequenceNo) : null,
+            NextAfterSequence: null,
+            HighWatermark: ToSequence(highWatermark)));
+    }
+
     private async Task<bool> IsBlockedAsync(Guid actorUserId, Guid peerUserId, CancellationToken cancellationToken) =>
         await dbContext.UserBlocks
             .AsNoTracking()
@@ -174,14 +267,53 @@ internal sealed class MessageService(
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
 
-    private static MessageDto ToDto(Message message, UserSummary author) => new(
+    private async Task<IReadOnlyList<MessageDto>> ToDtosAsync(
+        IReadOnlyCollection<Message> messages,
+        CancellationToken cancellationToken)
+    {
+        var authorIds = messages
+            .Where(message => message.AuthorUserId is not null)
+            .Select(message => message.AuthorUserId!.Value)
+            .Distinct()
+            .ToArray();
+        var authors = await userDirectory.FindByIdsAsync(authorIds, cancellationToken);
+        return messages.Select(message => ToDto(
+            message,
+            message.AuthorUserId is { } authorId && authors.TryGetValue(authorId, out var author) ? author : null))
+            .ToArray();
+    }
+
+    private static bool TryParseCursor(string? value, bool allowZero, out long? sequence)
+    {
+        sequence = null;
+        if (value is null)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(value)
+            || (value.Length > 1 && value[0] == '0')
+            || !long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+            || parsed < 0
+            || (!allowZero && parsed == 0))
+        {
+            return false;
+        }
+
+        sequence = parsed;
+        return true;
+    }
+
+    private static string ToSequence(long sequence) => sequence.ToString(CultureInfo.InvariantCulture);
+
+    private static MessageDto ToDto(Message message, UserSummary? author) => new(
         message.Id,
         message.SpaceId,
         message.ClientMessageId,
         message.SequenceNo.ToString(CultureInfo.InvariantCulture),
         (short)message.MessageType,
         author,
-        message.Content,
+        message.DeletedAt is null ? message.Content : null,
         message.Version,
         message.CreatedAt,
         message.EditedAt,

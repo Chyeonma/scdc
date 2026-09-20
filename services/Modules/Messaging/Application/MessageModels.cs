@@ -11,6 +11,21 @@ public sealed record SendMessageCommand(
 
 public sealed record SendMessageResult(MessageDto Message, bool Created);
 
+public sealed record GetMessagesQuery(
+    Guid ActorUserId,
+    Guid SpaceId,
+    int Limit,
+    string? BeforeSequence,
+    string? AfterSequence,
+    string? ThroughSequence);
+
+public sealed record MessagePageDto(
+    IReadOnlyList<MessageDto> Items,
+    bool HasMore,
+    string? NextBeforeSequence,
+    string? NextAfterSequence,
+    string HighWatermark);
+
 public sealed record MessageDto(
     Guid Id,
     Guid SpaceId,

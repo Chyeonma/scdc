@@ -267,3 +267,17 @@ export function createDirectConversation(recipientUserId) {
     body: { recipientUserId },
   });
 }
+
+export function getMessageHistory(spaceId, {
+  limit = 50,
+  beforeSequence,
+  afterSequence,
+  throughSequence,
+  signal,
+} = {}) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (beforeSequence) query.set('beforeSequence', beforeSequence);
+  if (afterSequence !== undefined) query.set('afterSequence', afterSequence);
+  if (throughSequence !== undefined) query.set('throughSequence', throughSequence);
+  return api(`/spaces/${spaceId}/messages?${query}`, { signal });
+}

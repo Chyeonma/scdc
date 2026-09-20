@@ -59,4 +59,8 @@ public static class MessagingErrors
     public static readonly Error RateLimited = Error.TooManyRequests(
         "Messaging.RateLimited",
         "Too many messages were sent. Try again shortly.");
+
+    public static readonly Error InvalidMessageCursor = Error.Validation(
+        "Messaging.InvalidCursor",
+        "The message history cursor is invalid.");
 }

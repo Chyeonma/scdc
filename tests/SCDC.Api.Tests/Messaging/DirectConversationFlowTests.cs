@@ -288,6 +288,83 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         }
     }
 
+    [Fact]
+    public async Task History_uses_stable_before_and_after_cursors_and_hides_tombstone_content()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("HistoryA");
+            var actorB = await CreateActorAsync("HistoryB");
+            var actorC = await CreateActorAsync("HistoryC");
+            actors.AddRange([actorA, actorB, actorC]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+
+            var first = await SendTextAsync(actorA, spaceId, "First");
+            var second = await SendTextAsync(actorB, spaceId, "Second");
+            var third = await SendTextAsync(actorA, spaceId, "Third");
+            await MarkMessageDeletedAsync(second.GetProperty("id").GetGuid());
+
+            var firstHistory = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages?limit=2",
+                actorA.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, firstHistory.StatusCode);
+            var firstPage = await firstHistory.Content.ReadFromJsonAsync<JsonElement>();
+            var firstItems = firstPage.GetProperty("items").EnumerateArray().ToArray();
+            Assert.Equal(2, firstItems.Length);
+            Assert.True(firstPage.GetProperty("hasMore").GetBoolean());
+            Assert.True(long.Parse(firstItems[0].GetProperty("sequenceNo").GetString()!)
+                        < long.Parse(firstItems[1].GetProperty("sequenceNo").GetString()!));
+            Assert.Equal(second.GetProperty("id").GetGuid(), firstItems[0].GetProperty("id").GetGuid());
+            Assert.True(firstItems[0].GetProperty("deletedAt").GetDateTimeOffset() <= DateTimeOffset.UtcNow);
+            Assert.Equal(JsonValueKind.Null, firstItems[0].GetProperty("content").ValueKind);
+
+            var nextBefore = firstPage.GetProperty("nextBeforeSequence").GetString();
+            var olderHistory = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages?limit=2&beforeSequence={nextBefore}",
+                actorA.AccessToken);
+            var olderPage = await olderHistory.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Single(olderPage.GetProperty("items").EnumerateArray());
+            Assert.Equal(first.GetProperty("id").GetGuid(), olderPage.GetProperty("items")[0].GetProperty("id").GetGuid());
+
+            var catchUp = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages?limit=1&afterSequence={first.GetProperty("sequenceNo").GetString()}",
+                actorA.AccessToken);
+            var catchUpPage = await catchUp.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(catchUpPage.GetProperty("hasMore").GetBoolean());
+            Assert.Equal(second.GetProperty("id").GetGuid(), catchUpPage.GetProperty("items")[0].GetProperty("id").GetGuid());
+            var highWatermark = catchUpPage.GetProperty("highWatermark").GetString();
+            var nextAfter = catchUpPage.GetProperty("nextAfterSequence").GetString();
+            var fourth = await SendTextAsync(actorB, spaceId, "Fourth after catch-up started");
+
+            var finalCatchUp = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages?limit=1&afterSequence={nextAfter}&throughSequence={highWatermark}",
+                actorA.AccessToken);
+            var finalCatchUpPage = await finalCatchUp.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.False(finalCatchUpPage.GetProperty("hasMore").GetBoolean());
+            Assert.Equal(third.GetProperty("id").GetGuid(), finalCatchUpPage.GetProperty("items")[0].GetProperty("id").GetGuid());
+
+            var latestCatchUp = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages?limit=1&afterSequence={highWatermark}",
+                actorA.AccessToken);
+            var latestCatchUpPage = await latestCatchUp.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.False(latestCatchUpPage.GetProperty("hasMore").GetBoolean());
+            Assert.Equal(fourth.GetProperty("id").GetGuid(), latestCatchUpPage.GetProperty("items")[0].GetProperty("id").GetGuid());
+
+            var outsiderHistory = await SendAuthorizedAsync(HttpMethod.Get, $"/api/v1/spaces/{spaceId}/messages", actorC.AccessToken);
+            Assert.Equal(HttpStatusCode.NotFound, outsiderHistory.StatusCode);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
     private async Task<TestActor> CreateActorAsync(string label)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -351,6 +428,31 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("id").GetGuid();
+    }
+
+    private async Task<JsonElement> SendTextAsync(TestActor actor, Guid spaceId, string content)
+    {
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Post,
+            $"/api/v1/spaces/{spaceId}/messages",
+            actor.AccessToken,
+            new { clientMessageId = Guid.NewGuid(), messageType = 1, content });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return await response.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    private async Task MarkMessageDeletedAsync(Guid messageId)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>()
+            .GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Test database connection is missing.");
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "UPDATE messaging.messages SET content = '[deleted]', deleted_at = clock_timestamp() WHERE id = @message_id",
+            connection);
+        command.Parameters.AddWithValue("message_id", messageId);
+        Assert.Equal(1, await command.ExecuteNonQueryAsync());
     }
 
     private async Task<(int Messages, int MessageCreatedOutboxEvents, Guid? LastMessageId, string? LastMessageSequence)>
