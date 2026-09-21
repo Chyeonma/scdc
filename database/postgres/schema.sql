@@ -691,6 +691,7 @@ CREATE TABLE messaging.messages (
     client_message_id   uuid,
     message_type        smallint NOT NULL DEFAULT 1,
     content             text,
+    idempotency_payload_hash char(64),
     reply_to_message_id uuid,
     thread_root_id      uuid,
     metadata            jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -720,6 +721,9 @@ CREATE TABLE messaging.messages (
         OR (content IS NOT NULL AND char_length(btrim(content)) BETWEEN 1 AND 10000)
     ),
     CONSTRAINT ck_messages_content_length CHECK (content IS NULL OR char_length(content) <= 10000),
+    CONSTRAINT ck_messages_idempotency_hash CHECK (
+        idempotency_payload_hash IS NULL OR idempotency_payload_hash ~ '^[0-9a-f]{64}$'
+    ),
     CONSTRAINT ck_messages_metadata CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT ck_messages_version CHECK (version >= 1),
     CONSTRAINT ck_messages_edited CHECK (edited_at IS NULL OR edited_at >= created_at),

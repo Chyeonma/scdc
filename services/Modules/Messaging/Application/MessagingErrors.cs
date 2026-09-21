@@ -39,4 +39,24 @@ public static class MessagingErrors
     public static readonly Error InvalidPageSize = Error.Validation(
         "Messaging.InvalidPageSize",
         "The conversation page size must be between 1 and 100.");
+
+    public static readonly Error InvalidMessage = Error.Validation(
+        "Messaging.ValidationFailed",
+        "The message content or type is invalid.");
+
+    public static readonly Error ActionNotAllowed = Error.Forbidden(
+        "Messaging.ActionNotAllowed",
+        "You cannot perform this action in the space.");
+
+    public static readonly Error SpaceNotWritable = Error.Conflict(
+        "Messaging.SpaceNotWritable",
+        "The space is not writable.");
+
+    public static readonly Error IdempotencyConflict = Error.Conflict(
+        "Messaging.IdempotencyConflict",
+        "The client message ID was already used with a different payload.");
+
+    public static readonly Error RateLimited = Error.TooManyRequests(
+        "Messaging.RateLimited",
+        "Too many messages were sent. Try again shortly.");
 }

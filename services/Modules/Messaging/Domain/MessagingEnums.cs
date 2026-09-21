@@ -34,3 +34,11 @@ internal enum NotificationLevel : short
     MentionsOnly = 1,
     AllMessages = 2
 }
+
+internal enum MessageType : short
+{
+    Text = 1,
+    System = 2,
+    Attachment = 3,
+    Reserved = 4
+}
