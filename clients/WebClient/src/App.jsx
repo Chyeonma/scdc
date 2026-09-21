@@ -47,6 +47,7 @@ import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
 import { useDirectMessageSender } from './hooks/useDirectMessageSender.js';
 import { mergeMessages } from './messaging/messageState.js';
+import { highestSequence, loadCatchUpPages, mergeSnapshot } from './messaging/realtimeSync.js';
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
@@ -101,6 +102,13 @@ export default function App() {
   const timelineEndRef = useRef(null);
   const historyRequestRef = useRef(null);
   const restoreScrollRef = useRef(null);
+  const connectionRef = useRef(null);
+  const subscribedSpaceRef = useRef(null);
+  const activeSpaceRef = useRef(null);
+  const messagesRef = useRef(messagesMap);
+  const loadInboxRef = useRef(null);
+  const syncActiveSpaceRef = useRef(null);
+  const realtimeSyncRef = useRef({ run: 0, active: null, bufferedEvents: new Map() });
   const { send: sendDirectMessage, retry: retryDirectMessage } = useDirectMessageSender({
     currentUser: currentUser || session?.user,
     setMessagesMap,
@@ -168,6 +176,8 @@ export default function App() {
   );
 
   const currentSpaceId = isHomeActive ? activeDmId : activeChannelId;
+  activeSpaceRef.current = currentSpaceId;
+  messagesRef.current = messagesMap;
 
   const loadHistory = useCallback(async (spaceId, beforeSequence = null) => {
     if (!spaceId || !session?.accessToken) return;
@@ -217,12 +227,6 @@ export default function App() {
     }
   }, [notify, session?.accessToken]);
 
-  useEffect(() => {
-    if (!isHomeActive || !activeDmId || !session?.accessToken) return undefined;
-    loadHistory(activeDmId);
-    return () => historyRequestRef.current?.abort();
-  }, [activeDmId, isHomeActive, loadHistory, session?.accessToken]);
-
   // Active Messages list
   const currentMessages = useMemo(() => {
     const list = messagesMap[currentSpaceId] || [];
@@ -248,9 +252,100 @@ export default function App() {
     timelineEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length, currentSpaceId]);
 
+  loadInboxRef.current = loadInbox;
+
+  const mergeRealtimeItems = useCallback((spaceId, items, snapshot = false) => {
+    setMessagesMap((previous) => ({
+      ...previous,
+      [spaceId]: snapshot
+        ? mergeSnapshot(previous[spaceId] || [], items)
+        : mergeMessages(previous[spaceId] || [], items),
+    }));
+  }, []);
+
+  syncActiveSpaceRef.current = async (spaceId, { resubscribe = true } = {}) => {
+    const connection = connectionRef.current;
+    if (!spaceId || !connection || connection.state !== HubConnectionState.Connected) return false;
+
+    const sync = realtimeSyncRef.current;
+    const run = ++sync.run;
+    sync.active = { run, spaceId };
+    sync.bufferedEvents.set(spaceId, []);
+    if (resubscribe) setConnectionState('connecting');
+
+    const isCurrent = () => sync.run === run && activeSpaceRef.current === spaceId;
+    try {
+      let highWatermark;
+      if (resubscribe) {
+        const token = await getAccessToken();
+        if (!token || !isCurrent()) return false;
+
+        const previousSpace = subscribedSpaceRef.current;
+        if (previousSpace && previousSpace !== spaceId) {
+          await connection.invoke('UnsubscribeSpace', previousSpace).catch(() => {});
+        }
+
+        const subscription = await connection.invoke('SubscribeSpace', spaceId);
+        if (!subscription?.ok) {
+          if (isCurrent()) setConnectionState('offline');
+          return false;
+        }
+        subscribedSpaceRef.current = spaceId;
+        highWatermark = subscription.value?.highWatermark;
+      }
+
+      const knownSequence = highestSequence(messagesRef.current[spaceId] || []);
+      setHistoryState('loading');
+      const snapshot = await getMessageHistory(spaceId, { limit: 50 });
+      if (!isCurrent()) return false;
+      mergeRealtimeItems(spaceId, snapshot.items || [], true);
+      setNextBeforeBySpace((previous) => ({ ...previous, [spaceId]: snapshot.nextBeforeSequence }));
+      setHistoryState('ready');
+
+      const catchUp = await loadCatchUpPages(
+        (afterSequence, throughSequence) => getMessageHistory(spaceId, {
+          limit: 50,
+          afterSequence,
+          throughSequence,
+        }),
+        knownSequence,
+        highWatermark,
+      );
+      if (!isCurrent()) return false;
+      mergeRealtimeItems(spaceId, catchUp.items);
+
+      let boundary = catchUp.highWatermark;
+      while (sync.bufferedEvents.get(spaceId)?.length) {
+        sync.bufferedEvents.set(spaceId, []);
+        const bufferedCatchUp = await loadCatchUpPages(
+          (afterSequence, throughSequence) => getMessageHistory(spaceId, {
+            limit: 50,
+            afterSequence,
+            throughSequence,
+          }),
+          boundary,
+        );
+        if (!isCurrent()) return false;
+        mergeRealtimeItems(spaceId, bufferedCatchUp.items);
+        boundary = bufferedCatchUp.highWatermark;
+      }
+
+      if (isCurrent()) setConnectionState('online');
+      return true;
+    } catch {
+      if (isCurrent()) {
+        setHistoryState('error');
+        setConnectionState('offline');
+      }
+      return false;
+    } finally {
+      if (sync.active?.run === run) sync.active = null;
+    }
+  };
+
   // SignalR Hub Connection Setup
   useEffect(() => {
-    if (!session?.accessToken || !currentSpaceId) return undefined;
+    if (!session?.accessToken) return undefined;
 
     let disposed = false;
     const connection = new HubConnectionBuilder()
@@ -258,20 +353,24 @@ export default function App() {
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(LogLevel.Warning)
       .build();
+    connectionRef.current = connection;
 
     connection.on('RealtimeEvent', (event) => {
       if (event?.schemaVersion !== 1) return;
 
-      if (event.eventType === 'MessageCreated') {
-        void loadInbox();
-        if (event.spaceId === currentSpaceId) {
-          void loadHistory(event.spaceId);
+      if (event.eventType === 'MessageCreated' && event.spaceId) {
+        void loadInboxRef.current?.();
+        const syncing = realtimeSyncRef.current.active;
+        if (syncing?.spaceId === event.spaceId) {
+          realtimeSyncRef.current.bufferedEvents.get(event.spaceId)?.push(event);
+        } else if (activeSpaceRef.current === event.spaceId) {
+          void syncActiveSpaceRef.current?.(event.spaceId, { resubscribe: false });
         }
         return;
       }
 
       if (event.eventType === 'SpaceUpdated') {
-        void loadInbox();
+        void loadInboxRef.current?.();
         return;
       }
 
@@ -286,9 +385,16 @@ export default function App() {
       if (event.eventType === 'SessionRevoked') sessionStore.clear();
     });
 
-    connection.onreconnecting(() => setConnectionState('connecting'));
-    connection.onreconnected(() => setConnectionState('online'));
+    connection.onreconnecting(() => {
+      subscribedSpaceRef.current = null;
+      setConnectionState('connecting');
+    });
+    connection.onreconnected(() => {
+      subscribedSpaceRef.current = null;
+      if (activeSpaceRef.current) void syncActiveSpaceRef.current?.(activeSpaceRef.current);
+    });
     connection.onclose(() => {
+      subscribedSpaceRef.current = null;
       if (!disposed) setConnectionState('offline');
     });
 
@@ -296,13 +402,16 @@ export default function App() {
       try {
         await connection.start();
         if (!disposed) {
-          const subscription = await connection.invoke('SubscribeSpace', currentSpaceId);
+          const spaceId = activeSpaceRef.current;
+          if (!spaceId) return;
+          const subscription = await connection.invoke('SubscribeSpace', spaceId);
           if (!subscription?.ok) {
             setConnectionState('offline');
             notify('warning', subscription?.error?.message || 'Không thể đăng ký nhận tin nhắn realtime.');
             return;
           }
-          setConnectionState('online');
+          subscribedSpaceRef.current = spaceId;
+          await syncActiveSpaceRef.current?.(spaceId, { resubscribe: false });
         }
       } catch {
         if (!disposed) {
@@ -315,14 +424,22 @@ export default function App() {
 
     return () => {
       disposed = true;
+      if (connectionRef.current === connection) connectionRef.current = null;
       void (async () => {
-        if (connection.state === HubConnectionState.Connected) {
-          await connection.invoke('UnsubscribeSpace', currentSpaceId).catch(() => {});
+        if (connection.state === HubConnectionState.Connected && subscribedSpaceRef.current) {
+          await connection.invoke('UnsubscribeSpace', subscribedSpaceRef.current).catch(() => {});
         }
         if (connection.state !== HubConnectionState.Disconnected) await connection.stop();
       })();
     };
-  }, [currentSpaceId, loadHistory, loadInbox, notify, session?.accessToken]);
+  }, [notify, session?.accessToken]);
+
+  useEffect(() => {
+    if (!session?.accessToken || !currentSpaceId) return;
+    if (connectionRef.current?.state === HubConnectionState.Connected) {
+      void syncActiveSpaceRef.current?.(currentSpaceId);
+    }
+  }, [currentSpaceId, session?.accessToken]);
 
   const handleSendMessage = useCallback(async ({ content, clientMessageId }) => {
     const sent = await sendDirectMessage({

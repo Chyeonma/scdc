@@ -187,11 +187,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P3-T03 — Reconnect và đồng bộ UI [FE, QA]
 
-- [ ] **P3-T03.1** Kết nối lại phải subscribe lại, refresh token khi cần và hiển thị đúng connecting/online/offline.
-- [ ] **P3-T03.2** Chốt thứ tự subscribe + tải snapshot/tải bù và buffer event trong lúc đồng bộ để không có khoảng trống dữ liệu.
-- [ ] **P3-T03.3** Hợp nhất HTTP response, history và event theo ID; sắp xếp bằng sequence, không dựa vào thời điểm event tới.
-- [ ] **P3-T03.4** Tải bù tin mới có phân trang; tải lại snapshot phần đang hiển thị để đồng bộ sửa/xóa vì `afterSequence` đơn thuần không bao phủ thay đổi tin cũ.
-- [ ] **P3-T03.5** Kiểm thử hai trình duyệt, nhiều tab, rớt mạng, API restart và chuyển space liên tục; kiểm tra cả proxy Vite/Nginx.
+- [x] **P3-T03.1** Kết nối lại phải subscribe lại, refresh token khi cần và hiển thị đúng connecting/online/offline.
+- [x] **P3-T03.2** Chốt thứ tự subscribe + tải snapshot/tải bù và buffer event trong lúc đồng bộ để không có khoảng trống dữ liệu.
+- [x] **P3-T03.3** Hợp nhất HTTP response, history và event theo ID; sắp xếp bằng sequence, không dựa vào thời điểm event tới.
+- [x] **P3-T03.4** Tải bù tin mới có phân trang; tải lại snapshot phần đang hiển thị để đồng bộ sửa/xóa vì `afterSequence` đơn thuần không bao phủ thay đổi tin cũ.
+- [ ] **P3-T03.5** Kiểm thử hai trình duyệt, nhiều tab, rớt mạng, API restart và chuyển space liên tục; kiểm tra cả proxy Vite/Nginx (đã có kiểm thử tự động cursor/snapshot và production build Vite; kiểm thử thủ công đa trình duyệt/API restart còn cần chạy trên môi trường tích hợp).
 
 **Nghiệm thu:** người nhận thấy tin không cần refresh; nối lại không mất/trùng tin và không hiển thị online giả khi Hub lỗi.
 
