@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SCDC.BuildingBlocks.Application;
 using SCDC.Contracts.Messaging;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Hubs;
+using SCDC.Modules.Messaging.Infrastructure;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
 using SCDC.Modules.Messaging.Infrastructure.Services;
 
@@ -23,6 +25,13 @@ public static class MessagingModule
         }
 
         services.AddDbContext<MessagingDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddOptions<MessagingOutboxOptions>()
+            .Bind(configuration.GetSection(MessagingOutboxOptions.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(options => options.PollInterval > TimeSpan.Zero, "Outbox poll interval must be positive.")
+            .Validate(options => options.InitialRetryDelay > TimeSpan.Zero, "Outbox retry delay must be positive.")
+            .Validate(options => options.MaxRetryDelay >= options.InitialRetryDelay, "Outbox max retry delay must not be shorter than the initial delay.")
+            .ValidateOnStart();
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddSingleton<MessageRateLimiter>();
         services.AddScoped<IMessageService, MessageService>();
@@ -34,6 +43,8 @@ public static class MessagingModule
         services.AddSingleton<IRealtimeSessionRevoker>(provider =>
             provider.GetRequiredService<MessagingRealtimeAccessRevoker>());
         services.AddScoped<IRealtimeMessagePublisher, MessagingRealtimePublisher>();
+        services.AddScoped<IMessagingOutboxDispatcher, MessagingOutboxDispatcher>();
+        services.AddHostedService<MessagingOutboxWorker>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }
