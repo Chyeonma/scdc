@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using SCDC.Api.Tests.Infrastructure;
+using SCDC.Modules.Messaging.Application;
 
 namespace SCDC.Api.Tests.Messaging;
 
@@ -402,6 +403,186 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         }
     }
 
+    [Fact]
+    public async Task Outbox_dispatch_publishes_message_after_it_is_committed()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            factory.OutboxPublisher.Reset();
+            var actorA = await CreateActorAsync("OutboxA");
+            var actorB = await CreateActorAsync("OutboxB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            var eventId = Guid.CreateVersion7();
+            await InsertMessageCreatedOutboxEventAsync(eventId, spaceId);
+
+            using var scope = factory.Services.CreateScope();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+            await dispatcher.DispatchDueAsync(CancellationToken.None);
+
+            var state = await GetOutboxStateByEventIdAsync(eventId);
+            Assert.NotNull(state.PublishedAt);
+            Assert.Equal(1, state.AttemptCount);
+            Assert.Null(state.LastError);
+            Assert.Contains(eventId, factory.OutboxPublisher.EventIds);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Outbox_failure_is_quarantined_and_can_be_replayed()
+    {
+        var eventId = Guid.CreateVersion7();
+        try
+        {
+            await InsertUnsupportedOutboxEventAsync(eventId);
+            using var scope = factory.Services.CreateScope();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+
+            await dispatcher.DispatchDueAsync(CancellationToken.None);
+
+            var failed = await dispatcher.ListFailuresAsync(10, CancellationToken.None);
+            Assert.Contains(failed, item => item.EventId == eventId && item.AttemptCount == 1);
+
+            Assert.True(await dispatcher.ReplayAsync(eventId, CancellationToken.None));
+            var replayed = await GetOutboxStateByEventIdAsync(eventId);
+            Assert.Null(replayed.PublishedAt);
+            Assert.Equal(0, replayed.AttemptCount);
+            Assert.Null(replayed.LastError);
+        }
+        finally
+        {
+            await DeleteOutboxEventAsync(eventId);
+        }
+    }
+
+    [Fact]
+    public async Task Outbox_retries_the_same_event_after_worker_stops_before_marking_published()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            factory.OutboxPublisher.Reset();
+            var actorA = await CreateActorAsync("OutboxCrashA");
+            var actorB = await CreateActorAsync("OutboxCrashB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            var eventId = Guid.CreateVersion7();
+            await InsertMessageCreatedOutboxEventAsync(eventId, spaceId);
+
+            using var stopSource = new CancellationTokenSource();
+            factory.OutboxPublisher.CancelAfterEventId = eventId;
+            factory.OutboxPublisher.CancellationSource = stopSource;
+            using (var scope = factory.Services.CreateScope())
+            {
+                var dispatcher = scope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                    dispatcher.DispatchDueAsync(stopSource.Token));
+            }
+
+            var interrupted = await GetOutboxStateByEventIdAsync(eventId);
+            Assert.Null(interrupted.PublishedAt);
+            Assert.Equal(0, interrupted.AttemptCount);
+
+            factory.OutboxPublisher.CancelAfterEventId = null;
+            factory.OutboxPublisher.CancellationSource = null;
+            using (var restartScope = factory.Services.CreateScope())
+            {
+                var dispatcher = restartScope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+                await dispatcher.DispatchDueAsync(CancellationToken.None);
+            }
+
+            var recovered = await GetOutboxStateByEventIdAsync(eventId);
+            Assert.NotNull(recovered.PublishedAt);
+            Assert.Equal(1, recovered.AttemptCount);
+            Assert.Equal(2, factory.OutboxPublisher.EventIds.Count(id => id == eventId));
+        }
+        finally
+        {
+            factory.OutboxPublisher.Reset();
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Outbox_keeps_event_due_when_worker_stops_before_publishing()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            factory.OutboxPublisher.Reset();
+            var actorA = await CreateActorAsync("OutboxBeforeA");
+            var actorB = await CreateActorAsync("OutboxBeforeB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            var eventId = Guid.CreateVersion7();
+            await InsertMessageCreatedOutboxEventAsync(eventId, spaceId);
+
+            using var stopSource = new CancellationTokenSource();
+            stopSource.Cancel();
+            using (var scope = factory.Services.CreateScope())
+            {
+                var dispatcher = scope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                    dispatcher.DispatchDueAsync(stopSource.Token));
+            }
+
+            var interrupted = await GetOutboxStateByEventIdAsync(eventId);
+            Assert.Null(interrupted.PublishedAt);
+            Assert.Equal(0, interrupted.AttemptCount);
+            Assert.DoesNotContain(eventId, factory.OutboxPublisher.EventIds);
+
+            using (var restartScope = factory.Services.CreateScope())
+            {
+                var dispatcher = restartScope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+                await dispatcher.DispatchDueAsync(CancellationToken.None);
+            }
+
+            var recovered = await GetOutboxStateByEventIdAsync(eventId);
+            Assert.NotNull(recovered.PublishedAt);
+            Assert.Equal(1, recovered.AttemptCount);
+        }
+        finally
+        {
+            factory.OutboxPublisher.Reset();
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Outbox_dispatches_due_events_in_available_then_occurred_order()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            factory.OutboxPublisher.Reset();
+            var actorA = await CreateActorAsync("OutboxOrderA");
+            var actorB = await CreateActorAsync("OutboxOrderB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            var firstEventId = Guid.CreateVersion7();
+            var secondEventId = Guid.CreateVersion7();
+            await InsertMessageCreatedOutboxEventAsync(firstEventId, spaceId, ageDays: 2);
+            await InsertMessageCreatedOutboxEventAsync(secondEventId, spaceId, ageDays: 1);
+
+            using var scope = factory.Services.CreateScope();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>();
+            await dispatcher.DispatchDueAsync(CancellationToken.None);
+
+            var eventIds = factory.OutboxPublisher.EventIds.ToList();
+            Assert.True(eventIds.IndexOf(firstEventId) < eventIds.IndexOf(secondEventId));
+        }
+        finally
+        {
+            factory.OutboxPublisher.Reset();
+            await CleanupActorsAsync(actors);
+        }
+    }
+
     private async Task<TestActor> CreateActorAsync(string label)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -526,6 +707,85 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
             reader.GetInt32(1),
             reader.IsDBNull(2) ? null : reader.GetGuid(2),
             reader.IsDBNull(3) ? null : reader.GetString(3));
+    }
+
+    private async Task<(DateTimeOffset? PublishedAt, int AttemptCount, string? LastError)> GetOutboxStateByEventIdAsync(Guid eventId)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>()
+            .GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Test database connection is missing.");
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "SELECT published_at, attempt_count, last_error FROM integration.outbox_events WHERE id = @event_id",
+            connection);
+        command.Parameters.AddWithValue("event_id", eventId);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        return (
+            reader.IsDBNull(0) ? null : reader.GetFieldValue<DateTimeOffset>(0),
+            reader.GetInt32(1),
+            reader.IsDBNull(2) ? null : reader.GetString(2));
+    }
+
+    private async Task InsertUnsupportedOutboxEventAsync(Guid eventId)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>()
+            .GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Test database connection is missing.");
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            """
+            INSERT INTO integration.outbox_events
+                (id, event_type, aggregate_type, aggregate_id, payload, occurred_at, available_at, attempt_count)
+            VALUES
+                (@event_id, 'Messaging.Unsupported', 'Test', @aggregate_id, '{}'::jsonb,
+                 clock_timestamp() - interval '1 day', clock_timestamp() - interval '1 day', 0)
+            """,
+            connection);
+        command.Parameters.AddWithValue("event_id", eventId);
+        command.Parameters.AddWithValue("aggregate_id", Guid.CreateVersion7());
+        Assert.Equal(1, await command.ExecuteNonQueryAsync());
+    }
+
+    private async Task InsertMessageCreatedOutboxEventAsync(Guid eventId, Guid spaceId, int ageDays = 1)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>()
+            .GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Test database connection is missing.");
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            """
+            INSERT INTO integration.outbox_events
+                (id, event_type, aggregate_type, aggregate_id, aggregate_version, space_id, payload, occurred_at, available_at, attempt_count)
+            VALUES
+                (@event_id, 'Messaging.MessageCreated', 'Message', @message_id, 1, @space_id,
+                 jsonb_build_object('messageId', @message_id::text, 'sequenceNo', '1'),
+                 @occurred_at, @occurred_at, 0)
+            """,
+            connection);
+        var messageId = Guid.CreateVersion7();
+        command.Parameters.AddWithValue("event_id", eventId);
+        command.Parameters.AddWithValue("message_id", messageId);
+        command.Parameters.AddWithValue("space_id", spaceId);
+        command.Parameters.AddWithValue("occurred_at", DateTimeOffset.UtcNow.AddDays(-ageDays));
+        Assert.Equal(1, await command.ExecuteNonQueryAsync());
+    }
+
+    private async Task DeleteOutboxEventAsync(Guid eventId)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>()
+            .GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Test database connection is missing.");
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "DELETE FROM integration.outbox_events WHERE id = @event_id",
+            connection);
+        command.Parameters.AddWithValue("event_id", eventId);
+        await command.ExecuteNonQueryAsync();
     }
 
     private async Task<(int DirectConversations, int ActiveMembers, int UserStates)> GetDirectConversationCountsAsync(Guid spaceId)

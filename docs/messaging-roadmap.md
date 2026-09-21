@@ -176,12 +176,12 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P3-T02 — Outbox worker và chống xử lý lặp [BE, DB, OPS]
 
-- [ ] **P3-T02.1** Worker đọc event tới hạn theo batch; chốt transaction/lock hoặc claim có phục hồi khi nhiều worker cùng chạy.
-- [ ] **P3-T02.2** Phát `MessageCreated`; chỉ đánh dấu published sau khi bước phát hoàn tất; ghi attempt, lỗi và thời điểm retry.
-- [ ] **P3-T02.3** Có backoff, ngưỡng retry và cơ chế xem/replay event lỗi; đề xuất bổ sung schema nếu cần trạng thái cách ly hoặc lease.
-- [ ] **P3-T02.4** Quy định giao nhận ít nhất một lần: consumer có side effect dùng inbox/idempotency; FE deduplicate bằng event/message ID và version.
-- [ ] **P3-T02.5** Tách dispatch theo event type để không nuốt event Identity; chưa bật gửi email thật cho đến khi có consumer email tương ứng.
-- [ ] **P3-T02.6** Test crash trước phát, sau phát nhưng trước đánh dấu, restart worker và event đến lệch thứ tự.
+- [x] **P3-T02.1** Worker đọc event tới hạn theo batch; chốt transaction/lock hoặc claim có phục hồi khi nhiều worker cùng chạy.
+- [x] **P3-T02.2** Phát `MessageCreated`; chỉ đánh dấu published sau khi bước phát hoàn tất; ghi attempt, lỗi và thời điểm retry.
+- [x] **P3-T02.3** Có backoff, ngưỡng retry và cơ chế xem/replay event lỗi; đề xuất bổ sung schema nếu cần trạng thái cách ly hoặc lease.
+- [x] **P3-T02.4** Quy định giao nhận ít nhất một lần: consumer có side effect dùng inbox/idempotency; FE deduplicate bằng event/message ID và version.
+- [x] **P3-T02.5** Tách dispatch theo event type để không nuốt event Identity; chưa bật gửi email thật cho đến khi có consumer email tương ứng.
+- [x] **P3-T02.6** Test crash trước phát, sau phát nhưng trước đánh dấu, restart worker và event đến lệch thứ tự.
 
 **Nghiệm thu:** lỗi phát không làm mất dữ liệu đã lưu; retry không nhân đôi UI/side effect. Published chỉ xác nhận đã xử lý phát, không bảo đảm mọi client đã nhận.
 
