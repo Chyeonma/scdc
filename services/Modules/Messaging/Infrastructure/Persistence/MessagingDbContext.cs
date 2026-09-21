@@ -56,6 +56,10 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.HasIndex(conversation => new { conversation.UserLowId, conversation.UserHighId })
             .IsUnique()
             .HasDatabaseName("ux_direct_conversations_pair");
+        entity.HasOne<ChatSpace>()
+            .WithOne()
+            .HasForeignKey<DirectConversation>(conversation => conversation.SpaceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureSpaceMember(ModelBuilder modelBuilder)
@@ -70,6 +74,10 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(member => member.JoinedAt).HasColumnName("joined_at");
         entity.Property(member => member.LeftAt).HasColumnName("left_at");
         entity.Property(member => member.RemovedByUserId).HasColumnName("removed_by_user_id");
+        entity.HasOne<ChatSpace>()
+            .WithMany()
+            .HasForeignKey(member => member.SpaceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureSpaceUserState(ModelBuilder modelBuilder)
@@ -86,6 +94,10 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(state => state.IsHidden).HasColumnName("is_hidden");
         entity.Property(state => state.IsPinned).HasColumnName("is_pinned");
         entity.Property(state => state.UpdatedAt).HasColumnName("updated_at");
+        entity.HasOne<ChatSpace>()
+            .WithMany()
+            .HasForeignKey(state => state.SpaceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureUserBlock(ModelBuilder modelBuilder)

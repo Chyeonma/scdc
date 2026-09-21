@@ -198,21 +198,31 @@ internal sealed class DirectConversationService(
                   && member.UserId == query.ActorUserId
                   && member.MembershipStatus == SpaceMembershipStatus.Active
                   && (query.IncludeHidden || state == null || !state.IsHidden)
-            select new DirectInboxRow(conversation, space, state);
+            select new { Conversation = conversation, Space = space, State = state };
 
         if (cursor is not null)
         {
-            inboxQuery = ApplyCursor(inboxQuery, cursor);
+            inboxQuery = cursor.LastActivityAt is { } lastActivityAt
+                ? inboxQuery.Where(row =>
+                    row.Space.LastActivityAt == null
+                    || row.Space.LastActivityAt < lastActivityAt
+                    || (row.Space.LastActivityAt == lastActivityAt
+                        && row.Space.Id.CompareTo(cursor.SpaceId) < 0))
+                : inboxQuery.Where(row =>
+                    row.Space.LastActivityAt == null
+                    && row.Space.Id.CompareTo(cursor.SpaceId) < 0);
         }
 
-        var rows = await inboxQuery
+        var rows = (await inboxQuery
             .OrderByDescending(row => row.Space.LastActivityAt.HasValue)
             .ThenByDescending(row => row.Space.LastActivityAt)
             .ThenByDescending(row => row.Space.Id)
             .Take(query.Limit + 1)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Select(row => new DirectInboxRow(row.Conversation, row.Space, row.State))
+            .ToArray();
 
-        var hasMore = rows.Count > query.Limit;
+        var hasMore = rows.Length > query.Limit;
         var pageRows = rows.Take(query.Limit).ToArray();
         var peerIds = pageRows
             .Select(row => GetPeerUserId(row.Conversation, query.ActorUserId))
@@ -289,22 +299,6 @@ internal sealed class DirectConversationService(
                 block => (block.BlockerUserId == actorUserId && block.BlockedUserId == recipientUserId)
                          || (block.BlockerUserId == recipientUserId && block.BlockedUserId == actorUserId),
                 cancellationToken);
-
-    private static IQueryable<DirectInboxRow> ApplyCursor(
-        IQueryable<DirectInboxRow> query,
-        InboxCursor cursor)
-    {
-        if (cursor.LastActivityAt is { } lastActivityAt)
-        {
-            return query.Where(row =>
-                row.Space.LastActivityAt == null
-                || row.Space.LastActivityAt < lastActivityAt
-                || (row.Space.LastActivityAt == lastActivityAt && row.Space.Id.CompareTo(cursor.SpaceId) < 0));
-        }
-
-        return query.Where(row =>
-            row.Space.LastActivityAt == null && row.Space.Id.CompareTo(cursor.SpaceId) < 0);
-    }
 
     private static Guid GetPeerUserId(DirectConversation conversation, Guid actorUserId) =>
         conversation.UserLowId == actorUserId ? conversation.UserHighId : conversation.UserLowId;

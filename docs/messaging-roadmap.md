@@ -166,11 +166,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P3-T01 — SignalR Hub và quyền subscribe [BE, FE]
 
-- [ ] **P3-T01.1** Đăng ký SignalR và map `/hubs/chat`; cấu hình xác thực token cho transport được dùng, giới hạn nhận token từ query vào đúng đường dẫn Hub.
-- [ ] **P3-T01.2** Chốt `SubscribeSpace`/`UnsubscribeSpace` và cập nhật client đang dùng `SubscribeChannel`; kiểm tra quyền trước khi join group.
-- [ ] **P3-T01.3** Quản lý user/session/connection cho nhiều tab, thiết bị; có luồng cập nhật inbox khi user chưa mở hội thoại.
-- [ ] **P3-T01.4** Triển khai `IRealtimeAccessRevoker`; bổ sung contract session nếu cần để logout/revoke session đóng đúng kết nối và ngăn subscribe lại.
-- [ ] **P3-T01.5** Ràng buộc gửi event với quyền hiện hành; test race revoke/broadcast và event cũ còn chờ outbox, không chỉ kiểm tra quyền lúc join.
+- [x] **P3-T01.1** Đăng ký SignalR và map `/hubs/chat`; cấu hình xác thực token cho transport được dùng, giới hạn nhận token từ query vào đúng đường dẫn Hub.
+- [x] **P3-T01.2** Chốt `SubscribeSpace`/`UnsubscribeSpace` và cập nhật client đang dùng `SubscribeChannel`; kiểm tra quyền trước khi join group.
+- [x] **P3-T01.3** Quản lý user/session/connection cho nhiều tab, thiết bị; có luồng cập nhật inbox khi user chưa mở hội thoại.
+- [x] **P3-T01.4** Triển khai `IRealtimeAccessRevoker`; bổ sung contract session nếu cần để logout/revoke session đóng đúng kết nối và ngăn subscribe lại.
+- [x] **P3-T01.5** Ràng buộc gửi event với quyền hiện hành; test race revoke/broadcast và event cũ còn chờ outbox, không chỉ kiểm tra quyền lúc join.
 
 **Nghiệm thu:** user ngoài space không nhận payload; token/session hết hiệu lực và quyền bị thu hồi được xử lý theo policy đã chốt.
 

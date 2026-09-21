@@ -5,6 +5,7 @@ using SCDC.Api.OpenApi;
 using SCDC.Modules.Community;
 using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
+using SCDC.Modules.Messaging.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddApiProblemDetails();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -76,6 +78,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 await app.RunAsync();
 

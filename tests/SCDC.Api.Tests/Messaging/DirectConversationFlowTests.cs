@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -365,6 +367,41 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
         }
     }
 
+    [Fact]
+    public async Task Realtime_subscribe_requires_current_space_membership()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("HubA");
+            var actorB = await CreateActorAsync("HubB");
+            var actorC = await CreateActorAsync("HubC");
+            actors.AddRange([actorA, actorB, actorC]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+
+            await using var member = CreateHubConnection(actorA.AccessToken);
+            await using var outsider = CreateHubConnection(actorC.AccessToken);
+            await member.StartAsync();
+            await outsider.StartAsync();
+
+            var allowed = await member.InvokeAsync<HubResultResponse>("SubscribeSpace", spaceId);
+            Assert.True(allowed.Ok);
+            Assert.Equal(spaceId, allowed.Value?.SpaceId);
+            Assert.NotNull(allowed.Value?.HighWatermark);
+
+            var denied = await outsider.InvokeAsync<HubResultResponse>("SubscribeSpace", spaceId);
+            Assert.False(denied.Ok);
+            Assert.Equal("Messaging.ResourceNotFound", denied.Error?.ErrorCode);
+
+            var unsubscribed = await member.InvokeAsync<HubResultResponse>("UnsubscribeSpace", spaceId);
+            Assert.True(unsubscribed.Ok);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
     private async Task<TestActor> CreateActorAsync(string label)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -401,6 +438,15 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
             username,
             loginBody.GetProperty("accessToken").GetString()!);
     }
+
+    private HubConnection CreateHubConnection(string accessToken) => new HubConnectionBuilder()
+        .WithUrl(new Uri(_client.BaseAddress!, "/hubs/chat"), options =>
+        {
+            options.AccessTokenProvider = () => Task.FromResult<string?>(accessToken);
+            options.Transports = HttpTransportType.LongPolling;
+            options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
+        })
+        .Build();
 
     private async Task<HttpResponseMessage> SendAuthorizedAsync(
         HttpMethod method,
@@ -541,4 +587,7 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
     }
 
     private sealed record TestActor(Guid UserId, string Username, string AccessToken);
+    private sealed record HubResultResponse(bool Ok, HubValue? Value, HubErrorResponse? Error);
+    private sealed record HubValue(Guid SpaceId, string HighWatermark);
+    private sealed record HubErrorResponse(string ErrorCode, string Message, string TraceId);
 }
