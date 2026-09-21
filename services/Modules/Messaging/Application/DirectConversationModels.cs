@@ -6,6 +6,17 @@ public sealed record CreateDirectConversationCommand(Guid ActorUserId, Guid Reci
 
 public sealed record CreateDirectConversationResult(SpaceSummaryDto Space, bool Created);
 
+public sealed record ListSpacesQuery(
+    Guid ActorUserId,
+    int Limit,
+    string? Cursor,
+    bool IncludeHidden);
+
+public sealed record SpacePageDto(
+    IReadOnlyList<SpaceSummaryDto> Items,
+    string? NextCursor,
+    bool HasMore);
+
 public sealed record SpaceSummaryDto(
     Guid Id,
     short SpaceType,

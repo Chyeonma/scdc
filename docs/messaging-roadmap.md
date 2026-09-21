@@ -122,10 +122,10 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P1-T02 — Inbox và chọn người trò chuyện [BE, FE]
 
-- [ ] **P1-T02.1** API danh sách hội thoại có phân trang, user summary, last message và last activity; chỉ trả không gian user có quyền.
-- [ ] **P1-T02.2** Dùng `IUserDirectory.FindByIdsAsync` để lấy tác giả/người nhận theo batch, tránh gọi một lần cho mỗi dòng.
-- [ ] **P1-T02.3** Tích hợp `CreateDmModal`, `SubSidebar`, `ChatHeader`; tra cứu chính xác username qua API adapter được bảo vệ, chưa cần xây tìm kiếm toàn bộ user.
-- [ ] **P1-T02.4** Bỏ ID giả ở luồng DM; có loading, empty, error, retry và xử lý hội thoại vừa bị thu hồi quyền.
+- [x] **P1-T02.1** API danh sách hội thoại có phân trang, user summary, last message và last activity; chỉ trả không gian user có quyền.
+- [x] **P1-T02.2** Dùng `IUserDirectory.FindByIdsAsync` để lấy tác giả/người nhận theo batch, tránh gọi một lần cho mỗi dòng.
+- [x] **P1-T02.3** Tích hợp `CreateDmModal`, `SubSidebar`, `ChatHeader`; tra cứu chính xác username qua API adapter được bảo vệ, chưa cần xây tìm kiếm toàn bộ user.
+- [x] **P1-T02.4** Bỏ ID giả ở luồng DM; có loading, empty, error, retry và xử lý hội thoại vừa bị thu hồi quyền.
 
 **Nghiệm thu:** đăng nhập bằng tài khoản thật, mở DM và tải lại vẫn thấy đúng hội thoại; không hiện hội thoại của user khác.
 

@@ -11,6 +11,8 @@ export function SubSidebar({
   activeDmId,
   onSelectDm,
   onOpenCreateDm,
+  inboxState,
+  onRetryInbox,
   onOpenCreateChannel,
   onOpenServerSettings,
   onOpenInviteModal,
@@ -171,6 +173,16 @@ export function SubSidebar({
 
         {/* DM List */}
         <nav className="dm-list" aria-label="Danh sách tin nhắn trực tiếp">
+          {inboxState === 'loading' && <p className="dm-list__state">Đang tải hội thoại...</p>}
+          {inboxState === 'error' && (
+            <div className="dm-list__state">
+              <p>Không thể tải hội thoại.</p>
+              <button type="button" className="btn btn--secondary" onClick={onRetryInbox}>Thử lại</button>
+            </div>
+          )}
+          {inboxState === 'ready' && dms.length === 0 && (
+            <p className="dm-list__state">Chưa có cuộc trò chuyện nào.</p>
+          )}
           {dms.map((dm) => {
             const isActive = dm.spaceId === activeDmId;
             const statusColor =
@@ -204,8 +216,8 @@ export function SubSidebar({
                       <span className="dm-item__badge">{dm.unreadCount}</span>
                     )}
                   </div>
-                  {dm.lastMessage && (
-                    <p className="dm-item__preview">{dm.lastMessage}</p>
+                  {dm.lastMessage?.content && (
+                    <p className="dm-item__preview">{dm.lastMessage.content}</p>
                   )}
                 </div>
               </button>
