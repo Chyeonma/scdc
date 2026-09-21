@@ -222,7 +222,7 @@ internal sealed class DirectConversationService(
             .Select(row => new DirectInboxRow(row.Conversation, row.Space, row.State))
             .ToArray();
 
-        var hasMore = rows.Count > query.Limit;
+        var hasMore = rows.Length > query.Limit;
         var pageRows = rows.Take(query.Limit).ToArray();
         var peerIds = pageRows
             .Select(row => GetPeerUserId(row.Conversation, query.ActorUserId))
