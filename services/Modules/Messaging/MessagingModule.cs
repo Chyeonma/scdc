@@ -33,6 +33,7 @@ public static class MessagingModule
             .Validate(options => options.MaxRetryDelay >= options.InitialRetryDelay, "Outbox max retry delay must not be shorter than the initial delay.")
             .ValidateOnStart();
         services.AddScoped<IDirectConversationService, DirectConversationService>();
+        services.AddScoped<IGroupConversationService, GroupConversationService>();
         services.AddSingleton<MessageRateLimiter>();
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IRealtimeSpaceAccess, RealtimeSpaceAccess>();
