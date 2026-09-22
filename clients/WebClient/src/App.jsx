@@ -21,6 +21,13 @@ import {
   getSpaces,
   sessionStore,
   getMe,
+  getServers,
+  getServerChannels,
+  getServerMembers,
+  createServer,
+  createServerChannel,
+  createServerInvite,
+  leaveServer,
 } from './api.js';
 
 import {
@@ -65,9 +72,9 @@ export default function App() {
 
   // Navigation State
   const [isHomeActive, setIsHomeActive] = useState(true);
-  const [servers, setServers] = useState(INITIAL_SERVERS);
-  const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
-  const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
+  const [servers, setServers] = useState([]);
+  const [activeServerId, setActiveServerId] = useState(null);
+  const [activeChannelId, setActiveChannelId] = useState(null);
   const [dms, setDms] = useState([]);
   const [activeDmId, setActiveDmId] = useState(null);
   const [inboxState, setInboxState] = useState('loading');
@@ -159,14 +166,36 @@ export default function App() {
     loadInbox();
   }, [session?.accessToken, loadInbox]);
 
+  const loadServers = useCallback(async () => {
+    if (!session?.accessToken) return;
+    try {
+      const rows = await getServers();
+      const hydrated = await Promise.all(rows.map(async (server) => ({ ...server, channels: await getServerChannels(server.id), unreadCount: 0 })));
+      setServers(hydrated);
+      setActiveServerId((current) => hydrated.some((server) => server.id === current) ? current : (hydrated[0]?.id || null));
+    } catch (error) { notify('error', error.message || 'Không thể tải server.'); }
+  }, [session?.accessToken, notify]);
+
+  useEffect(() => {
+    if (session?.accessToken) loadServers();
+    else { setServers([]); setActiveServerId(null); setActiveChannelId(null); }
+  }, [session?.accessToken, loadServers]);
+
+  useEffect(() => {
+    if (!activeServerId) return;
+    const server = servers.find((item) => item.id === activeServerId);
+    setActiveChannelId((current) => server?.channels?.some((channel) => channel.spaceId === current) ? current : (server?.channels?.[0]?.spaceId || null));
+    getServerMembers(activeServerId).then((rows) => setMembers(rows.map((row) => ({ ...row.user, ...row, status: 'offline' })))).catch(() => setMembers([]));
+  }, [activeServerId, servers]);
+
   // Active Server & Channel reference
   const activeServer = useMemo(
-    () => servers.find((s) => s.id === activeServerId) || servers[0],
+    () => servers.find((s) => s.id === activeServerId),
     [servers, activeServerId]
   );
 
   const activeChannel = useMemo(
-    () => activeServer?.channels?.find((c) => c.spaceId === activeChannelId) || activeServer?.channels?.[0],
+    () => activeServer?.channels?.find((c) => c.spaceId === activeChannelId),
     [activeServer, activeChannelId]
   );
 
@@ -584,23 +613,24 @@ export default function App() {
   }
 
   // Create Server
-  function handleCreateServer(serverData) {
-    setServers((prev) => [...prev, serverData]);
-    setIsHomeActive(false);
-    setActiveServerId(serverData.id);
-    setActiveChannelId(serverData.channels[0].spaceId);
-    notify('success', `Đã tạo server "${serverData.name}".`);
+  async function handleCreateServer(serverData) {
+    try {
+      const server = await createServer(serverData);
+      setServers((prev) => [...prev, { ...server, channels: [], unreadCount: 0 }]);
+      setIsHomeActive(false);
+      setActiveServerId(server.id);
+      notify('success', `Đã tạo server "${server.name}".`);
+    } catch (error) { notify('error', error.message || 'Không thể tạo server.'); throw error; }
   }
 
   // Create Channel
-  function handleCreateChannel(channelData) {
-    setServers((prev) =>
-      prev.map((s) =>
-        s.id === activeServerId ? { ...s, channels: [...(s.channels || []), channelData] } : s
-      )
-    );
-    setActiveChannelId(channelData.spaceId);
-    notify('success', `Đã tạo kênh #${channelData.name}.`);
+  async function handleCreateChannel(channelData) {
+    try {
+      const channel = await createServerChannel(activeServerId, channelData);
+      setServers((prev) => prev.map((server) => server.id === activeServerId ? { ...server, channels: [...(server.channels || []), channel] } : server));
+      setActiveChannelId(channel.spaceId);
+      notify('success', `Đã tạo kênh #${channel.name}.`);
+    } catch (error) { notify('error', error.message || 'Không thể tạo kênh.'); throw error; }
   }
 
   // If not logged in, render Auth Screen
@@ -655,8 +685,9 @@ export default function App() {
         onOpenCreateChannel={() => setShowCreateChannel(true)}
         onOpenServerSettings={() => setShowServerSettings(true)}
         onOpenInviteModal={() => setShowInviteModal(true)}
-        onLeaveServer={() => {
+        onLeaveServer={async () => {
           if (confirm(`Bạn có chắc chắn muốn rời khỏi ${activeServer?.name}?`)) {
+            await leaveServer(activeServerId);
             setServers((prev) => prev.filter((s) => s.id !== activeServerId));
             setIsHomeActive(true);
             notify('warning', `Đã rời khỏi ${activeServer?.name}.`);
@@ -856,6 +887,7 @@ export default function App() {
           server={activeServer}
           onClose={() => setShowInviteModal(false)}
           notify={notify}
+          onCreateInvite={() => createServerInvite(activeServerId)}
         />
       )}
 

@@ -35,6 +35,7 @@ public static class MessagingModule
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddSingleton<MessageRateLimiter>();
         services.AddScoped<IMessageService, MessageService>();
+        services.AddScoped<IChannelSpaceProvisioner, ChannelSpaceProvisioner>();
         services.AddScoped<IRealtimeSpaceAccess, RealtimeSpaceAccess>();
         services.AddSingleton<RealtimeConnectionRegistry>();
         services.AddSingleton<MessagingRealtimeAccessRevoker>();

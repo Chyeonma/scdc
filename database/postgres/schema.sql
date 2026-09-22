@@ -543,6 +543,15 @@ CREATE TABLE community.permissions (
     description varchar(255) NOT NULL
 );
 
+INSERT INTO community.permissions (code, description) VALUES
+    ('channel.read', 'Read messages in a channel'),
+    ('channel.send', 'Send messages in a channel'),
+    ('channel.manage', 'Create, archive, and configure channels'),
+    ('server.manage', 'Manage server settings and members'),
+    ('member.manage', 'Kick and ban members'),
+    ('invite.create', 'Create server invites')
+ON CONFLICT (code) DO NOTHING;
+
 CREATE TABLE community.roles (
     id              uuid PRIMARY KEY DEFAULT uuidv7(),
     server_id       uuid NOT NULL,

@@ -4,10 +4,15 @@ export function InviteModal({
   server,
   onClose,
   notify,
+  onCreateInvite,
 }) {
   const [copied, setCopied] = useState(false);
-  const inviteCode = `${server?.slug || 'scdc'}-${Math.random().toString(36).slice(2, 8)}`;
-  const inviteLink = `https://scdc.chat/invite/${inviteCode}`;
+  const [inviteCode, setInviteCode] = useState(null);
+  const inviteLink = inviteCode ? `${window.location.origin}/invite/${inviteCode}` : '';
+
+  React.useEffect(() => {
+    onCreateInvite?.().then((invite) => setInviteCode(invite.code)).catch((error) => notify?.('error', error.message));
+  }, [onCreateInvite, notify]);
 
   function handleCopy() {
     navigator.clipboard?.writeText?.(inviteLink);
@@ -28,11 +33,12 @@ export function InviteModal({
           <label className="form-group">
             <span>HOẶC GỬI LIÊN KẾT MỜI SERVER</span>
             <div className="input-copy-box">
-              <input type="text" value={inviteLink} readOnly />
+              <input type="text" value={inviteLink} readOnly placeholder="Đang tạo link mời..." />
               <button
                 type="button"
                 className={`btn ${copied ? 'btn--success' : 'btn--primary'}`}
                 onClick={handleCopy}
+                disabled={!inviteCode}
               >
                 {copied ? '✓ Đã chép' : 'Sao chép'}
               </button>

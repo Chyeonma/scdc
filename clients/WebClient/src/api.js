@@ -288,3 +288,11 @@ export function sendMessage(spaceId, { clientMessageId, content }) {
     body: { clientMessageId, messageType: 1, content },
   });
 }
+
+export function getServers() { return api('/servers'); }
+export function createServer({ name, description }) { return api('/servers', { method: 'POST', body: { name, description } }); }
+export function getServerChannels(serverId) { return api(`/servers/${serverId}/channels`); }
+export function createServerChannel(serverId, { name, topic, visibility }) { return api(`/servers/${serverId}/channels`, { method: 'POST', body: { name, topic, visibility } }); }
+export function getServerMembers(serverId) { return api(`/servers/${serverId}/members`); }
+export function createServerInvite(serverId) { return api(`/servers/${serverId}/invites`, { method: 'POST', body: {} }); }
+export function leaveServer(serverId) { return api(`/servers/${serverId}/leave`, { method: 'POST', body: {} }); }

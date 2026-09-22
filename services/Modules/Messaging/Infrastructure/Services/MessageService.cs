@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Contracts.Identity;
+using SCDC.Contracts.Community;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Domain;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
@@ -14,6 +15,7 @@ namespace SCDC.Modules.Messaging.Infrastructure.Services;
 internal sealed class MessageService(
     MessagingDbContext dbContext,
     IUserDirectory userDirectory,
+    IChannelAccessChecker channelAccess,
     MessageRateLimiter rateLimiter,
     TimeProvider timeProvider) : IMessageService
 {
@@ -54,43 +56,27 @@ internal sealed class MessageService(
             return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
         }
 
-        var isActiveMember = await dbContext.SpaceMembers
-            .AsNoTracking()
-            .AnyAsync(member => member.SpaceId == command.SpaceId
-                                && member.UserId == command.ActorUserId
-                                && member.MembershipStatus == SpaceMembershipStatus.Active,
-                cancellationToken);
-        if (!isActiveMember)
-        {
-            return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
-        }
-
         if (space.Status != SpaceStatus.Active)
         {
             return Result.Failure<SendMessageResult>(MessagingErrors.SpaceNotWritable);
         }
 
-        if (space.SpaceType != SpaceType.Direct)
+        if (space.SpaceType == SpaceType.Channel)
         {
-            return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
+            var access = await channelAccess.CheckAsync(command.ActorUserId, command.SpaceId, cancellationToken);
+            if (!access.CanRead) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            if (!access.CanSend) return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
         }
-
-        var directConversation = await dbContext.DirectConversations
-            .AsNoTracking()
-            .SingleOrDefaultAsync(conversation => conversation.SpaceId == command.SpaceId, cancellationToken);
-        if (directConversation is null)
+        else if (space.SpaceType == SpaceType.Direct)
         {
-            return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            var isActiveMember = await dbContext.SpaceMembers.AsNoTracking().AnyAsync(member => member.SpaceId == command.SpaceId && member.UserId == command.ActorUserId && member.MembershipStatus == SpaceMembershipStatus.Active, cancellationToken);
+            if (!isActiveMember) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            var directConversation = await dbContext.DirectConversations.AsNoTracking().SingleOrDefaultAsync(conversation => conversation.SpaceId == command.SpaceId, cancellationToken);
+            if (directConversation is null) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            var peerUserId = directConversation.UserLowId == command.ActorUserId ? directConversation.UserHighId : directConversation.UserLowId;
+            if (await userDirectory.FindByIdAsync(peerUserId, cancellationToken) is null || await IsBlockedAsync(command.ActorUserId, peerUserId, cancellationToken)) return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
         }
-
-        var peerUserId = directConversation.UserLowId == command.ActorUserId
-            ? directConversation.UserHighId
-            : directConversation.UserLowId;
-        if (await userDirectory.FindByIdAsync(peerUserId, cancellationToken) is null
-            || await IsBlockedAsync(command.ActorUserId, peerUserId, cancellationToken))
-        {
-            return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
-        }
+        else return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
 
         var existing = await dbContext.Messages
             .AsNoTracking()
@@ -172,15 +158,19 @@ internal sealed class MessageService(
             return Result.Failure<MessagePageDto>(MessagingErrors.AccountUnavailable);
         }
 
-        var canRead = await (
-            from space in dbContext.Spaces.AsNoTracking()
-            join member in dbContext.SpaceMembers.AsNoTracking() on space.Id equals member.SpaceId
-            where space.Id == query.SpaceId
-                  && space.Status != SpaceStatus.Deleted
-                  && space.SpaceType == SpaceType.Direct
+        var space = await dbContext.Spaces.AsNoTracking().SingleOrDefaultAsync(x => x.Id == query.SpaceId && x.Status != SpaceStatus.Deleted, cancellationToken);
+        if (space is null) return Result.Failure<MessagePageDto>(MessagingErrors.ResourceNotFound);
+        var canRead = space.SpaceType == SpaceType.Channel
+            ? (await channelAccess.CheckAsync(query.ActorUserId, query.SpaceId, cancellationToken)).CanRead
+            : await (
+            from item in dbContext.Spaces.AsNoTracking()
+            join member in dbContext.SpaceMembers.AsNoTracking() on item.Id equals member.SpaceId
+            where item.Id == query.SpaceId
+                  && item.Status != SpaceStatus.Deleted
+                  && item.SpaceType == SpaceType.Direct
                   && member.UserId == query.ActorUserId
                   && member.MembershipStatus == SpaceMembershipStatus.Active
-            select space.Id)
+            select item.Id)
             .AnyAsync(cancellationToken);
         if (!canRead)
         {

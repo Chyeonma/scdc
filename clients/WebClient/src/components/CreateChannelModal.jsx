@@ -8,7 +8,7 @@ export function CreateChannelModal({
   const [topic, setTopic] = useState('');
   const [visibility, setVisibility] = useState(1); // 1=public, 2=private, 3=read-only
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const formattedName = name
       .toLowerCase()
@@ -18,14 +18,7 @@ export function CreateChannelModal({
 
     if (!formattedName) return;
 
-    onCreateChannel({
-      spaceId: `ch-${Date.now()}`,
-      name: formattedName,
-      topic: topic.trim(),
-      visibility: Number(visibility),
-      position: 99,
-      unread: false,
-    });
+    await onCreateChannel({ name: formattedName, topic: topic.trim(), visibility: Number(visibility) });
     onClose();
   }
 
