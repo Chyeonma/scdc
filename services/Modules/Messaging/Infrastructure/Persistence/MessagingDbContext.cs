@@ -8,6 +8,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
 {
     public DbSet<ChatSpace> Spaces => Set<ChatSpace>();
     public DbSet<DirectConversation> DirectConversations => Set<DirectConversation>();
+    public DbSet<GroupConversation> GroupConversations => Set<GroupConversation>();
     public DbSet<SpaceMember> SpaceMembers => Set<SpaceMember>();
     public DbSet<SpaceUserState> SpaceUserStates => Set<SpaceUserState>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
@@ -18,6 +19,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
     {
         ConfigureSpace(modelBuilder);
         ConfigureDirectConversation(modelBuilder);
+        ConfigureGroupConversation(modelBuilder);
         ConfigureSpaceMember(modelBuilder);
         ConfigureSpaceUserState(modelBuilder);
         ConfigureUserBlock(modelBuilder);
@@ -77,6 +79,24 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.HasOne<ChatSpace>()
             .WithMany()
             .HasForeignKey(member => member.SpaceId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureGroupConversation(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<GroupConversation>();
+        entity.ToTable("group_conversations", "messaging");
+        entity.HasKey(conversation => conversation.SpaceId);
+        entity.Property(conversation => conversation.SpaceId).HasColumnName("space_id");
+        entity.Property(conversation => conversation.Name).HasColumnName("name").HasMaxLength(100);
+        entity.Property(conversation => conversation.AvatarObjectKey).HasColumnName("avatar_object_key").HasMaxLength(500);
+        entity.Property(conversation => conversation.OwnerUserId).HasColumnName("owner_user_id");
+        entity.Property(conversation => conversation.MaxMembers).HasColumnName("max_members");
+        entity.Property(conversation => conversation.CreatedAt).HasColumnName("created_at");
+        entity.Property(conversation => conversation.UpdatedAt).HasColumnName("updated_at");
+        entity.HasOne<ChatSpace>()
+            .WithOne()
+            .HasForeignKey<GroupConversation>(conversation => conversation.SpaceId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 

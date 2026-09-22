@@ -14,12 +14,20 @@ import {
 
 import {
   api,
+  addGroupMember,
+  changeGroupOwner,
   createDirectConversation,
+  createGroupConversation,
   findDirectRecipient,
+  getGroupConversation,
+  getGroupConversations,
+  getGroupMembers,
   getAccessToken,
   getMessageHistory,
   getSpaces,
+  removeGroupMember,
   sessionStore,
+  updateGroupConversation,
   getMe,
 } from './api.js';
 
@@ -42,6 +50,7 @@ import { ServerSettingsModal } from './components/ServerSettingsModal.jsx';
 import { CreateServerModal } from './components/CreateServerModal.jsx';
 import { CreateChannelModal } from './components/CreateChannelModal.jsx';
 import { CreateDmModal } from './components/CreateDmModal.jsx';
+import { GroupSettingsModal } from './components/GroupSettingsModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
@@ -89,6 +98,7 @@ export default function App() {
   const [showCreateServer, setShowCreateServer] = useState(false);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateDm, setShowCreateDm] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [reportingMessage, setReportingMessage] = useState(null);
   const [inspectingUser, setInspectingUser] = useState(null);
@@ -130,13 +140,20 @@ export default function App() {
     user: space.peer,
   }), []);
 
+  const toGroup = useCallback((group) => ({
+    ...group,
+    id: group.spaceId,
+    spaceId: group.spaceId,
+    spaceType: 2,
+  }), []);
+
   const loadInbox = useCallback(async () => {
     if (!session?.accessToken) return;
 
     setInboxState('loading');
     try {
-      const page = await getSpaces();
-      const nextDms = (page.items || []).map(toDm);
+      const [page, groups] = await Promise.all([getSpaces(), getGroupConversations()]);
+      const nextDms = [...(page.items || []).map(toDm), ...(groups || []).map(toGroup)];
       setDms(nextDms);
       setActiveDmId((current) => nextDms.some((dm) => dm.spaceId === current)
         ? current
@@ -145,7 +162,7 @@ export default function App() {
     } catch {
       setInboxState('error');
     }
-  }, [session?.accessToken, toDm]);
+  }, [session?.accessToken, toDm, toGroup]);
 
   useEffect(() => {
     if (!session?.accessToken) {
@@ -441,6 +458,18 @@ export default function App() {
     }
   }, [currentSpaceId, session?.accessToken]);
 
+  useEffect(() => {
+    if (!isHomeActive || activeDm?.spaceType !== 2 || !activeDmId) return;
+    getGroupMembers(activeDmId)
+      .then((items) => setMembers((items || []).map((item) => ({
+        ...item.user,
+        userId: item.user.id,
+        roleName: item.role === 3 ? 'Owner' : item.role === 2 ? 'Moderator' : 'Member',
+        status: item.user.status || 'offline',
+      }))))
+      .catch(() => setMembers([]));
+  }, [activeDm?.spaceType, activeDmId, isHomeActive]);
+
   const handleSendMessage = useCallback(async ({ content, clientMessageId }) => {
     const sent = await sendDirectMessage({
       spaceId: currentSpaceId,
@@ -567,9 +596,23 @@ export default function App() {
     setIsHomeActive(true);
   }
 
+  async function handleStartGroup({ name, usernames }) {
+    const recipients = await Promise.all(usernames.map((username) => findDirectRecipient(username)));
+    const group = toGroup(await createGroupConversation({
+      name,
+      memberUserIds: recipients.map((recipient) => recipient.id),
+    }));
+    setDms((previous) => [group, ...previous.filter((dm) => dm.spaceId !== group.spaceId)]);
+    setActiveDmId(group.spaceId);
+    setIsHomeActive(true);
+  }
+
   async function handleSelectDm(spaceId) {
     try {
-      const space = toDm(await api(`/spaces/${spaceId}`));
+      const selected = dms.find((dm) => dm.spaceId === spaceId);
+      const space = selected?.spaceType === 2
+        ? toGroup(await getGroupConversation(spaceId))
+        : toDm(await api(`/spaces/${spaceId}`));
       setDms((previous) => previous.map((dm) => dm.spaceId === spaceId ? space : dm));
       setActiveDmId(spaceId);
     } catch (error) {
@@ -690,7 +733,8 @@ export default function App() {
           }
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          isDirectMessage={isHomeActive}
+          isDirectMessage={isHomeActive && activeDm?.spaceType === 1}
+          onOpenGroupSettings={isHomeActive && activeDm?.spaceType === 2 ? () => setShowGroupSettings(true) : undefined}
           statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
         />
 
@@ -846,7 +890,32 @@ export default function App() {
         <CreateDmModal
           onClose={() => setShowCreateDm(false)}
           onStartDm={handleStartDm}
+          onStartGroup={handleStartGroup}
           notify={notify}
+        />
+      )}
+
+      {showGroupSettings && activeDm?.spaceType === 2 && (
+        <GroupSettingsModal
+          group={activeDm}
+          currentUser={currentUser}
+          loadMembers={() => getGroupMembers(activeDm.spaceId)}
+          onUpdate={async (updates) => {
+            const updated = toGroup(await updateGroupConversation(activeDm.spaceId, updates));
+            setDms((previous) => previous.map((dm) => dm.spaceId === updated.spaceId ? { ...dm, ...updated } : dm));
+            return updated;
+          }}
+          onAddMember={async (username) => {
+            const user = await findDirectRecipient(username);
+            await addGroupMember(activeDm.spaceId, user.id);
+          }}
+          onRemoveMember={(userId) => removeGroupMember(activeDm.spaceId, userId)}
+          onTransferOwner={async (userId) => {
+            await changeGroupOwner(activeDm.spaceId, userId);
+            const updated = toGroup(await getGroupConversation(activeDm.spaceId));
+            setDms((previous) => previous.map((dm) => dm.spaceId === updated.spaceId ? { ...dm, ...updated } : dm));
+          }}
+          onClose={() => setShowGroupSettings(false)}
         />
       )}
 

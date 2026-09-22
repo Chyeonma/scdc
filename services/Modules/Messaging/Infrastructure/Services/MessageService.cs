@@ -70,26 +70,28 @@ internal sealed class MessageService(
             return Result.Failure<SendMessageResult>(MessagingErrors.SpaceNotWritable);
         }
 
-        if (space.SpaceType != SpaceType.Direct)
+        if (space.SpaceType is not (SpaceType.Direct or SpaceType.Group))
         {
             return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
         }
 
-        var directConversation = await dbContext.DirectConversations
-            .AsNoTracking()
-            .SingleOrDefaultAsync(conversation => conversation.SpaceId == command.SpaceId, cancellationToken);
-        if (directConversation is null)
+        if (space.SpaceType == SpaceType.Group)
         {
-            return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            var groupExists = await dbContext.GroupConversations.AsNoTracking()
+                .AnyAsync(group => group.SpaceId == command.SpaceId, cancellationToken);
+            if (!groupExists) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
         }
-
-        var peerUserId = directConversation.UserLowId == command.ActorUserId
-            ? directConversation.UserHighId
-            : directConversation.UserLowId;
-        if (await userDirectory.FindByIdAsync(peerUserId, cancellationToken) is null
-            || await IsBlockedAsync(command.ActorUserId, peerUserId, cancellationToken))
+        else
         {
-            return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
+            var directConversation = await dbContext.DirectConversations.AsNoTracking()
+                .SingleOrDefaultAsync(conversation => conversation.SpaceId == command.SpaceId, cancellationToken);
+            if (directConversation is null) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            var peerUserId = directConversation.UserLowId == command.ActorUserId
+                ? directConversation.UserHighId
+                : directConversation.UserLowId;
+            if (await userDirectory.FindByIdAsync(peerUserId, cancellationToken) is null
+                || await IsBlockedAsync(command.ActorUserId, peerUserId, cancellationToken))
+                return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
         }
 
         var existing = await dbContext.Messages
@@ -177,7 +179,7 @@ internal sealed class MessageService(
             join member in dbContext.SpaceMembers.AsNoTracking() on space.Id equals member.SpaceId
             where space.Id == query.SpaceId
                   && space.Status != SpaceStatus.Deleted
-                  && space.SpaceType == SpaceType.Direct
+                  && (space.SpaceType == SpaceType.Direct || space.SpaceType == SpaceType.Group)
                   && member.UserId == query.ActorUserId
                   && member.MembershipStatus == SpaceMembershipStatus.Active
             select space.Id)

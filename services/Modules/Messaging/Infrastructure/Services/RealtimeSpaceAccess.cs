@@ -22,7 +22,7 @@ internal sealed class RealtimeSpaceAccess(MessagingDbContext dbContext) : IRealt
             from item in dbContext.Spaces.AsNoTracking()
             join member in dbContext.SpaceMembers.AsNoTracking() on item.Id equals member.SpaceId
             where item.Id == spaceId
-                  && item.SpaceType == SpaceType.Direct
+                  && (item.SpaceType == SpaceType.Direct || item.SpaceType == SpaceType.Group)
                   && item.Status != SpaceStatus.Deleted
                   && member.UserId == userId
                   && member.MembershipStatus == SpaceMembershipStatus.Active
@@ -41,7 +41,7 @@ internal sealed class RealtimeSpaceAccess(MessagingDbContext dbContext) : IRealt
             from item in dbContext.Spaces.AsNoTracking()
             join member in dbContext.SpaceMembers.AsNoTracking() on item.Id equals member.SpaceId
             where item.Id == spaceId
-                  && item.SpaceType == SpaceType.Direct
+                  && (item.SpaceType == SpaceType.Direct || item.SpaceType == SpaceType.Group)
                   && item.Status != SpaceStatus.Deleted
                   && member.MembershipStatus == SpaceMembershipStatus.Active
             select member.UserId)
