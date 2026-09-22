@@ -209,11 +209,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P4-T02 — Community tối thiểu để chat channel [BE, DB, FE]
 
-- [ ] **P4-T02.1** Community triển khai tạo/list server, join qua invite, list member và tạo/list channel.
-- [ ] **P4-T02.2** Chốt role/permission và override; triển khai `IChannelAccessChecker.CheckAsync(userId, spaceId)` đúng rule quyền đọc/gửi.
-- [ ] **P4-T02.3** Thêm contract cấp chat space loại channel qua Messaging; phối hợp tạo `community.channels` và space có transaction hoặc cơ chế bù/retry rõ ràng.
-- [ ] **P4-T02.4** Xử lý leave/kick/ban, đổi quyền, archive/delete channel; gọi revoke theo contract và ngăn truy cập HTTP tương ứng.
-- [ ] **P4-T02.5** Nối `ServerRail`, `SubSidebar`, modal server/channel và member list với API thật.
+- [x] **P4-T02.1** Community triển khai tạo/list server, join qua invite, list member và tạo/list channel.
+- [x] **P4-T02.2** Chốt role/permission và override; triển khai `IChannelAccessChecker.CheckAsync(userId, spaceId)` đúng rule quyền đọc/gửi.
+- [x] **P4-T02.3** Thêm contract cấp chat space loại channel qua Messaging; phối hợp tạo `community.channels` và space có transaction hoặc cơ chế bù/retry rõ ràng. Space được cấp trước qua `IChannelSpaceProvisioner`; nếu ghi channel thất bại thì space được retire ngay, tránh resource mồ côi.
+- [x] **P4-T02.4** Xử lý leave/kick/ban, đổi quyền, archive/delete channel; gọi revoke theo contract và ngăn truy cập HTTP tương ứng.
+- [x] **P4-T02.5** Nối `ServerRail`, `SubSidebar`, modal server/channel và member list với API thật.
 
 **Nghiệm thu:** channel gắn đúng space; người không có quyền không thể đọc tin bằng cách đoán ID; tạo lỗi không để resource mồ côi.
 

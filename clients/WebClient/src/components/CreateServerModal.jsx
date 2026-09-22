@@ -7,34 +7,11 @@ export function CreateServerModal({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const slug = name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || `server-${Date.now()}`;
-
-    onCreateServer({
-      id: `srv-${Date.now()}`,
-      name: name.trim(),
-      slug,
-      description: description.trim(),
-      role: 'owner',
-      unreadCount: 0,
-      channels: [
-        {
-          spaceId: `sp-${Date.now()}-1`,
-          name: 'general',
-          topic: 'Kênh trò chuyện chung',
-          visibility: 1,
-          position: 0,
-          unread: false,
-        }
-      ]
-    });
+    await onCreateServer({ name: name.trim(), description: description.trim() });
     onClose();
   }
 

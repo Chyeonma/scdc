@@ -6,6 +6,8 @@ public interface IChannelAccessChecker
         Guid userId,
         Guid spaceId,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Guid>> ListReadableMemberIdsAsync(Guid spaceId, CancellationToken cancellationToken);
 }
 
 public sealed record ChannelAccessDecision(bool CanRead, bool CanSend)
