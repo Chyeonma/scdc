@@ -268,6 +268,41 @@ export function createDirectConversation(recipientUserId) {
   });
 }
 
+export function getGroupConversations() {
+  return api('/conversations/group');
+}
+
+export function getGroupConversation(spaceId) {
+  return api(`/conversations/group/${spaceId}`);
+}
+
+export function getGroupMembers(spaceId) {
+  return api(`/conversations/group/${spaceId}/members`);
+}
+
+export function createGroupConversation({ name, memberUserIds, maxMembers, avatarObjectKey }) {
+  return api('/conversations/group', {
+    method: 'POST',
+    body: { name, memberUserIds, maxMembers, avatarObjectKey },
+  });
+}
+
+export function updateGroupConversation(spaceId, { name, maxMembers, avatarObjectKey }) {
+  return api(`/conversations/group/${spaceId}`, { method: 'PATCH', body: { name, maxMembers, avatarObjectKey } });
+}
+
+export function addGroupMember(spaceId, userId) {
+  return api(`/conversations/group/${spaceId}/members`, { method: 'POST', body: { userId } });
+}
+
+export function removeGroupMember(spaceId, userId) {
+  return api(`/conversations/group/${spaceId}/members/${userId}`, { method: 'DELETE' });
+}
+
+export function changeGroupOwner(spaceId, userId) {
+  return api(`/conversations/group/${spaceId}/owner`, { method: 'PUT', body: { userId } });
+}
+
 export function getMessageHistory(spaceId, {
   limit = 50,
   beforeSequence,

@@ -199,11 +199,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P4-T01 — Vòng đời nhóm [BE, DB, FE]
 
-- [ ] **P4-T01.1** Tạo group cùng space và membership trong transaction; validate tên, số thành viên, user trùng/không tồn tại.
-- [ ] **P4-T01.2** Thêm/xóa thành viên, rời nhóm, đổi tên/avatar metadata và chuyển chủ nhóm; không để nhóm hoạt động thiếu owner hợp lệ.
-- [ ] **P4-T01.3** Chốt quyền owner/admin/member và tranh chấp hai thao tác thành viên đồng thời; giới hạn nhóm theo `max_members`.
-- [ ] **P4-T01.4** Áp dụng quyền vào gửi/history/subscribe; revoke mọi kết nối liên quan khi rời hoặc bị xóa khỏi nhóm.
-- [ ] **P4-T01.5** Nối UI tạo nhóm, danh sách thành viên và cài đặt; phát event membership và system message nếu đã chốt ở P0.
+- [x] **P4-T01.1** Tạo group cùng space và membership trong transaction; validate tên, số thành viên, user trùng/không tồn tại.
+- [x] **P4-T01.2** Thêm/xóa thành viên, rời nhóm, đổi tên/avatar metadata và chuyển chủ nhóm; không để nhóm hoạt động thiếu owner hợp lệ.
+- [x] **P4-T01.3** Chốt quyền owner/admin/member và tranh chấp hai thao tác thành viên đồng thời; giới hạn nhóm theo `max_members`.
+- [x] **P4-T01.4** Áp dụng quyền vào gửi/history/subscribe; revoke mọi kết nối liên quan khi rời hoặc bị xóa khỏi nhóm.
+- [x] **P4-T01.5** Nối UI tạo nhóm, danh sách thành viên và cài đặt; phát event membership và system message nếu đã chốt ở P0 (UI nhận `SpaceUpdated`; system message chưa được chốt payload/UX riêng nên không tự tạo nội dung hệ thống).
 
 **Nghiệm thu:** ba tài khoản chat nhóm thật; người bị xóa không đọc/gửi/nhận tin mới; chính sách xem lịch sử khớp P0.
 
@@ -219,9 +219,9 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P4-T03 — Dùng chung luồng message cho ba loại space [BE, FE, QA]
 
-- [ ] **P4-T03.1** Phân nhánh authorization: DM/group theo membership Messaging, channel qua Community; không suy quyền channel từ `space_members`.
-- [ ] **P4-T03.2** Dùng lại send/history/outbox/realtime; không sao chép ba bộ xử lý tin nhắn riêng.
-- [ ] **P4-T03.3** Test ma trận quyền DM/group/channel; FE phản ánh read-only nhưng backend vẫn là nơi quyết định quyền.
+- [x] **P4-T03.1** Phân nhánh authorization: DM/group theo membership Messaging, channel qua Community; không suy quyền channel từ `space_members`. `SpaceMessageAccess` áp dụng cùng quyết định đọc/gửi cho HTTP và subscribe.
+- [x] **P4-T03.2** Dùng lại send/history/outbox/realtime; không sao chép ba bộ xử lý tin nhắn riêng. WebClient dùng một composer/sender/history cho ba loại space.
+- [x] **P4-T03.3** Test ma trận quyền DM/group/channel; FE phản ánh read-only nhưng backend vẫn là nơi quyết định quyền. Test bao phủ private/read-only/archived, override, revoke và outbox.
 
 **Nghiệm thu:** một contract message thống nhất hoạt động ở cả ba loại space và kiểm thử được các trường hợp mất quyền.
 

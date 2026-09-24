@@ -43,6 +43,24 @@ internal sealed class MessagingRealtimeAccessRevoker(
         }
     }
 
+    public async Task NotifySpaceUpdatedAsync(
+        IReadOnlyCollection<Guid> userIds,
+        Guid spaceId,
+        CancellationToken cancellationToken)
+    {
+        if (spaceId == Guid.Empty) return;
+        foreach (var userId in userIds.Where(userId => userId != Guid.Empty).Distinct())
+        {
+            foreach (var connection in connections.GetUserConnections(userId))
+            {
+                await SendIgnoringDisconnectAsync(
+                    connection.ConnectionId,
+                    CreateEvent("SpaceUpdated", spaceId, null, new { }),
+                    cancellationToken);
+            }
+        }
+    }
+
     public async Task RevokeSessionAsync(
         Guid userId,
         Guid sessionId,

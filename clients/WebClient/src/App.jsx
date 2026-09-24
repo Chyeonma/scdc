@@ -14,12 +14,20 @@ import {
 
 import {
   api,
+  addGroupMember,
+  changeGroupOwner,
   createDirectConversation,
+  createGroupConversation,
   findDirectRecipient,
+  getGroupConversation,
+  getGroupConversations,
+  getGroupMembers,
   getAccessToken,
   getMessageHistory,
   getSpaces,
+  removeGroupMember,
   sessionStore,
+  updateGroupConversation,
   getMe,
   getServers,
   getServerChannels,
@@ -31,9 +39,6 @@ import {
 } from './api.js';
 
 import {
-  INITIAL_SERVERS,
-  INITIAL_MEMBERS,
-  INITIAL_MESSAGES,
   INITIAL_THREADS,
 } from './mockData.js';
 
@@ -49,10 +54,11 @@ import { ServerSettingsModal } from './components/ServerSettingsModal.jsx';
 import { CreateServerModal } from './components/CreateServerModal.jsx';
 import { CreateChannelModal } from './components/CreateChannelModal.jsx';
 import { CreateDmModal } from './components/CreateDmModal.jsx';
+import { GroupSettingsModal } from './components/GroupSettingsModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
-import { useDirectMessageSender } from './hooks/useDirectMessageSender.js';
+import { useMessageSender } from './hooks/useMessageSender.js';
 import { mergeMessages } from './messaging/messageState.js';
 import { highestSequence, loadCatchUpPages, mergeSnapshot } from './messaging/realtimeSync.js';
 
@@ -82,9 +88,9 @@ export default function App() {
   const [nextBeforeBySpace, setNextBeforeBySpace] = useState({});
 
   // Messages & Threads State
-  const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
+  const [messagesMap, setMessagesMap] = useState({});
   const [threadsMap, setThreadsMap] = useState(INITIAL_THREADS);
-  const [members, setMembers] = useState(INITIAL_MEMBERS);
+  const [members, setMembers] = useState([]);
 
   // Active Collapsible Right Panel ('memberList' | 'thread' | 'pinned' | null)
   const [rightPanelMode, setRightPanelMode] = useState('memberList');
@@ -96,6 +102,7 @@ export default function App() {
   const [showCreateServer, setShowCreateServer] = useState(false);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateDm, setShowCreateDm] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [reportingMessage, setReportingMessage] = useState(null);
   const [inspectingUser, setInspectingUser] = useState(null);
@@ -114,9 +121,11 @@ export default function App() {
   const activeSpaceRef = useRef(null);
   const messagesRef = useRef(messagesMap);
   const loadInboxRef = useRef(null);
+  const loadServersRef = useRef(null);
+  const serversRef = useRef(servers);
   const syncActiveSpaceRef = useRef(null);
   const realtimeSyncRef = useRef({ run: 0, active: null, bufferedEvents: new Map() });
-  const { send: sendDirectMessage, retry: retryDirectMessage } = useDirectMessageSender({
+  const { send: sendMessageToSpace, retry: retryMessage } = useMessageSender({
     currentUser: currentUser || session?.user,
     setMessagesMap,
   });
@@ -137,13 +146,20 @@ export default function App() {
     user: space.peer,
   }), []);
 
+  const toGroup = useCallback((group) => ({
+    ...group,
+    id: group.spaceId,
+    spaceId: group.spaceId,
+    spaceType: 2,
+  }), []);
+
   const loadInbox = useCallback(async () => {
     if (!session?.accessToken) return;
 
     setInboxState('loading');
     try {
-      const page = await getSpaces();
-      const nextDms = (page.items || []).map(toDm);
+      const [page, groups] = await Promise.all([getSpaces(), getGroupConversations()]);
+      const nextDms = [...(page.items || []).map(toDm), ...(groups || []).map(toGroup)];
       setDms(nextDms);
       setActiveDmId((current) => nextDms.some((dm) => dm.spaceId === current)
         ? current
@@ -152,11 +168,12 @@ export default function App() {
     } catch {
       setInboxState('error');
     }
-  }, [session?.accessToken, toDm]);
+  }, [session?.accessToken, toDm, toGroup]);
 
   useEffect(() => {
     if (!session?.accessToken) {
       setDms([]);
+      setMessagesMap({});
       setActiveDmId(null);
       setInboxState('ready');
       return;
@@ -173,8 +190,12 @@ export default function App() {
       const hydrated = await Promise.all(rows.map(async (server) => ({ ...server, channels: await getServerChannels(server.id), unreadCount: 0 })));
       setServers(hydrated);
       setActiveServerId((current) => hydrated.some((server) => server.id === current) ? current : (hydrated[0]?.id || null));
+      return hydrated;
     } catch (error) { notify('error', error.message || 'Không thể tải server.'); }
   }, [session?.accessToken, notify]);
+
+  loadServersRef.current = loadServers;
+  serversRef.current = servers;
 
   useEffect(() => {
     if (session?.accessToken) loadServers();
@@ -204,7 +225,10 @@ export default function App() {
     [dms, activeDmId]
   );
 
-  const currentSpaceId = isHomeActive ? activeDmId : activeChannelId;
+  const currentSpaceId = isHomeActive ? activeDmId : activeChannel?.spaceId;
+  const canSendCurrentSpace = isHomeActive
+    ? Boolean(activeDm && activeDm.status === 1)
+    : Boolean(activeChannel?.canSend && activeChannel.status === 1);
   activeSpaceRef.current = currentSpaceId;
   messagesRef.current = messagesMap;
 
@@ -247,8 +271,17 @@ export default function App() {
       if (error?.name === 'AbortError' || historyRequestRef.current !== controller) return;
       restoreScrollRef.current = null;
       if (error?.status === 403 || error?.status === 404) {
-        setDms((previous) => previous.filter((dm) => dm.spaceId !== spaceId));
-        setActiveDmId((current) => current === spaceId ? null : current);
+        if (serversRef.current.some((server) => server.channels?.some((channel) => channel.spaceId === spaceId))) {
+          setServers((previous) => previous.map((server) => ({
+            ...server,
+            channels: server.channels?.filter((channel) => channel.spaceId !== spaceId),
+          })));
+          void loadServersRef.current?.();
+        } else {
+          setDms((previous) => previous.filter((dm) => dm.spaceId !== spaceId));
+          setActiveDmId((current) => current === spaceId ? null : current);
+        }
+        setMessagesMap((previous) => ({ ...previous, [spaceId]: [] }));
         notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
       } else {
         setHistoryState('error');
@@ -405,9 +438,21 @@ export default function App() {
 
       if (event.eventType === 'SpaceAccessRevoked' && event.spaceId) {
         setMessagesMap((previous) => ({ ...previous, [event.spaceId]: [] }));
-        setDms((previous) => previous.filter((dm) => dm.spaceId !== event.spaceId));
-        setActiveDmId((active) => active === event.spaceId ? null : active);
-        notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
+        const isChannel = serversRef.current.some((server) => server.channels?.some((channel) => channel.spaceId === event.spaceId));
+        if (isChannel) {
+          void loadServersRef.current?.().then((updated) => {
+            const stillReadable = updated?.some((server) => server.channels?.some((channel) => channel.spaceId === event.spaceId));
+            if (stillReadable && activeSpaceRef.current === event.spaceId) {
+              void syncActiveSpaceRef.current?.(event.spaceId);
+            } else if (!stillReadable) {
+              notify('warning', 'Bạn không còn quyền đọc kênh này.');
+            }
+          });
+        } else {
+          setDms((previous) => previous.filter((dm) => dm.spaceId !== event.spaceId));
+          setActiveDmId((active) => active === event.spaceId ? null : active);
+          notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
+        }
         return;
       }
 
@@ -467,26 +512,40 @@ export default function App() {
     if (!session?.accessToken || !currentSpaceId) return;
     if (connectionRef.current?.state === HubConnectionState.Connected) {
       void syncActiveSpaceRef.current?.(currentSpaceId);
+    } else {
+      void loadHistory(currentSpaceId);
     }
-  }, [currentSpaceId, session?.accessToken]);
+  }, [currentSpaceId, session?.accessToken, loadHistory]);
+
+  useEffect(() => {
+    if (!isHomeActive || activeDm?.spaceType !== 2 || !activeDmId) return;
+    getGroupMembers(activeDmId)
+      .then((items) => setMembers((items || []).map((item) => ({
+        ...item.user,
+        userId: item.user.id,
+        roleName: item.role === 3 ? 'Owner' : item.role === 2 ? 'Moderator' : 'Member',
+        status: item.user.status || 'offline',
+      }))))
+      .catch(() => setMembers([]));
+  }, [activeDm?.spaceType, activeDmId, isHomeActive]);
 
   const handleSendMessage = useCallback(async ({ content, clientMessageId }) => {
-    const sent = await sendDirectMessage({
+    const sent = await sendMessageToSpace({
       spaceId: currentSpaceId,
       content,
       clientMessageId,
     });
     setReplyingTo(null);
     return sent;
-  }, [currentSpaceId, sendDirectMessage]);
+  }, [currentSpaceId, sendMessageToSpace]);
 
   const handleRetryMessage = useCallback(async (message) => {
     try {
-      await retryDirectMessage(message);
+      await retryMessage(message);
     } catch {
       // The failed message keeps the ProblemDetails text and remains retryable.
     }
-  }, [retryDirectMessage]);
+  }, [retryMessage]);
 
   // Toggle Reaction Handler
   function handleToggleReaction(messageId, emoji) {
@@ -596,9 +655,23 @@ export default function App() {
     setIsHomeActive(true);
   }
 
+  async function handleStartGroup({ name, usernames }) {
+    const recipients = await Promise.all(usernames.map((username) => findDirectRecipient(username)));
+    const group = toGroup(await createGroupConversation({
+      name,
+      memberUserIds: recipients.map((recipient) => recipient.id),
+    }));
+    setDms((previous) => [group, ...previous.filter((dm) => dm.spaceId !== group.spaceId)]);
+    setActiveDmId(group.spaceId);
+    setIsHomeActive(true);
+  }
+
   async function handleSelectDm(spaceId) {
     try {
-      const space = toDm(await api(`/spaces/${spaceId}`));
+      const selected = dms.find((dm) => dm.spaceId === spaceId);
+      const space = selected?.spaceType === 2
+        ? toGroup(await getGroupConversation(spaceId))
+        : toDm(await api(`/spaces/${spaceId}`));
       setDms((previous) => previous.map((dm) => dm.spaceId === spaceId ? space : dm));
       setActiveDmId(spaceId);
     } catch (error) {
@@ -721,7 +794,8 @@ export default function App() {
           }
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          isDirectMessage={isHomeActive}
+          isDirectMessage={isHomeActive && activeDm?.spaceType === 1}
+          onOpenGroupSettings={isHomeActive && activeDm?.spaceType === 2 ? () => setShowGroupSettings(true) : undefined}
           statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
         />
 
@@ -730,33 +804,33 @@ export default function App() {
           className="chat-timeline"
           ref={timelineRef}
           onScroll={(event) => {
-            if (!isHomeActive || event.currentTarget.scrollTop > 32 || historyState === 'loading') return;
-            const nextBefore = nextBeforeBySpace[activeDmId];
-            if (nextBefore) loadHistory(activeDmId, nextBefore);
+            if (!currentSpaceId || event.currentTarget.scrollTop > 32 || historyState === 'loading') return;
+            const nextBefore = nextBeforeBySpace[currentSpaceId];
+            if (nextBefore) loadHistory(currentSpaceId, nextBefore);
           }}
         >
-          {isHomeActive && historyState === 'loading' && currentMessages.length > 0 && (
+          {historyState === 'loading' && currentMessages.length > 0 && (
             <p className="timeline-history-state">Đang tải tin nhắn cũ hơn...</p>
           )}
-          {isHomeActive && historyState === 'error' && (
+          {historyState === 'error' && (
             <div className="timeline-history-state">
               <p>Không thể tải lịch sử tin nhắn.</p>
-              <button type="button" className="btn btn--secondary" onClick={() => loadHistory(activeDmId)}>
+              <button type="button" className="btn btn--secondary" onClick={() => loadHistory(currentSpaceId)}>
                 Thử lại
               </button>
             </div>
           )}
-          {isHomeActive && nextBeforeBySpace[activeDmId] && currentMessages.length > 0 && historyState !== 'loading' && (
+          {currentSpaceId && nextBeforeBySpace[currentSpaceId] && currentMessages.length > 0 && historyState !== 'loading' && (
             <button
               type="button"
               className="btn btn--secondary timeline-load-older"
-              onClick={() => loadHistory(activeDmId, nextBeforeBySpace[activeDmId])}
+              onClick={() => loadHistory(currentSpaceId, nextBeforeBySpace[currentSpaceId])}
             >
               Tải tin nhắn cũ hơn
             </button>
           )}
           {currentMessages.length === 0 ? (
-            isHomeActive && historyState === 'loading' ? (
+            historyState === 'loading' ? (
               <div className="timeline-empty"><p>Đang tải lịch sử tin nhắn...</p></div>
             ) : (
             <div className="timeline-empty">
@@ -789,9 +863,9 @@ export default function App() {
                   message={message}
                   isGrouped={Boolean(isGrouped)}
                   isOwn={Boolean(isOwn)}
-                  onReply={isHomeActive ? undefined : (msg) => setReplyingTo(msg)}
-                  onRetryMessage={isHomeActive ? handleRetryMessage : undefined}
-                  allowReply={!isHomeActive}
+                  onReply={undefined}
+                  onRetryMessage={handleRetryMessage}
+                  allowReply={false}
                   onOpenThread={handleOpenThread}
                   onToggleReaction={handleToggleReaction}
                   onPinMessage={handlePinMessage}
@@ -808,14 +882,17 @@ export default function App() {
         </div>
 
         {/* Message Composer */}
+        {!isHomeActive && activeChannel?.canRead && !canSendCurrentSpace && (
+          <p className="timeline-history-state">Kênh này chỉ cho phép bạn đọc tin nhắn.</p>
+        )}
         <MessageComposer
-          key={isHomeActive ? activeDmId : activeChannelId}
+          key={currentSpaceId}
           channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
           replyingTo={isHomeActive ? null : replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
-          directMessageMode={isHomeActive}
-          disabled={!isHomeActive || !activeDmId}
+          textOnlyMode
+          disabled={!currentSpaceId || !canSendCurrentSpace}
         />
       </main>
 
@@ -877,7 +954,32 @@ export default function App() {
         <CreateDmModal
           onClose={() => setShowCreateDm(false)}
           onStartDm={handleStartDm}
+          onStartGroup={handleStartGroup}
           notify={notify}
+        />
+      )}
+
+      {showGroupSettings && activeDm?.spaceType === 2 && (
+        <GroupSettingsModal
+          group={activeDm}
+          currentUser={currentUser}
+          loadMembers={() => getGroupMembers(activeDm.spaceId)}
+          onUpdate={async (updates) => {
+            const updated = toGroup(await updateGroupConversation(activeDm.spaceId, updates));
+            setDms((previous) => previous.map((dm) => dm.spaceId === updated.spaceId ? { ...dm, ...updated } : dm));
+            return updated;
+          }}
+          onAddMember={async (username) => {
+            const user = await findDirectRecipient(username);
+            await addGroupMember(activeDm.spaceId, user.id);
+          }}
+          onRemoveMember={(userId) => removeGroupMember(activeDm.spaceId, userId)}
+          onTransferOwner={async (userId) => {
+            await changeGroupOwner(activeDm.spaceId, userId);
+            const updated = toGroup(await getGroupConversation(activeDm.spaceId));
+            setDms((previous) => previous.map((dm) => dm.spaceId === updated.spaceId ? { ...dm, ...updated } : dm));
+          }}
+          onClose={() => setShowGroupSettings(false)}
         />
       )}
 
