@@ -31,6 +31,8 @@ Một route message dùng chung DM/group/channel; `spaceId` không mặc nhiên 
 | Sửa tin | `PATCH /spaces/{spaceId}/messages/{messageId}` | `{content, expectedVersion}` | `200` MessageDto | P6 |
 | Xóa tin | `DELETE /spaces/{spaceId}/messages/{messageId}?expectedVersion=...` | Không body; version bắt buộc | `204`; xóa lặp có quyền vẫn `204` | P6 |
 | Read state cá nhân | `PUT /spaces/{spaceId}/read-state` | `{lastReadSequence}` | `200` `{spaceId,lastReadSequence,lastReadAt}` | P5 |
+| Tùy chỉnh hội thoại | `GET /spaces/{spaceId}/preferences` | Không body | `200` UserSpacePreferencesDto | P5 |
+| Lưu tùy chỉnh hội thoại | `PUT /spaces/{spaceId}/preferences` | Đầy đủ `{notificationLevel,mutedUntil,isHidden,isPinned}` | `200` UserSpacePreferencesDto | P5 |
 
 Routes group/membership, reaction/pin, search, block/report và file theo mục 14 roadmap là phạm vi phase sau, **chưa chốt toàn bộ request/response trong P0-T02**. DTO nền dưới có điểm mở rộng để các slice đó không phải suy đoán dữ liệu từ mock.
 
@@ -126,11 +128,13 @@ Tombstone giữ id, spaceId, sequence, type, version, author và timestamps/quan
 | `serverId` | UUID cho channel; null cho DM/group |
 | `lastMessage` | MessagePreviewDto hoặc null; `{id,sequenceNo,messageType,author,content,deletedAt}`; preview tối đa 160 code point và null content nếu đã xóa |
 | `lastMessageSequence`, `lastActivityAt` | decimal string hoặc null; UTC string hoặc null khi chưa có tin |
-| `lastReadSequence`, `unreadCount` | decimal string hoặc null; integer >=0; từ P5-T01 là mốc đọc đã lưu và số tin chưa đọc thực tế (loại trừ tin của mình, system, đã xóa, thread reply) |
+| `lastReadSequence`, `unreadCount`, `notificationCount` | decimal string hoặc null; integer >=0; unread là số tin thực tế (loại trừ tin của mình, system, đã xóa, thread reply); notificationCount là số tin đủ điều kiện cảnh báo theo preference |
 | `preferences` | `{notificationLevel: integer, mutedUntil: UTC|null, isHidden: boolean, isPinned: boolean}`; mặc định 2/null/false/false khi chưa có state |
 | `capabilities` | `{canRead,canSend,canEditOwn,canDeleteOwn,canDeleteOthers,canPin,canReact,canAttach}` đều boolean theo actor; gợi ý UI, backend vẫn kiểm tra mỗi thao tác |
 
-`GET /spaces` trả inbox **DM/group** còn đọc được, chưa Deleted, không hidden; channel nằm trong danh sách Community và dùng `GET /spaces/{id}` khi mở. Query thêm `includeHidden=true` để quản lý hội thoại ẩn. `limit` mặc định 50, khoảng 1–100; sort `last_activity_at DESC NULLS LAST, id DESC`, không dùng flag pin vào sort cursor v1; FE có thể nhóm các hội thoại đã tải theo pin.
+`GET /spaces` trả inbox DM; `GET /conversations/group` trả nhóm; `GET /servers/{serverId}/channels` trả channel. Cả ba loại chỉ hiển thị space còn quyền đọc, chưa Deleted và không hidden theo mặc định; `includeHidden=true` cho phép quản lý space ẩn. DM `limit` mặc định 50, khoảng 1–100; sort `last_activity_at DESC NULLS LAST, id DESC`, không dùng flag pin vào sort cursor v1; FE đưa space đã pin lên đầu sau khi tải.
+
+Group và channel list cũng trả `lastReadSequence`, `unreadCount`, `notificationCount` và `preferences`. `PUT preferences` cập nhật đủ bốn field trong một lần; `mutedUntil=null` hủy mute. `isHidden` được bỏ khi có tin mới từ người khác. `notificationCount` bằng 0 khi mute còn hiệu lực hoặc mức notification là None/MentionsOnly; unread không đổi. Mention alert chỉ có từ P6-T04.
 
 SpacePageDto là `{items: SpaceSummaryDto[], nextCursor: string|null, hasMore: boolean}`. Cursor opaque do server phát, gắn version/filter/order key `(lastActivityAt nullable, id)`; chỉ dùng lại với cùng filter. Không phải token cấp quyền. Cursor sai/chỉnh sửa trả `Messaging.InvalidCursor`; keyset có activity thay đổi không hứa snapshot cố định: FE deduplicate ID và refresh trang đầu khi inbox thay đổi. Cơ chế encode/validate nằm ở P1, không buộc FE decode.
 
@@ -150,6 +154,7 @@ Ví dụ response tạo DM `201` trước khi có tin:
   "lastActivityAt": null,
   "lastReadSequence": null,
   "unreadCount": 0,
+  "notificationCount": 0,
   "preferences": {"notificationLevel": 2, "mutedUntil": null, "isHidden": false, "isPinned": false},
   "capabilities": {"canRead": true, "canSend": true, "canEditOwn": true, "canDeleteOwn": true, "canDeleteOthers": false, "canPin": true, "canReact": true, "canAttach": true}
 }
@@ -233,6 +238,7 @@ Hub đề xuất `/hubs/chat`; authenticated connection gắn userId/sessionId t
 |---|---|---|
 | `SubscribeSpace` | `spaceId: UUID` | HubResult với value `{spaceId, highWatermark}`; lặp không tạo subscription trùng |
 | `UnsubscribeSpace` | `spaceId: UUID` | HubResult với value `{spaceId}`; idempotent, không tiết lộ có space không |
+| `SetTyping` | `spaceId: UUID, isTyping: boolean` | Cần subscription và quyền gửi khi start; HubResult `{spaceId,isTyping,expiresAt}`; start giới hạn phát tối đa mỗi 2 giây |
 
 HubResult là union: thành công `{ok:true,value:object,error:null}`; lỗi `{ok:false,value:null,error:{errorCode,message,traceId}}`. Không trả HTTP ProblemDetails cho invocation; negotiate/connect HTTP vẫn dùng authentication host. Unknown exception chỉ trả lỗi chung và traceId. Ví dụ subscribe lỗi:
 
@@ -254,6 +260,8 @@ HubResult là union: thành công `{ok:true,value:object,error:null}`; lỗi `{o
 | `MessageUpdated` | `{messageId, sequenceNo}` | Subscriber còn quyền; refetch, giữ version mới nhất |
 | `MessageDeleted` | `{messageId, sequenceNo, deletedAt}` | Subscriber còn quyền; có thể dựng tombstone ngay bằng aggregateVersion; refetch để xác nhận |
 | `SpaceUpdated` | `{}` | Các connection của user còn quyền có space trong inbox; invalidation SpaceSummaryDto/trang đầu, không broadcast user preferences |
+| `PreferencesUpdated` | `{}` | Chỉ các connection của chính user; tải lại danh sách và preference |
+| `TypingChanged` | `{userId,displayName,isTyping,expiresAt}` | Subscriber khác user gửi còn quyền đọc; TTL 6 giây, không outbox |
 | `SpaceAccessRevoked` | `{}` | Chỉ user bị revoke với subscription đã biết; bỏ cache và subscription; không nội dung message |
 | `SessionRevoked` | `{}`; `spaceId=null` | Chỉ connection của session bị revoke, rồi disconnect; không coi event này là biện pháp bảo vệ duy nhất |
 
@@ -275,7 +283,7 @@ Ví dụ một lần tạo message và event tương ứng (event ID khác messa
 
 Outbox cùng transaction nghiệp vụ; retry giữ eventId, giao nhận ít nhất một lần. FE dùng cache eventId có giới hạn bộ nhớ và idempotent merge theo message ID/version; không giả định cache giữ vô hạn. Published không có nghĩa delivered/read. Không dựa vào thứ tự event tới. Event không được hỗ trợ về schemaVersion/type: không áp dụng payload, đánh dấu space cần resync; log metadata tối thiểu.
 
-ReadStateUpdated/ReactionChanged/PinChanged/MembershipChanged/TypingChanged thuộc phase sau: dùng cùng envelope nhưng payload sẽ chốt theo slice. Reaction/pin invalidation không dùng message.version để giả lập revision; typing là best-effort có TTL, không ghi outbox. P3 phải đổi listener cũ đang coi MessageCreated payload là MessageDto và đổi `SubscribeChannel` sang `SubscribeSpace`.
+ReactionChanged/PinChanged/MembershipChanged thuộc phase sau: dùng cùng envelope nhưng payload sẽ chốt theo slice. Reaction/pin invalidation không dùng message.version để giả lập revision. Typing là best-effort có TTL, không ghi outbox; mất mạng thì client xóa typing khi hết TTL. P3 đã đổi listener cũ đang coi MessageCreated payload là MessageDto và đổi `SubscribeChannel` sang `SubscribeSpace`.
 
 ## 7. Ownership và contract liên module — P0-T02.5/.6
 

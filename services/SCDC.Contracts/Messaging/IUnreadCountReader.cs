@@ -8,4 +8,8 @@ public interface IUnreadCountReader
         CancellationToken cancellationToken);
 }
 
-public sealed record SpaceUnreadState(int UnreadCount, string? LastReadSequence);
+public sealed record SpaceUnreadState(
+    int UnreadCount,
+    int NotificationCount,
+    string? LastReadSequence,
+    UserSpacePreferencesDto Preferences);

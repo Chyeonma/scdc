@@ -68,6 +68,10 @@ public static class MessagingErrors
         "Messaging.InvalidReadState",
         "The read position must identify a message in this space.");
 
+    public static readonly Error InvalidPreferences = Error.Validation(
+        "Messaging.InvalidPreferences",
+        "The space notification preferences are invalid.");
+
     public static readonly Error InvalidGroup = Error.Validation(
         "Messaging.InvalidGroup",
         "The group name, members, or member limit is invalid.");

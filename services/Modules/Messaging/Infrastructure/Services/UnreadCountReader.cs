@@ -6,7 +6,7 @@ using SCDC.Modules.Messaging.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
-internal sealed class UnreadCountReader(MessagingDbContext dbContext) : IUnreadCountReader
+internal sealed class UnreadCountReader(MessagingDbContext dbContext, TimeProvider timeProvider) : IUnreadCountReader
 {
     public async Task<IReadOnlyDictionary<Guid, SpaceUnreadState>> GetAsync(
         Guid userId,
@@ -37,10 +37,18 @@ internal sealed class UnreadCountReader(MessagingDbContext dbContext) : IUnreadC
             select new { SpaceId = grouped.Key, Count = grouped.Count() })
             .ToDictionaryAsync(row => row.SpaceId, row => row.Count, cancellationToken);
 
-        return ids.ToDictionary(
-            id => id,
-            id => new SpaceUnreadState(
-                counts.GetValueOrDefault(id),
-                states.GetValueOrDefault(id)?.LastReadSequence?.ToString(CultureInfo.InvariantCulture)));
+        var now = timeProvider.GetUtcNow();
+        return ids.ToDictionary(id => id, id =>
+        {
+            var state = states.GetValueOrDefault(id);
+            var unreadCount = counts.GetValueOrDefault(id);
+            var level = state?.NotificationLevel ?? NotificationLevel.AllMessages;
+            var muted = state?.MutedUntil is { } until && until > now;
+            return new SpaceUnreadState(
+                unreadCount,
+                level == NotificationLevel.AllMessages && !muted ? unreadCount : 0,
+                state?.LastReadSequence?.ToString(CultureInfo.InvariantCulture),
+                new UserSpacePreferencesDto((short)level, state?.MutedUntil, state?.IsHidden ?? false, state?.IsPinned ?? false));
+        });
     }
 }

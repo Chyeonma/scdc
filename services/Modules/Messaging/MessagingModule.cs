@@ -37,11 +37,14 @@ public static class MessagingModule
         services.AddSingleton<MessageRateLimiter>();
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IReadStateService, ReadStateService>();
+        services.AddScoped<ISpacePreferencesService, SpacePreferencesService>();
         services.AddScoped<IUnreadCountReader, UnreadCountReader>();
         services.AddScoped<SpaceMessageAccess>();
         services.AddScoped<IChannelSpaceProvisioner, ChannelSpaceProvisioner>();
         services.AddScoped<IRealtimeSpaceAccess, RealtimeSpaceAccess>();
+        services.AddScoped<ITypingAccess, TypingAccess>();
         services.AddSingleton<RealtimeConnectionRegistry>();
+        services.AddSingleton<TypingStateRegistry>();
         services.AddSingleton<MessagingRealtimeAccessRevoker>();
         services.AddSingleton<IRealtimeAccessRevoker>(provider =>
             provider.GetRequiredService<MessagingRealtimeAccessRevoker>());

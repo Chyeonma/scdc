@@ -62,6 +62,8 @@ Identity đã định nghĩa `PendingVerification=0`, `Active=1`, `Suspended=2`,
 - Reaction/pin chỉ dành cho message còn tồn tại và không phải System. Bỏ reaction của mình cũng dùng cùng quyền reaction; không cho thay reaction của user khác.
 - Report cần quyền đọc tin tại thời điểm tạo; quyền review bằng chứng của moderator là quyền riêng trong Moderation, không tự cấp quyền duyệt toàn bộ DM/group.
 - Read state, hide/mute và pin hội thoại là trạng thái cá nhân; không cần quyền pin message và không ảnh hưởng người khác.
+- P5-T02: hide loại space khỏi danh sách mặc định nhưng vẫn đọc được bằng ID và xuất hiện trong `includeHidden=true`; tin mới từ người khác bỏ hide trong cùng transaction gửi. Gửi tin của chính mình không bỏ hide. Pin hội thoại chỉ đổi thứ tự UI đã tải, không phải pin message.
+- `unreadCount` luôn phản ánh tin chưa đọc hợp lệ. `notificationCount` chỉ bật khi `notification_level=AllMessages` và `muted_until` đã hết hoặc null; `None` và `MentionsOnly` chưa tạo cảnh báo cho tới khi mention thật được triển khai ở P6-T04. Mute không đổi `last_read_sequence`. Badge tổng và toast trong ứng dụng dùng `notificationCount`, badge trong từng space vẫn có thể cho thấy unread.
 
 ### Khi quyền hoặc tài khoản thay đổi
 

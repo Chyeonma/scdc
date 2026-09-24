@@ -239,10 +239,10 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P5-T02 — Typing, tùy chỉnh inbox và thông báo trong ứng dụng [BE, FE]
 
-- [ ] **P5-T02.1** Typing start/stop có kiểm tra quyền, throttle và tự hết hạn; không lưu mỗi keystroke vào DB/outbox.
-- [ ] **P5-T02.2** API mute, `notification_level`, hide và pin hội thoại qua `space_user_states`; phân biệt pin hội thoại với pin message.
-- [ ] **P5-T02.3** Chốt hội thoại ẩn có xuất hiện lại khi nhận tin mới không; mute chỉ ảnh hưởng thông báo, không tự đánh dấu đã đọc.
-- [ ] **P5-T02.4** Thêm badge/thông báo trong ứng dụng theo preference và quyền; push/email notification là backlog riêng nếu cần sau này.
+- [x] **P5-T02.1** Typing start/stop có kiểm tra quyền, throttle và tự hết hạn; không lưu mỗi keystroke vào DB/outbox.
+- [x] **P5-T02.2** API mute, `notification_level`, hide và pin hội thoại qua `space_user_states`; phân biệt pin hội thoại với pin message.
+- [x] **P5-T02.3** Chốt hội thoại ẩn có xuất hiện lại khi nhận tin mới không; mute chỉ ảnh hưởng thông báo, không tự đánh dấu đã đọc.
+- [x] **P5-T02.4** Thêm badge/thông báo trong ứng dụng theo preference và quyền; push/email notification là backlog riêng nếu cần sau này.
 
 **Nghiệm thu:** typing tự biến mất khi mất mạng; tùy chỉnh tồn tại sau refresh và không làm sai unread.
 

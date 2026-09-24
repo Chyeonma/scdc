@@ -49,8 +49,10 @@ public sealed class ConversationsController(
 
     [HttpGet("group")]
     [ProducesResponseType<IReadOnlyList<GroupConversationDto>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<GroupConversationDto>>> ListGroups(CancellationToken cancellationToken) =>
-        FromResult(await groupConversationService.ListAsync(User.GetUserId(), cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<GroupConversationDto>>> ListGroups(
+        [FromQuery] bool includeHidden,
+        CancellationToken cancellationToken) =>
+        FromResult(await groupConversationService.ListAsync(User.GetUserId(), includeHidden, cancellationToken));
 
     [HttpPost("group")]
     [ProducesResponseType<GroupConversationDto>(StatusCodes.Status201Created)]

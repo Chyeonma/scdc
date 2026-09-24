@@ -29,6 +29,7 @@ import {
   sessionStore,
   updateGroupConversation,
   updateReadState,
+  updateSpacePreferences,
   getMe,
   getServers,
   getServerChannels,
@@ -75,6 +76,7 @@ export default function App() {
 
   // Current user details
   const [currentUser, setCurrentUser] = useState(null);
+  const currentUserIdRef = useRef(null);
   const [userStatus, setUserStatus] = useState('online');
 
   // Navigation State
@@ -86,6 +88,9 @@ export default function App() {
   const [activeDmId, setActiveDmId] = useState(null);
   const [inboxState, setInboxState] = useState('loading');
   const [historyState, setHistoryState] = useState('idle');
+  const [showHidden, setShowHidden] = useState(false);
+  const [preferenceSaving, setPreferenceSaving] = useState(false);
+  const [typingBySpace, setTypingBySpace] = useState({});
   const [visibleReadPosition, setVisibleReadPosition] = useState(null);
   const [nextBeforeBySpace, setNextBeforeBySpace] = useState({});
 
@@ -123,7 +128,9 @@ export default function App() {
   const activeSpaceRef = useRef(null);
   const messagesRef = useRef(messagesMap);
   const loadInboxRef = useRef(null);
+  const dmsRef = useRef(dms);
   const loadServersRef = useRef(null);
+  const pendingAlertSpaceIdsRef = useRef(new Set());
   const readQueueRef = useRef(new Map());
   const badgeRefreshTimerRef = useRef(null);
   const serversRef = useRef(servers);
@@ -144,6 +151,10 @@ export default function App() {
     }
   }, [session]);
 
+  useEffect(() => {
+    if (session?.user?.id) setIsHomeActive(true);
+  }, [session?.user?.id]);
+
   const toDm = useCallback((space) => ({
     ...space,
     spaceId: space.id,
@@ -162,28 +173,35 @@ export default function App() {
 
     setInboxState('loading');
     try {
-      const [page, groups] = await Promise.all([getSpaces(), getGroupConversations()]);
-      const nextDms = [...(page.items || []).map(toDm), ...(groups || []).map(toGroup)];
+      const [page, groups] = await Promise.all([
+        getSpaces({ includeHidden: showHidden }),
+        getGroupConversations({ includeHidden: showHidden }),
+      ]);
+      const nextDms = [...(page.items || []).map(toDm), ...(groups || []).map(toGroup)]
+        .sort((left, right) => Number(Boolean(right.preferences?.isPinned)) - Number(Boolean(left.preferences?.isPinned)));
       setDms(nextDms);
+      dmsRef.current = nextDms;
       setActiveDmId((current) => nextDms.some((dm) => dm.spaceId === current)
         ? current
         : (nextDms[0]?.spaceId || null));
       setInboxState('ready');
+      return nextDms;
     } catch {
       setInboxState('error');
     }
-  }, [session?.accessToken, toDm, toGroup]);
+  }, [session?.accessToken, showHidden, toDm, toGroup]);
 
   useEffect(() => {
     if (!session?.accessToken) {
       setDms([]);
+      dmsRef.current = [];
       setMessagesMap({});
       setActiveDmId(null);
+      setTypingBySpace({});
       setInboxState('ready');
       return;
     }
 
-    setIsHomeActive(true);
     loadInbox();
   }, [session?.accessToken, loadInbox]);
 
@@ -192,20 +210,24 @@ export default function App() {
     try {
       const rows = await getServers();
       const hydrated = await Promise.all(rows.map(async (server) => {
-        const channels = (await getServerChannels(server.id)).map((channel) => ({
+        const channels = (await getServerChannels(server.id, { includeHidden: showHidden }))
+          .sort((left, right) => Number(Boolean(right.preferences?.isPinned)) - Number(Boolean(left.preferences?.isPinned)))
+          .map((channel) => ({
           ...channel,
           unread: channel.unreadCount > 0,
         }));
-        return { ...server, channels, unreadCount: channels.reduce((total, channel) => total + channel.unreadCount, 0) };
+        return { ...server, channels, unreadCount: channels.reduce((total, channel) => total + channel.notificationCount, 0) };
       }));
       setServers(hydrated);
+      serversRef.current = hydrated;
       setActiveServerId((current) => hydrated.some((server) => server.id === current) ? current : (hydrated[0]?.id || null));
       return hydrated;
     } catch (error) { notify('error', error.message || 'Không thể tải server.'); }
-  }, [session?.accessToken, notify]);
+  }, [session?.accessToken, showHidden, notify]);
 
   loadServersRef.current = loadServers;
   serversRef.current = servers;
+  dmsRef.current = dms;
 
   useEffect(() => {
     if (session?.accessToken) loadServers();
@@ -236,11 +258,27 @@ export default function App() {
   );
 
   const currentSpaceId = isHomeActive ? activeDmId : activeChannel?.spaceId;
+  currentUserIdRef.current = currentUser?.id;
+  const currentPreferences = (isHomeActive ? activeDm?.preferences : activeChannel?.preferences)
+    || { notificationLevel: 2, mutedUntil: null, isHidden: false, isPinned: false };
   const canSendCurrentSpace = isHomeActive
     ? Boolean(activeDm && activeDm.status === 1)
     : Boolean(activeChannel?.canSend && activeChannel.status === 1);
   activeSpaceRef.current = currentSpaceId;
   messagesRef.current = messagesMap;
+
+  const savePreferences = useCallback(async (changes) => {
+    if (!currentSpaceId || preferenceSaving) return;
+    setPreferenceSaving(true);
+    try {
+      await updateSpacePreferences(currentSpaceId, { ...currentPreferences, ...changes });
+      await Promise.all([loadInboxRef.current?.(), loadServersRef.current?.()]);
+    } catch (error) {
+      notify('error', error.message || 'Không thể lưu tùy chỉnh hội thoại.');
+    } finally {
+      setPreferenceSaving(false);
+    }
+  }, [currentSpaceId, currentPreferences, preferenceSaving, notify]);
 
   const loadHistory = useCallback(async (spaceId, beforeSequence = null) => {
     if (!spaceId || !session?.accessToken) return;
@@ -326,18 +364,72 @@ export default function App() {
 
   loadInboxRef.current = loadInbox;
 
-  const refreshBadges = useCallback(() => {
+  const refreshBadges = useCallback((alertSpaceId = null) => {
+    if (alertSpaceId) pendingAlertSpaceIdsRef.current.add(alertSpaceId);
     if (badgeRefreshTimerRef.current) clearTimeout(badgeRefreshTimerRef.current);
-    badgeRefreshTimerRef.current = setTimeout(() => {
+    badgeRefreshTimerRef.current = setTimeout(async () => {
       badgeRefreshTimerRef.current = null;
-      void loadInboxRef.current?.();
-      void loadServersRef.current?.();
+      const pendingAlerts = [...pendingAlertSpaceIdsRef.current];
+      pendingAlertSpaceIdsRef.current.clear();
+      const previousDms = dmsRef.current;
+      const previousServers = serversRef.current;
+      const [nextDms, nextServers] = await Promise.all([
+        loadInboxRef.current?.(),
+        loadServersRef.current?.(),
+      ]);
+      for (const spaceId of pendingAlerts) {
+        if (spaceId === activeSpaceRef.current) continue;
+        const before = previousDms.find((item) => item.spaceId === spaceId)
+          || previousServers.flatMap((server) => server.channels || []).find((item) => item.spaceId === spaceId);
+        const after = nextDms?.find((item) => item.spaceId === spaceId)
+          || nextServers?.flatMap((server) => server.channels || []).find((item) => item.spaceId === spaceId);
+        if (document.visibilityState === 'visible'
+            && after && after.notificationCount > (before?.notificationCount || 0)) {
+          notify('info', `Tin nhắn mới trong ${after.name || after.user?.displayName || 'hội thoại'}.`);
+        }
+      }
     }, 120);
-  }, []);
+  }, [notify]);
 
   useEffect(() => () => {
     if (badgeRefreshTimerRef.current) clearTimeout(badgeRefreshTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    const now = Date.now();
+    const muteTimes = [
+      ...dms.map((item) => item.preferences?.mutedUntil),
+      ...servers.flatMap((server) => server.channels || []).map((item) => item.preferences?.mutedUntil),
+    ].map((value) => Date.parse(value)).filter((value) => Number.isFinite(value) && value > now);
+    if (!muteTimes.length) return undefined;
+    const timer = setTimeout(() => refreshBadges(), Math.min(Math.min(...muteTimes) - now + 100, 2_147_483_647));
+    return () => clearTimeout(timer);
+  }, [dms, servers, refreshBadges]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setTypingBySpace((previous) => {
+        let changed = false;
+        const next = {};
+        for (const [spaceId, users] of Object.entries(previous)) {
+          const active = Object.fromEntries(Object.entries(users).filter(([, entry]) => Date.parse(entry.expiresAt) > now));
+          if (Object.keys(active).length !== Object.keys(users).length) changed = true;
+          if (Object.keys(active).length) next[spaceId] = active;
+        }
+        return changed ? next : previous;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const setLocalTyping = useCallback((isTyping) => {
+    const connection = connectionRef.current;
+    if (!currentSpaceId || connection?.state !== HubConnectionState.Connected
+        || subscribedSpaceRef.current !== currentSpaceId) return;
+    if (isTyping && document.visibilityState !== 'visible') return;
+    void connection.invoke('SetTyping', currentSpaceId, isTyping).catch(() => {});
+  }, [currentSpaceId]);
 
   const checkVisibleReadPosition = useCallback(() => {
     if (document.visibilityState !== 'visible' || !currentSpaceId || historyState !== 'ready' || searchQuery.trim()) {
@@ -509,7 +601,7 @@ export default function App() {
       if (event?.schemaVersion !== 1) return;
 
       if (event.eventType === 'MessageCreated' && event.spaceId) {
-        refreshBadges();
+        refreshBadges(event.spaceId);
         const syncing = realtimeSyncRef.current.active;
         if (syncing?.spaceId === event.spaceId) {
           realtimeSyncRef.current.bufferedEvents.get(event.spaceId)?.push(event);
@@ -520,11 +612,29 @@ export default function App() {
       }
 
       if (event.eventType === 'SpaceUpdated') {
-        refreshBadges();
+        refreshBadges(event.spaceId);
+        return;
+      }
+
+      if (event.eventType === 'TypingChanged' && event.spaceId && event.payload?.userId) {
+        if (event.payload.userId === currentUserIdRef.current) return;
+        setTypingBySpace((previous) => {
+          const users = { ...previous[event.spaceId] };
+          if (event.payload.isTyping && Date.parse(event.payload.expiresAt) > Date.now()) {
+            users[event.payload.userId] = {
+              displayName: event.payload.displayName,
+              expiresAt: event.payload.expiresAt,
+            };
+          } else {
+            delete users[event.payload.userId];
+          }
+          return { ...previous, [event.spaceId]: users };
+        });
         return;
       }
 
       if (event.eventType === 'SpaceAccessRevoked' && event.spaceId) {
+        setTypingBySpace((previous) => ({ ...previous, [event.spaceId]: {} }));
         setMessagesMap((previous) => ({ ...previous, [event.spaceId]: [] }));
         const isChannel = serversRef.current.some((server) => server.channels?.some((channel) => channel.spaceId === event.spaceId));
         if (isChannel) {
@@ -544,11 +654,17 @@ export default function App() {
         return;
       }
 
+      if (event.eventType === 'PreferencesUpdated') {
+        refreshBadges();
+        return;
+      }
+
       if (event.eventType === 'SessionRevoked') sessionStore.clear();
     });
 
     connection.onreconnecting(() => {
       subscribedSpaceRef.current = null;
+      setTypingBySpace({});
       setConnectionState('connecting');
     });
     connection.onreconnected(() => {
@@ -558,6 +674,7 @@ export default function App() {
     });
     connection.onclose(() => {
       subscribedSpaceRef.current = null;
+      setTypingBySpace({});
       if (!disposed) setConnectionState('offline');
     });
 
@@ -829,7 +946,7 @@ export default function App() {
           }
         }}
         onOpenCreateServer={() => setShowCreateServer(true)}
-        totalUnreadDMs={dms.reduce((acc, d) => acc + (d.unreadCount || 0), 0)}
+        totalUnreadDMs={dms.reduce((acc, d) => acc + (d.notificationCount || 0), 0)}
       />
 
       {/* COLUMN 2: SUB-SIDEBAR (CHANNELS OR DMS + USER DOCK) */}
@@ -841,6 +958,8 @@ export default function App() {
         dms={dms}
         activeDmId={activeDmId}
         onSelectDm={handleSelectDm}
+        showHidden={showHidden}
+        onToggleShowHidden={() => setShowHidden((current) => !current)}
         onOpenCreateDm={() => setShowCreateDm(true)}
         inboxState={inboxState}
         onRetryInbox={loadInbox}
@@ -887,6 +1006,36 @@ export default function App() {
           onOpenGroupSettings={isHomeActive && activeDm?.spaceType === 2 ? () => setShowGroupSettings(true) : undefined}
           statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
         />
+
+        {currentSpaceId && (
+          <div className="conversation-preferences" aria-label="Tùy chỉnh hội thoại">
+            <button type="button" disabled={preferenceSaving}
+              onClick={() => void savePreferences({ isPinned: !currentPreferences.isPinned })}>
+              {currentPreferences.isPinned ? '★ Bỏ ghim' : '☆ Ghim hội thoại'}
+            </button>
+            <button type="button" disabled={preferenceSaving}
+              onClick={() => void savePreferences({
+                mutedUntil: currentPreferences.mutedUntil && Date.parse(currentPreferences.mutedUntil) > Date.now()
+                  ? null : new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+              })}>
+              {currentPreferences.mutedUntil && Date.parse(currentPreferences.mutedUntil) > Date.now()
+                ? 'Bật thông báo' : 'Tắt thông báo 1 giờ'}
+            </button>
+            <label>
+              Thông báo
+              <select disabled={preferenceSaving} value={currentPreferences.notificationLevel}
+                onChange={(event) => void savePreferences({ notificationLevel: Number(event.target.value) })}>
+                <option value={2}>Tất cả</option>
+                <option value={1}>Chỉ mention (chưa hỗ trợ)</option>
+                <option value={0}>Không thông báo</option>
+              </select>
+            </label>
+            <button type="button" disabled={preferenceSaving}
+              onClick={() => void savePreferences({ isHidden: !currentPreferences.isHidden })}>
+              {currentPreferences.isHidden ? 'Hiện lại' : 'Ẩn hội thoại'}
+            </button>
+          </div>
+        )}
 
         {/* Message Timeline */}
         <div
@@ -981,6 +1130,8 @@ export default function App() {
           replyingTo={isHomeActive ? null : replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
+          onTypingChange={setLocalTyping}
+          typingUsers={Object.values(typingBySpace[currentSpaceId] || {}).map((entry) => entry.displayName)}
           textOnlyMode
           disabled={!currentSpaceId || !canSendCurrentSpace}
         />

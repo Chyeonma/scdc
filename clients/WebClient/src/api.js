@@ -268,8 +268,8 @@ export function createDirectConversation(recipientUserId) {
   });
 }
 
-export function getGroupConversations() {
-  return api('/conversations/group');
+export function getGroupConversations({ includeHidden = false } = {}) {
+  return api(`/conversations/group${includeHidden ? '?includeHidden=true' : ''}`);
 }
 
 export function getGroupConversation(spaceId) {
@@ -331,9 +331,19 @@ export function updateReadState(spaceId, lastReadSequence) {
   });
 }
 
+export function getSpacePreferences(spaceId) {
+  return api(`/spaces/${spaceId}/preferences`);
+}
+
+export function updateSpacePreferences(spaceId, preferences) {
+  return api(`/spaces/${spaceId}/preferences`, { method: 'PUT', body: preferences });
+}
+
 export function getServers() { return api('/servers'); }
 export function createServer({ name, description }) { return api('/servers', { method: 'POST', body: { name, description } }); }
-export function getServerChannels(serverId) { return api(`/servers/${serverId}/channels`); }
+export function getServerChannels(serverId, { includeHidden = false } = {}) {
+  return api(`/servers/${serverId}/channels${includeHidden ? '?includeHidden=true' : ''}`);
+}
 export function createServerChannel(serverId, { name, topic, visibility }) { return api(`/servers/${serverId}/channels`, { method: 'POST', body: { name, topic, visibility } }); }
 export function getServerMembers(serverId) { return api(`/servers/${serverId}/members`); }
 export function createServerInvite(serverId) { return api(`/servers/${serverId}/invites`, { method: 'POST', body: {} }); }

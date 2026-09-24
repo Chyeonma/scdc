@@ -31,7 +31,8 @@ public sealed record SpaceSummaryDto(
     string? LastReadSequence,
     int UnreadCount,
     SpacePreferencesDto Preferences,
-    SpaceCapabilitiesDto Capabilities);
+    SpaceCapabilitiesDto Capabilities,
+    int NotificationCount = 0);
 
 public sealed record MessagePreviewDto(
     Guid Id,

@@ -7,6 +7,7 @@ export function MessageComposer({
   replyingTo,
   onCancelReply,
   onSendMessage,
+  onTypingChange,
   typingUsers = [],
   textOnlyMode = false,
   disabled = false,
@@ -19,6 +20,20 @@ export function MessageComposer({
   const fileInputRef = useRef(null);
   const clientMessageIdRef = useRef(null);
   const lastSubmissionContentRef = useRef(null);
+  const isTyping = Boolean(content.trim()) && !disabled && !isSending;
+
+  useEffect(() => {
+    if (!isTyping || !onTypingChange) return undefined;
+    onTypingChange(true);
+    const heartbeat = setInterval(() => onTypingChange(true), 3000);
+    const visibilityChanged = () => onTypingChange(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', visibilityChanged);
+    return () => {
+      clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', visibilityChanged);
+      onTypingChange(false);
+    };
+  }, [isTyping, onTypingChange]);
 
   const emojiList = ['😀', '😂', '😍', '🔥', '👍', '❤️', '🎉', '🚀', '💯', '👏', '🥳', '😎', '💡', '✅', '⚡', '✨'];
 

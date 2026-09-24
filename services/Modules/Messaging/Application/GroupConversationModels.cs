@@ -1,4 +1,5 @@
 using SCDC.Contracts.Identity;
+using SCDC.Contracts.Messaging;
 
 namespace SCDC.Modules.Messaging.Application;
 
@@ -33,7 +34,9 @@ public sealed record GroupConversationDto(
     int Version,
     DateTimeOffset? LastActivityAt,
     int UnreadCount = 0,
-    string? LastReadSequence = null);
+    string? LastReadSequence = null,
+    int NotificationCount = 0,
+    UserSpacePreferencesDto? Preferences = null);
 
 public sealed record GroupMemberDto(
     UserSummary User,
