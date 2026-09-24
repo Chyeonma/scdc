@@ -8,7 +8,7 @@ export function MessageComposer({
   onCancelReply,
   onSendMessage,
   typingUsers = [],
-  directMessageMode = false,
+  textOnlyMode = false,
   disabled = false,
 }) {
   const [content, setContent] = useState('');
@@ -49,10 +49,10 @@ export function MessageComposer({
     const trimmed = content.trim();
     if ((!trimmed && attachedFiles.length === 0) || disabled || isSending) return;
 
-    const clientMessageId = directMessageMode
+    const clientMessageId = textOnlyMode
       ? (clientMessageIdRef.current || createClientMessageId())
       : undefined;
-    if (directMessageMode) {
+    if (textOnlyMode) {
       clientMessageIdRef.current = clientMessageId;
       lastSubmissionContentRef.current = trimmed;
     }
@@ -107,7 +107,7 @@ export function MessageComposer({
 
   return (
     <div className="composer-container">
-      {!directMessageMode && replyingTo && (
+      {!textOnlyMode && replyingTo && (
         <div className="reply-context-bar">
           <span className="reply-context-bar__text">
             Đang trả lời <strong>@{replyingTo.author?.displayName || replyingTo.author?.username}</strong>:
@@ -117,7 +117,7 @@ export function MessageComposer({
         </div>
       )}
 
-      {!directMessageMode && attachedFiles.length > 0 && (
+      {!textOnlyMode && attachedFiles.length > 0 && (
         <div className="composer-attachments">
           {attachedFiles.map((file, index) => (
             <div className="composer-attachment-chip" key={`${file.name}-${index}`}>
@@ -129,7 +129,7 @@ export function MessageComposer({
       )}
 
       <div className="composer-box">
-        {!directMessageMode && (
+        {!textOnlyMode && (
           <>
             <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} multiple />
             <button

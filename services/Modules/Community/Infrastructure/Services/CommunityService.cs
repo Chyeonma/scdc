@@ -58,12 +58,14 @@ internal sealed class CommunityService(
     {
         if (!await IsActiveMemberAsync(actor, serverId, ct)) return Result.Failure<IReadOnlyList<ChannelDto>>(CommunityErrors.NotFound);
         var channels = await db.Channels.AsNoTracking().Where(x => x.ServerId == serverId).OrderBy(x => x.Position).ThenBy(x => x.Name).ToListAsync(ct);
+        var statuses = await spaces.GetStatusesAsync(channels.Select(channel => channel.SpaceId).ToArray(), ct);
         var checker = new ChannelAccessChecker(db);
         var items = new List<ChannelDto>();
         foreach (var channel in channels)
         {
+            if (!statuses.TryGetValue(channel.SpaceId, out var status) || status == 3) continue;
             var access = await checker.CheckAsync(actor, channel.SpaceId, ct);
-            if (access.CanRead) items.Add(ToDto(channel, access));
+            if (access.CanRead) items.Add(ToDto(channel, access, status));
         }
         return Result.Success<IReadOnlyList<ChannelDto>>(items);
     }
@@ -83,7 +85,7 @@ internal sealed class CommunityService(
             db.Channels.Add(channel);
             await db.SaveChangesAsync(ct);
             var access = await new ChannelAccessChecker(db).CheckAsync(command.ActorUserId, channel.SpaceId, ct);
-            return Result.Success(ToDto(channel, access));
+            return Result.Success(ToDto(channel, access, 1));
         }
         catch (DbUpdateException)
         {
@@ -162,13 +164,13 @@ internal sealed class CommunityService(
         if (command.RoleId is { } roleId)
         {
             var item = await db.ChannelRoleOverrides.SingleOrDefaultAsync(x => x.SpaceId == command.SpaceId && x.RoleId == roleId && x.PermissionCode == command.PermissionCode, ct);
-            if (item is null) db.ChannelRoleOverrides.Add(new ChannelRoleOverride { SpaceId = command.SpaceId, RoleId = roleId, PermissionCode = command.PermissionCode, Effect = (PermissionEffect)command.Effect }); else item.Effect = (PermissionEffect)command.Effect;
+            if (item is null) db.ChannelRoleOverrides.Add(new ChannelRoleOverride { SpaceId = command.SpaceId, ServerId = command.ServerId, RoleId = roleId, PermissionCode = command.PermissionCode, Effect = (PermissionEffect)command.Effect }); else item.Effect = (PermissionEffect)command.Effect;
             await db.SaveChangesAsync(ct); await RevokeServerAsync(Guid.Empty, command.ServerId, ct);
         }
         else
         {
             var userId = command.UserId!.Value; var item = await db.ChannelUserOverrides.SingleOrDefaultAsync(x => x.SpaceId == command.SpaceId && x.UserId == userId && x.PermissionCode == command.PermissionCode, ct);
-            if (item is null) db.ChannelUserOverrides.Add(new ChannelUserOverride { SpaceId = command.SpaceId, UserId = userId, PermissionCode = command.PermissionCode, Effect = (PermissionEffect)command.Effect }); else item.Effect = (PermissionEffect)command.Effect;
+            if (item is null) db.ChannelUserOverrides.Add(new ChannelUserOverride { SpaceId = command.SpaceId, ServerId = command.ServerId, UserId = userId, PermissionCode = command.PermissionCode, Effect = (PermissionEffect)command.Effect }); else item.Effect = (PermissionEffect)command.Effect;
             await db.SaveChangesAsync(ct); await revoker.RevokeAsync(userId, [command.SpaceId], ct);
         }
         return Result.Success();
@@ -214,5 +216,5 @@ internal sealed class CommunityService(
     private static string? Normalize(string? value, int max) { var text = value?.Trim(); return string.IsNullOrEmpty(text) ? null : text[..Math.Min(text.Length, max)]; }
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
     private static ServerDto ToDto(Server s) => new(s.Id, s.Name, s.Slug, s.Description, s.OwnerUserId, (short)s.Status);
-    private static ChannelDto ToDto(Channel c, SCDC.Contracts.Community.ChannelAccessDecision a) => new(c.SpaceId, c.ServerId, c.Name, c.Topic, (short)c.Visibility, c.Position, a.CanRead, a.CanSend);
+    private static ChannelDto ToDto(Channel c, SCDC.Contracts.Community.ChannelAccessDecision a, short status) => new(c.SpaceId, c.ServerId, c.Name, c.Topic, (short)c.Visibility, c.Position, status, a.CanRead, a.CanSend && status == 1);
 }

@@ -7,7 +7,7 @@ import {
   messageError,
 } from '../messaging/messageState.js';
 
-export function useDirectMessageSender({ currentUser, setMessagesMap }) {
+export function useMessageSender({ currentUser, setMessagesMap }) {
   const send = useCallback(async ({ spaceId, content, clientMessageId }) => {
     if (!spaceId) {
       throw new Error('Chọn một cuộc trò chuyện trước khi gửi tin nhắn.');

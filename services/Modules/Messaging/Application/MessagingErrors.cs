@@ -63,4 +63,20 @@ public static class MessagingErrors
     public static readonly Error InvalidMessageCursor = Error.Validation(
         "Messaging.InvalidCursor",
         "The message history cursor is invalid.");
+
+    public static readonly Error InvalidGroup = Error.Validation(
+        "Messaging.InvalidGroup",
+        "The group name, members, or member limit is invalid.");
+
+    public static readonly Error GroupMemberUnavailable = Error.Validation(
+        "Messaging.GroupMemberUnavailable",
+        "One or more group members are unavailable.");
+
+    public static readonly Error GroupMemberLimitReached = Error.Conflict(
+        "Messaging.GroupMemberLimitReached",
+        "The group has reached its member limit.");
+
+    public static readonly Error GroupOwnerTransferRequired = Error.Conflict(
+        "Messaging.GroupOwnerTransferRequired",
+        "Transfer group ownership before leaving the group.");
 }

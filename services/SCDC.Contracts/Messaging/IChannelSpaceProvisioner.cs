@@ -6,6 +6,9 @@ public interface IChannelSpaceProvisioner
     Task<ChannelSpaceProvisionResult> CreateAsync(Guid createdByUserId, CancellationToken cancellationToken);
     Task ArchiveAsync(Guid spaceId, CancellationToken cancellationToken);
     Task RetireAsync(Guid spaceId, CancellationToken cancellationToken);
+    Task<IReadOnlyDictionary<Guid, short>> GetStatusesAsync(
+        IReadOnlyCollection<Guid> spaceIds,
+        CancellationToken cancellationToken);
 }
 
 public sealed record ChannelSpaceProvisionResult(Guid? SpaceId, string? FailureReason = null)

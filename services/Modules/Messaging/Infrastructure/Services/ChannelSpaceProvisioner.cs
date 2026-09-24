@@ -7,6 +7,12 @@ namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
 internal sealed class ChannelSpaceProvisioner(MessagingDbContext dbContext, TimeProvider clock) : IChannelSpaceProvisioner
 {
+    public async Task<IReadOnlyDictionary<Guid, short>> GetStatusesAsync(
+        IReadOnlyCollection<Guid> spaceIds,
+        CancellationToken cancellationToken) => await dbContext.Spaces.AsNoTracking()
+            .Where(space => spaceIds.Contains(space.Id) && space.SpaceType == SpaceType.Channel)
+            .ToDictionaryAsync(space => space.Id, space => (short)space.Status, cancellationToken);
+
     public async Task<ChannelSpaceProvisionResult> CreateAsync(Guid createdByUserId, CancellationToken cancellationToken)
     {
         if (createdByUserId == Guid.Empty) return new(null, "Creator is required.");

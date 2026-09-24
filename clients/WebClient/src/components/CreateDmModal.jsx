@@ -1,27 +1,37 @@
 import React, { useState } from 'react';
 
-export function CreateDmModal({
-  onClose,
-  onStartDm,
-  notify,
-}) {
+export function CreateDmModal({ onClose, onStartDm, onStartGroup, notify }) {
+  const [mode, setMode] = useState('direct');
   const [username, setUsername] = useState('');
+  const [groupName, setGroupName] = useState('');
+  const [groupMembers, setGroupMembers] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (isSubmitting) return;
     const cleanUsername = username.trim().toLowerCase();
-    if (!cleanUsername || isSubmitting) return;
+    const members = [...new Set(groupMembers.split(',').map((value) => value.trim().toLowerCase()).filter(Boolean))];
+    if (mode === 'direct' && !cleanUsername) return;
+    if (mode === 'group' && (!groupName.trim() || members.length < 2)) {
+      setError('Nhóm cần tên và ít nhất hai username khác, phân tách bằng dấu phẩy.');
+      return;
+    }
 
     setIsSubmitting(true);
     setError('');
     try {
-      await onStartDm(cleanUsername);
-      notify?.('success', `Đã mở cuộc trò chuyện với @${cleanUsername}.`);
+      if (mode === 'direct') {
+        await onStartDm(cleanUsername);
+        notify?.('success', `Đã mở cuộc trò chuyện với @${cleanUsername}.`);
+      } else {
+        await onStartGroup({ name: groupName.trim(), usernames: members });
+        notify?.('success', 'Đã tạo nhóm trò chuyện.');
+      }
       onClose();
     } catch (requestError) {
-      setError(requestError?.message || 'Không thể mở cuộc trò chuyện. Vui lòng thử lại.');
+      setError(requestError?.message || 'Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
@@ -29,38 +39,33 @@ export function CreateDmModal({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card" onClick={(event) => event.stopPropagation()}>
         <div className="modal-card__header">
-          <h2>Bắt đầu cuộc trò chuyện mới</h2>
-          <p>Nhập chính xác username của người dùng bạn muốn nhắn tin trực tiếp.</p>
+          <h2>{mode === 'direct' ? 'Bắt đầu cuộc trò chuyện mới' : 'Tạo nhóm trò chuyện'}</h2>
+          <p>{mode === 'direct' ? 'Nhập username của người bạn muốn nhắn tin.' : 'Thêm ít nhất hai thành viên bằng username.'}</p>
+        </div>
+
+        <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
+          <button type="button" className={`btn ${mode === 'direct' ? 'btn--primary' : 'btn--secondary'}`} onClick={() => { setMode('direct'); setError(''); }} disabled={isSubmitting}>Nhắn riêng</button>
+          <button type="button" className={`btn ${mode === 'group' ? 'btn--primary' : 'btn--secondary'}`} onClick={() => { setMode('group'); setError(''); }} disabled={isSubmitting}>Tạo nhóm</button>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
-          <label className="form-group">
-            <span>USERNAME NGƯỜI DÙNG</span>
-            <div className="input-prefix-box">
-              <span>@</span>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => { setUsername(e.target.value); setError(''); }}
-                placeholder="bob"
-                required
-                autoFocus
-                disabled={isSubmitting}
-              />
-            </div>
-          </label>
-
+          {mode === 'direct' ? (
+            <label className="form-group">
+              <span>USERNAME NGƯỜI DÙNG</span>
+              <div className="input-prefix-box"><span>@</span><input type="text" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="bob" required autoFocus disabled={isSubmitting} /></div>
+            </label>
+          ) : (
+            <>
+              <label className="form-group"><span>TÊN NHÓM</span><input type="text" value={groupName} onChange={(event) => setGroupName(event.target.value)} maxLength="100" required autoFocus disabled={isSubmitting} /></label>
+              <label className="form-group"><span>THÀNH VIÊN</span><input type="text" value={groupMembers} onChange={(event) => setGroupMembers(event.target.value)} placeholder="alice, bob" required disabled={isSubmitting} /></label>
+            </>
+          )}
           {error && <p className="form-error" role="alert">{error}</p>}
-
           <div className="modal-actions">
-            <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>
-              Huỷ
-            </button>
-            <button type="submit" className="btn btn--primary" disabled={!username.trim() || isSubmitting}>
-              {isSubmitting ? 'Đang mở...' : 'Bắt đầu trò chuyện'}
-            </button>
+            <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Huỷ</button>
+            <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Đang tạo...' : mode === 'direct' ? 'Bắt đầu trò chuyện' : 'Tạo nhóm'}</button>
           </div>
         </form>
       </div>
