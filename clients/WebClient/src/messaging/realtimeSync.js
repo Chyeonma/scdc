@@ -18,7 +18,9 @@ export function highestSequence(messages) {
 export function mergeSnapshot(existing, snapshot) {
   const unsent = (existing || []).filter((message) =>
     message.deliveryState === 'pending' || message.deliveryState === 'failed');
-  return mergeMessages(unsent, snapshot || []);
+  const current = (existing || []).filter((message) =>
+    (snapshot || []).some((item) => item.id === message.id));
+  return mergeMessages([...unsent, ...current], snapshot || []);
 }
 
 /**

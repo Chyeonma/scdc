@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { highestSequence, loadCatchUpPages, mergeSnapshot } from './realtimeSync.js';
+import { mergeMessages, tombstoneMessage } from './messageState.js';
+
+test('older versions cannot overwrite an edit or resurrect a tombstone', () => {
+  const edited = mergeMessages([{ id: 'a', sequenceNo: '1', content: 'new', version: 2 }],
+    [{ id: 'a', sequenceNo: '1', content: 'old', version: 1 }]);
+  assert.equal(edited[0].content, 'new');
+  const deleted = tombstoneMessage(edited, 'a', 3, '2026-09-24T00:00:00Z');
+  assert.equal(mergeMessages(deleted, [{ id: 'a', sequenceNo: '1', content: 'new', version: 2 }])[0].content, null);
+  assert.equal(mergeSnapshot(deleted, [{ id: 'a', sequenceNo: '1', content: 'old', version: 1 }])[0].content, null);
+});
 
 test('loads all catch-up pages against the first high watermark', async () => {
   const calls = [];

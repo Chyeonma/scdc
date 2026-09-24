@@ -324,6 +324,20 @@ export function sendMessage(spaceId, { clientMessageId, content }) {
   });
 }
 
+export function getMessage(spaceId, messageId) {
+  return api(`/spaces/${spaceId}/messages/${messageId}`);
+}
+
+export function editMessage(spaceId, messageId, content, expectedVersion) {
+  return api(`/spaces/${spaceId}/messages/${messageId}`, {
+    method: 'PATCH', body: { content, expectedVersion },
+  });
+}
+
+export function deleteMessage(spaceId, messageId, expectedVersion) {
+  return api(`/spaces/${spaceId}/messages/${messageId}?expectedVersion=${expectedVersion}`, { method: 'DELETE' });
+}
+
 export function updateReadState(spaceId, lastReadSequence) {
   return api(`/spaces/${spaceId}/read-state`, {
     method: 'PUT',

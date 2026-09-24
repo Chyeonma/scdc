@@ -19,7 +19,8 @@ internal sealed class SpaceMessageAccess(MessagingDbContext dbContext, IChannelA
         if (space.SpaceType == SpaceType.Channel)
         {
             var channel = await channelAccess.CheckAsync(userId, space.Id, cancellationToken);
-            return new(channel.CanRead, channel.CanSend && space.Status == SpaceStatus.Active);
+            return new(channel.CanRead, channel.CanSend && space.Status == SpaceStatus.Active,
+                channel.CanEditOwn && space.Status == SpaceStatus.Active, channel.CanDeleteOthers);
         }
 
         if (space.SpaceType is not (SpaceType.Direct or SpaceType.Group))

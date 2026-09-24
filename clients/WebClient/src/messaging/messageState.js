@@ -66,6 +66,9 @@ export function mergeMessages(existing, incoming) {
       candidate.id === sent.id
       || (sent.clientMessageId && candidate.clientMessageId === sent.clientMessageId));
     if (index >= 0) {
+      const current = merged[index];
+      if ((sent.version ?? 0) < (current.version ?? 0)) continue;
+      if (current.deletedAt && !sent.deletedAt && (sent.version ?? 0) === (current.version ?? 0)) continue;
       merged[index] = sent;
     } else {
       merged.push(sent);
@@ -73,6 +76,12 @@ export function mergeMessages(existing, incoming) {
   }
 
   return sortMessages(merged);
+}
+
+export function tombstoneMessage(existing, messageId, version, deletedAt) {
+  return existing.map((message) => message.id === messageId && version >= (message.version ?? 0)
+    ? { ...message, content: null, deletedAt, version, attachments: [], reactions: [], isPinned: false }
+    : message);
 }
 
 export function messageError(error) {

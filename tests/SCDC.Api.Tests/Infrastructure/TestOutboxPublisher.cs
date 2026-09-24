@@ -4,6 +4,11 @@ namespace SCDC.Api.Tests.Infrastructure;
 
 public sealed class TestOutboxPublisher : IRealtimeMessagePublisher
 {
+    public Task PublishMessageChangedAsync(RealtimeMessageChanged notification, CancellationToken cancellationToken)
+    {
+        lock (_gate) _eventIds.Add(notification.EventId);
+        return Task.CompletedTask;
+    }
     private readonly object _gate = new();
     private readonly List<Guid> _eventIds = [];
 

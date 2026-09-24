@@ -17,6 +17,82 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
+    public async Task Edit_and_delete_enforce_author_version_and_tombstone()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var author = await CreateActorAsync("edit_author");
+            var peer = await CreateActorAsync("edit_peer");
+            var third = await CreateActorAsync("edit_third");
+            actors.AddRange([author, peer, third]);
+            var conversation = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = peer.Id });
+            var spaceId = (await conversation.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var sent = await SendTextAsync(author, spaceId);
+            var messageId = sent.GetProperty("id").GetGuid();
+            var path = $"/api/v1/spaces/{spaceId}/messages/{messageId}";
+
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Patch, path, peer.Token,
+                new { content = "changed", expectedVersion = 1 })).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Delete, $"{path}?expectedVersion=1", peer.Token)).StatusCode);
+            var edited = await SendAsync(HttpMethod.Patch, path, author.Token,
+                new { content = "updated", expectedVersion = 1 });
+            Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+            Assert.Equal(2, (await edited.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("version").GetInt32());
+            var unchanged = await SendAsync(HttpMethod.Patch, path, author.Token,
+                new { content = " updated ", expectedVersion = 2 });
+            Assert.Equal(HttpStatusCode.OK, unchanged.StatusCode);
+            Assert.Equal(2, (await unchanged.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("version").GetInt32());
+            Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(HttpMethod.Patch, path, author.Token,
+                new { content = "stale", expectedVersion = 1 })).StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(HttpMethod.Delete, $"{path}?expectedVersion=1", author.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await SendAsync(HttpMethod.Delete, $"{path}?expectedVersion=2", author.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await SendAsync(HttpMethod.Delete, $"{path}?expectedVersion=1", author.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(HttpMethod.Patch, path, author.Token,
+                new { content = "restore", expectedVersion = 3 })).StatusCode);
+            var tombstone = await SendAsync(HttpMethod.Get, path, peer.Token);
+            Assert.Equal(HttpStatusCode.OK, tombstone.StatusCode);
+            var dto = await tombstone.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(3, dto.GetProperty("version").GetInt32());
+            Assert.Equal(JsonValueKind.Null, dto.GetProperty("content").ValueKind);
+            Assert.NotEqual(JsonValueKind.Null, dto.GetProperty("deletedAt").ValueKind);
+
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+            await using var command = new NpgsqlCommand("""
+                SELECT (SELECT count(*) FROM messaging.message_edits WHERE message_id = @id),
+                       (SELECT content FROM messaging.messages WHERE id = @id),
+                       (SELECT count(*) FROM integration.outbox_events WHERE aggregate_id = @id AND event_type IN ('Messaging.MessageUpdated','Messaging.MessageDeleted'))
+                """, connection);
+            command.Parameters.AddWithValue("id", messageId);
+            await using var reader = await command.ExecuteReaderAsync();
+            Assert.True(await reader.ReadAsync());
+            Assert.Equal(1, reader.GetInt64(0));
+            Assert.Equal("[deleted]", reader.GetString(1));
+            Assert.Equal(2, reader.GetInt64(2));
+            await reader.CloseAsync();
+
+            var group = await SendAsync(HttpMethod.Post, "/api/v1/conversations/group", author.Token,
+                new { name = "Edit delete rights", memberUserIds = new[] { peer.Id, third.Id } });
+            Assert.Equal(HttpStatusCode.Created, group.StatusCode);
+            var groupId = (await group.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("spaceId").GetGuid();
+            var groupMessage = await SendTextAsync(peer, groupId);
+            var groupMessageId = groupMessage.GetProperty("id").GetGuid();
+            var groupPath = $"/api/v1/spaces/{groupId}/messages/{groupMessageId}";
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Patch, groupPath, author.Token,
+                new { content = "not mine", expectedVersion = 1 })).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAsync(HttpMethod.Delete, $"{groupPath}?expectedVersion=1", author.Token)).StatusCode);
+        }
+        finally
+        {
+            await CleanupAsync(actors);
+        }
+    }
+
+    [Fact]
     public async Task Dm_group_and_channels_share_message_flow_and_enforce_current_rights()
     {
         var actors = new List<TestActor>();
