@@ -64,6 +64,10 @@ public static class MessagingErrors
         "Messaging.InvalidCursor",
         "The message history cursor is invalid.");
 
+    public static readonly Error InvalidReadState = Error.Validation(
+        "Messaging.InvalidReadState",
+        "The read position must identify a message in this space.");
+
     public static readonly Error InvalidGroup = Error.Validation(
         "Messaging.InvalidGroup",
         "The group name, members, or member limit is invalid.");

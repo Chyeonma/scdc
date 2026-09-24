@@ -324,6 +324,13 @@ export function sendMessage(spaceId, { clientMessageId, content }) {
   });
 }
 
+export function updateReadState(spaceId, lastReadSequence) {
+  return api(`/spaces/${spaceId}/read-state`, {
+    method: 'PUT',
+    body: { lastReadSequence },
+  });
+}
+
 export function getServers() { return api('/servers'); }
 export function createServer({ name, description }) { return api('/servers', { method: 'POST', body: { name, description } }); }
 export function getServerChannels(serverId) { return api(`/servers/${serverId}/channels`); }

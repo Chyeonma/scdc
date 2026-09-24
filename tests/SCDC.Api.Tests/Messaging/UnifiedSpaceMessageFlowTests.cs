@@ -134,6 +134,109 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         }
     }
 
+    [Fact]
+    public async Task Read_state_is_monotonic_and_unread_counts_actual_messages_across_spaces()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var owner = await CreateActorAsync("read_owner");
+            var reader = await CreateActorAsync("read_reader");
+            var third = await CreateActorAsync("read_third");
+            actors.AddRange([owner, reader, third]);
+
+            var directResponse = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", owner.Token,
+                new { recipientUserId = reader.Id });
+            Assert.Equal(HttpStatusCode.Created, directResponse.StatusCode);
+            var directId = (await directResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var groupResponse = await SendAsync(HttpMethod.Post, "/api/v1/conversations/group", owner.Token,
+                new { name = "Read state test", memberUserIds = new[] { reader.Id, third.Id } });
+            Assert.Equal(HttpStatusCode.Created, groupResponse.StatusCode);
+            var groupId = (await groupResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("spaceId").GetGuid();
+
+            var first = await SendTextAsync(owner, directId);
+            var groupMessage = await SendTextAsync(owner, groupId);
+            var second = await SendTextAsync(owner, directId);
+            var firstSequence = first.GetProperty("sequenceNo").GetString()!;
+            var secondSequence = second.GetProperty("sequenceNo").GetString()!;
+            var groupSequence = groupMessage.GetProperty("sequenceNo").GetString()!;
+            Assert.True(long.Parse(secondSequence) - long.Parse(firstSequence) > 1);
+            await InsertExcludedMessagesAsync(directId, owner.Id, first.GetProperty("id").GetGuid());
+
+            var inbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+            var direct = (await inbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetGuid() == directId);
+            Assert.Equal(2, direct.GetProperty("unreadCount").GetInt32());
+            var ownerInbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", owner.Token);
+            Assert.Equal(0, (await ownerInbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetGuid() == directId).GetProperty("unreadCount").GetInt32());
+            var groups = await SendAsync(HttpMethod.Get, "/api/v1/conversations/group", reader.Token);
+            Assert.Equal(1, (await groups.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+                .Single(item => item.GetProperty("spaceId").GetGuid() == groupId).GetProperty("unreadCount").GetInt32());
+
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{directId}/read-state", reader.Token,
+                    new { lastReadSequence = groupSequence })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{directId}/read-state", reader.Token,
+                    new { lastReadSequence = "01" })).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{directId}/read-state", third.Token,
+                    new { lastReadSequence = secondSequence })).StatusCode);
+
+            await using (var otherDevice = CreateHubConnection(reader.Token))
+            {
+                var updated = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+                otherDevice.On<JsonElement>("RealtimeEvent", envelope =>
+                {
+                    if (envelope.GetProperty("eventType").GetString() == "SpaceUpdated"
+                        && envelope.GetProperty("spaceId").GetGuid() == directId)
+                        updated.TrySetResult(envelope);
+                });
+                await otherDevice.StartAsync();
+                var read = await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{directId}/read-state", reader.Token,
+                    new { lastReadSequence = secondSequence });
+                Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+                Assert.Equal(secondSequence, (await read.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("lastReadSequence").GetString());
+                await updated.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+
+            var stale = await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{directId}/read-state", reader.Token,
+                new { lastReadSequence = firstSequence });
+            Assert.Equal(HttpStatusCode.OK, stale.StatusCode);
+            Assert.Equal(secondSequence, (await stale.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("lastReadSequence").GetString());
+            inbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+            direct = (await inbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetGuid() == directId);
+            Assert.Equal(0, direct.GetProperty("unreadCount").GetInt32());
+
+            var serverResponse = await SendAsync(HttpMethod.Post, "/api/v1/servers", owner.Token,
+                new { name = "Read state server" });
+            Assert.Equal(HttpStatusCode.Created, serverResponse.StatusCode);
+            var serverId = (await serverResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var invite = await SendAsync(HttpMethod.Post, $"/api/v1/servers/{serverId}/invites", owner.Token, new { });
+            var code = (await invite.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/invites/{code}/join", reader.Token, new { })).StatusCode);
+            var channelId = await CreateChannelAsync(owner, serverId, "read-state", 1);
+            var channelMessage = await SendTextAsync(owner, channelId);
+            var channelSequence = channelMessage.GetProperty("sequenceNo").GetString()!;
+            var channels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", reader.Token);
+            Assert.Equal(1, (await channels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+                .Single(item => item.GetProperty("spaceId").GetGuid() == channelId).GetProperty("unreadCount").GetInt32());
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{channelId}/read-state", reader.Token,
+                    new { lastReadSequence = channelSequence })).StatusCode);
+            channels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", reader.Token);
+            Assert.Equal(0, (await channels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+                .Single(item => item.GetProperty("spaceId").GetGuid() == channelId).GetProperty("unreadCount").GetInt32());
+        }
+        finally
+        {
+            await CleanupAsync(actors);
+        }
+    }
+
     private async Task<Guid> CreateChannelAsync(TestActor owner, Guid serverId, string name, short visibility)
     {
         var response = await SendAsync(HttpMethod.Post, $"/api/v1/servers/{serverId}/channels", owner.Token,
@@ -204,6 +307,28 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    private async Task InsertExcludedMessagesAsync(Guid spaceId, Guid authorId, Guid rootMessageId)
+    {
+        var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand("""
+            INSERT INTO messaging.messages (space_id, message_type, content)
+            VALUES (@space_id, 2, 'system');
+            INSERT INTO messaging.messages (space_id, author_user_id, client_message_id, message_type, content, created_at, deleted_at)
+            VALUES (@space_id, @author_id, @deleted_client_id, 1, 'deleted', @deleted_at, @deleted_at);
+            INSERT INTO messaging.messages (space_id, author_user_id, client_message_id, message_type, content, thread_root_id)
+            VALUES (@space_id, @author_id, @thread_client_id, 1, 'thread reply', @root_id);
+            """, connection);
+        command.Parameters.AddWithValue("space_id", spaceId);
+        command.Parameters.AddWithValue("author_id", authorId);
+        command.Parameters.AddWithValue("deleted_client_id", Guid.NewGuid());
+        command.Parameters.AddWithValue("thread_client_id", Guid.NewGuid());
+        command.Parameters.AddWithValue("deleted_at", DateTimeOffset.UtcNow);
+        command.Parameters.AddWithValue("root_id", rootMessageId);
+        await command.ExecuteNonQueryAsync();
+    }
+
     private async Task CleanupAsync(IReadOnlyCollection<TestActor> actors)
     {
         if (actors.Count == 0) return;
@@ -215,6 +340,7 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         foreach (var sql in new[]
                  {
                      "DELETE FROM integration.outbox_events WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",
+                     "DELETE FROM messaging.messages WHERE thread_root_id IS NOT NULL AND space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",
                      "DELETE FROM messaging.messages WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",
                      "DELETE FROM community.channels WHERE server_id IN (SELECT id FROM community.servers WHERE owner_user_id = ANY(@ids))",
                      "DELETE FROM community.invites WHERE server_id IN (SELECT id FROM community.servers WHERE owner_user_id = ANY(@ids))",

@@ -13,6 +13,7 @@ internal sealed class CommunityService(
     CommunityDbContext db,
     IUserDirectory users,
     IChannelSpaceProvisioner spaces,
+    IUnreadCountReader unreadCountReader,
     IRealtimeAccessRevoker revoker,
     TimeProvider clock) : ICommunityService
 {
@@ -67,7 +68,12 @@ internal sealed class CommunityService(
             var access = await checker.CheckAsync(actor, channel.SpaceId, ct);
             if (access.CanRead) items.Add(ToDto(channel, access, status));
         }
-        return Result.Success<IReadOnlyList<ChannelDto>>(items);
+        var unread = await unreadCountReader.GetAsync(actor, items.Select(item => item.SpaceId).ToArray(), ct);
+        return Result.Success<IReadOnlyList<ChannelDto>>(items.Select(item => item with
+        {
+            UnreadCount = unread[item.SpaceId].UnreadCount,
+            LastReadSequence = unread[item.SpaceId].LastReadSequence
+        }).ToArray());
     }
 
     public async Task<Result<ChannelDto>> CreateChannelAsync(CreateChannelCommand command, CancellationToken ct)

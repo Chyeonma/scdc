@@ -28,6 +28,7 @@ import {
   removeGroupMember,
   sessionStore,
   updateGroupConversation,
+  updateReadState,
   getMe,
   getServers,
   getServerChannels,
@@ -85,6 +86,7 @@ export default function App() {
   const [activeDmId, setActiveDmId] = useState(null);
   const [inboxState, setInboxState] = useState('loading');
   const [historyState, setHistoryState] = useState('idle');
+  const [visibleReadPosition, setVisibleReadPosition] = useState(null);
   const [nextBeforeBySpace, setNextBeforeBySpace] = useState({});
 
   // Messages & Threads State
@@ -122,6 +124,8 @@ export default function App() {
   const messagesRef = useRef(messagesMap);
   const loadInboxRef = useRef(null);
   const loadServersRef = useRef(null);
+  const readQueueRef = useRef(new Map());
+  const badgeRefreshTimerRef = useRef(null);
   const serversRef = useRef(servers);
   const syncActiveSpaceRef = useRef(null);
   const realtimeSyncRef = useRef({ run: 0, active: null, bufferedEvents: new Map() });
@@ -187,7 +191,13 @@ export default function App() {
     if (!session?.accessToken) return;
     try {
       const rows = await getServers();
-      const hydrated = await Promise.all(rows.map(async (server) => ({ ...server, channels: await getServerChannels(server.id), unreadCount: 0 })));
+      const hydrated = await Promise.all(rows.map(async (server) => {
+        const channels = (await getServerChannels(server.id)).map((channel) => ({
+          ...channel,
+          unread: channel.unreadCount > 0,
+        }));
+        return { ...server, channels, unreadCount: channels.reduce((total, channel) => total + channel.unreadCount, 0) };
+      }));
       setServers(hydrated);
       setActiveServerId((current) => hydrated.some((server) => server.id === current) ? current : (hydrated[0]?.id || null));
       return hydrated;
@@ -316,6 +326,84 @@ export default function App() {
 
   loadInboxRef.current = loadInbox;
 
+  const refreshBadges = useCallback(() => {
+    if (badgeRefreshTimerRef.current) clearTimeout(badgeRefreshTimerRef.current);
+    badgeRefreshTimerRef.current = setTimeout(() => {
+      badgeRefreshTimerRef.current = null;
+      void loadInboxRef.current?.();
+      void loadServersRef.current?.();
+    }, 120);
+  }, []);
+
+  useEffect(() => () => {
+    if (badgeRefreshTimerRef.current) clearTimeout(badgeRefreshTimerRef.current);
+  }, []);
+
+  const checkVisibleReadPosition = useCallback(() => {
+    if (document.visibilityState !== 'visible' || !currentSpaceId || historyState !== 'ready' || searchQuery.trim()) {
+      setVisibleReadPosition(null);
+      return;
+    }
+    const timeline = timelineRef.current;
+    const end = timelineEndRef.current;
+    if (!timeline || !end) {
+      setVisibleReadPosition(null);
+      return;
+    }
+    const viewport = timeline.getBoundingClientRect();
+    const marker = end.getBoundingClientRect();
+    if (marker.top < viewport.top || marker.top > viewport.bottom) {
+      setVisibleReadPosition(null);
+      return;
+    }
+    const sequence = highestSequence(currentMessages);
+    if (sequence === '0') {
+      setVisibleReadPosition(null);
+    } else {
+      setVisibleReadPosition((previous) =>
+        previous?.spaceId === currentSpaceId && previous.sequence === sequence
+          ? previous
+          : { spaceId: currentSpaceId, sequence });
+    }
+  }, [currentMessages, currentSpaceId, historyState, searchQuery]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(checkVisibleReadPosition);
+    document.addEventListener('visibilitychange', checkVisibleReadPosition);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('visibilitychange', checkVisibleReadPosition);
+    };
+  }, [checkVisibleReadPosition]);
+
+  useEffect(() => {
+    if (!visibleReadPosition || visibleReadPosition.spaceId !== currentSpaceId
+        || document.visibilityState !== 'visible' || historyState !== 'ready') return undefined;
+    const { spaceId, sequence } = visibleReadPosition;
+    const timer = setTimeout(() => {
+      if (document.visibilityState !== 'visible' || searchQuery.trim()) return;
+      const entry = readQueueRef.current.get(spaceId) || { acknowledged: '0', desired: '0', running: false };
+      if (BigInt(sequence) > BigInt(entry.desired)) entry.desired = sequence;
+      readQueueRef.current.set(spaceId, entry);
+      if (entry.running || BigInt(entry.desired) <= BigInt(entry.acknowledged)) return;
+      entry.running = true;
+      void (async () => {
+        try {
+          while (BigInt(entry.desired) > BigInt(entry.acknowledged)) {
+            const result = await updateReadState(spaceId, entry.desired);
+            entry.acknowledged = result.lastReadSequence;
+          }
+          refreshBadges();
+        } catch {
+          // Retry when the visible position changes or the tab becomes visible again.
+        } finally {
+          entry.running = false;
+        }
+      })();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [visibleReadPosition, currentSpaceId, historyState, refreshBadges, searchQuery]);
+
   const mergeRealtimeItems = useCallback((spaceId, items, snapshot = false) => {
     setMessagesMap((previous) => ({
       ...previous,
@@ -421,7 +509,7 @@ export default function App() {
       if (event?.schemaVersion !== 1) return;
 
       if (event.eventType === 'MessageCreated' && event.spaceId) {
-        void loadInboxRef.current?.();
+        refreshBadges();
         const syncing = realtimeSyncRef.current.active;
         if (syncing?.spaceId === event.spaceId) {
           realtimeSyncRef.current.bufferedEvents.get(event.spaceId)?.push(event);
@@ -432,7 +520,7 @@ export default function App() {
       }
 
       if (event.eventType === 'SpaceUpdated') {
-        void loadInboxRef.current?.();
+        refreshBadges();
         return;
       }
 
@@ -465,6 +553,7 @@ export default function App() {
     });
     connection.onreconnected(() => {
       subscribedSpaceRef.current = null;
+      refreshBadges();
       if (activeSpaceRef.current) void syncActiveSpaceRef.current?.(activeSpaceRef.current);
     });
     connection.onclose(() => {
@@ -506,7 +595,7 @@ export default function App() {
         if (connection.state !== HubConnectionState.Disconnected) await connection.stop();
       })();
     };
-  }, [notify, session?.accessToken]);
+  }, [notify, refreshBadges, session?.accessToken]);
 
   useEffect(() => {
     if (!session?.accessToken || !currentSpaceId) return;
@@ -804,6 +893,7 @@ export default function App() {
           className="chat-timeline"
           ref={timelineRef}
           onScroll={(event) => {
+            checkVisibleReadPosition();
             if (!currentSpaceId || event.currentTarget.scrollTop > 32 || historyState === 'loading') return;
             const nextBefore = nextBeforeBySpace[currentSpaceId];
             if (nextBefore) loadHistory(currentSpaceId, nextBefore);

@@ -13,6 +13,7 @@ internal sealed class GroupConversationService(
     IUserDirectory userDirectory,
     IRealtimeAccessRevoker realtimeAccessRevoker,
     MessagingRealtimeAccessRevoker realtimeEvents,
+    IUnreadCountReader unreadCountReader,
     TimeProvider timeProvider) : IGroupConversationService
 {
     public async Task<Result<GroupConversationDto>> CreateAsync(
@@ -107,7 +108,8 @@ internal sealed class GroupConversationService(
         var group = await FindVisibleGroupAsync(actorUserId, spaceId, cancellationToken);
         if (group is null) return Result.Failure<GroupConversationDto>(MessagingErrors.ResourceNotFound);
         var count = await ActiveMemberCountAsync(spaceId, cancellationToken);
-        return Result.Success(ToDto(group.Space, group.Group, count));
+        var unread = await unreadCountReader.GetAsync(actorUserId, [spaceId], cancellationToken);
+        return Result.Success(WithUnread(ToDto(group.Space, group.Group, count), unread[spaceId]));
     }
 
     public async Task<Result<IReadOnlyList<GroupConversationDto>>> ListAsync(Guid actorUserId, CancellationToken cancellationToken)
@@ -129,8 +131,9 @@ internal sealed class GroupConversationService(
             .GroupBy(member => member.SpaceId)
             .Select(memberSet => new { SpaceId = memberSet.Key, Count = memberSet.Count() })
             .ToDictionaryAsync(item => item.SpaceId, item => item.Count, cancellationToken);
+        var unread = await unreadCountReader.GetAsync(actorUserId, ids, cancellationToken);
         return Result.Success<IReadOnlyList<GroupConversationDto>>(rows
-            .Select(row => ToDto(row.Space, row.Group, counts.GetValueOrDefault(row.Space.Id)))
+            .Select(row => WithUnread(ToDto(row.Space, row.Group, counts.GetValueOrDefault(row.Space.Id)), unread[row.Space.Id]))
             .ToArray());
     }
 
@@ -171,7 +174,8 @@ internal sealed class GroupConversationService(
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         await NotifyMembersAsync(command.SpaceId, cancellationToken);
-        return Result.Success(ToDto(locked.Space, locked.Group, count));
+        var unread = await unreadCountReader.GetAsync(command.ActorUserId, [command.SpaceId], cancellationToken);
+        return Result.Success(WithUnread(ToDto(locked.Space, locked.Group, count), unread[command.SpaceId]));
     }
 
     public async Task<Result> AddMemberAsync(ChangeGroupMemberCommand command, CancellationToken cancellationToken)
@@ -316,6 +320,8 @@ internal sealed class GroupConversationService(
     private static bool TryNormalizeName(string? value, out string name) { name = value?.Trim() ?? string.Empty; return name.Length is >= 1 and <= 100; }
     private static string? NormalizeAvatar(string? value) { var avatar = value?.Trim(); return string.IsNullOrEmpty(avatar) ? null : avatar.Length <= 500 ? avatar : null; }
     private static GroupConversationDto ToDto(ChatSpace space, GroupConversation group, int count) => new(space.Id, group.Name, group.AvatarObjectKey, group.OwnerUserId, group.MaxMembers, count, (short)space.Status, space.Version, space.LastActivityAt);
+    private static GroupConversationDto WithUnread(GroupConversationDto group, SpaceUnreadState unread) =>
+        group with { UnreadCount = unread.UnreadCount, LastReadSequence = unread.LastReadSequence };
     private sealed record GroupRow(ChatSpace Space, GroupConversation Group, SpaceMember Member);
     private sealed record LockedGroup(ChatSpace Space, GroupConversation Group, SpaceMember? ActorMember);
 }
