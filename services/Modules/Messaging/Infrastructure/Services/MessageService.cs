@@ -107,6 +107,12 @@ internal sealed class MessageService(
         space.LastMessageId = message.Id;
         space.LastMessageSequence = message.SequenceNo;
         space.LastActivityAt = now;
+        // A new incoming message returns a hidden conversation to the recipient's inbox.
+        await dbContext.SpaceUserStates
+            .Where(state => state.SpaceId == command.SpaceId
+                            && state.UserId != command.ActorUserId
+                            && state.IsHidden)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(state => state.IsHidden, false), cancellationToken);
         dbContext.OutboxEvents.Add(new OutboxEvent
         {
             Id = Guid.CreateVersion7(),

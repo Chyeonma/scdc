@@ -10,6 +10,8 @@ export function SubSidebar({
   dms,
   activeDmId,
   onSelectDm,
+  showHidden,
+  onToggleShowHidden,
   onOpenCreateDm,
   inboxState,
   onRetryInbox,
@@ -103,6 +105,10 @@ export function SubSidebar({
             </button>
           </div>
 
+          <button type="button" className="show-hidden-toggle" onClick={onToggleShowHidden}>
+            {showHidden ? 'Ẩn hội thoại đã ẩn' : 'Hiện hội thoại đã ẩn'}
+          </button>
+
           {!channelsCollapsed && (
             <nav className="channel-list" aria-label="Danh sách kênh">
               {activeServer.channels?.map((channel) => {
@@ -118,7 +124,11 @@ export function SubSidebar({
                     onClick={() => onSelectChannel(channel.spaceId)}
                   >
                     <span className="channel-item__icon">{channelIcon}</span>
-                    <span className="channel-item__name">{channel.name}</span>
+                    <span className="channel-item__name">
+                      {channel.preferences?.isPinned ? '★ ' : ''}{channel.name}
+                      {channel.preferences?.isHidden ? ' (đã ẩn)' : ''}
+                      {channel.preferences?.mutedUntil && Date.parse(channel.preferences.mutedUntil) > Date.now() ? ' 🔕' : ''}
+                    </span>
                     {channel.unread && <span className="channel-item__badge" />}
                   </button>
                 );
@@ -171,6 +181,10 @@ export function SubSidebar({
           </button>
         </div>
 
+        <button type="button" className="show-hidden-toggle" onClick={onToggleShowHidden}>
+          {showHidden ? 'Ẩn hội thoại đã ẩn' : 'Hiện hội thoại đã ẩn'}
+        </button>
+
         {/* DM List */}
         <nav className="dm-list" aria-label="Danh sách tin nhắn trực tiếp">
           {inboxState === 'loading' && <p className="dm-list__state">Đang tải hội thoại...</p>}
@@ -210,7 +224,10 @@ export function SubSidebar({
                 <div className="dm-item__info">
                   <div className="dm-item__top">
                     <strong className="dm-item__name">
+                      {dm.preferences?.isPinned ? '★ ' : ''}
                       {dm.name || dm.user?.displayName || dm.user?.username}
+                      {dm.preferences?.isHidden ? ' (đã ẩn)' : ''}
+                      {dm.preferences?.mutedUntil && Date.parse(dm.preferences.mutedUntil) > Date.now() ? ' 🔕' : ''}
                     </strong>
                     {dm.unreadCount > 0 && (
                       <span className="dm-item__badge">{dm.unreadCount}</span>

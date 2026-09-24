@@ -76,16 +76,30 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
                     var subscription = await connection.InvokeAsync<JsonElement>("SubscribeSpace", spaceId);
                     Assert.True(subscription.GetProperty("ok").GetBoolean());
                 }
+                var typingDenied = await connection.InvokeAsync<JsonElement>("SetTyping", readOnlyId, true);
+                Assert.False(typingDenied.GetProperty("ok").GetBoolean());
                 var denied = await connection.InvokeAsync<JsonElement>("SubscribeSpace", privateId);
                 Assert.False(denied.GetProperty("ok").GetBoolean());
             }
 
             Assert.Equal(HttpStatusCode.OK,
                 (await SendAsync(HttpMethod.Get, $"/api/v1/spaces/{readOnlyId}/messages?limit=20", member.Token)).StatusCode);
+            var hideChannel = await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{readOnlyId}/preferences", member.Token,
+                new { notificationLevel = 2, mutedUntil = (DateTimeOffset?)null, isHidden = true, isPinned = false });
+            Assert.Equal(HttpStatusCode.OK, hideChannel.StatusCode);
+            var visibleChannels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", member.Token);
+            Assert.DoesNotContain((await visibleChannels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray(),
+                item => item.GetProperty("spaceId").GetGuid() == readOnlyId);
+            var allChannels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels?includeHidden=true", member.Token);
+            Assert.Contains((await allChannels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray(),
+                item => item.GetProperty("spaceId").GetGuid() == readOnlyId);
             Assert.Equal(HttpStatusCode.Forbidden,
                 (await SendAsync(HttpMethod.Post, $"/api/v1/spaces/{readOnlyId}/messages", member.Token,
                     new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "denied" })).StatusCode);
             await SendTextAsync(owner, readOnlyId);
+            visibleChannels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", member.Token);
+            Assert.Contains((await visibleChannels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray(),
+                item => item.GetProperty("spaceId").GetGuid() == readOnlyId);
             Assert.Equal(HttpStatusCode.NotFound,
                 (await SendAsync(HttpMethod.Get, $"/api/v1/spaces/{privateId}/messages?limit=20", member.Token)).StatusCode);
 
@@ -230,6 +244,109 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             channels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", reader.Token);
             Assert.Equal(0, (await channels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
                 .Single(item => item.GetProperty("spaceId").GetGuid() == channelId).GetProperty("unreadCount").GetInt32());
+        }
+        finally
+        {
+            await CleanupAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Preferences_survive_refresh_and_typing_respects_subscription_and_send_rights()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var sender = await CreateActorAsync("pref_sender");
+            var reader = await CreateActorAsync("pref_reader");
+            var outsider = await CreateActorAsync("pref_outsider");
+            actors.AddRange([sender, reader, outsider]);
+            var created = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", sender.Token,
+                new { recipientUserId = reader.Id });
+            Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+            var spaceId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+            var muteUntil = DateTimeOffset.UtcNow.AddHours(1);
+            var preferences = await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{spaceId}/preferences", reader.Token,
+                new { notificationLevel = 2, mutedUntil = muteUntil, isHidden = true, isPinned = true });
+            Assert.Equal(HttpStatusCode.OK, preferences.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{spaceId}/preferences", reader.Token,
+                    new { notificationLevel = 7, mutedUntil = (DateTimeOffset?)null, isHidden = false, isPinned = false })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{spaceId}/preferences", reader.Token,
+                    new { isHidden = false })).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, $"/api/v1/spaces/{spaceId}/preferences", outsider.Token)).StatusCode);
+            var restored = await SendAsync(HttpMethod.Get, $"/api/v1/spaces/{spaceId}/preferences", reader.Token);
+            var restoredPreferences = await restored.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(restoredPreferences.GetProperty("isHidden").GetBoolean());
+            Assert.True(restoredPreferences.GetProperty("isPinned").GetBoolean());
+
+            var hiddenInbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+            Assert.Empty((await hiddenInbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+            var allInbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces?includeHidden=true", reader.Token);
+            Assert.Single((await allInbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+
+            var groupResponse = await SendAsync(HttpMethod.Post, "/api/v1/conversations/group", sender.Token,
+                new { name = "Preference group", memberUserIds = new[] { reader.Id, outsider.Id } });
+            Assert.Equal(HttpStatusCode.Created, groupResponse.StatusCode);
+            var groupId = (await groupResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("spaceId").GetGuid();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{groupId}/preferences", reader.Token,
+                    new { notificationLevel = 0, mutedUntil = (DateTimeOffset?)null, isHidden = true, isPinned = true })).StatusCode);
+            var hiddenGroups = await SendAsync(HttpMethod.Get, "/api/v1/conversations/group", reader.Token);
+            Assert.Empty((await hiddenGroups.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+            var allGroups = await SendAsync(HttpMethod.Get, "/api/v1/conversations/group?includeHidden=true", reader.Token);
+            Assert.Single((await allGroups.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+
+            await using (var senderConnection = CreateHubConnection(sender.Token))
+            await using (var readerConnection = CreateHubConnection(reader.Token))
+            await using (var outsiderConnection = CreateHubConnection(outsider.Token))
+            {
+                var started = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var stopped = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+                readerConnection.On<JsonElement>("RealtimeEvent", envelope =>
+                {
+                    if (envelope.GetProperty("eventType").GetString() != "TypingChanged") return;
+                    if (envelope.GetProperty("payload").GetProperty("isTyping").GetBoolean()) started.TrySetResult(envelope);
+                    else stopped.TrySetResult(envelope);
+                });
+                await senderConnection.StartAsync();
+                await readerConnection.StartAsync();
+                await outsiderConnection.StartAsync();
+                Assert.True((await senderConnection.InvokeAsync<JsonElement>("SubscribeSpace", spaceId)).GetProperty("ok").GetBoolean());
+                Assert.True((await readerConnection.InvokeAsync<JsonElement>("SubscribeSpace", spaceId)).GetProperty("ok").GetBoolean());
+                Assert.False((await outsiderConnection.InvokeAsync<JsonElement>("SetTyping", spaceId, true)).GetProperty("ok").GetBoolean());
+
+                var typing = await senderConnection.InvokeAsync<JsonElement>("SetTyping", spaceId, true);
+                Assert.True(typing.GetProperty("ok").GetBoolean());
+                Assert.True((await started.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("payload").GetProperty("isTyping").GetBoolean());
+                Assert.True((await senderConnection.InvokeAsync<JsonElement>("SetTyping", spaceId, false)).GetProperty("ok").GetBoolean());
+                Assert.False((await stopped.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("payload").GetProperty("isTyping").GetBoolean());
+            }
+            Assert.Equal(0, await CountMessageOutboxAsync(spaceId));
+
+            await SendTextAsync(sender, spaceId);
+            await SendTextAsync(sender, groupId);
+            var visibleGroups = await SendAsync(HttpMethod.Get, "/api/v1/conversations/group", reader.Token);
+            var visibleGroup = (await visibleGroups.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().Single();
+            Assert.Equal(1, visibleGroup.GetProperty("unreadCount").GetInt32());
+            Assert.Equal(0, visibleGroup.GetProperty("notificationCount").GetInt32());
+            Assert.False(visibleGroup.GetProperty("preferences").GetProperty("isHidden").GetBoolean());
+            var visibleInbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+            var visible = (await visibleInbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray().Single();
+            Assert.Equal(1, visible.GetProperty("unreadCount").GetInt32());
+            Assert.Equal(0, visible.GetProperty("notificationCount").GetInt32());
+            Assert.False(visible.GetProperty("preferences").GetProperty("isHidden").GetBoolean());
+            Assert.True(visible.GetProperty("preferences").GetProperty("isPinned").GetBoolean());
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{spaceId}/preferences", reader.Token,
+                    new { notificationLevel = 2, mutedUntil = (DateTimeOffset?)null, isHidden = false, isPinned = true })).StatusCode);
+            visibleInbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+            visible = (await visibleInbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray().Single();
+            Assert.Equal(1, visible.GetProperty("unreadCount").GetInt32());
+            Assert.Equal(1, visible.GetProperty("notificationCount").GetInt32());
         }
         finally
         {

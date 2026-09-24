@@ -112,16 +112,20 @@ internal sealed class GroupConversationService(
         return Result.Success(WithUnread(ToDto(group.Space, group.Group, count), unread[spaceId]));
     }
 
-    public async Task<Result<IReadOnlyList<GroupConversationDto>>> ListAsync(Guid actorUserId, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<GroupConversationDto>>> ListAsync(Guid actorUserId, bool includeHidden, CancellationToken cancellationToken)
     {
         if (actorUserId == Guid.Empty) return Result.Failure<IReadOnlyList<GroupConversationDto>>(MessagingErrors.AccountUnavailable);
         var rows = await (
             from conversation in dbContext.GroupConversations.AsNoTracking()
             join space in dbContext.Spaces.AsNoTracking() on conversation.SpaceId equals space.Id
             join member in dbContext.SpaceMembers.AsNoTracking() on space.Id equals member.SpaceId
+            join userState in dbContext.SpaceUserStates.AsNoTracking().Where(item => item.UserId == actorUserId)
+                on space.Id equals userState.SpaceId into userStates
+            from state in userStates.DefaultIfEmpty()
             where member.UserId == actorUserId
                   && member.MembershipStatus == SpaceMembershipStatus.Active
                   && space.Status != SpaceStatus.Deleted
+                  && (includeHidden || state == null || !state.IsHidden)
             orderby space.LastActivityAt descending, space.Id descending
             select new { Space = space, Group = conversation })
             .ToListAsync(cancellationToken);
@@ -319,9 +323,18 @@ internal sealed class GroupConversationService(
     private static void Touch(ChatSpace space) { space.Version++; space.UpdatedAt = DateTimeOffset.UtcNow; }
     private static bool TryNormalizeName(string? value, out string name) { name = value?.Trim() ?? string.Empty; return name.Length is >= 1 and <= 100; }
     private static string? NormalizeAvatar(string? value) { var avatar = value?.Trim(); return string.IsNullOrEmpty(avatar) ? null : avatar.Length <= 500 ? avatar : null; }
-    private static GroupConversationDto ToDto(ChatSpace space, GroupConversation group, int count) => new(space.Id, group.Name, group.AvatarObjectKey, group.OwnerUserId, group.MaxMembers, count, (short)space.Status, space.Version, space.LastActivityAt);
+    private static GroupConversationDto ToDto(ChatSpace space, GroupConversation group, int count) =>
+        new(space.Id, group.Name, group.AvatarObjectKey, group.OwnerUserId, group.MaxMembers, count,
+            (short)space.Status, space.Version, space.LastActivityAt,
+            Preferences: new UserSpacePreferencesDto(2, null, false, false));
     private static GroupConversationDto WithUnread(GroupConversationDto group, SpaceUnreadState unread) =>
-        group with { UnreadCount = unread.UnreadCount, LastReadSequence = unread.LastReadSequence };
+        group with
+        {
+            UnreadCount = unread.UnreadCount,
+            NotificationCount = unread.NotificationCount,
+            LastReadSequence = unread.LastReadSequence,
+            Preferences = unread.Preferences
+        };
     private sealed record GroupRow(ChatSpace Space, GroupConversation Group, SpaceMember Member);
     private sealed record LockedGroup(ChatSpace Space, GroupConversation Group, SpaceMember? ActorMember);
 }

@@ -10,6 +10,7 @@ public sealed record HubResult<T>(bool Ok, T? Value, HubError? Error)
 public sealed record HubError(string ErrorCode, string Message, string TraceId);
 public sealed record SubscribeSpaceResponse(Guid SpaceId, string HighWatermark);
 public sealed record UnsubscribeSpaceResponse(Guid SpaceId);
+public sealed record TypingResponse(Guid SpaceId, bool IsTyping, DateTimeOffset? ExpiresAt);
 
 public sealed record RealtimeEventEnvelope(
     Guid EventId,
@@ -21,3 +22,4 @@ public sealed record RealtimeEventEnvelope(
     object Payload);
 
 internal sealed record MessageCreatedPayload(Guid MessageId, string SequenceNo);
+internal sealed record TypingChangedPayload(Guid UserId, string DisplayName, bool IsTyping, DateTimeOffset? ExpiresAt);

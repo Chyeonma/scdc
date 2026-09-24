@@ -55,7 +55,7 @@ internal sealed class CommunityService(
         return Result.Success(new ServerDto(id, name, slug, Normalize(command.Description, 500), command.ActorUserId, (short)ServerStatus.Active));
     }
 
-    public async Task<Result<IReadOnlyList<ChannelDto>>> ListChannelsAsync(Guid actor, Guid serverId, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<ChannelDto>>> ListChannelsAsync(Guid actor, Guid serverId, bool includeHidden, CancellationToken ct)
     {
         if (!await IsActiveMemberAsync(actor, serverId, ct)) return Result.Failure<IReadOnlyList<ChannelDto>>(CommunityErrors.NotFound);
         var channels = await db.Channels.AsNoTracking().Where(x => x.ServerId == serverId).OrderBy(x => x.Position).ThenBy(x => x.Name).ToListAsync(ct);
@@ -69,10 +69,14 @@ internal sealed class CommunityService(
             if (access.CanRead) items.Add(ToDto(channel, access, status));
         }
         var unread = await unreadCountReader.GetAsync(actor, items.Select(item => item.SpaceId).ToArray(), ct);
-        return Result.Success<IReadOnlyList<ChannelDto>>(items.Select(item => item with
+        return Result.Success<IReadOnlyList<ChannelDto>>(items
+            .Where(item => includeHidden || !unread[item.SpaceId].Preferences.IsHidden)
+            .Select(item => item with
         {
             UnreadCount = unread[item.SpaceId].UnreadCount,
-            LastReadSequence = unread[item.SpaceId].LastReadSequence
+            NotificationCount = unread[item.SpaceId].NotificationCount,
+            LastReadSequence = unread[item.SpaceId].LastReadSequence,
+            Preferences = unread[item.SpaceId].Preferences
         }).ToArray());
     }
 
@@ -222,5 +226,8 @@ internal sealed class CommunityService(
     private static string? Normalize(string? value, int max) { var text = value?.Trim(); return string.IsNullOrEmpty(text) ? null : text[..Math.Min(text.Length, max)]; }
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
     private static ServerDto ToDto(Server s) => new(s.Id, s.Name, s.Slug, s.Description, s.OwnerUserId, (short)s.Status);
-    private static ChannelDto ToDto(Channel c, SCDC.Contracts.Community.ChannelAccessDecision a, short status) => new(c.SpaceId, c.ServerId, c.Name, c.Topic, (short)c.Visibility, c.Position, status, a.CanRead, a.CanSend && status == 1);
+    private static ChannelDto ToDto(Channel c, SCDC.Contracts.Community.ChannelAccessDecision a, short status) =>
+        new(c.SpaceId, c.ServerId, c.Name, c.Topic, (short)c.Visibility, c.Position,
+            status, a.CanRead, a.CanSend && status == 1,
+            Preferences: new UserSpacePreferencesDto(2, null, false, false));
 }

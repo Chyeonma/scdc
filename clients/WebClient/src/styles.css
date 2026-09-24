@@ -2538,6 +2538,51 @@ button:disabled {
   border-color: var(--red);
 }
 
+.toast--info {
+  border-color: var(--brand, #5865f2);
+}
+
+.conversation-preferences {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border, #3f4147);
+  background: var(--bg-secondary, #2b2d31);
+  font-size: 0.78rem;
+}
+
+.conversation-preferences button,
+.conversation-preferences select,
+.show-hidden-toggle {
+  border: 1px solid var(--border, #3f4147);
+  border-radius: 5px;
+  background: var(--bg-tertiary, #232428);
+  color: var(--text-primary, #fff);
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.conversation-preferences button:disabled,
+.conversation-preferences select:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.conversation-preferences label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.show-hidden-toggle {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 6px 12px;
+  font-size: 0.75rem;
+}
+
 .toast-close-btn {
   margin-left: 8px;
   color: var(--text-muted);

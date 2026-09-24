@@ -160,7 +160,7 @@ internal sealed class DirectConversationService(
                 cancellationToken);
 
         var unread = await unreadCountReader.GetAsync(actorUserId, [spaceId], cancellationToken);
-        return Result.Success(ToSpaceSummary(directConversation.Space, peer, state, unread[spaceId].UnreadCount));
+        return Result.Success(ToSpaceSummary(directConversation.Space, peer, state, unread[spaceId]));
     }
 
     public async Task<Result<SpacePageDto>> ListAsync(
@@ -240,7 +240,7 @@ internal sealed class DirectConversationService(
                 row.Space,
                 peers[GetPeerUserId(row.Conversation, query.ActorUserId)],
                 row.State,
-                unread[row.Space.Id].UnreadCount))
+                unread[row.Space.Id]))
             .ToArray();
 
         var nextCursor = hasMore && pageRows.Length > 0
@@ -378,7 +378,7 @@ internal sealed class DirectConversationService(
             cancellationToken);
         var unread = await unreadCountReader.GetAsync(actorUserId, [directConversation.Space.Id], cancellationToken);
         return Result.Success(new CreateDirectConversationResult(
-            ToSpaceSummary(directConversation.Space, recipient, state, unread[directConversation.Space.Id].UnreadCount),
+            ToSpaceSummary(directConversation.Space, recipient, state, unread[directConversation.Space.Id]),
             Created: false));
     }
 
@@ -386,7 +386,7 @@ internal sealed class DirectConversationService(
         ChatSpace space,
         UserSummary peer,
         SpaceUserState? state,
-        int unreadCount = 0)
+        SpaceUnreadState? unread = null)
     {
         return new SpaceSummaryDto(
             space.Id,
@@ -400,7 +400,7 @@ internal sealed class DirectConversationService(
             LastMessageSequence: space.LastMessageSequence?.ToString(System.Globalization.CultureInfo.InvariantCulture),
             LastActivityAt: space.LastActivityAt,
             LastReadSequence: state?.LastReadSequence?.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            UnreadCount: unreadCount,
+            UnreadCount: unread?.UnreadCount ?? 0,
             new SpacePreferencesDto(
                 (short)(state?.NotificationLevel ?? NotificationLevel.AllMessages),
                 state?.MutedUntil,
@@ -414,7 +414,8 @@ internal sealed class DirectConversationService(
                 CanDeleteOthers: false,
                 CanPin: space.Status == SpaceStatus.Active,
                 CanReact: space.Status == SpaceStatus.Active,
-                CanAttach: space.Status == SpaceStatus.Active));
+                CanAttach: space.Status == SpaceStatus.Active),
+            NotificationCount: unread?.NotificationCount ?? 0);
     }
 
     private static SpaceMember CreateActiveMember(Guid spaceId, Guid userId, DateTimeOffset now) => new()

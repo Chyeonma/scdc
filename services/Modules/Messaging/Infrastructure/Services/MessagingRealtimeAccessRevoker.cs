@@ -61,6 +61,18 @@ internal sealed class MessagingRealtimeAccessRevoker(
         }
     }
 
+    public async Task NotifyPreferencesUpdatedAsync(Guid userId, Guid spaceId, CancellationToken cancellationToken)
+    {
+        if (userId == Guid.Empty || spaceId == Guid.Empty) return;
+        foreach (var connection in connections.GetUserConnections(userId))
+        {
+            await SendIgnoringDisconnectAsync(
+                connection.ConnectionId,
+                CreateEvent("PreferencesUpdated", spaceId, null, new { }),
+                cancellationToken);
+        }
+    }
+
     public async Task RevokeSessionAsync(
         Guid userId,
         Guid sessionId,

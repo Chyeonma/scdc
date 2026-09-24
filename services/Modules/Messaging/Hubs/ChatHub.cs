@@ -11,7 +11,11 @@ namespace SCDC.Modules.Messaging.Hubs;
 public sealed class ChatHub(
     IIdentitySessionValidator sessionValidator,
     IRealtimeSpaceAccess spaceAccess,
-    RealtimeConnectionRegistry connections) : Hub
+    ITypingAccess typingAccess,
+    IUserDirectory userDirectory,
+    RealtimeConnectionRegistry connections,
+    TypingStateRegistry typingStates,
+    TimeProvider timeProvider) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -28,6 +32,7 @@ public sealed class ChatHub(
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        typingStates.RemoveConnection(Context.ConnectionId);
         connections.Remove(Context.ConnectionId);
         await base.OnDisconnectedAsync(exception);
     }
@@ -81,8 +86,55 @@ public sealed class ChatHub(
         }
 
         connections.Unsubscribe(Context.ConnectionId, spaceId);
+        typingStates.Stop(Context.ConnectionId, GetIdentityClaims().UserId, spaceId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(spaceId), Context.ConnectionAborted);
         return HubResult<UnsubscribeSpaceResponse>.Success(new UnsubscribeSpaceResponse(spaceId));
+    }
+
+    public async Task<HubResult<TypingResponse>> SetTyping(Guid spaceId, bool isTyping)
+    {
+        if (spaceId == Guid.Empty || !connections.IsSubscribed(Context.ConnectionId, spaceId))
+            return Failure<TypingResponse>("Messaging.ResourceNotFound", "The space is not subscribed.");
+        if (!await TryValidateSessionAsync(Context.ConnectionAborted))
+        {
+            Context.Abort();
+            return Failure<TypingResponse>("Identity.SessionInvalid", "The session is no longer active.");
+        }
+
+        var (userId, _, _) = GetIdentityClaims();
+        if (!await typingAccess.CanSendAsync(userId, spaceId, Context.ConnectionAborted))
+            return Failure<TypingResponse>("Messaging.ActionNotAllowed", "Typing is not allowed in this space.");
+
+        DateTimeOffset? expiresAt = null;
+        bool publish;
+        if (isTyping)
+        {
+            publish = typingStates.Start(Context.ConnectionId, userId, spaceId, out var expiry);
+            expiresAt = expiry;
+        }
+        else
+        {
+            publish = typingStates.Stop(Context.ConnectionId, userId, spaceId);
+        }
+
+        if (publish)
+        {
+            var actor = await userDirectory.FindByIdAsync(userId, Context.ConnectionAborted);
+            if (actor is not null)
+            {
+                var envelope = new RealtimeEventEnvelope(
+                    Guid.CreateVersion7(), "TypingChanged", 1, spaceId,
+                    timeProvider.GetUtcNow(), null,
+                    new TypingChangedPayload(userId, actor.DisplayName, isTyping, expiresAt));
+                foreach (var recipient in connections.GetSubscribers(spaceId).Where(item => item.UserId != userId))
+                {
+                    if (await typingAccess.CanReadAsync(recipient.UserId, spaceId, Context.ConnectionAborted))
+                        await Clients.Client(recipient.ConnectionId).SendAsync("RealtimeEvent", envelope, Context.ConnectionAborted);
+                }
+            }
+        }
+
+        return HubResult<TypingResponse>.Success(new TypingResponse(spaceId, isTyping, expiresAt));
     }
 
     internal static string GroupName(Guid spaceId) => $"space:{spaceId:D}";
