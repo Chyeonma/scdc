@@ -7,6 +7,7 @@ internal sealed class Message
     public Guid SpaceId { get; set; }
     public Guid? AuthorUserId { get; set; }
     public Guid? ClientMessageId { get; set; }
+    public Guid? ThreadRootId { get; set; }
     public MessageType MessageType { get; set; }
     public string? Content { get; set; }
     public string? IdempotencyPayloadHash { get; set; }

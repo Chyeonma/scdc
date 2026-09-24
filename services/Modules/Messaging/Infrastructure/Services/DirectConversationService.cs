@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Contracts.Identity;
+using SCDC.Contracts.Messaging;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Domain;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
@@ -12,6 +13,7 @@ namespace SCDC.Modules.Messaging.Infrastructure.Services;
 internal sealed class DirectConversationService(
     MessagingDbContext dbContext,
     IUserDirectory userDirectory,
+    IUnreadCountReader unreadCountReader,
     TimeProvider timeProvider) : IDirectConversationService
 {
     public async Task<Result<CreateDirectConversationResult>> GetOrCreateAsync(
@@ -55,7 +57,7 @@ internal sealed class DirectConversationService(
         var existing = await FindDirectConversationAsync(userLowId, userHighId, cancellationToken);
         if (existing is not null)
         {
-            return ToExistingResult(existing, recipient);
+            return await ToExistingResultAsync(existing, recipient, command.ActorUserId, cancellationToken);
         }
 
         var now = timeProvider.GetUtcNow();
@@ -102,7 +104,7 @@ internal sealed class DirectConversationService(
             var concurrentConversation = await FindDirectConversationAsync(userLowId, userHighId, cancellationToken);
             if (concurrentConversation is not null)
             {
-                return ToExistingResult(concurrentConversation, recipient);
+                return await ToExistingResultAsync(concurrentConversation, recipient, command.ActorUserId, cancellationToken);
             }
 
             return Result.Failure<CreateDirectConversationResult>(MessagingErrors.DirectConversationConflict);
@@ -157,7 +159,8 @@ internal sealed class DirectConversationService(
                 item => item.SpaceId == spaceId && item.UserId == actorUserId,
                 cancellationToken);
 
-        return Result.Success(ToSpaceSummary(directConversation.Space, peer, state));
+        var unread = await unreadCountReader.GetAsync(actorUserId, [spaceId], cancellationToken);
+        return Result.Success(ToSpaceSummary(directConversation.Space, peer, state, unread[spaceId].UnreadCount));
     }
 
     public async Task<Result<SpacePageDto>> ListAsync(
@@ -229,13 +232,15 @@ internal sealed class DirectConversationService(
             .Distinct()
             .ToArray();
         var peers = await userDirectory.FindByIdsAsync(peerIds, cancellationToken);
+        var unread = await unreadCountReader.GetAsync(query.ActorUserId, pageRows.Select(row => row.Space.Id).ToArray(), cancellationToken);
 
         var items = pageRows
             .Where(row => peers.ContainsKey(GetPeerUserId(row.Conversation, query.ActorUserId)))
             .Select(row => ToSpaceSummary(
                 row.Space,
                 peers[GetPeerUserId(row.Conversation, query.ActorUserId)],
-                row.State))
+                row.State,
+                unread[row.Space.Id].UnreadCount))
             .ToArray();
 
         var nextCursor = hasMore && pageRows.Length > 0
@@ -357,24 +362,31 @@ internal sealed class DirectConversationService(
         return Convert.FromBase64String(normalized);
     }
 
-    private static Result<CreateDirectConversationResult> ToExistingResult(
+    private async Task<Result<CreateDirectConversationResult>> ToExistingResultAsync(
         DirectConversationWithSpace directConversation,
-        UserSummary recipient)
+        UserSummary recipient,
+        Guid actorUserId,
+        CancellationToken cancellationToken)
     {
         if (directConversation.Space.Status == SpaceStatus.Deleted)
         {
             return Result.Failure<CreateDirectConversationResult>(MessagingErrors.DirectConversationClosed);
         }
 
+        var state = await dbContext.SpaceUserStates.AsNoTracking().SingleOrDefaultAsync(
+            item => item.SpaceId == directConversation.Space.Id && item.UserId == actorUserId,
+            cancellationToken);
+        var unread = await unreadCountReader.GetAsync(actorUserId, [directConversation.Space.Id], cancellationToken);
         return Result.Success(new CreateDirectConversationResult(
-            ToSpaceSummary(directConversation.Space, recipient, null),
+            ToSpaceSummary(directConversation.Space, recipient, state, unread[directConversation.Space.Id].UnreadCount),
             Created: false));
     }
 
     private static SpaceSummaryDto ToSpaceSummary(
         ChatSpace space,
         UserSummary peer,
-        SpaceUserState? state)
+        SpaceUserState? state,
+        int unreadCount = 0)
     {
         return new SpaceSummaryDto(
             space.Id,
@@ -388,7 +400,7 @@ internal sealed class DirectConversationService(
             LastMessageSequence: space.LastMessageSequence?.ToString(System.Globalization.CultureInfo.InvariantCulture),
             LastActivityAt: space.LastActivityAt,
             LastReadSequence: state?.LastReadSequence?.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            UnreadCount: 0,
+            UnreadCount: unreadCount,
             new SpacePreferencesDto(
                 (short)(state?.NotificationLevel ?? NotificationLevel.AllMessages),
                 state?.MutedUntil,

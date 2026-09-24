@@ -126,7 +126,7 @@ Tombstone giữ id, spaceId, sequence, type, version, author và timestamps/quan
 | `serverId` | UUID cho channel; null cho DM/group |
 | `lastMessage` | MessagePreviewDto hoặc null; `{id,sequenceNo,messageType,author,content,deletedAt}`; preview tối đa 160 code point và null content nếu đã xóa |
 | `lastMessageSequence`, `lastActivityAt` | decimal string hoặc null; UTC string hoặc null khi chưa có tin |
-| `lastReadSequence`, `unreadCount` | decimal string hoặc null; integer >=0; trước P5 lần lượt null/0, không thể hiện đã có unread thật |
+| `lastReadSequence`, `unreadCount` | decimal string hoặc null; integer >=0; từ P5-T01 là mốc đọc đã lưu và số tin chưa đọc thực tế (loại trừ tin của mình, system, đã xóa, thread reply) |
 | `preferences` | `{notificationLevel: integer, mutedUntil: UTC|null, isHidden: boolean, isPinned: boolean}`; mặc định 2/null/false/false khi chưa có state |
 | `capabilities` | `{canRead,canSend,canEditOwn,canDeleteOwn,canDeleteOthers,canPin,canReact,canAttach}` đều boolean theo actor; gợi ý UI, backend vẫn kiểm tra mỗi thao tác |
 

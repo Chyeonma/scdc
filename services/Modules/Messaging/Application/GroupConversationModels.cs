@@ -31,7 +31,9 @@ public sealed record GroupConversationDto(
     int MemberCount,
     short Status,
     int Version,
-    DateTimeOffset? LastActivityAt);
+    DateTimeOffset? LastActivityAt,
+    int UnreadCount = 0,
+    string? LastReadSequence = null);
 
 public sealed record GroupMemberDto(
     UserSummary User,

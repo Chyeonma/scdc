@@ -229,11 +229,11 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P5-T01 — Đã đọc và bộ đếm chưa đọc [BE, DB, FE]
 
-- [ ] **P5-T01.1** Upsert `space_user_states.last_read_sequence` chỉ tăng; kiểm tra mốc đọc thuộc space và không vượt phạm vi user được đọc.
-- [ ] **P5-T01.2** FE chỉ gửi mốc khi nội dung đã hiển thị theo policy, không tự mark read cho tab ẩn; gom request cập nhật để tránh spam.
-- [ ] **P5-T01.3** Đếm unread bằng số message thỏa điều kiện sau mốc đọc; không lấy `lastSequence - lastReadSequence` vì sequence là toàn cục và có khoảng trống.
-- [ ] **P5-T01.4** Chốt loại trừ tin của chính mình, system message, tin đã xóa và thread reply; đồng bộ badge nhiều tab/thiết bị.
-- [ ] **P5-T01.5** Nếu cần delivered/read chính xác từng tin, bổ sung client acknowledgment qua `receipts`; không coi thao tác broadcast là delivered.
+- [x] **P5-T01.1** Upsert `space_user_states.last_read_sequence` chỉ tăng; kiểm tra mốc đọc thuộc space và không vượt phạm vi user được đọc.
+- [x] **P5-T01.2** FE chỉ gửi mốc khi nội dung đã hiển thị theo policy, không tự mark read cho tab ẩn; gom request cập nhật để tránh spam.
+- [x] **P5-T01.3** Đếm unread bằng số message thỏa điều kiện sau mốc đọc; không lấy `lastSequence - lastReadSequence` vì sequence là toàn cục và có khoảng trống.
+- [x] **P5-T01.4** Chốt loại trừ tin của chính mình, system message, tin đã xóa và thread reply; đồng bộ badge nhiều tab/thiết bị.
+- [x] **P5-T01.5** Nếu cần delivered/read chính xác từng tin, bổ sung client acknowledgment qua `receipts`; không coi thao tác broadcast là delivered. P5-T01 chỉ lưu mốc đọc theo space do client chủ động xác nhận; chưa hiển thị delivered/read từng tin nên chưa cần `receipts`.
 
 **Nghiệm thu:** đọc trên một thiết bị cập nhật thiết bị khác; request cũ không kéo lùi mốc; bộ đếm đúng khi các space gửi xen kẽ.
 
