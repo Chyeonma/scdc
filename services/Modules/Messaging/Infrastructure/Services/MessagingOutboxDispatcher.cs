@@ -177,6 +177,18 @@ internal sealed class MessagingOutboxDispatcher(
                         item.OccurredAt),
                     cancellationToken);
                 return;
+            case "Messaging.MessageUpdated":
+            case "Messaging.MessageDeleted":
+                var changed = JsonSerializer.Deserialize<MessageChangedOutboxPayload>(item.Payload, PayloadJsonOptions)
+                    ?? throw new InvalidOperationException("Message change outbox payload is missing.");
+                if (item.SpaceId is not { } changedSpaceId || item.AggregateVersion is not { } changedVersion
+                    || changedVersion < 2 || changed.MessageId == Guid.Empty || string.IsNullOrWhiteSpace(changed.SequenceNo)
+                    || (item.EventType == "Messaging.MessageDeleted" && changed.DeletedAt is null))
+                    throw new InvalidOperationException("Message change outbox payload is invalid.");
+                await realtimePublisher.PublishMessageChangedAsync(new RealtimeMessageChanged(
+                    item.Id, changedSpaceId, changed.MessageId, changed.SequenceNo,
+                    changedVersion, item.OccurredAt, changed.DeletedAt), cancellationToken);
+                return;
             default:
                 throw new InvalidOperationException($"Unsupported Messaging outbox event type '{item.EventType}'.");
         }
@@ -199,4 +211,5 @@ internal sealed class MessagingOutboxDispatcher(
     }
 
     private sealed record MessageCreatedOutboxPayload(Guid MessageId, string SequenceNo);
+    private sealed record MessageChangedOutboxPayload(Guid MessageId, string SequenceNo, DateTimeOffset? DeletedAt);
 }

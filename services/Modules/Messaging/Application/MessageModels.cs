@@ -11,6 +11,10 @@ public sealed record SendMessageCommand(
 
 public sealed record SendMessageResult(MessageDto Message, bool Created);
 
+public sealed record EditMessageCommand(Guid ActorUserId, Guid SpaceId, Guid MessageId, string? Content, int ExpectedVersion);
+
+public sealed record DeleteMessageCommand(Guid ActorUserId, Guid SpaceId, Guid MessageId, int ExpectedVersion);
+
 public sealed record GetMessagesQuery(
     Guid ActorUserId,
     Guid SpaceId,

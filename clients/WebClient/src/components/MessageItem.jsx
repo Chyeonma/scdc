@@ -63,6 +63,7 @@ export function MessageItem({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || '');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const quickEmojis = ['👍', '❤️', '🔥', '🚀', '🎉', '💯'];
 
@@ -77,11 +78,15 @@ export function MessageItem({
     );
   }
 
-  function handleSaveEdit(e) {
+  async function handleSaveEdit(e) {
     e.preventDefault();
-    if (!editContent.trim()) return;
-    onEditMessage?.(message.id, editContent.trim());
-    setIsEditing(false);
+    if (!editContent.trim() || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      if (await onEditMessage?.(message.id, editContent.trim())) setIsEditing(false);
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   return (
@@ -94,7 +99,7 @@ export function MessageItem({
       }}
     >
       {/* Reply Quote Banner */}
-      {message.replyTo && (
+      {!message.deletedAt && message.replyTo && (
         <div className="message__reply-banner" onClick={() => onJumpToReply?.(message.replyTo.id)}>
           <span className="reply-hook" />
           <span className="reply-author">@{message.replyTo.authorName}</span>
@@ -153,7 +158,9 @@ export function MessageItem({
           )}
 
           {/* Content / Edit Form */}
-          {isEditing ? (
+          {message.deletedAt ? (
+            <div className="message__content"><em>Tin nhắn đã bị xóa</em></div>
+          ) : isEditing ? (
             <form className="message__edit-form" onSubmit={handleSaveEdit}>
               <textarea
                 value={editContent}
@@ -168,7 +175,7 @@ export function MessageItem({
                   <button type="button" className="btn-sm btn-ghost" onClick={() => setIsEditing(false)}>
                     Huỷ
                   </button>
-                  <button type="submit" className="btn-sm btn-primary">
+                  <button type="submit" className="btn-sm btn-primary" disabled={savingEdit}>
                     Lưu
                   </button>
                 </div>
@@ -198,7 +205,7 @@ export function MessageItem({
           )}
 
           {/* Attachments */}
-          {message.attachments && message.attachments.length > 0 && (
+          {!message.deletedAt && message.attachments && message.attachments.length > 0 && (
             <div className="message__attachments">
               {message.attachments.map((att) => (
                 <div className="attachment-card" key={att.id}>
@@ -226,7 +233,7 @@ export function MessageItem({
           )}
 
           {/* Reactions */}
-          {message.reactions && message.reactions.length > 0 && (
+          {!message.deletedAt && message.reactions && message.reactions.length > 0 && (
             <div className="message__reactions">
               {message.reactions.map((r, i) => (
                 <button
@@ -257,7 +264,7 @@ export function MessageItem({
       </div>
 
       {/* Floating Hover Action Toolbar */}
-      {showActions && !isEditing && (
+      {showActions && !isEditing && !message.deletedAt && (
         <div className="message__actions-toolbar">
           {/* Quick Reaction buttons */}
           <div className="quick-react-group">
@@ -310,7 +317,7 @@ export function MessageItem({
               ✏️
             </button>
           )}
-          {(isOwn || true) && (
+          {isOwn && (
             <button
               type="button"
               className="action-btn action-btn--danger"

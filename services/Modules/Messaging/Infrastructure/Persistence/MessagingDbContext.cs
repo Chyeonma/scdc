@@ -13,6 +13,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
     public DbSet<SpaceUserState> SpaceUserStates => Set<SpaceUserState>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageEdit> MessageEdits => Set<MessageEdit>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -24,6 +25,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         ConfigureSpaceUserState(modelBuilder);
         ConfigureUserBlock(modelBuilder);
         ConfigureMessage(modelBuilder);
+        ConfigureMessageEdit(modelBuilder);
         ConfigureOutbox(modelBuilder);
     }
 
@@ -150,10 +152,24 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(message => message.CreatedAt).HasColumnName("created_at");
         entity.Property(message => message.EditedAt).HasColumnName("edited_at");
         entity.Property(message => message.DeletedAt).HasColumnName("deleted_at");
+        entity.Property(message => message.DeletedByUserId).HasColumnName("deleted_by_user_id");
         entity.HasIndex(message => new { message.SpaceId, message.AuthorUserId, message.ClientMessageId })
             .HasDatabaseName("ux_messages_client_id")
             .IsUnique()
             .HasFilter("author_user_id IS NOT NULL AND client_message_id IS NOT NULL");
+    }
+
+    private static void ConfigureMessageEdit(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<MessageEdit>();
+        entity.ToTable("message_edits", "messaging");
+        entity.HasKey(edit => edit.Id);
+        entity.Property(edit => edit.Id).HasColumnName("id");
+        entity.Property(edit => edit.MessageId).HasColumnName("message_id");
+        entity.Property(edit => edit.Version).HasColumnName("version");
+        entity.Property(edit => edit.PreviousContent).HasColumnName("previous_content");
+        entity.Property(edit => edit.EditedByUserId).HasColumnName("edited_by_user_id");
+        entity.Property(edit => edit.EditedAt).HasColumnName("edited_at");
     }
 
     private static void ConfigureOutbox(ModelBuilder modelBuilder)

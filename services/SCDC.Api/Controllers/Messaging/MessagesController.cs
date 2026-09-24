@@ -63,9 +63,34 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
             ? Created($"/api/v1/spaces/{spaceId}/messages/{sent.Message.Id}", sent.Message)
             : Ok(sent.Message);
     }
+
+    [HttpGet("{messageId:guid}")]
+    [ProducesResponseType<MessageDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessageDto>> Get(Guid spaceId, Guid messageId, CancellationToken cancellationToken) =>
+        FromResult(await messageService.GetAsync(User.GetUserId(), spaceId, messageId, cancellationToken));
+
+    [HttpPatch("{messageId:guid}")]
+    [ProducesResponseType<MessageDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessageDto>> Edit(
+        Guid spaceId, Guid messageId, EditMessageRequest request, CancellationToken cancellationToken) =>
+        FromResult(await messageService.EditAsync(
+            new EditMessageCommand(User.GetUserId(), spaceId, messageId, request.Content, request.ExpectedVersion),
+            cancellationToken));
+
+    [HttpDelete("{messageId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Delete(
+        Guid spaceId, Guid messageId, [FromQuery] int expectedVersion, CancellationToken cancellationToken)
+    {
+        var result = await messageService.DeleteAsync(
+            new DeleteMessageCommand(User.GetUserId(), spaceId, messageId, expectedVersion), cancellationToken);
+        return FromNoContentResult(result);
+    }
 }
 
 public sealed record SendMessageRequest(
     Guid ClientMessageId,
     short MessageType,
     string? Content);
+
+public sealed record EditMessageRequest(string? Content, int ExpectedVersion);

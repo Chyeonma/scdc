@@ -15,4 +15,5 @@ internal sealed class Message
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? EditedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
+    public Guid? DeletedByUserId { get; set; }
 }

@@ -221,6 +221,127 @@ internal sealed class MessageService(
             HighWatermark: ToSequence(highWatermark)));
     }
 
+    public async Task<Result<MessageDto>> GetAsync(Guid actorUserId, Guid spaceId, Guid messageId, CancellationToken cancellationToken)
+    {
+        if (actorUserId == Guid.Empty || spaceId == Guid.Empty || messageId == Guid.Empty)
+            return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
+        if (await userDirectory.FindByIdAsync(actorUserId, cancellationToken) is null)
+            return Result.Failure<MessageDto>(MessagingErrors.AccountUnavailable);
+        var space = await dbContext.Spaces.AsNoTracking().SingleOrDefaultAsync(x => x.Id == spaceId && x.Status != SpaceStatus.Deleted, cancellationToken);
+        if (space is null || !(await spaceAccess.CheckAsync(actorUserId, space, cancellationToken)).CanRead)
+            return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
+        var message = await dbContext.Messages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == messageId && x.SpaceId == spaceId, cancellationToken);
+        if (message is null) return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
+        var author = message.AuthorUserId is { } authorId
+            ? await userDirectory.FindByIdAsync(authorId, cancellationToken)
+            : null;
+        return Result.Success(ToDto(message, author));
+    }
+
+    public async Task<Result<MessageDto>> EditAsync(EditMessageCommand command, CancellationToken cancellationToken)
+    {
+        if (command.ActorUserId == Guid.Empty || command.SpaceId == Guid.Empty || command.MessageId == Guid.Empty
+            || command.ExpectedVersion < 1 || !TryNormalizeText(command.Content, out var content))
+            return Result.Failure<MessageDto>(MessagingErrors.InvalidMessage);
+        var actor = await userDirectory.FindByIdAsync(command.ActorUserId, cancellationToken);
+        if (actor is null) return Result.Failure<MessageDto>(MessagingErrors.AccountUnavailable);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var space = await dbContext.Spaces
+            .FromSqlInterpolated($"SELECT * FROM messaging.spaces WHERE id = {command.SpaceId} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+        if (space is null || space.Status == SpaceStatus.Deleted)
+            return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
+        var access = await spaceAccess.CheckAsync(command.ActorUserId, space, cancellationToken);
+        if (!access.CanRead) return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
+        var message = await dbContext.Messages.SingleOrDefaultAsync(x => x.Id == command.MessageId && x.SpaceId == command.SpaceId, cancellationToken);
+        if (message is null) return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
+        if (message.AuthorUserId != command.ActorUserId || message.MessageType != MessageType.Text)
+            return Result.Failure<MessageDto>(MessagingErrors.ActionNotAllowed);
+        if (message.DeletedAt is not null) return Result.Failure<MessageDto>(MessagingErrors.MessageDeleted);
+        if (space.Status != SpaceStatus.Active) return Result.Failure<MessageDto>(MessagingErrors.SpaceNotWritable);
+        if (!access.CanSend || (space.SpaceType == SpaceType.Channel && !access.CanEditOwn))
+            return Result.Failure<MessageDto>(MessagingErrors.ActionNotAllowed);
+        if (space.SpaceType == SpaceType.Direct)
+        {
+            var pair = await dbContext.DirectConversations.AsNoTracking().SingleAsync(x => x.SpaceId == command.SpaceId, cancellationToken);
+            var peer = pair.UserLowId == command.ActorUserId ? pair.UserHighId : pair.UserLowId;
+            if (await IsBlockedAsync(command.ActorUserId, peer, cancellationToken))
+                return Result.Failure<MessageDto>(MessagingErrors.ActionNotAllowed);
+        }
+        if (message.Version != command.ExpectedVersion)
+            return Result.Failure<MessageDto>(MessagingErrors.VersionConflict);
+        if (message.Content == content) return Result.Success(ToDto(message, actor));
+
+        var now = timeProvider.GetUtcNow();
+        dbContext.MessageEdits.Add(new MessageEdit
+        {
+            Id = Guid.CreateVersion7(), MessageId = message.Id, Version = message.Version,
+            PreviousContent = message.Content, EditedByUserId = command.ActorUserId, EditedAt = now
+        });
+        message.Content = content;
+        message.Version++;
+        message.EditedAt = now;
+        AddChangeEvent(message, "Messaging.MessageUpdated", now);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Result.Success(ToDto(message, actor));
+    }
+
+    public async Task<Result> DeleteAsync(DeleteMessageCommand command, CancellationToken cancellationToken)
+    {
+        if (command.ActorUserId == Guid.Empty || command.SpaceId == Guid.Empty || command.MessageId == Guid.Empty
+            || command.ExpectedVersion < 1)
+            return Result.Failure(MessagingErrors.InvalidMessage);
+        if (await userDirectory.FindByIdAsync(command.ActorUserId, cancellationToken) is null)
+            return Result.Failure(MessagingErrors.AccountUnavailable);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var space = await dbContext.Spaces
+            .FromSqlInterpolated($"SELECT * FROM messaging.spaces WHERE id = {command.SpaceId} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+        if (space is null || space.Status == SpaceStatus.Deleted)
+            return Result.Failure(MessagingErrors.ResourceNotFound);
+        var access = await spaceAccess.CheckAsync(command.ActorUserId, space, cancellationToken);
+        if (!access.CanRead) return Result.Failure(MessagingErrors.ResourceNotFound);
+        var message = await dbContext.Messages.SingleOrDefaultAsync(x => x.Id == command.MessageId && x.SpaceId == command.SpaceId, cancellationToken);
+        if (message is null) return Result.Failure(MessagingErrors.ResourceNotFound);
+        if (message.MessageType == MessageType.System || (message.AuthorUserId != command.ActorUserId
+            && !(space.SpaceType == SpaceType.Channel && access.CanDeleteOthers)
+            && !(space.SpaceType == SpaceType.Group && await dbContext.SpaceMembers.AsNoTracking().AnyAsync(
+                member => member.SpaceId == command.SpaceId && member.UserId == command.ActorUserId
+                    && member.MembershipStatus == SpaceMembershipStatus.Active && member.MemberRole != SpaceMemberRole.Member,
+                cancellationToken))))
+            return Result.Failure(MessagingErrors.ActionNotAllowed);
+        if (message.DeletedAt is not null) return Result.Success();
+        if (message.Version != command.ExpectedVersion) return Result.Failure(MessagingErrors.VersionConflict);
+
+        var now = timeProvider.GetUtcNow();
+        message.DeletedAt = now;
+        message.DeletedByUserId = command.ActorUserId;
+        message.Version++;
+        // Text is non-null by database constraint; this also removes it from the search vector.
+        message.Content = message.MessageType == MessageType.Text ? "[deleted]" : null;
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE FROM messaging.pinned_messages WHERE space_id = {command.SpaceId} AND message_id = {command.MessageId}", cancellationToken);
+        AddChangeEvent(message, "Messaging.MessageDeleted", now);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Result.Success();
+    }
+
+    private void AddChangeEvent(Message message, string eventType, DateTimeOffset now)
+    {
+        dbContext.OutboxEvents.Add(new OutboxEvent
+        {
+            Id = Guid.CreateVersion7(), EventType = eventType, AggregateType = "Message",
+            AggregateId = message.Id, AggregateVersion = message.Version, SpaceId = message.SpaceId,
+            Payload = eventType == "Messaging.MessageDeleted"
+                ? JsonSerializer.Serialize(new { messageId = message.Id, sequenceNo = ToSequence(message.SequenceNo), deletedAt = message.DeletedAt })
+                : JsonSerializer.Serialize(new { messageId = message.Id, sequenceNo = ToSequence(message.SequenceNo) }),
+            OccurredAt = now, AvailableAt = now, AttemptCount = 0
+        });
+    }
+
     private async Task<bool> IsBlockedAsync(Guid actorUserId, Guid peerUserId, CancellationToken cancellationToken) =>
         await dbContext.UserBlocks
             .AsNoTracking()

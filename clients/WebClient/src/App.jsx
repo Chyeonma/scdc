@@ -24,6 +24,9 @@ import {
   getGroupMembers,
   getAccessToken,
   getMessageHistory,
+  getMessage,
+  editMessage,
+  deleteMessage,
   getSpaces,
   removeGroupMember,
   sessionStore,
@@ -61,7 +64,7 @@ import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
 import { useMessageSender } from './hooks/useMessageSender.js';
-import { mergeMessages } from './messaging/messageState.js';
+import { mergeMessages, tombstoneMessage } from './messaging/messageState.js';
 import { highestSequence, loadCatchUpPages, mergeSnapshot } from './messaging/realtimeSync.js';
 
 export default function App() {
@@ -558,6 +561,7 @@ export default function App() {
 
       let boundary = catchUp.highWatermark;
       while (sync.bufferedEvents.get(spaceId)?.length) {
+        const buffered = sync.bufferedEvents.get(spaceId) || [];
         sync.bufferedEvents.set(spaceId, []);
         const bufferedCatchUp = await loadCatchUpPages(
           (afterSequence, throughSequence) => getMessageHistory(spaceId, {
@@ -569,6 +573,13 @@ export default function App() {
         );
         if (!isCurrent()) return false;
         mergeRealtimeItems(spaceId, bufferedCatchUp.items);
+        for (const event of buffered) {
+          if (event.eventType === 'MessageUpdated' || event.eventType === 'MessageDeleted') {
+            const changed = await getMessage(spaceId, event.payload.messageId);
+            if (!isCurrent()) return false;
+            mergeRealtimeItems(spaceId, [changed]);
+          }
+        }
         boundary = bufferedCatchUp.highWatermark;
       }
 
@@ -600,6 +611,25 @@ export default function App() {
     connection.on('RealtimeEvent', (event) => {
       if (event?.schemaVersion !== 1) return;
 
+      if (event.eventType === 'MessageUpdated' || event.eventType === 'MessageDeleted') {
+        if (!event.spaceId || !event.payload?.messageId) return;
+        if (event.eventType === 'MessageDeleted') {
+          setMessagesMap((previous) => ({ ...previous,
+            [event.spaceId]: tombstoneMessage(previous[event.spaceId] || [],
+              event.payload.messageId, event.aggregateVersion, event.payload.deletedAt),
+          }));
+        }
+        const syncing = realtimeSyncRef.current.active;
+        if (syncing?.spaceId === event.spaceId) {
+          realtimeSyncRef.current.bufferedEvents.get(event.spaceId)?.push(event);
+        } else if (activeSpaceRef.current === event.spaceId) {
+          void getMessage(event.spaceId, event.payload.messageId)
+            .then((changed) => mergeRealtimeItems(event.spaceId, [changed]))
+            .catch(() => {});
+        }
+        refreshBadges(event.spaceId);
+        return;
+      }
       if (event.eventType === 'MessageCreated' && event.spaceId) {
         refreshBadges(event.spaceId);
         const syncing = realtimeSyncRef.current.active;
@@ -800,25 +830,42 @@ export default function App() {
   }
 
   // Delete Message
-  function handleDeleteMessage(messageId) {
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: (prev[currentSpaceId] || []).filter((m) => m.id !== messageId),
-    }));
-    notify('success', 'Đã xoá tin nhắn.');
+  async function handleDeleteMessage(messageId) {
+    const spaceId = currentSpaceId;
+    const message = messagesRef.current[spaceId]?.find((item) => item.id === messageId);
+    if (!message || !window.confirm('Xóa tin nhắn này?')) return;
+    try {
+      await deleteMessage(spaceId, messageId, message.version);
+      setMessagesMap((previous) => ({ ...previous,
+        [spaceId]: tombstoneMessage(previous[spaceId] || [], messageId, message.version + 1, new Date().toISOString()),
+      }));
+      notify('success', 'Đã xoá tin nhắn.');
+      void getMessage(spaceId, messageId).then((changed) => mergeRealtimeItems(spaceId, [changed])).catch(() => {});
+    } catch (error) {
+      if (error?.status === 409) {
+        void getMessage(spaceId, messageId).then((changed) => mergeRealtimeItems(spaceId, [changed])).catch(() => {});
+      }
+      notify('error', error.message || 'Không thể xoá tin nhắn.');
+    }
   }
 
   // Edit Message
-  function handleEditMessage(messageId, newContent) {
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: (prev[currentSpaceId] || []).map((m) =>
-        m.id === messageId
-          ? { ...m, content: newContent, editedAt: new Date().toISOString() }
-          : m
-      ),
-    }));
-    notify('success', 'Đã cập nhật tin nhắn.');
+  async function handleEditMessage(messageId, newContent) {
+    const spaceId = currentSpaceId;
+    const message = messagesRef.current[spaceId]?.find((item) => item.id === messageId);
+    if (!message) return false;
+    try {
+      const changed = await editMessage(spaceId, messageId, newContent, message.version);
+      mergeRealtimeItems(spaceId, [changed]);
+      notify('success', 'Đã cập nhật tin nhắn.');
+      return true;
+    } catch (error) {
+      if (error?.status === 409) {
+        void getMessage(spaceId, messageId).then((changed) => mergeRealtimeItems(spaceId, [changed])).catch(() => {});
+      }
+      notify('error', error.message || 'Không thể cập nhật tin nhắn.');
+      return false;
+    }
   }
 
   // Thread Replies

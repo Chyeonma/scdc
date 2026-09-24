@@ -52,6 +52,12 @@ public static class MessagingErrors
         "Messaging.SpaceNotWritable",
         "The space is not writable.");
 
+    public static readonly Error VersionConflict = Error.Conflict(
+        "Messaging.VersionConflict", "The message changed. Refresh it and try again.");
+
+    public static readonly Error MessageDeleted = Error.Conflict(
+        "Messaging.MessageDeleted", "The message was deleted.");
+
     public static readonly Error IdempotencyConflict = Error.Conflict(
         "Messaging.IdempotencyConflict",
         "The client message ID was already used with a different payload.");

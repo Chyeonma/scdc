@@ -250,11 +250,13 @@ Nhánh Community có thể được phát triển đồng thời với P1–P3 s
 
 ### P6-T01 — Sửa và xóa [BE, DB, FE]
 
-- [ ] **P6-T01.1** API sửa có kiểm tra tác giả/quyền, nội dung và expected version; xung đột trả `409` theo contract.
-- [ ] **P6-T01.2** Ghi `message_edits`, tăng version, cập nhật `edited_at` và outbox trong cùng transaction.
-- [ ] **P6-T01.3** Xóa mềm bằng `deleted_at`/`deleted_by_user_id`; chốt tombstone, last-message preview, pin, reply preview và attachment sau xóa.
-- [ ] **P6-T01.4** Phát `MessageUpdated`/`MessageDeleted`; FE không cho event version cũ ghi đè trạng thái mới.
-- [ ] **P6-T01.5** Lịch sử chỉnh sửa chỉ mở cho actor được phép; không lộ nội dung đã xóa qua search, event hay preview.
+- [x] **P6-T01.1** API sửa có kiểm tra tác giả/quyền, nội dung và expected version; xung đột trả `409` theo contract.
+- [x] **P6-T01.2** Ghi `message_edits`, tăng version, cập nhật `edited_at` và outbox trong cùng transaction.
+- [x] **P6-T01.3** Xóa mềm bằng `deleted_at`/`deleted_by_user_id`; chốt tombstone, last-message preview, pin, reply preview và attachment sau xóa.
+- [x] **P6-T01.4** Phát `MessageUpdated`/`MessageDeleted`; FE không cho event version cũ ghi đè trạng thái mới.
+- [x] **P6-T01.5** Lịch sử chỉnh sửa chỉ mở cho actor được phép; không lộ nội dung đã xóa qua search, event hay preview.
+
+Triển khai P6-T01: tin Text bị xóa giữ ID/sequence/version, `deleted_at` và người xóa; content lưu thành `[deleted]` để thỏa constraint Text, API trả `content: null`. Gỡ pin message trong cùng transaction; reply/thread vẫn tham chiếu tombstone, và UI không hiển thị reply snippet/file/reaction của tin bị xóa. Inbox v1 chưa có last-message content preview (trả `null`); sequence/activity vẫn giữ để bảo toàn cursor. `message_edits` chưa có API công khai theo policy; quyền Moderation/audit là task P8. Channel dùng quyền Community `message.edit_own`/`message.delete`; cài migration trong `database/postgres/migrations` cho DB hiện hữu. Retention purge theo kỳ thuộc P9.
 
 **Nghiệm thu:** không sửa/xóa tin người khác trái quyền; cập nhật đồng thời được xử lý rõ ràng và các màn hình nhất quán sau reconnect.
 

@@ -5,6 +5,8 @@ public interface IRealtimeMessagePublisher
     Task PublishMessageCreatedAsync(
         RealtimeMessageCreated notification,
         CancellationToken cancellationToken);
+
+    Task PublishMessageChangedAsync(RealtimeMessageChanged notification, CancellationToken cancellationToken);
 }
 
 public sealed record RealtimeMessageCreated(
@@ -14,3 +16,7 @@ public sealed record RealtimeMessageCreated(
     string SequenceNo,
     int AggregateVersion,
     DateTimeOffset OccurredAt);
+
+public sealed record RealtimeMessageChanged(
+    Guid EventId, Guid SpaceId, Guid MessageId, string SequenceNo,
+    int AggregateVersion, DateTimeOffset OccurredAt, DateTimeOffset? DeletedAt);
