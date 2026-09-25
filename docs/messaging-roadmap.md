@@ -316,10 +316,12 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P8-T01 — Tìm kiếm lịch sử [BE, DB, FE]
 
-- [ ] **P8-T01.1** API search theo space, nội dung, tác giả và khoảng thời gian; phân trang và giới hạn truy vấn.
-- [ ] **P8-T01.2** Dùng `search_vector`/GIN đã có; đánh giá tìm kiếm tiếng Việt có/không dấu với cấu hình `simple` hiện tại trước khi chọn mở rộng.
-- [ ] **P8-T01.3** Filter quyền và soft delete trước khi trả kết quả; không tìm chỉ trên tập message FE đã tải như hiện tại.
-- [ ] **P8-T01.4** FE debounce, loading/empty/error và jump-to-message; test sau sửa/xóa và sau thu hồi quyền.
+- [x] **P8-T01.1** API search theo space, nội dung, tác giả và khoảng thời gian; phân trang và giới hạn truy vấn.
+- [x] **P8-T01.2** Dùng `search_vector`/GIN đã có; đánh giá tìm kiếm tiếng Việt có/không dấu với cấu hình `simple` hiện tại trước khi chọn mở rộng.
+- [x] **P8-T01.3** Filter quyền và soft delete trước khi trả kết quả; không tìm chỉ trên tập message FE đã tải như hiện tại.
+- [x] **P8-T01.4** FE debounce, loading/empty/error và jump-to-message; test sau sửa/xóa và sau thu hồi quyền.
+
+P8-T01 dùng `plainto_tsquery('simple', q)` trên `search_vector`/GIN sẵn có. Tìm kiếm có dấu khớp có dấu; từ không dấu không khớp từ có dấu. Chưa thêm extension/index chuẩn hóa dấu trong task này; contract và giới hạn ở [messaging-search.md](messaging-search.md).
 
 **Nghiệm thu:** tìm được tin cũ chưa tải vào trình duyệt, không trả kết quả ngoài quyền.
 
