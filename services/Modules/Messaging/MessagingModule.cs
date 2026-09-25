@@ -56,6 +56,7 @@ public static class MessagingModule
         services.AddSingleton<IAttachmentObjectStore, MinioAttachmentObjectStore>();
         services.AddSingleton<IFileScanner, ClamAvFileScanner>();
         services.AddScoped<IAttachmentUploadService, AttachmentUploadService>();
+        services.AddScoped<IAttachmentDownloadService, AttachmentDownloadService>();
         services.AddScoped<IAttachmentCleanupService, AttachmentCleanupService>();
         services.AddHostedService<AttachmentCleanupWorker>();
         services.AddScoped<IDirectConversationService, DirectConversationService>();

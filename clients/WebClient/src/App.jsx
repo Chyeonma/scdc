@@ -880,12 +880,14 @@ export default function App() {
       .catch(() => setMembers([]));
   }, [activeDm?.spaceType, activeDmId, isHomeActive]);
 
-  const handleSendMessage = useCallback(async ({ content, clientMessageId, replyToMessageId }) => {
+  const handleSendMessage = useCallback(async ({ content, clientMessageId, replyToMessageId, attachmentIds, attachments }) => {
     const sent = await sendMessageToSpace({
       spaceId: currentSpaceId,
       content,
       clientMessageId,
       replyToMessageId,
+      attachmentIds,
+      attachments,
     });
     setReplyingTo(null);
     return sent;
@@ -1302,7 +1304,7 @@ export default function App() {
                   isOwn={Boolean(isOwn)}
                   onReply={setReplyingTo}
                   onRetryMessage={handleRetryMessage}
-                  allowReply={canSendCurrentSpace && !message.deletedAt && message.messageType === 1}
+                  allowReply={canSendCurrentSpace && !message.deletedAt && [1, 3].includes(message.messageType)}
                   onOpenThread={handleOpenThread}
                   onToggleReaction={handleToggleReaction}
                   onPinMessage={handlePinMessage}
@@ -1331,7 +1333,6 @@ export default function App() {
           onSendMessage={handleSendMessage}
           onTypingChange={setLocalTyping}
           typingUsers={Object.values(typingBySpace[currentSpaceId] || {}).map((entry) => entry.displayName)}
-          textOnlyMode
           disabled={!currentSpaceId || !canSendCurrentSpace}
         />
       </main>

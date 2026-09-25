@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { initials } from './ServerRail.jsx';
+import { MessageAttachment } from './MessageAttachment.jsx';
 
 function formatTime(isoString) {
   if (!isoString) return '';
@@ -217,28 +218,9 @@ export function MessageItem({
           {/* Attachments */}
           {!message.deletedAt && message.attachments && message.attachments.length > 0 && (
             <div className="message__attachments">
-              {message.attachments.map((att) => (
-                <div className="attachment-card" key={att.id}>
-                  <span className="attachment-icon">📄</span>
-                  <div className="attachment-details">
-                    <strong className="attachment-name">{att.name}</strong>
-                    <small className="attachment-size">
-                      {(att.sizeBytes / 1024).toFixed(1)} KB
-                    </small>
-                  </div>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert(`Đang tải tệp: ${att.name}`);
-                    }}
-                    className="attachment-download"
-                    title="Tải tệp"
-                  >
-                    ⬇
-                  </a>
-                </div>
-              ))}
+              {message.attachments.map((att) => <MessageAttachment key={att.id} attachment={att}
+                spaceId={message.spaceId} available={!['pending', 'failed'].includes(message.deliveryState)}
+                pendingLabel={message.deliveryState === 'failed' ? 'Chưa gửi thành công' : 'Đang gửi tin nhắn…'} />)}
             </div>
           )}
 

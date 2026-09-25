@@ -22,6 +22,10 @@ public sealed class TestAttachmentObjectStore : IAttachmentObjectStore
         Objects.TryRemove(objectKey, out _);
         return Task.CompletedTask;
     }
+
+    public Task<byte[]> GetAsync(string objectKey, CancellationToken cancellationToken) =>
+        Task.FromResult(Objects.TryGetValue(objectKey, out var bytes)
+            ? bytes : throw new FileNotFoundException("Attachment object is missing.", objectKey));
 }
 
 public sealed class TestFileScanner : IFileScanner

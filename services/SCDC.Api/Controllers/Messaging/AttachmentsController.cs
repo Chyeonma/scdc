@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SCDC.Api.Controllers.Identity;
+using SCDC.Api.Errors;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Modules.Messaging.Application;
 
@@ -8,8 +9,20 @@ namespace SCDC.Api.Controllers.Messaging;
 
 [Authorize]
 [Route("api/v1/spaces/{spaceId:guid}/attachments")]
-public sealed class AttachmentsController(IAttachmentUploadService uploads) : ApiControllerBase
+public sealed class AttachmentsController(IAttachmentUploadService uploads,
+    IAttachmentDownloadService downloads) : ApiControllerBase
 {
+    [HttpGet("{attachmentId:guid}/download")]
+    public async Task<IActionResult> Download(Guid spaceId, Guid attachmentId,
+        CancellationToken cancellationToken)
+    {
+        var result = await downloads.DownloadAsync(User.GetUserId(), spaceId, attachmentId, cancellationToken);
+        if (result.IsFailure) return ApiErrorMapper.ToObjectResult(result.Error, HttpContext);
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers.XContentTypeOptions = "nosniff";
+        return File(result.Value.Content, result.Value.MimeType, result.Value.Name);
+    }
+
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(11 * 1024 * 1024)]
