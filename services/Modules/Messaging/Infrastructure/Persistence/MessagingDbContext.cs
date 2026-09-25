@@ -14,6 +14,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<MessageEdit> MessageEdits => Set<MessageEdit>();
+    public DbSet<MessageMention> MessageMentions => Set<MessageMention>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -26,6 +27,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         ConfigureUserBlock(modelBuilder);
         ConfigureMessage(modelBuilder);
         ConfigureMessageEdit(modelBuilder);
+        ConfigureMessageMention(modelBuilder);
         ConfigureOutbox(modelBuilder);
     }
 
@@ -171,6 +173,16 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(edit => edit.PreviousContent).HasColumnName("previous_content");
         entity.Property(edit => edit.EditedByUserId).HasColumnName("edited_by_user_id");
         entity.Property(edit => edit.EditedAt).HasColumnName("edited_at");
+    }
+
+    private static void ConfigureMessageMention(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<MessageMention>();
+        entity.ToTable("mentions", "messaging");
+        entity.HasKey(mention => new { mention.MessageId, mention.MentionedUserId });
+        entity.Property(mention => mention.MessageId).HasColumnName("message_id");
+        entity.Property(mention => mention.MentionedUserId).HasColumnName("mentioned_user_id");
+        entity.Property(mention => mention.CreatedAt).HasColumnName("created_at");
     }
 
     private static void ConfigureOutbox(ModelBuilder modelBuilder)

@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import { createClientMessageId } from '../messaging/messageState.js';
+import { getMentionSuggestions } from '../api.js';
 
 export function MessageComposer({
+  spaceId,
   channelName,
   replyingTo,
   onCancelReply,
@@ -16,6 +18,9 @@ export function MessageComposer({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [isSending, setIsSending] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState([]);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const clientMessageIdRef = useRef(null);
@@ -50,7 +55,60 @@ export function MessageComposer({
     }
   }, [content]);
 
+  useEffect(() => {
+    if (!spaceId || !mentionQuery || disabled) {
+      setMentionSuggestions([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      getMentionSuggestions(spaceId, mentionQuery, controller.signal)
+        .then((users) => setMentionSuggestions(users))
+        .catch(() => { if (!controller.signal.aborted) setMentionSuggestions([]); });
+    }, 150);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [spaceId, mentionQuery, disabled]);
+
+  function updateMentionQuery(value, cursor) {
+    const match = value.slice(0, cursor).match(/(?:^|[^a-zA-Z0-9_.@])@([a-zA-Z0-9_.]{1,32})$/);
+    setMentionQuery(match?.[1] || null);
+    setSelectedMentionIndex(0);
+  }
+
+  function selectMention(user) {
+    const textarea = textareaRef.current;
+    if (!textarea || !mentionQuery) return;
+    const cursor = textarea.selectionStart;
+    const start = cursor - mentionQuery.length - 1;
+    const next = `${content.slice(0, start)}@${user.username} ${content.slice(cursor)}`;
+    handleContentChange(next);
+    setMentionQuery(null);
+    setMentionSuggestions([]);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const position = start + user.username.length + 2;
+      textarea.setSelectionRange(position, position);
+    });
+  }
+
   function handleKeyDown(event) {
+    if (mentionSuggestions.length > 0 && mentionQuery) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedMentionIndex((index) => (index + (event.key === 'ArrowDown' ? 1 : -1) + mentionSuggestions.length) % mentionSuggestions.length);
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        selectMention(mentionSuggestions[selectedMentionIndex]);
+        return;
+      }
+      if (event.key === 'Escape') {
+        setMentionQuery(null);
+        setMentionSuggestions([]);
+        return;
+      }
+    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void handleSubmit();
@@ -97,6 +155,8 @@ export function MessageComposer({
         })),
       });
       setContent('');
+      setMentionQuery(null);
+      setMentionSuggestions([]);
       setAttachedFiles([]);
       clientMessageIdRef.current = null;
       lastSubmissionContentRef.current = null;
@@ -169,13 +229,29 @@ export function MessageComposer({
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(event) => handleContentChange(event.target.value)}
+          onChange={(event) => {
+            handleContentChange(event.target.value);
+            updateMentionQuery(event.target.value, event.target.selectionStart);
+          }}
+          onClick={(event) => updateMentionQuery(event.target.value, event.target.selectionStart)}
           onKeyDown={handleKeyDown}
           placeholder={`Gửi tin nhắn vào #${channelName || 'kênh'}`}
           rows={1}
           disabled={composerDisabled}
           className="composer-input"
         />
+
+        {mentionSuggestions.length > 0 && !composerDisabled && (
+          <div className="mention-suggestions" role="listbox" aria-label="Gợi ý nhắc đến">
+            {mentionSuggestions.map((user, index) => (
+              <button key={user.userId} type="button" role="option"
+                aria-selected={index === selectedMentionIndex}
+                className={`mention-suggestions__item ${index === selectedMentionIndex ? 'is-selected' : ''}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectMention(user)}>@{user.username}</button>
+            ))}
+          </div>
+        )}
 
         <div className="composer-actions">
           <button

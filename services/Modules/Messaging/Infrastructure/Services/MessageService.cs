@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Contracts.Identity;
@@ -15,9 +16,14 @@ internal sealed class MessageService(
     MessagingDbContext dbContext,
     IUserDirectory userDirectory,
     SpaceMessageAccess spaceAccess,
+    IRealtimeSpaceAccess realtimeSpaceAccess,
     MessageRateLimiter rateLimiter,
     TimeProvider timeProvider) : IMessageService
 {
+    private static readonly Regex MentionPattern = new(
+        @"(?<![A-Za-z0-9_.@])@([A-Za-z0-9_.]{3,32})(?![A-Za-z0-9_.])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public async Task<Result<SendMessageResult>> SendAsync(
         SendMessageCommand command,
         CancellationToken cancellationToken)
@@ -116,6 +122,7 @@ internal sealed class MessageService(
         }
 
         var now = timeProvider.GetUtcNow();
+        var mentions = await ResolveMentionsAsync(command.SpaceId, command.ActorUserId, content, cancellationToken);
         var message = new Message
         {
             Id = Guid.CreateVersion7(),
@@ -132,6 +139,10 @@ internal sealed class MessageService(
         };
         dbContext.Messages.Add(message);
         await dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.MessageMentions.AddRange(mentions.Select(user => new MessageMention
+        {
+            MessageId = message.Id, MentionedUserId = user.Id, CreatedAt = now
+        }));
 
         if (command.ThreadRootId is null)
         {
@@ -165,7 +176,7 @@ internal sealed class MessageService(
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return Result.Success(new SendMessageResult(ToDto(message, actor), Created: true));
+        return Result.Success(new SendMessageResult((await ToDtosAsync([message], cancellationToken))[0], Created: true));
     }
 
     public async Task<Result<MessagePageDto>> GetHistoryAsync(
@@ -267,6 +278,27 @@ internal sealed class MessageService(
         return Result.Success((await ToDtosAsync([message], cancellationToken))[0]);
     }
 
+    public async Task<Result<IReadOnlyList<MentionSummaryDto>>> SuggestMentionsAsync(
+        Guid actorUserId, Guid spaceId, string? query, CancellationToken cancellationToken)
+    {
+        if (actorUserId == Guid.Empty || spaceId == Guid.Empty || await userDirectory.FindByIdAsync(actorUserId, cancellationToken) is null)
+            return Result.Failure<IReadOnlyList<MentionSummaryDto>>(MessagingErrors.ResourceNotFound);
+        var space = await dbContext.Spaces.AsNoTracking().SingleOrDefaultAsync(
+            item => item.Id == spaceId && item.Status != SpaceStatus.Deleted, cancellationToken);
+        if (space is null || !(await spaceAccess.CheckAsync(actorUserId, space, cancellationToken)).CanRead)
+            return Result.Failure<IReadOnlyList<MentionSummaryDto>>(MessagingErrors.ResourceNotFound);
+        var prefix = query?.Trim().TrimStart('@') ?? string.Empty;
+        if (prefix.Length is < 1 or > 32 || prefix.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '_' and '.'))
+            return Result.Failure<IReadOnlyList<MentionSummaryDto>>(MessagingErrors.InvalidMessage);
+        var memberIds = await realtimeSpaceAccess.GetActiveMemberIdsAsync(spaceId, cancellationToken);
+        var users = await userDirectory.FindByIdsAsync(memberIds, cancellationToken);
+        return Result.Success<IReadOnlyList<MentionSummaryDto>>(users.Values
+            .Where(user => user.Id != actorUserId && user.Username.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(user => user.Username, StringComparer.OrdinalIgnoreCase)
+            .Take(10)
+            .Select(user => new MentionSummaryDto(user.Id, user.Username)).ToArray());
+    }
+
     public async Task<Result<MessagePageDto>> GetThreadRepliesAsync(GetThreadRepliesQuery query, CancellationToken cancellationToken)
     {
         if (query.ActorUserId == Guid.Empty || query.SpaceId == Guid.Empty || query.RootMessageId == Guid.Empty
@@ -347,9 +379,17 @@ internal sealed class MessageService(
         }
         if (message.Version != command.ExpectedVersion)
             return Result.Failure<MessageDto>(MessagingErrors.VersionConflict);
-        if (message.Content == content) return Result.Success(ToDto(message, actor));
+        if (message.Content == content) return Result.Success((await ToDtosAsync([message], cancellationToken))[0]);
 
         var now = timeProvider.GetUtcNow();
+        var mentions = await ResolveMentionsAsync(command.SpaceId, command.ActorUserId, content, cancellationToken);
+        var existingMentions = await dbContext.MessageMentions
+            .Where(mention => mention.MessageId == message.Id).ToListAsync(cancellationToken);
+        var wantedIds = mentions.Select(user => user.Id).ToHashSet();
+        dbContext.MessageMentions.RemoveRange(existingMentions.Where(mention => !wantedIds.Contains(mention.MentionedUserId)));
+        var existingIds = existingMentions.Select(mention => mention.MentionedUserId).ToHashSet();
+        dbContext.MessageMentions.AddRange(mentions.Where(user => !existingIds.Contains(user.Id))
+            .Select(user => new MessageMention { MessageId = message.Id, MentionedUserId = user.Id, CreatedAt = now }));
         dbContext.MessageEdits.Add(new MessageEdit
         {
             Id = Guid.CreateVersion7(), MessageId = message.Id, Version = message.Version,
@@ -361,7 +401,7 @@ internal sealed class MessageService(
         AddChangeEvent(message, "Messaging.MessageUpdated", now);
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return Result.Success(ToDto(message, actor));
+        return Result.Success((await ToDtosAsync([message], cancellationToken))[0]);
     }
 
     public async Task<Result> DeleteAsync(DeleteMessageCommand command, CancellationToken cancellationToken)
@@ -397,6 +437,8 @@ internal sealed class MessageService(
         message.Version++;
         // Text is non-null by database constraint; this also removes it from the search vector.
         message.Content = message.MessageType == MessageType.Text ? "[deleted]" : null;
+        await dbContext.MessageMentions.Where(mention => mention.MessageId == message.Id)
+            .ExecuteDeleteAsync(cancellationToken);
         await dbContext.Database.ExecuteSqlInterpolatedAsync(
             $"DELETE FROM messaging.pinned_messages WHERE space_id = {command.SpaceId} AND message_id = {command.MessageId}", cancellationToken);
         AddChangeEvent(message, "Messaging.MessageDeleted", now);
@@ -424,6 +466,24 @@ internal sealed class MessageService(
             .AnyAsync(block => (block.BlockerUserId == actorUserId && block.BlockedUserId == peerUserId)
                                || (block.BlockerUserId == peerUserId && block.BlockedUserId == actorUserId),
                 cancellationToken);
+
+    private async Task<IReadOnlyList<UserSummary>> ResolveMentionsAsync(
+        Guid spaceId, Guid actorUserId, string content, CancellationToken cancellationToken)
+    {
+        var names = MentionPattern.Matches(content).Select(match => match.Groups[1].Value)
+            .Where(name => !name.Equals("everyone", StringComparison.OrdinalIgnoreCase)
+                           && !name.Equals("here", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray();
+        if (names.Length == 0) return [];
+        var readableIds = (await realtimeSpaceAccess.GetActiveMemberIdsAsync(spaceId, cancellationToken)).ToHashSet();
+        var users = new List<UserSummary>();
+        foreach (var name in names)
+        {
+            var user = await userDirectory.FindByUsernameAsync(name, cancellationToken);
+            if (user is not null && user.Id != actorUserId && readableIds.Contains(user.Id)) users.Add(user);
+        }
+        return users;
+    }
 
     private static bool TryNormalizeText(string? value, out string content)
     {
@@ -458,6 +518,17 @@ internal sealed class MessageService(
             .Distinct()
             .ToArray();
         var authors = await userDirectory.FindByIdsAsync(authorIds, cancellationToken);
+        var messageIds = messages.Select(message => message.Id).ToArray();
+        var mentions = await dbContext.MessageMentions.AsNoTracking()
+            .Where(mention => messageIds.Contains(mention.MessageId))
+            .ToListAsync(cancellationToken);
+        var mentionedUsers = await userDirectory.FindByIdsAsync(
+            mentions.Select(mention => mention.MentionedUserId).Distinct().ToArray(), cancellationToken);
+        var mentionsByMessage = mentions.Where(mention => mentionedUsers.ContainsKey(mention.MentionedUserId))
+            .GroupBy(mention => mention.MessageId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<MentionSummaryDto>)group
+                .Select(mention => new MentionSummaryDto(mention.MentionedUserId,
+                    mentionedUsers[mention.MentionedUserId].Username)).ToArray());
         var rootIds = messages.Where(message => message.ThreadRootId is null)
             .Select(message => message.Id).ToArray();
         var counts = rootIds.Length == 0
@@ -471,7 +542,8 @@ internal sealed class MessageService(
         return messages.Select(message => ToDto(
             message,
             message.AuthorUserId is { } authorId && authors.TryGetValue(authorId, out var author) ? author : null,
-            counts.GetValueOrDefault(message.Id)))
+            counts.GetValueOrDefault(message.Id),
+            message.DeletedAt is null ? mentionsByMessage.GetValueOrDefault(message.Id) ?? [] : []))
             .ToArray();
     }
 
@@ -498,7 +570,8 @@ internal sealed class MessageService(
 
     private static string ToSequence(long sequence) => sequence.ToString(CultureInfo.InvariantCulture);
 
-    private static MessageDto ToDto(Message message, UserSummary? author, int threadCount = 0) => new(
+    private static MessageDto ToDto(Message message, UserSummary? author, int threadCount = 0,
+        IReadOnlyList<MentionSummaryDto>? mentions = null) => new(
         message.Id,
         message.SpaceId,
         message.ClientMessageId,
@@ -515,5 +588,6 @@ internal sealed class MessageService(
         Attachments: [],
         Reactions: [],
         IsPinned: false,
-        ThreadCount: threadCount);
+        ThreadCount: threadCount,
+        Mentions: mentions ?? []);
 }

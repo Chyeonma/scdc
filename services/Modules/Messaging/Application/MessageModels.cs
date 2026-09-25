@@ -53,7 +53,10 @@ public sealed record MessageDto(
     IReadOnlyList<AttachmentSummaryDto> Attachments,
     IReadOnlyList<ReactionSummaryDto> Reactions,
     bool IsPinned,
-    int ThreadCount);
+    int ThreadCount,
+    IReadOnlyList<MentionSummaryDto> Mentions);
+
+public sealed record MentionSummaryDto(Guid UserId, string Username);
 
 public sealed record AttachmentSummaryDto(
     Guid Id,

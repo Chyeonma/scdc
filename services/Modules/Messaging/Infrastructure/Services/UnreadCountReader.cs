@@ -37,6 +37,40 @@ internal sealed class UnreadCountReader(MessagingDbContext dbContext, TimeProvid
             select new { SpaceId = grouped.Key, Count = grouped.Count() })
             .ToDictionaryAsync(row => row.SpaceId, row => row.Count, cancellationToken);
 
+        // Mentions in thread replies alert the recipient even though thread replies do not
+        // increase the ordinary unread count. One mention row per user/message makes this
+        // count stable across retries and lets edits/deletes retract the alert.
+        var mentionCounts = await (
+            from mention in dbContext.MessageMentions.AsNoTracking()
+            join message in dbContext.Messages.AsNoTracking() on mention.MessageId equals message.Id
+            join state in dbContext.SpaceUserStates.AsNoTracking().Where(item => item.UserId == userId)
+                on message.SpaceId equals state.SpaceId into stateRows
+            from state in stateRows.DefaultIfEmpty()
+            where mention.MentionedUserId == userId
+                  && ids.Contains(message.SpaceId)
+                  && message.SequenceNo > (state == null ? 0 : state.LastReadSequence ?? 0)
+                  && message.AuthorUserId != userId
+                  && message.DeletedAt == null
+            group message by message.SpaceId into grouped
+            select new { SpaceId = grouped.Key, Count = grouped.Count() })
+            .ToDictionaryAsync(row => row.SpaceId, row => row.Count, cancellationToken);
+
+        var threadMentionCounts = await (
+            from mention in dbContext.MessageMentions.AsNoTracking()
+            join message in dbContext.Messages.AsNoTracking() on mention.MessageId equals message.Id
+            join state in dbContext.SpaceUserStates.AsNoTracking().Where(item => item.UserId == userId)
+                on message.SpaceId equals state.SpaceId into stateRows
+            from state in stateRows.DefaultIfEmpty()
+            where mention.MentionedUserId == userId
+                  && ids.Contains(message.SpaceId)
+                  && message.SequenceNo > (state == null ? 0 : state.LastReadSequence ?? 0)
+                  && message.AuthorUserId != userId
+                  && message.DeletedAt == null
+                  && message.ThreadRootId != null
+            group message by message.SpaceId into grouped
+            select new { SpaceId = grouped.Key, Count = grouped.Count() })
+            .ToDictionaryAsync(row => row.SpaceId, row => row.Count, cancellationToken);
+
         var now = timeProvider.GetUtcNow();
         return ids.ToDictionary(id => id, id =>
         {
@@ -46,7 +80,12 @@ internal sealed class UnreadCountReader(MessagingDbContext dbContext, TimeProvid
             var muted = state?.MutedUntil is { } until && until > now;
             return new SpaceUnreadState(
                 unreadCount,
-                level == NotificationLevel.AllMessages && !muted ? unreadCount : 0,
+                muted ? 0 : level switch
+                {
+                    NotificationLevel.AllMessages => unreadCount + threadMentionCounts.GetValueOrDefault(id),
+                    NotificationLevel.MentionsOnly => mentionCounts.GetValueOrDefault(id),
+                    _ => 0
+                },
                 state?.LastReadSequence?.ToString(CultureInfo.InvariantCulture),
                 new UserSpacePreferencesDto((short)level, state?.MutedUntil, state?.IsHidden ?? false, state?.IsPinned ?? false));
         });
