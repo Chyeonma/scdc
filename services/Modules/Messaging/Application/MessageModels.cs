@@ -9,7 +9,8 @@ public sealed record SendMessageCommand(
     short MessageType,
     string? Content,
     Guid? ReplyToMessageId = null,
-    Guid? ThreadRootId = null);
+    Guid? ThreadRootId = null,
+    IReadOnlyList<Guid>? AttachmentIds = null);
 
 public sealed record SendMessageResult(MessageDto Message, bool Created);
 

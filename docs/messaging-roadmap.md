@@ -295,11 +295,13 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P7-T01 — Upload và metadata [BE, DB, OPS]
 
-- [ ] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
-- [ ] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
-- [ ] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
-- [ ] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
-- [ ] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+- [x] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
+- [x] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
+- [x] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
+- [x] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
+- [x] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+
+P7-T01 dùng SeaweedFS S3-compatible trong Compose, MinIO .NET SDK ở backend và ClamAV để quét trước khi ghi object. API multipart tạo staging upload 24 giờ; tối đa 10 MiB/file, 5 file/message, định dạng PNG/JPEG/GIF/WEBP/PDF/UTF-8 text. `messageType=3` cho attachment-only, `messageType=1` cho text kèm file. Chi tiết contract, cấu hình và cleanup ở [messaging-attachments.md](messaging-attachments.md).
 
 **Nghiệm thu:** file thật nằm trong storage, DB chỉ lưu metadata; file của user khác không thể bị gắn vào tin tùy ý.
 
