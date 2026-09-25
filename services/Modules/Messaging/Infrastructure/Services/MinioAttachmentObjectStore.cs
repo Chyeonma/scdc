@@ -23,4 +23,13 @@ internal sealed class MinioAttachmentObjectStore(IMinioClient client,
         await client.RemoveObjectAsync(new RemoveObjectArgs()
             .WithBucket(BucketName).WithObject(objectKey), cancellationToken);
     }
+
+    public async Task<byte[]> GetAsync(string objectKey, CancellationToken cancellationToken)
+    {
+        using var buffer = new MemoryStream();
+        await client.GetObjectAsync(new GetObjectArgs()
+            .WithBucket(BucketName).WithObject(objectKey)
+            .WithCallbackStream(stream => stream.CopyTo(buffer)), cancellationToken);
+        return buffer.ToArray();
+    }
 }

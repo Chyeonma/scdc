@@ -44,6 +44,9 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             var attachmentId = staged.GetProperty("id").GetGuid();
             Assert.Equal("text/plain", staged.GetProperty("mimeType").GetString());
             Assert.Equal(1, staged.GetProperty("scanStatus").GetInt32());
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{spaceId}/attachments/{attachmentId}/download", author.Token)).StatusCode);
             var uploadRetry = await UploadFileAsync(author, spaceId, file, "note.txt", "image/png",
                 clientUploadId: clientUploadId);
             Assert.Equal(HttpStatusCode.OK, uploadRetry.StatusCode);
@@ -58,6 +61,9 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
                 (await UploadFileAsync(author, spaceId, file, "note.txt", "text/plain", new string('0', 64))).StatusCode);
             Assert.Equal(HttpStatusCode.BadRequest,
                 (await UploadFileAsync(author, spaceId, [0, 1, 2, 3], "bad.bin", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await UploadFileAsync(author, spaceId, new byte[10 * 1024 * 1024 + 1],
+                    "too-large.txt", "text/plain")).StatusCode);
             Assert.Equal(HttpStatusCode.BadRequest,
                 (await UploadFileAsync(author, spaceId, Encoding.UTF8.GetBytes("EICAR test"), "virus.txt", "text/plain")).StatusCode);
             Assert.Equal(HttpStatusCode.ServiceUnavailable,
@@ -76,6 +82,21 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             Assert.Equal(3, body.GetProperty("messageType").GetInt32());
             Assert.Equal(JsonValueKind.Null, body.GetProperty("content").ValueKind);
             Assert.Equal(attachmentId, body.GetProperty("attachments").EnumerateArray().Single().GetProperty("id").GetGuid());
+            var downloadPath = $"/api/v1/spaces/{spaceId}/attachments/{attachmentId}/download";
+            Assert.Equal(HttpStatusCode.Unauthorized, (await _client.GetAsync(downloadPath)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, downloadPath, outsider.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{otherSpaceId}/attachments/{attachmentId}/download", author.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{spaceId}/attachments/{Guid.NewGuid()}/download", reader.Token)).StatusCode);
+            var downloaded = await SendAsync(HttpMethod.Get, downloadPath, reader.Token);
+            Assert.Equal(HttpStatusCode.OK, downloaded.StatusCode);
+            Assert.Equal(file, await downloaded.Content.ReadAsByteArrayAsync());
+            Assert.Equal("attachment", downloaded.Content.Headers.ContentDisposition?.DispositionType);
+            Assert.Equal("no-store", downloaded.Headers.CacheControl?.ToString());
             Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, messagePath, author.Token, request)).StatusCode);
             Assert.Equal(HttpStatusCode.Conflict,
                 (await SendAsync(HttpMethod.Post, messagePath, author.Token,
@@ -127,6 +148,35 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             Assert.True(removed >= 1);
             Assert.False(factory.AttachmentStore.Objects.ContainsKey(abandonedKey));
             Assert.True(factory.AttachmentStore.Objects.ContainsKey(objectKey));
+            var readerUpload = await UploadFileAsync(reader, spaceId, Encoding.UTF8.GetBytes("reader draft"),
+                "reader.txt", "text/plain");
+            Assert.Equal(HttpStatusCode.OK, readerUpload.StatusCode);
+            var readerUploadId = (await readerUpload.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            await using var revoke = new NpgsqlCommand("""
+                UPDATE messaging.space_members SET membership_status = 2, left_at = now()
+                WHERE space_id = @space_id AND user_id = @user_id
+                """, connection);
+            revoke.Parameters.AddWithValue("space_id", spaceId);
+            revoke.Parameters.AddWithValue("user_id", reader.Id);
+            await revoke.ExecuteNonQueryAsync();
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, downloadPath, reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Post, messagePath, reader.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 3,
+                        attachmentIds = new[] { readerUploadId } })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Get, downloadPath, author.Token)).StatusCode);
+
+            await using var softDelete = new NpgsqlCommand("""
+                UPDATE messaging.messages SET deleted_at = now(), deleted_by_user_id = @user_id
+                WHERE id = @message_id
+                """, connection);
+            softDelete.Parameters.AddWithValue("user_id", author.Id);
+            softDelete.Parameters.AddWithValue("message_id", body.GetProperty("id").GetGuid());
+            await softDelete.ExecuteNonQueryAsync();
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, downloadPath, author.Token)).StatusCode);
         }
         finally
         {

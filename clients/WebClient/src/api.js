@@ -321,11 +321,73 @@ export function getMessageHistory(spaceId, {
   return api(`/spaces/${spaceId}/messages?${query}`, { signal });
 }
 
-export function sendMessage(spaceId, { clientMessageId, content, replyToMessageId, threadRootId }) {
+export function sendMessage(spaceId, { clientMessageId, content, replyToMessageId, threadRootId, attachmentIds = [] }) {
   return api(`/spaces/${spaceId}/messages`, {
     method: 'POST',
-    body: { clientMessageId, messageType: 1, content, replyToMessageId, threadRootId },
+    body: {
+      clientMessageId, messageType: content?.trim() ? 1 : 3,
+      content: content?.trim() || null, replyToMessageId, threadRootId, attachmentIds,
+    },
   });
+}
+
+export async function uploadAttachment(spaceId, file, clientUploadId, onProgress, signal, retry = true) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  if (signal?.aborted) throw new DOMException('Đã huỷ tải lên.', 'AbortError');
+  const checksumSha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const form = new FormData();
+  form.append('file', file);
+  form.append('clientUploadId', clientUploadId);
+  form.append('checksumSha256', checksumSha256);
+  const token = await getAccessToken();
+  if (signal?.aborted) throw new DOMException('Đã huỷ tải lên.', 'AbortError');
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    const abort = () => request.abort();
+    request.open('POST', `${API_ROOT}/spaces/${spaceId}/attachments`);
+    request.setRequestHeader('Authorization', `Bearer ${token}`);
+    request.setRequestHeader('Accept', 'application/json');
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round(event.loaded / event.total * 100));
+    };
+    request.onerror = () => reject(new ApiError('Mất kết nối khi tải tệp lên.', 0));
+    request.onabort = () => reject(new DOMException('Đã huỷ tải lên.', 'AbortError'));
+    request.onload = async () => {
+      if (request.status === 401 && retry && session?.refreshToken) {
+        try {
+          await refreshSession();
+          resolve(await uploadAttachment(spaceId, file, clientUploadId, onProgress, signal, false));
+        } catch (error) { reject(error); }
+        return;
+      }
+      if (request.status < 200 || request.status >= 300) {
+        let problem = null;
+        try { problem = JSON.parse(request.responseText); } catch { /* No JSON body. */ }
+        reject(new ApiError(problem?.detail || problem?.title || `Tải tệp thất bại (${request.status}).`, request.status, problem));
+        return;
+      }
+      try { resolve(JSON.parse(request.responseText)); }
+      catch { reject(new ApiError('Phản hồi tải tệp không hợp lệ.', request.status)); }
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    request.onloadend = () => signal?.removeEventListener('abort', abort);
+    request.send(form);
+    if (signal?.aborted) request.abort();
+  });
+}
+
+export async function getAttachmentBlob(spaceId, attachmentId, signal, retry = true) {
+  const token = await getAccessToken();
+  const response = await fetch(`${API_ROOT}/spaces/${spaceId}/attachments/${attachmentId}/download`, {
+    headers: { Authorization: `Bearer ${token}` }, signal, cache: 'no-store',
+  });
+  if (response.status === 401 && retry && session?.refreshToken) {
+    await refreshSession();
+    return getAttachmentBlob(spaceId, attachmentId, signal, false);
+  }
+  if (!response.ok) throw await readError(response);
+  return response.blob();
 }
 
 export function getThreadReplies(spaceId, rootMessageId, { limit = 50, beforeSequence, signal } = {}) {

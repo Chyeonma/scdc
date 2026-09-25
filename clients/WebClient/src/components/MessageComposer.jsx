@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import { createClientMessageId } from '../messaging/messageState.js';
-import { getMentionSuggestions } from '../api.js';
+import { getMentionSuggestions, uploadAttachment } from '../api.js';
+
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = /\.(png|jpe?g|gif|webp|pdf|txt)$/i;
 
 export function MessageComposer({
   spaceId,
@@ -18,11 +21,15 @@ export function MessageComposer({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [isSending, setIsSending] = useState(false);
+  const [composerError, setComposerError] = useState(null);
+  const [submissionPhase, setSubmissionPhase] = useState(null);
+  const [activeUploadKey, setActiveUploadKey] = useState(null);
   const [mentionQuery, setMentionQuery] = useState(null);
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const activeUploadRef = useRef(null);
   const clientMessageIdRef = useRef(null);
   const lastSubmissionContentRef = useRef(null);
   const replyTargetRef = useRef(replyingTo?.id || null);
@@ -32,6 +39,8 @@ export function MessageComposer({
     lastSubmissionContentRef.current = null;
   }
   const isTyping = Boolean(content.trim()) && !disabled && !isSending;
+
+  useEffect(() => () => activeUploadRef.current?.controller.abort(), []);
 
   useEffect(() => {
     if (!isTyping || !onTypingChange) return undefined;
@@ -122,22 +131,59 @@ export function MessageComposer({
       lastSubmissionContentRef.current = null;
     }
     setContent(nextContent);
+    setComposerError(null);
+  }
+
+  function updateFile(key, patch) {
+    setAttachedFiles((previous) => previous.map((item) => item.key === key ? { ...item, ...patch } : item));
+  }
+
+  async function uploadOne(entry) {
+    const controller = new AbortController();
+    activeUploadRef.current = { key: entry.key, controller };
+    setActiveUploadKey(entry.key);
+    setSubmissionPhase('uploading');
+    const clientUploadId = entry.expiresAt && Date.parse(entry.expiresAt) <= Date.now()
+      ? createClientMessageId() : entry.clientUploadId;
+    updateFile(entry.key, { clientUploadId, uploadId: null, expiresAt: null,
+      status: 'uploading', progress: 0, error: null });
+    try {
+      const uploaded = await uploadAttachment(spaceId, entry.file, clientUploadId,
+        (progress) => updateFile(entry.key, { progress }), controller.signal);
+      updateFile(entry.key, { clientUploadId, uploadId: uploaded.id,
+        expiresAt: uploaded.expiresAt, status: 'uploaded', progress: 100 });
+      return uploaded;
+    } catch (error) {
+      updateFile(entry.key, { status: error.name === 'AbortError' ? 'cancelled' : 'failed',
+        error: error.name === 'AbortError' ? 'Đã huỷ tải lên.' : error.message });
+      throw error;
+    } finally {
+      if (activeUploadRef.current?.key === entry.key) activeUploadRef.current = null;
+      setActiveUploadKey(null);
+      setSubmissionPhase(null);
+    }
   }
 
   async function handleSubmit() {
     const trimmed = content.trim();
-    if ((!trimmed && attachedFiles.length === 0) || disabled || isSending) return;
+    if ((!trimmed && attachedFiles.length === 0) || disabled || isSending || activeUploadRef.current) return;
 
-    const clientMessageId = textOnlyMode
-      ? (clientMessageIdRef.current || createClientMessageId())
-      : undefined;
-    if (textOnlyMode) {
-      clientMessageIdRef.current = clientMessageId;
-      lastSubmissionContentRef.current = trimmed;
-    }
+    const clientMessageId = clientMessageIdRef.current || createClientMessageId();
+    clientMessageIdRef.current = clientMessageId;
+    lastSubmissionContentRef.current = trimmed;
 
     setIsSending(true);
+    setComposerError(null);
     try {
+      const uploadedFiles = [];
+      for (const entry of attachedFiles) {
+        if (entry.error && entry.status === 'invalid') throw new Error(entry.error);
+        const uploaded = entry.uploadId && (!entry.expiresAt || Date.parse(entry.expiresAt) > Date.now())
+          ? { id: entry.uploadId, name: entry.file.name, sizeBytes: String(entry.file.size), mimeType: entry.file.type }
+          : await uploadOne(entry);
+        uploadedFiles.push(uploaded);
+      }
+      setSubmissionPhase('sending');
       await onSendMessage({
         content: trimmed,
         clientMessageId,
@@ -147,12 +193,9 @@ export function MessageComposer({
           authorName: replyingTo.author?.displayName || replyingTo.author?.username || 'User',
           content: replyingTo.content?.slice(0, 80) || 'Đính kèm',
         } : null,
-        attachments: attachedFiles.map((file, index) => ({
-          id: `att-${Date.now()}-${index}`,
-          name: file.name,
-          sizeBytes: file.size,
-          mimeType: file.type || 'application/octet-stream',
-        })),
+        attachmentIds: uploadedFiles.map((file) => file.id),
+        attachments: uploadedFiles.map((file) => ({ id: file.id, name: file.name,
+          sizeBytes: file.sizeBytes, mimeType: file.mimeType })),
       });
       setContent('');
       setMentionQuery(null);
@@ -161,22 +204,38 @@ export function MessageComposer({
       clientMessageIdRef.current = null;
       lastSubmissionContentRef.current = null;
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    } catch {
-      // The parent stores the ProblemDetails text on the failed local message.
-      // Keep this draft untouched so retry uses its stable clientMessageId.
+    } catch (error) {
+      setComposerError(error.name === 'AbortError' ? 'Đã huỷ tải lên.' : error.message);
     } finally {
       setIsSending(false);
+      setSubmissionPhase(null);
     }
   }
 
   function handleFileSelect(event) {
     const files = Array.from(event.target.files || []);
-    if (files.length > 0) setAttachedFiles((previous) => [...previous, ...files]);
+    if (files.length > 0) {
+      setAttachedFiles((previous) => [...previous, ...files.slice(0, Math.max(0, 5 - previous.length)).map((file) => ({
+        key: createClientMessageId(), clientUploadId: createClientMessageId(), file,
+        status: file.size < 1 || file.size > MAX_ATTACHMENT_SIZE || !ALLOWED_EXTENSIONS.test(file.name)
+          ? 'invalid' : 'ready',
+        error: file.size < 1 || file.size > MAX_ATTACHMENT_SIZE
+          ? 'Tệp phải có dung lượng từ 1 byte đến 10 MiB.'
+          : !ALLOWED_EXTENSIONS.test(file.name) ? 'Định dạng tệp không được hỗ trợ.' : null,
+        progress: 0, uploadId: null, expiresAt: null,
+      }))]);
+      if (attachedFiles.length + files.length > 5) setComposerError('Mỗi tin nhắn chỉ gửi tối đa 5 tệp.');
+      clientMessageIdRef.current = null;
+      lastSubmissionContentRef.current = null;
+    }
     event.target.value = '';
   }
 
-  function removeFile(index) {
-    setAttachedFiles((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
+  function removeFile(key) {
+    if (activeUploadRef.current?.key === key) activeUploadRef.current.controller.abort();
+    setAttachedFiles((previous) => previous.filter((item) => item.key !== key));
+    clientMessageIdRef.current = null;
+    lastSubmissionContentRef.current = null;
   }
 
   function handleAddEmoji(emoji) {
@@ -185,7 +244,7 @@ export function MessageComposer({
     textareaRef.current?.focus();
   }
 
-  const composerDisabled = disabled || isSending;
+  const composerDisabled = disabled || isSending || Boolean(activeUploadKey);
 
   return (
     <div className="composer-container">
@@ -201,10 +260,21 @@ export function MessageComposer({
 
       {!textOnlyMode && attachedFiles.length > 0 && (
         <div className="composer-attachments">
-          {attachedFiles.map((file, index) => (
-            <div className="composer-attachment-chip" key={`${file.name}-${index}`}>
-              <span>📎 {file.name} ({(file.size / 1024).toFixed(0)}KB)</span>
-              <button type="button" onClick={() => removeFile(index)}>✕</button>
+          {attachedFiles.map((entry) => (
+            <div className="composer-attachment-chip" key={entry.key}>
+              <span className="composer-attachment-chip__name">📎 {entry.file.name} ({(entry.file.size / 1024).toFixed(1)} KB)</span>
+              <span className="composer-attachment-chip__status">
+                {entry.status === 'uploading' ? (entry.progress >= 100 ? 'Đang quét tệp…' : `Đang tải ${entry.progress}%`)
+                  : entry.status === 'uploaded' ? 'Đã tải lên, chưa gửi'
+                    : entry.error || 'Chưa tải lên'}
+              </span>
+              {entry.status === 'uploading' && (
+                <button type="button" onClick={() => activeUploadRef.current?.controller.abort()}>Huỷ</button>
+              )}
+              {['failed', 'cancelled'].includes(entry.status) && !isSending && (
+                <button type="button" onClick={() => void uploadOne(entry).catch(() => {})}>Thử lại</button>
+              )}
+              <button type="button" onClick={() => removeFile(entry.key)} aria-label={`Bỏ tệp ${entry.file.name}`}>✕</button>
             </div>
           ))}
         </div>
@@ -270,7 +340,7 @@ export function MessageComposer({
             disabled={(!content.trim() && attachedFiles.length === 0) || composerDisabled}
             title="Gửi tin nhắn (Enter)"
           >
-            {isSending ? '…' : '↑'}
+            {submissionPhase === 'uploading' ? '⇧' : isSending ? '…' : '↑'}
           </button>
         </div>
 
@@ -284,6 +354,8 @@ export function MessageComposer({
           </div>
         )}
       </div>
+
+      {composerError && <p className="composer-error" role="alert">{composerError}</p>}
 
       <div className="composer-footer">
         {typingUsers.length > 0 ? (

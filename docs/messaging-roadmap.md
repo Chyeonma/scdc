@@ -307,10 +307,12 @@ P7-T01 dùng SeaweedFS S3-compatible trong Compose, MinIO .NET SDK ở backend v
 
 ### P7-T02 — Hiển thị và tải xuống [BE, FE, QA]
 
-- [ ] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
-- [ ] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
-- [ ] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
-- [ ] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+- [x] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
+- [x] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
+- [x] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
+- [x] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+
+P7-T02 tải file qua API xác thực riêng cho mỗi request; không phát URL ký. Quyền được kiểm tra lúc bắt đầu download, nên request đang chạy có thể hoàn tất sau khi quyền bị thu hồi; request mới nhận 404 và response không được cache. Chi tiết ở [messaging-attachments.md](messaging-attachments.md).
 
 **Nghiệm thu:** gửi file giữa hai tài khoản và tải được sau refresh; không thể tải file chỉ bằng cách đoán attachment ID.
 
