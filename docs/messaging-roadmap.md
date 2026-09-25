@@ -262,10 +262,12 @@ Triển khai P6-T01: tin Text bị xóa giữ ID/sequence/version, `deleted_at` 
 
 ### P6-T02 — Reply và thread [BE, DB, FE]
 
-- [ ] **P6-T02.1** Gửi `replyToMessageId`/`threadRootId`; xác minh message cùng space và quyền đọc; tận dụng composite FK hiện có.
-- [ ] **P6-T02.2** Chốt thread một cấp, root hợp lệ, policy root bị xóa; API list reply có cursor.
-- [ ] **P6-T02.3** Xác định thread reply có xuất hiện trong timeline chính/unread/last message không; tính thread count từ dữ liệu thật hoặc projection được cập nhật an toàn.
-- [ ] **P6-T02.4** Nối reply composer, `ThreadPanel`, preview và jump-to-message; tải vùng lịch sử quanh tin đích nếu chưa có trong client.
+- [x] **P6-T02.1** Gửi `replyToMessageId`/`threadRootId`; xác minh message cùng space và quyền đọc; tận dụng composite FK hiện có.
+- [x] **P6-T02.2** Chốt thread một cấp, root hợp lệ, policy root bị xóa; API list reply có cursor.
+- [x] **P6-T02.3** Xác định thread reply có xuất hiện trong timeline chính/unread/last message không; tính thread count từ dữ liệu thật hoặc projection được cập nhật an toàn.
+- [x] **P6-T02.4** Nối reply composer, `ThreadPanel`, preview và jump-to-message; tải vùng lịch sử quanh tin đích nếu chưa có trong client.
+
+P6-T02: plain reply (`replyToMessageId`, không có `threadRootId`) nằm trong timeline và unread như tin thường. Thread reply vẫn ở history/catch-up để giữ cursor đầy đủ nhưng UI tách vào `ThreadPanel`, không tính unread, không đổi last-message/last-activity hay tự hiện lại hội thoại ẩn. Root Text/Attachment phải cùng space và chưa xóa khi tạo reply mới; root bị xóa sau đó vẫn có tombstone và panel đọc reply cũ. `threadCount` là số reply chưa xóa đọc trực tiếp từ DB; không lưu projection. Watermark realtime lấy max sequence thực tế, kể cả thread reply.
 
 **Nghiệm thu:** không reply xuyên space; thread tải lại còn dữ liệu; root bị xóa không làm hỏng panel.
 

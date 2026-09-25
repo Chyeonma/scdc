@@ -7,7 +7,9 @@ public sealed record SendMessageCommand(
     Guid SpaceId,
     Guid ClientMessageId,
     short MessageType,
-    string? Content);
+    string? Content,
+    Guid? ReplyToMessageId = null,
+    Guid? ThreadRootId = null);
 
 public sealed record SendMessageResult(MessageDto Message, bool Created);
 
@@ -22,6 +24,10 @@ public sealed record GetMessagesQuery(
     string? BeforeSequence,
     string? AfterSequence,
     string? ThroughSequence);
+
+public sealed record GetThreadRepliesQuery(
+    Guid ActorUserId, Guid SpaceId, Guid RootMessageId, int Limit,
+    string? BeforeSequence, string? AfterSequence, string? ThroughSequence);
 
 public sealed record MessagePageDto(
     IReadOnlyList<MessageDto> Items,

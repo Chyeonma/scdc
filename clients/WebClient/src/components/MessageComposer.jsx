@@ -20,6 +20,12 @@ export function MessageComposer({
   const fileInputRef = useRef(null);
   const clientMessageIdRef = useRef(null);
   const lastSubmissionContentRef = useRef(null);
+  const replyTargetRef = useRef(replyingTo?.id || null);
+  if (replyTargetRef.current !== (replyingTo?.id || null)) {
+    replyTargetRef.current = replyingTo?.id || null;
+    clientMessageIdRef.current = null;
+    lastSubmissionContentRef.current = null;
+  }
   const isTyping = Boolean(content.trim()) && !disabled && !isSending;
 
   useEffect(() => {
@@ -77,6 +83,7 @@ export function MessageComposer({
       await onSendMessage({
         content: trimmed,
         clientMessageId,
+        replyToMessageId: replyingTo?.id || null,
         replyTo: replyingTo ? {
           id: replyingTo.id,
           authorName: replyingTo.author?.displayName || replyingTo.author?.username || 'User',
@@ -122,7 +129,7 @@ export function MessageComposer({
 
   return (
     <div className="composer-container">
-      {!textOnlyMode && replyingTo && (
+      {replyingTo && (
         <div className="reply-context-bar">
           <span className="reply-context-bar__text">
             Đang trả lời <strong>@{replyingTo.author?.displayName || replyingTo.author?.username}</strong>:

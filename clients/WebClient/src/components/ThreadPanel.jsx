@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { initials } from './ServerRail.jsx';
 
 export function ThreadPanel({
@@ -6,16 +6,43 @@ export function ThreadPanel({
   replies = [],
   onClose,
   onSendReply,
+  onJumpToMessage,
+  loading = false,
+  error = null,
+  nextBeforeSequence = null,
+  onLoadOlder,
+  canSend = true,
 }) {
   const [replyText, setReplyText] = useState('');
+  const [sending, setSending] = useState(false);
+  const clientMessageIdRef = useRef(null);
 
-  if (!rootMessage) return null;
+  if (!rootMessage) return <aside className="thread-panel" aria-label="Chủ đề con">
+    <button type="button" className="panel-close-btn" onClick={onClose}>✕</button>
+    <p>{error || (loading ? 'Đang tải chủ đề...' : 'Chọn một tin nhắn để xem chủ đề.')}</p>
+  </aside>;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!replyText.trim()) return;
-    onSendReply?.(rootMessage.id, replyText.trim());
-    setReplyText('');
+    if (!replyText.trim() || !canSend || sending || rootMessage.deletedAt) return;
+    const clientMessageId = clientMessageIdRef.current || crypto.randomUUID();
+    clientMessageIdRef.current = clientMessageId;
+    setSending(true);
+    try {
+      await onSendReply?.(rootMessage.id, replyText.trim(), clientMessageId);
+      setReplyText('');
+      clientMessageIdRef.current = null;
+    } catch {
+      // Keep the draft and idempotency key for retry.
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function jumpToReply(messageId) {
+    const node = document.getElementById(`thread-message-${messageId}`);
+    if (node) node.scrollIntoView({ block: 'center' });
+    else onJumpToMessage?.(messageId);
   }
 
   return (
@@ -32,7 +59,7 @@ export function ThreadPanel({
 
       <div className="thread-panel__scroll">
         {/* Root message */}
-        <div className="thread-root-card">
+        <div className="thread-root-card" id={`thread-message-${rootMessage.id}`}>
           <div className="thread-root-card__header">
             <span className="avatar avatar--sm">
               {initials(rootMessage.author?.displayName || rootMessage.author?.username)}
@@ -40,17 +67,20 @@ export function ThreadPanel({
             <strong>{rootMessage.author?.displayName || rootMessage.author?.username}</strong>
             <small>{new Date(rootMessage.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
           </div>
-          <p className="thread-root-card__content">{rootMessage.content}</p>
+          <p className="thread-root-card__content">{rootMessage.deletedAt ? 'Tin nhắn đã bị xóa' : rootMessage.content}</p>
         </div>
 
         <div className="thread-divider">
-          <span>{replies.length} phản hồi</span>
+          <span>{rootMessage.threadCount || 0} phản hồi</span>
         </div>
 
         {/* Replies List */}
         <div className="thread-replies-list">
+          {nextBeforeSequence && <button type="button" onClick={onLoadOlder} disabled={loading}>Tải phản hồi cũ hơn</button>}
+          {loading && <p>Đang tải phản hồi...</p>}
+          {error && <p role="alert">{error}</p>}
           {replies.map((reply) => (
-            <div className="thread-reply-item" key={reply.id}>
+            <div className="thread-reply-item" key={reply.id} id={`thread-message-${reply.id}`}>
               <span className="avatar avatar--xs">
                 {initials(reply.author?.displayName || reply.author?.username)}
               </span>
@@ -59,11 +89,22 @@ export function ThreadPanel({
                   <strong>{reply.author?.displayName || reply.author?.username}</strong>
                   <time>{new Date(reply.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time>
                 </div>
-                <p>{reply.content}</p>
+                {!reply.deletedAt && reply.replyToMessageId && (
+                  <button type="button" className="message__reply-banner"
+                    onClick={() => jumpToReply(reply.replyToMessageId)}>
+                    {(() => {
+                      const target = reply.replyToMessageId === rootMessage.id
+                        ? rootMessage : replies.find((item) => item.id === reply.replyToMessageId);
+                      return target?.deletedAt ? 'Tin nhắn đã bị xóa'
+                        : target?.content?.slice(0, 80) || 'Xem tin được trả lời';
+                    })()}
+                  </button>
+                )}
+                <p>{reply.deletedAt ? 'Tin nhắn đã bị xóa' : reply.content}</p>
               </div>
             </div>
           ))}
-          {replies.length === 0 && (
+          {replies.length === 0 && !loading && !error && (
             <div className="thread-empty">
               <p>Chưa có phản hồi nào. Hãy là người đầu tiên trả lời!</p>
             </div>
@@ -76,11 +117,11 @@ export function ThreadPanel({
         <input
           type="text"
           value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
+          onChange={(e) => { setReplyText(e.target.value); clientMessageIdRef.current = null; }}
           placeholder="Phản hồi trong chủ đề..."
           className="thread-composer__input"
         />
-        <button type="submit" className="thread-composer__btn" disabled={!replyText.trim()}>
+        <button type="submit" className="thread-composer__btn" disabled={!replyText.trim() || !canSend || sending || Boolean(rootMessage.deletedAt)}>
           Gửi
         </button>
       </form>

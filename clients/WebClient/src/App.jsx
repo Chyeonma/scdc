@@ -24,7 +24,9 @@ import {
   getGroupMembers,
   getAccessToken,
   getMessageHistory,
+  getThreadReplies,
   getMessage,
+  sendMessage,
   editMessage,
   deleteMessage,
   getSpaces,
@@ -42,10 +44,6 @@ import {
   createServerInvite,
   leaveServer,
 } from './api.js';
-
-import {
-  INITIAL_THREADS,
-} from './mockData.js';
 
 import { ServerRail } from './components/ServerRail.jsx';
 import { SubSidebar } from './components/SubSidebar.jsx';
@@ -99,7 +97,9 @@ export default function App() {
 
   // Messages & Threads State
   const [messagesMap, setMessagesMap] = useState({});
-  const [threadsMap, setThreadsMap] = useState(INITIAL_THREADS);
+  const [threadsMap, setThreadsMap] = useState({});
+  const [threadState, setThreadState] = useState({ loading: false, error: null, nextBeforeSequence: null });
+  const [replyTargets, setReplyTargets] = useState({});
   const [members, setMembers] = useState([]);
 
   // Active Collapsible Right Panel ('memberList' | 'thread' | 'pinned' | null)
@@ -139,6 +139,11 @@ export default function App() {
   const serversRef = useRef(servers);
   const syncActiveSpaceRef = useRef(null);
   const realtimeSyncRef = useRef({ run: 0, active: null, bufferedEvents: new Map() });
+  const threadRequestRef = useRef(0);
+  const threadSelectionRef = useRef(null);
+  const threadReloadRef = useRef(null);
+  const replyFetchRef = useRef(new Set());
+  const replyCacheGenerationRef = useRef(0);
   const { send: sendMessageToSpace, retry: retryMessage } = useMessageSender({
     currentUser: currentUser || session?.user,
     setMessagesMap,
@@ -199,6 +204,12 @@ export default function App() {
       setDms([]);
       dmsRef.current = [];
       setMessagesMap({});
+      setThreadsMap({});
+      setReplyTargets({});
+      replyCacheGenerationRef.current++;
+      threadSelectionRef.current = null;
+      threadRequestRef.current++;
+      setThreadRootMessage(null);
       setActiveDmId(null);
       setTypingBySpace({});
       setInboxState('ready');
@@ -333,6 +344,15 @@ export default function App() {
           setActiveDmId((current) => current === spaceId ? null : current);
         }
         setMessagesMap((previous) => ({ ...previous, [spaceId]: [] }));
+        setThreadsMap({});
+        setReplyTargets({});
+        replyCacheGenerationRef.current++;
+        if (threadSelectionRef.current?.spaceId === spaceId) {
+          threadSelectionRef.current = null;
+          threadRequestRef.current++;
+          setThreadRootMessage(null);
+          setRightPanelMode(null);
+        }
         notify('warning', 'Bạn không còn quyền truy cập cuộc trò chuyện này.');
       } else {
         setHistoryState('error');
@@ -342,11 +362,45 @@ export default function App() {
 
   // Active Messages list
   const currentMessages = useMemo(() => {
-    const list = messagesMap[currentSpaceId] || [];
+    const list = (messagesMap[currentSpaceId] || []).filter((message) => !message.threadRootId);
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
     return list.filter((m) => m.content?.toLowerCase().includes(q));
   }, [messagesMap, currentSpaceId, searchQuery]);
+
+  useEffect(() => {
+    if (threadSelectionRef.current && threadSelectionRef.current.spaceId !== currentSpaceId) {
+      threadSelectionRef.current = null;
+      threadRequestRef.current++;
+      setThreadRootMessage(null);
+      setRightPanelMode('memberList');
+    }
+    setReplyingTo(null);
+  }, [currentSpaceId]);
+
+  useEffect(() => {
+    if (!currentSpaceId) return;
+    const cached = new Set((messagesMap[currentSpaceId] || []).map((message) => message.id));
+    const missing = [...new Set(currentMessages.map((message) => message.replyToMessageId)
+      .filter((id) => id && !cached.has(id)
+        && !Object.hasOwn(replyTargets, `${currentSpaceId}:${id}`)
+        && !replyFetchRef.current.has(`${currentSpaceId}:${id}`)))];
+    for (const id of missing) {
+      const key = `${currentSpaceId}:${id}`;
+      const generation = replyCacheGenerationRef.current;
+      replyFetchRef.current.add(key);
+      void getMessage(currentSpaceId, id)
+        .then((message) => {
+          if (generation === replyCacheGenerationRef.current)
+            setReplyTargets((previous) => ({ ...previous, [key]: message }));
+        })
+        .catch(() => {
+          if (generation === replyCacheGenerationRef.current)
+            setReplyTargets((previous) => ({ ...previous, [key]: null }));
+        })
+        .finally(() => replyFetchRef.current.delete(key));
+    }
+  }, [currentMessages, currentSpaceId, messagesMap, replyTargets]);
 
   // Pinned messages for current space
   const currentPinnedMessages = useMemo(() => {
@@ -506,7 +560,44 @@ export default function App() {
         ? mergeSnapshot(previous[spaceId] || [], items)
         : mergeMessages(previous[spaceId] || [], items),
     }));
+    const threaded = (items || []).filter((item) => item.threadRootId);
+    if (threaded.length) {
+      setThreadsMap((previous) => {
+        const next = { ...previous };
+        for (const item of threaded) next[item.threadRootId] = mergeMessages(next[item.threadRootId] || [], [item]);
+        return next;
+      });
+    }
   }, []);
+
+  const loadThread = useCallback(async (spaceId, rootId, beforeSequence = null, refresh = false) => {
+    const request = ++threadRequestRef.current;
+    setThreadState((previous) => ({ ...previous, loading: true, error: null }));
+    try {
+      const [page, root] = await Promise.all([
+        getThreadReplies(spaceId, rootId, { limit: 50, beforeSequence }),
+        getMessage(spaceId, rootId),
+      ]);
+      if (request !== threadRequestRef.current
+        || threadSelectionRef.current?.spaceId !== spaceId
+        || threadSelectionRef.current?.rootId !== rootId) return;
+      setThreadRootMessage(root);
+      setThreadsMap((previous) => ({ ...previous,
+        [rootId]: beforeSequence || refresh
+          ? mergeMessages(previous[rootId] || [], page.items || [])
+          : mergeMessages([], page.items || []),
+      }));
+      setThreadState({ loading: false, error: null, nextBeforeSequence: page.nextBeforeSequence });
+    } catch (error) {
+      if (request === threadRequestRef.current)
+        setThreadState((previous) => ({ ...previous, loading: false, error: error.message || 'Không thể tải thread.' }));
+    }
+  }, []);
+
+  threadReloadRef.current = (spaceId) => {
+    const selected = threadSelectionRef.current;
+    if (selected?.spaceId === spaceId) void loadThread(spaceId, selected.rootId, null, true);
+  };
 
   syncActiveSpaceRef.current = async (spaceId, { resubscribe = true } = {}) => {
     const connection = connectionRef.current;
@@ -584,6 +675,7 @@ export default function App() {
       }
 
       if (isCurrent()) setConnectionState('online');
+      if (isCurrent()) threadReloadRef.current?.(spaceId);
       return true;
     } catch {
       if (isCurrent()) {
@@ -618,6 +710,18 @@ export default function App() {
             [event.spaceId]: tombstoneMessage(previous[event.spaceId] || [],
               event.payload.messageId, event.aggregateVersion, event.payload.deletedAt),
           }));
+          const key = `${event.spaceId}:${event.payload.messageId}`;
+          setReplyTargets((previous) => previous[key]
+            ? { ...previous, [key]: tombstoneMessage([previous[key]], event.payload.messageId,
+              event.aggregateVersion, event.payload.deletedAt)[0] }
+            : previous);
+          setReplyingTo((previous) => previous?.id === event.payload.messageId ? null : previous);
+          setThreadRootMessage((previous) => previous?.id === event.payload.messageId
+            ? tombstoneMessage([previous], event.payload.messageId, event.aggregateVersion, event.payload.deletedAt)[0]
+            : previous);
+          setThreadsMap((previous) => Object.fromEntries(Object.entries(previous).map(([rootId, replies]) => [
+            rootId, tombstoneMessage(replies, event.payload.messageId, event.aggregateVersion, event.payload.deletedAt),
+          ])));
         }
         const syncing = realtimeSyncRef.current.active;
         if (syncing?.spaceId === event.spaceId) {
@@ -628,10 +732,12 @@ export default function App() {
             .catch(() => {});
         }
         refreshBadges(event.spaceId);
+        threadReloadRef.current?.(event.spaceId);
         return;
       }
       if (event.eventType === 'MessageCreated' && event.spaceId) {
         refreshBadges(event.spaceId);
+        threadReloadRef.current?.(event.spaceId);
         const syncing = realtimeSyncRef.current.active;
         if (syncing?.spaceId === event.spaceId) {
           realtimeSyncRef.current.bufferedEvents.get(event.spaceId)?.push(event);
@@ -666,6 +772,15 @@ export default function App() {
       if (event.eventType === 'SpaceAccessRevoked' && event.spaceId) {
         setTypingBySpace((previous) => ({ ...previous, [event.spaceId]: {} }));
         setMessagesMap((previous) => ({ ...previous, [event.spaceId]: [] }));
+        setThreadsMap({});
+        setReplyTargets({});
+        replyCacheGenerationRef.current++;
+        if (threadSelectionRef.current?.spaceId === event.spaceId) {
+          threadSelectionRef.current = null;
+          threadRequestRef.current++;
+          setThreadRootMessage(null);
+          setRightPanelMode(null);
+        }
         const isChannel = serversRef.current.some((server) => server.channels?.some((channel) => channel.spaceId === event.spaceId));
         if (isChannel) {
           void loadServersRef.current?.().then((updated) => {
@@ -765,11 +880,12 @@ export default function App() {
       .catch(() => setMembers([]));
   }, [activeDm?.spaceType, activeDmId, isHomeActive]);
 
-  const handleSendMessage = useCallback(async ({ content, clientMessageId }) => {
+  const handleSendMessage = useCallback(async ({ content, clientMessageId, replyToMessageId }) => {
     const sent = await sendMessageToSpace({
       spaceId: currentSpaceId,
       content,
       clientMessageId,
+      replyToMessageId,
     });
     setReplyingTo(null);
     return sent;
@@ -839,6 +955,7 @@ export default function App() {
       setMessagesMap((previous) => ({ ...previous,
         [spaceId]: tombstoneMessage(previous[spaceId] || [], messageId, message.version + 1, new Date().toISOString()),
       }));
+      setReplyingTo((previous) => previous?.id === messageId ? null : previous);
       notify('success', 'Đã xoá tin nhắn.');
       void getMessage(spaceId, messageId).then((changed) => mergeRealtimeItems(spaceId, [changed])).catch(() => {});
     } catch (error) {
@@ -870,34 +987,66 @@ export default function App() {
 
   // Thread Replies
   function handleOpenThread(message) {
-    setThreadRootMessage(message);
+    if (!currentSpaceId) return;
+    const rootId = message.threadRootId || message.id;
+    threadSelectionRef.current = { spaceId: currentSpaceId, rootId };
+    setThreadRootMessage(message.id === rootId ? message : null);
+    setThreadState({ loading: true, error: null, nextBeforeSequence: null });
     setRightPanelMode('thread');
+    return loadThread(currentSpaceId, rootId);
   }
 
-  function handleSendThreadReply(rootId, replyText) {
-    const newReply = {
-      id: `th-${Date.now()}`,
-      sequenceNo: Date.now(),
-      author: {
-        id: currentUser?.id || 'usr-me',
-        username: currentUser?.username || 'me',
-        displayName: currentUser?.displayName || currentUser?.username || 'Me',
-      },
-      content: replyText,
-      createdAt: new Date().toISOString(),
-    };
+  async function handleSendThreadReply(rootId, replyText, clientMessageId) {
+    const spaceId = currentSpaceId;
+    try {
+      const sent = await sendMessage(spaceId, {
+        clientMessageId, content: replyText, replyToMessageId: rootId, threadRootId: rootId,
+      });
+      mergeRealtimeItems(spaceId, [sent]);
+      if (threadSelectionRef.current?.spaceId === spaceId && threadSelectionRef.current?.rootId === rootId)
+        void loadThread(spaceId, rootId, null, true);
+      return sent;
+    } catch (error) {
+      notify('error', error.message || 'Không thể gửi phản hồi.');
+      throw error;
+    }
+  }
 
-    setThreadsMap((prev) => ({
-      ...prev,
-      [rootId]: [...(prev[rootId] || []), newReply],
-    }));
-
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: (prev[currentSpaceId] || []).map((m) =>
-        m.id === rootId ? { ...m, threadCount: (m.threadCount || 0) + 1 } : m
-      ),
-    }));
+  async function handleJumpToMessage(messageId) {
+    if (!currentSpaceId || !messageId) return;
+    try {
+      const spaceId = currentSpaceId;
+      const target = (messagesRef.current[spaceId] || []).find((message) => message.id === messageId)
+        || await getMessage(spaceId, messageId);
+      if (activeSpaceRef.current !== spaceId) return;
+      if (target.threadRootId) {
+        await handleOpenThread(target);
+        if (threadSelectionRef.current?.spaceId !== spaceId
+          || threadSelectionRef.current?.rootId !== target.threadRootId) return;
+        const page = await getThreadReplies(spaceId, target.threadRootId, {
+          limit: 50, beforeSequence: (BigInt(target.sequenceNo) + 1n).toString(),
+        });
+        if (threadSelectionRef.current?.spaceId !== spaceId
+          || threadSelectionRef.current?.rootId !== target.threadRootId) return;
+        setThreadsMap((previous) => ({ ...previous,
+          [target.threadRootId]: mergeMessages(previous[target.threadRootId] || [], page.items || []),
+        }));
+        setThreadState((previous) => ({ ...previous, nextBeforeSequence: page.nextBeforeSequence }));
+        setTimeout(() => document.getElementById(`thread-message-${messageId}`)?.scrollIntoView({ block: 'center' }), 50);
+        return;
+      }
+      setSearchQuery('');
+      if (!(messagesRef.current[spaceId] || []).some((message) => message.id === messageId)) {
+        const beforeSequence = (BigInt(target.sequenceNo) + 1n).toString();
+        const page = await getMessageHistory(spaceId, { limit: 50, beforeSequence });
+        if (activeSpaceRef.current !== spaceId) return;
+        mergeRealtimeItems(spaceId, page.items || []);
+        setNextBeforeBySpace((previous) => ({ ...previous, [spaceId]: page.nextBeforeSequence }));
+      }
+      setTimeout(() => document.getElementById(`message-${messageId}`)?.scrollIntoView({ block: 'center' }), 50);
+    } catch (error) {
+      notify('error', error.message || 'Không thể mở tin nhắn.');
+    }
   }
 
   async function handleStartDm(username) {
@@ -1106,7 +1255,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {currentSpaceId && nextBeforeBySpace[currentSpaceId] && currentMessages.length > 0 && historyState !== 'loading' && (
+          {currentSpaceId && nextBeforeBySpace[currentSpaceId] && historyState !== 'loading' && (
             <button
               type="button"
               className="btn btn--secondary timeline-load-older"
@@ -1147,18 +1296,20 @@ export default function App() {
                 <MessageItem
                   key={message.id}
                   message={message}
+                  replyTarget={(messagesMap[currentSpaceId] || []).find((item) => item.id === message.replyToMessageId)
+                    || replyTargets[`${currentSpaceId}:${message.replyToMessageId}`]}
                   isGrouped={Boolean(isGrouped)}
                   isOwn={Boolean(isOwn)}
-                  onReply={undefined}
+                  onReply={setReplyingTo}
                   onRetryMessage={handleRetryMessage}
-                  allowReply={false}
+                  allowReply={canSendCurrentSpace && !message.deletedAt && message.messageType === 1}
                   onOpenThread={handleOpenThread}
                   onToggleReaction={handleToggleReaction}
                   onPinMessage={handlePinMessage}
                   onDeleteMessage={handleDeleteMessage}
                   onEditMessage={handleEditMessage}
                   onReportMessage={(msg) => setReportingMessage(msg)}
-                  onJumpToReply={() => {}}
+                  onJumpToReply={handleJumpToMessage}
                   onAuthorClick={(author) => setInspectingUser(author)}
                 />
               );
@@ -1174,7 +1325,7 @@ export default function App() {
         <MessageComposer
           key={currentSpaceId}
           channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
-          replyingTo={isHomeActive ? null : replyingTo}
+          replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
           onTypingChange={setLocalTyping}
@@ -1189,13 +1340,25 @@ export default function App() {
         mode={rightPanelMode}
         members={members}
         onSelectMember={(mem) => setInspectingUser(mem)}
-        threadRootMessage={threadRootMessage}
+        threadRootMessage={(() => {
+          const current = (messagesMap[currentSpaceId] || []).find((message) => message.id === threadRootMessage?.id);
+          return current && current.version >= threadRootMessage.version ? current : threadRootMessage;
+        })()}
         threadReplies={threadRootMessage ? threadsMap[threadRootMessage.id] || [] : []}
-        onCloseThread={() => setRightPanelMode(null)}
+        threadLoading={threadState.loading}
+        threadError={threadState.error}
+        threadNextBeforeSequence={threadState.nextBeforeSequence}
+        onLoadOlderThread={() => {
+          const selected = threadSelectionRef.current;
+          if (selected && threadState.nextBeforeSequence)
+            void loadThread(selected.spaceId, selected.rootId, threadState.nextBeforeSequence);
+        }}
+        canSendThread={canSendCurrentSpace}
+        onCloseThread={() => { threadSelectionRef.current = null; threadRequestRef.current++; setRightPanelMode(null); }}
         onSendThreadReply={handleSendThreadReply}
         pinnedMessages={currentPinnedMessages}
         onClosePinned={() => setRightPanelMode(null)}
-        onJumpToMessage={() => {}}
+        onJumpToMessage={handleJumpToMessage}
         onUnpinMessage={handlePinMessage}
       />
 
