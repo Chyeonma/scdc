@@ -10,6 +10,12 @@ namespace SCDC.Api.Controllers.Messaging;
 [Route("api/v1/spaces/{spaceId:guid}/messages")]
 public sealed class MessagesController(IMessageService messageService) : ApiControllerBase
 {
+    [HttpGet("mentions/suggestions")]
+    [ProducesResponseType<IReadOnlyList<MentionSummaryDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<MentionSummaryDto>>> SuggestMentions(
+        Guid spaceId, [FromQuery] string? query, CancellationToken cancellationToken) =>
+        FromResult(await messageService.SuggestMentionsAsync(User.GetUserId(), spaceId, query, cancellationToken));
+
     [HttpGet]
     [ProducesResponseType<MessagePageDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<MessagePageDto>> GetHistory(

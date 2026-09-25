@@ -272,6 +272,10 @@ export function getGroupConversations({ includeHidden = false } = {}) {
   return api(`/conversations/group${includeHidden ? '?includeHidden=true' : ''}`);
 }
 
+export function getMentionSuggestions(spaceId, query, signal) {
+  return api(`/spaces/${spaceId}/messages/mentions/suggestions?query=${encodeURIComponent(query)}`, { signal });
+}
+
 export function getGroupConversation(spaceId) {
   return api(`/conversations/group/${spaceId}`);
 }

@@ -282,10 +282,12 @@ P6-T02: plain reply (`replyToMessageId`, không có `threadRootId`) nằm trong 
 
 ### P6-T04 — Mention người dùng [BE, DB, FE]
 
-- [ ] **P6-T04.1** Chốt cú pháp và structured payload mention, lưu `messaging.mentions`; không tin danh sách ID client gửi mà không validate.
-- [ ] **P6-T04.2** Gợi ý người dùng trong phạm vi được phép; không gửi nội dung thông báo cho người không có quyền đọc space.
-- [ ] **P6-T04.3** Đồng bộ mention khi sửa/xóa; xử lý notification idempotent và tôn trọng mute/notification level.
-- [ ] **P6-T04.4** Render highlight và badge; role mention, `@everyone` để backlog riêng vì schema hiện chỉ có user mention.
+- [x] **P6-T04.1** Chốt cú pháp và structured payload mention, lưu `messaging.mentions`; không tin danh sách ID client gửi mà không validate.
+- [x] **P6-T04.2** Gợi ý người dùng trong phạm vi được phép; không gửi nội dung thông báo cho người không có quyền đọc space.
+- [x] **P6-T04.3** Đồng bộ mention khi sửa/xóa; xử lý notification idempotent và tôn trọng mute/notification level.
+- [x] **P6-T04.4** Render highlight và badge; role mention, `@everyone` để backlog riêng vì schema hiện chỉ có user mention.
+
+P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) tại ranh giới từ, không nhận `@everyone`/`@here`. Server tự phân giải tối đa 20 username duy nhất trong nội dung, chỉ lưu người dùng đang hoạt động và có quyền đọc space; request không nhận ID mention do client chỉ định. DTO trả `mentions: [{ userId, username }]`; username không hợp lệ hoặc ngoài space vẫn là chữ thường, không highlight và không tạo badge. Endpoint gợi ý chỉ trả tối đa 10 thành viên đang đọc được space, sau khi xác minh quyền đọc của người gọi. Badge `MentionsOnly` đếm message chưa đọc có mention; `AllMessages` đếm unread thông thường cộng mention trong thread (vì thread reply không tính unread thông thường). Mute/None đưa badge về 0. Retry idempotent không thêm dòng mention; sửa/xóa đồng bộ bảng mention trong cùng transaction với message và outbox. Role mention và `@everyone` vẫn thuộc backlog.
 
 **Nghiệm thu:** mention không bị nhân đôi khi retry và không trở thành đường làm lộ hội thoại riêng.
 

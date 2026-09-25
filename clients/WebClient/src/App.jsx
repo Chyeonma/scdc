@@ -1324,6 +1324,7 @@ export default function App() {
         )}
         <MessageComposer
           key={currentSpaceId}
+          spaceId={currentSpaceId}
           channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}

@@ -1,6 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { initials } from './ServerRail.jsx';
 
+function contentWithMentions(message) {
+  const names = new Set((message.mentions || []).map((mention) => mention.username.toLowerCase()));
+  return (message.content || '').split(/((?<![a-zA-Z0-9_.@])@[a-zA-Z0-9_.]{3,32}(?![a-zA-Z0-9_.]))/g)
+    .map((part, index) => part.startsWith('@') && names.has(part.slice(1).toLowerCase())
+      ? <span key={index} className="mention-tag">{part}</span> : part);
+}
+
 export function ThreadPanel({
   rootMessage,
   replies = [],
@@ -67,7 +74,7 @@ export function ThreadPanel({
             <strong>{rootMessage.author?.displayName || rootMessage.author?.username}</strong>
             <small>{new Date(rootMessage.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
           </div>
-          <p className="thread-root-card__content">{rootMessage.deletedAt ? 'Tin nhắn đã bị xóa' : rootMessage.content}</p>
+          <p className="thread-root-card__content">{rootMessage.deletedAt ? 'Tin nhắn đã bị xóa' : contentWithMentions(rootMessage)}</p>
         </div>
 
         <div className="thread-divider">
@@ -100,7 +107,7 @@ export function ThreadPanel({
                     })()}
                   </button>
                 )}
-                <p>{reply.deletedAt ? 'Tin nhắn đã bị xóa' : reply.content}</p>
+                <p>{reply.deletedAt ? 'Tin nhắn đã bị xóa' : contentWithMentions(reply)}</p>
               </div>
             </div>
           ))}

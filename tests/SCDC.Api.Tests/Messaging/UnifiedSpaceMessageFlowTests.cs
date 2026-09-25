@@ -17,6 +17,109 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
+    public async Task Mentions_are_scoped_idempotent_and_follow_edits_deletes_and_preferences()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var author = await CreateActorAsync("mention_author");
+            var reader = await CreateActorAsync("mention_reader");
+            var outsider = await CreateActorAsync("mention_outsider");
+            actors.AddRange([author, reader, outsider]);
+            var created = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = reader.Id });
+            var spaceId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var rootPath = $"/api/v1/spaces/{spaceId}/messages";
+
+            var suggestions = await SendAsync(HttpMethod.Get,
+                $"{rootPath}/mentions/suggestions?query={reader.Username[..8]}", author.Token);
+            Assert.Equal(HttpStatusCode.OK, suggestions.StatusCode);
+            var candidates = await suggestions.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Contains(candidates.EnumerateArray(), item => item.GetProperty("userId").GetGuid() == reader.Id);
+            Assert.DoesNotContain(candidates.EnumerateArray(), item => item.GetProperty("userId").GetGuid() == outsider.Id);
+            Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get,
+                $"{rootPath}/mentions/suggestions?query={reader.Username[..8]}", outsider.Token)).StatusCode);
+
+            var preferencesPath = $"/api/v1/spaces/{spaceId}/preferences";
+            async Task SetPreferencesAsync(short level, DateTimeOffset? mutedUntil = null)
+            {
+                var response = await SendAsync(HttpMethod.Put, preferencesPath, reader.Token,
+                    new { notificationLevel = level, mutedUntil, isHidden = false, isPinned = false });
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+            async Task<int> NotificationCountAsync()
+            {
+                var response = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+                var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+                return body.GetProperty("items").EnumerateArray()
+                    .Single(item => item.GetProperty("id").GetGuid() == spaceId)
+                    .GetProperty("notificationCount").GetInt32();
+            }
+
+            await SetPreferencesAsync(1);
+            var clientMessageId = Guid.NewGuid();
+            var content = $"hello @{reader.Username} @{reader.Username} @{outsider.Username} @everyone";
+            var sent = await SendAsync(HttpMethod.Post, rootPath, author.Token,
+                new { clientMessageId, messageType = 1, content });
+            Assert.Equal(HttpStatusCode.Created, sent.StatusCode);
+            var message = await sent.Content.ReadFromJsonAsync<JsonElement>();
+            var messageId = message.GetProperty("id").GetGuid();
+            Assert.Equal(reader.Id, message.GetProperty("mentions").EnumerateArray().Single().GetProperty("userId").GetGuid());
+            Assert.Equal(1, await NotificationCountAsync());
+
+            var retry = await SendAsync(HttpMethod.Post, rootPath, author.Token,
+                new { clientMessageId, messageType = 1, content });
+            Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+            Assert.Single((await retry.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("mentions").EnumerateArray());
+            Assert.Equal(1, await NotificationCountAsync());
+
+            var path = $"{rootPath}/{messageId}";
+            var edited = await SendAsync(HttpMethod.Patch, path, author.Token,
+                new { content = $"removed @{outsider.Username}", expectedVersion = 1 });
+            Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+            Assert.Empty((await edited.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("mentions").EnumerateArray());
+            Assert.Equal(0, await NotificationCountAsync());
+            edited = await SendAsync(HttpMethod.Patch, path, author.Token,
+                new { content = $"again @{reader.Username}", expectedVersion = 2 });
+            Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+            Assert.Equal(1, await NotificationCountAsync());
+
+            await SetPreferencesAsync(1, DateTimeOffset.UtcNow.AddHours(1));
+            Assert.Equal(0, await NotificationCountAsync());
+            await SetPreferencesAsync(0);
+            Assert.Equal(0, await NotificationCountAsync());
+            await SetPreferencesAsync(1);
+            Assert.Equal(1, await NotificationCountAsync());
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAsync(HttpMethod.Delete, $"{path}?expectedVersion=3", author.Token)).StatusCode);
+            Assert.Equal(0, await NotificationCountAsync());
+            var deleted = await SendAsync(HttpMethod.Get, path, reader.Token);
+            Assert.Empty((await deleted.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("mentions").EnumerateArray());
+
+            var root = await SendTextAsync(author, spaceId);
+            var rootId = root.GetProperty("id").GetGuid();
+            var read = await SendAsync(HttpMethod.Put, $"/api/v1/spaces/{spaceId}/read-state", reader.Token,
+                new { lastReadSequence = root.GetProperty("sequenceNo").GetString() });
+            Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+            var thread = await SendAsync(HttpMethod.Post, rootPath, author.Token,
+                new { clientMessageId = Guid.NewGuid(), messageType = 1,
+                    content = $"thread @{reader.Username}", replyToMessageId = rootId, threadRootId = rootId });
+            Assert.Equal(HttpStatusCode.Created, thread.StatusCode);
+            Assert.Equal(1, await NotificationCountAsync());
+            var inbox = await SendAsync(HttpMethod.Get, "/api/v1/spaces", reader.Token);
+            var summary = (await inbox.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items")
+                .EnumerateArray().Single(item => item.GetProperty("id").GetGuid() == spaceId);
+            Assert.Equal(0, summary.GetProperty("unreadCount").GetInt32());
+            await SetPreferencesAsync(2);
+            Assert.Equal(1, await NotificationCountAsync());
+        }
+        finally
+        {
+            await CleanupAsync(actors);
+        }
+    }
+
+    [Fact]
     public async Task Replies_and_threads_persist_with_one_level_roots_cursor_and_tombstones()
     {
         var actors = new List<TestActor>();
@@ -584,7 +687,7 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             new { login = username, password, deviceName = "Unified space test" });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var tokens = await login.Content.ReadFromJsonAsync<JsonElement>();
-        return new(body.GetProperty("userId").GetGuid(), tokens.GetProperty("accessToken").GetString()!);
+        return new(body.GetProperty("userId").GetGuid(), tokens.GetProperty("accessToken").GetString()!, username);
     }
 
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, string token, object? body = null)
@@ -669,5 +772,5 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         await transaction.CommitAsync();
     }
 
-    private sealed record TestActor(Guid Id, string Token);
+    private sealed record TestActor(Guid Id, string Token, string Username);
 }

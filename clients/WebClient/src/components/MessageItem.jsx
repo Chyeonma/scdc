@@ -14,15 +14,16 @@ function formatTime(isoString) {
   }).format(date);
 }
 
-function renderFormattedContent(text) {
+function renderFormattedContent(text, mentions = []) {
   if (!text) return null;
+  const mentionedNames = new Set(mentions.map((mention) => mention.username.toLowerCase()));
 
   // Simple and safe markdown parser for mentions, bold, code blocks
   const lines = text.split('\n');
 
   return lines.map((line, lineIndex) => {
     // Check if line contains bold **text** or code `code` or mentions @user
-    const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`|@[a-zA-Z0-9_.-]+)/g);
+    const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`|(?<![a-zA-Z0-9_.@])@[a-zA-Z0-9_.]{3,32}(?![a-zA-Z0-9_.]))/g);
 
     return (
       <p key={lineIndex} className="message__text-line">
@@ -33,7 +34,7 @@ function renderFormattedContent(text) {
           if (part.startsWith('`') && part.endsWith('`')) {
             return <code key={partIndex} className="inline-code">{part.slice(1, -1)}</code>;
           }
-          if (part.startsWith('@')) {
+          if (part.startsWith('@') && mentionedNames.has(part.slice(1).toLowerCase())) {
             return <span key={partIndex} className="mention-tag">{part}</span>;
           }
           return part;
@@ -192,7 +193,7 @@ export function MessageItem({
             </form>
           ) : (
             <div className="message__content">
-              {renderFormattedContent(message.content)}
+              {renderFormattedContent(message.content, message.mentions)}
               {message.editedAt && <span className="edited-tag">(đã chỉnh sửa)</span>}
             </div>
           )}
