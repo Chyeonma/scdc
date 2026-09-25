@@ -58,6 +58,7 @@ export function MessageItem({
   onReportMessage,
   onJumpToReply,
   onAuthorClick,
+  replyTarget,
 }) {
   const [showActions, setShowActions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -91,6 +92,7 @@ export function MessageItem({
 
   return (
     <article
+      id={`message-${message.id}`}
       className={`message ${isGrouped ? 'message--grouped' : ''} ${isOwn ? 'message--own' : ''} ${message.isPinned ? 'message--pinned' : ''} ${message.deliveryState ? `message--${message.deliveryState}` : ''}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
@@ -99,11 +101,18 @@ export function MessageItem({
       }}
     >
       {/* Reply Quote Banner */}
-      {!message.deletedAt && message.replyTo && (
-        <div className="message__reply-banner" onClick={() => onJumpToReply?.(message.replyTo.id)}>
+      {!message.deletedAt && message.replyToMessageId && (
+        <div className="message__reply-banner" role="button" tabIndex={0}
+          onClick={() => onJumpToReply?.(message.replyToMessageId)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onJumpToReply?.(message.replyToMessageId);
+            }
+          }}>
           <span className="reply-hook" />
-          <span className="reply-author">@{message.replyTo.authorName}</span>
-          <span className="reply-snippet">{message.replyTo.content}</span>
+          <span className="reply-author">@{replyTarget?.author?.displayName || replyTarget?.author?.username || 'Tin nhắn'}</span>
+          <span className="reply-snippet">{replyTarget?.deletedAt ? 'Tin nhắn đã bị xóa' : replyTarget?.content?.slice(0, 80) || 'Xem tin được trả lời'}</span>
         </div>
       )}
 

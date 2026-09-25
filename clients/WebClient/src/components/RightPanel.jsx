@@ -11,6 +11,11 @@ export function RightPanel({
   threadReplies,
   onCloseThread,
   onSendThreadReply,
+  threadLoading,
+  threadError,
+  threadNextBeforeSequence,
+  onLoadOlderThread,
+  canSendThread,
   pinnedMessages,
   onClosePinned,
   onJumpToMessage,
@@ -21,10 +26,17 @@ export function RightPanel({
   if (mode === 'thread') {
     return (
       <ThreadPanel
+        key={threadRootMessage?.id || 'empty'}
         rootMessage={threadRootMessage}
         replies={threadReplies}
         onClose={onCloseThread}
         onSendReply={onSendThreadReply}
+        onJumpToMessage={onJumpToMessage}
+        loading={threadLoading}
+        error={threadError}
+        nextBeforeSequence={threadNextBeforeSequence}
+        onLoadOlder={onLoadOlderThread}
+        canSend={canSendThread}
       />
     );
   }

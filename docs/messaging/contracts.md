@@ -27,6 +27,7 @@ Một route message dùng chung DM/group/channel; `spaceId` không mặc nhiên 
 | Chi tiết space | `GET /spaces/{spaceId}` | Không body | `200` SpaceSummaryDto | P1 |
 | Gửi tin | `POST /spaces/{spaceId}/messages` | SendMessageRequest | Mới: `201` MessageDto + Location message; retry hợp lệ: `200` DTO hiện hành | P2 |
 | Đọc một tin | `GET /spaces/{spaceId}/messages/{messageId}` | Không body | `200` MessageDto hoặc tombstone | P2 |
+| Đọc reply trong thread | `GET /spaces/{spaceId}/messages/{messageId}/replies` | Cursor như history; `messageId` là root | `200` MessagePageDto, kể cả tombstone reply | P6 |
 | History/tải bù | `GET /spaces/{spaceId}/messages` | Quy tắc query mục 4 | `200` MessagePageDto | P2 |
 | Sửa tin | `PATCH /spaces/{spaceId}/messages/{messageId}` | `{content, expectedVersion}` | `200` MessageDto | P6 |
 | Xóa tin | `DELETE /spaces/{spaceId}/messages/{messageId}?expectedVersion=...` | Không body; version bắt buộc | `204`; xóa lặp có quyền vẫn `204` | P6 |
@@ -170,7 +171,9 @@ Capabilities thể hiện quyền nghiệp vụ; tính năng chưa có phải c�
 - `beforeSequence=S`: chỉ lấy sequence <S, lấy limit tin gần S nhất rồi trả tăng dần. Không yêu cầu S còn là message đang hiện; cursor là biên số.
 - `afterSequence=S`: lấy sequence >S theo tăng dần, có `throughSequence=H` tùy chọn để chặn trên. Lần đầu server chọn H là sequence lớn nhất đã commit của space (0 nếu rỗng); các trang tiếp theo dùng **cùng H**.
 - before và after cùng xuất hiện hoặc through không đi cùng after: `400`. after >through: `400`. S có thể bằng H và trả trang rỗng. Request `lastReadSequence` thì khác: phải trỏ tới message thực thuộc space, không chấp nhận biên tùy ý.
-- History/tải bù bao gồm tombstone và thread reply để stream sequence không bỏ sót; FE phân nhóm thread khi render timeline chính. P5 tính unread theo policy đã chốt cho thread, không lấy số phần tử tải bù làm unread.
+- History/tải bù bao gồm tombstone và thread reply để stream sequence không bỏ sót; FE tách thread reply khỏi timeline chính và hiển thị trong ThreadPanel. Plain reply vẫn ở timeline/unread/last-message như tin thường; thread reply không tính unread, last-message hoặc last-activity. P5 không lấy số phần tử tải bù làm unread.
+
+P6-T02: endpoint `/replies` dùng cùng `limit`/`beforeSequence`/`afterSequence`/`throughSequence` và MessagePageDto như history, nhưng chỉ truy vấn các tin có `threadRootId` bằng root ID; tombstone reply vẫn có trong trang. Root phải là Text/Attachment không nằm trong thread và cùng space. Root đã xóa vẫn đọc được thread cũ nhưng không nhận reply mới. Plain reply chỉ trỏ tới tin ngoài thread; reply trong thread phải khai báo root, target là root hoặc reply của chính root đó. Retry cùng client ID và payload gốc vẫn trả tin hiện hành sau khi root bị xóa.
 
 MessagePageDto: `{items: MessageDto[], hasMore: boolean, nextBeforeSequence: string|null, nextAfterSequence: string|null, highWatermark: string}`. Chỉ cursor đúng hướng có giá trị khi hasMore=true; hướng kia luôn null. highWatermark của tải bù giữ H; history trả max committed sequence tại lúc đọc, không dùng nó để bỏ qua các trang chưa tải.
 

@@ -4,7 +4,7 @@ export function createClientMessageId() {
   return crypto.randomUUID();
 }
 
-export function createPendingMessage({ spaceId, clientMessageId, content, author }) {
+export function createPendingMessage({ spaceId, clientMessageId, content, author, replyToMessageId, threadRootId }) {
   return {
     id: `${LOCAL_MESSAGE_PREFIX}${clientMessageId}`,
     spaceId,
@@ -17,6 +17,8 @@ export function createPendingMessage({ spaceId, clientMessageId, content, author
       displayName: author.displayName || author.username,
     } : null,
     content,
+    replyToMessageId: replyToMessageId || null,
+    threadRootId: threadRootId || null,
     version: 1,
     createdAt: new Date().toISOString(),
     editedAt: null,

@@ -142,6 +142,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(message => message.SpaceId).HasColumnName("space_id");
         entity.Property(message => message.AuthorUserId).HasColumnName("author_user_id");
         entity.Property(message => message.ClientMessageId).HasColumnName("client_message_id");
+        entity.Property(message => message.ReplyToMessageId).HasColumnName("reply_to_message_id");
         entity.Property(message => message.ThreadRootId).HasColumnName("thread_root_id");
         entity.Property(message => message.MessageType).HasColumnName("message_type").HasConversion<short>();
         entity.Property(message => message.Content).HasColumnName("content");

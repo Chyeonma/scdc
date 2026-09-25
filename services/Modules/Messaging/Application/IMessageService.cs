@@ -12,6 +12,8 @@ public interface IMessageService
         GetMessagesQuery query,
         CancellationToken cancellationToken);
 
+    Task<Result<MessagePageDto>> GetThreadRepliesAsync(GetThreadRepliesQuery query, CancellationToken cancellationToken);
+
     Task<Result<MessageDto>> GetAsync(Guid actorUserId, Guid spaceId, Guid messageId, CancellationToken cancellationToken);
 
     Task<Result<MessageDto>> EditAsync(EditMessageCommand command, CancellationToken cancellationToken);

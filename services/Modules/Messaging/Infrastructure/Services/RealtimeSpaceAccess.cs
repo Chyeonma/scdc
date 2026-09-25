@@ -22,11 +22,14 @@ internal sealed class RealtimeSpaceAccess(
         }
 
         var space = await dbContext.Spaces.AsNoTracking().SingleOrDefaultAsync(item => item.Id == spaceId, cancellationToken);
-        return space is null || !(await spaceAccess.CheckAsync(userId, space, cancellationToken)).CanRead
-            ? null
-            : new RealtimeSpaceReadAccess(
-                space.Id,
-                (space.LastMessageSequence ?? 0).ToString(CultureInfo.InvariantCulture));
+        if (space is null || !(await spaceAccess.CheckAsync(userId, space, cancellationToken)).CanRead)
+            return null;
+        // LastMessageSequence excludes thread replies; the sync watermark must include every message.
+        var highWatermark = await dbContext.Messages.AsNoTracking()
+            .Where(message => message.SpaceId == spaceId)
+            .Select(message => (long?)message.SequenceNo)
+            .MaxAsync(cancellationToken) ?? 0;
+        return new RealtimeSpaceReadAccess(space.Id, highWatermark.ToString(CultureInfo.InvariantCulture));
     }
 
     public async Task<IReadOnlyList<Guid>> GetActiveMemberIdsAsync(

@@ -22,7 +22,8 @@ internal sealed class MessageService(
         SendMessageCommand command,
         CancellationToken cancellationToken)
     {
-        if (command.ActorUserId == Guid.Empty || command.SpaceId == Guid.Empty || command.ClientMessageId == Guid.Empty)
+        if (command.ActorUserId == Guid.Empty || command.SpaceId == Guid.Empty || command.ClientMessageId == Guid.Empty
+            || command.ReplyToMessageId == Guid.Empty || command.ThreadRootId == Guid.Empty)
         {
             return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
         }
@@ -44,7 +45,8 @@ internal sealed class MessageService(
             return Result.Failure<SendMessageResult>(MessagingErrors.AccountUnavailable);
         }
 
-        var payloadHash = ComputePayloadHash(MessageType.Text, content);
+        var effectiveReplyId = command.ReplyToMessageId ?? command.ThreadRootId;
+        var payloadHash = ComputePayloadHash(MessageType.Text, content, effectiveReplyId, command.ThreadRootId);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         var space = await dbContext.Spaces
@@ -84,8 +86,33 @@ internal sealed class MessageService(
         if (existing is not null)
         {
             return existing.IdempotencyPayloadHash == payloadHash
-                ? Result.Success(new SendMessageResult(ToDto(existing, actor), Created: false))
+                ? Result.Success(new SendMessageResult((await ToDtosAsync([existing], cancellationToken))[0], Created: false))
                 : Result.Failure<SendMessageResult>(MessagingErrors.IdempotencyConflict);
+        }
+
+        if (effectiveReplyId is { } replyId)
+        {
+            var replyTarget = await dbContext.Messages.AsNoTracking().SingleOrDefaultAsync(
+                message => message.Id == replyId && message.SpaceId == command.SpaceId, cancellationToken);
+            if (replyTarget is null) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+            if (replyTarget.DeletedAt is not null) return Result.Failure<SendMessageResult>(MessagingErrors.MessageDeleted);
+            if (replyTarget.MessageType is not (MessageType.Text or MessageType.Attachment))
+                return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
+
+            if (command.ThreadRootId is { } rootId)
+            {
+                var root = rootId == replyTarget.Id ? replyTarget : await dbContext.Messages.AsNoTracking()
+                    .SingleOrDefaultAsync(message => message.Id == rootId && message.SpaceId == command.SpaceId, cancellationToken);
+                if (root is null) return Result.Failure<SendMessageResult>(MessagingErrors.ResourceNotFound);
+                if (root.DeletedAt is not null) return Result.Failure<SendMessageResult>(MessagingErrors.MessageDeleted);
+                if (root.ThreadRootId is not null || root.MessageType is not (MessageType.Text or MessageType.Attachment)
+                    || (replyTarget.Id != rootId && replyTarget.ThreadRootId != rootId))
+                    return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
+            }
+            else if (replyTarget.ThreadRootId is not null)
+            {
+                return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
+            }
         }
 
         var now = timeProvider.GetUtcNow();
@@ -95,6 +122,8 @@ internal sealed class MessageService(
             SpaceId = command.SpaceId,
             AuthorUserId = command.ActorUserId,
             ClientMessageId = command.ClientMessageId,
+            ReplyToMessageId = effectiveReplyId,
+            ThreadRootId = command.ThreadRootId,
             MessageType = MessageType.Text,
             Content = content,
             IdempotencyPayloadHash = payloadHash,
@@ -104,15 +133,18 @@ internal sealed class MessageService(
         dbContext.Messages.Add(message);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        space.LastMessageId = message.Id;
-        space.LastMessageSequence = message.SequenceNo;
-        space.LastActivityAt = now;
-        // A new incoming message returns a hidden conversation to the recipient's inbox.
-        await dbContext.SpaceUserStates
-            .Where(state => state.SpaceId == command.SpaceId
-                            && state.UserId != command.ActorUserId
-                            && state.IsHidden)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(state => state.IsHidden, false), cancellationToken);
+        if (command.ThreadRootId is null)
+        {
+            space.LastMessageId = message.Id;
+            space.LastMessageSequence = message.SequenceNo;
+            space.LastActivityAt = now;
+            // Thread replies stay out of inbox activity and do not unhide conversations.
+            await dbContext.SpaceUserStates
+                .Where(state => state.SpaceId == command.SpaceId
+                                && state.UserId != command.ActorUserId
+                                && state.IsHidden)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(state => state.IsHidden, false), cancellationToken);
+        }
         dbContext.OutboxEvents.Add(new OutboxEvent
         {
             Id = Guid.CreateVersion7(),
@@ -232,10 +264,54 @@ internal sealed class MessageService(
             return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
         var message = await dbContext.Messages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == messageId && x.SpaceId == spaceId, cancellationToken);
         if (message is null) return Result.Failure<MessageDto>(MessagingErrors.ResourceNotFound);
-        var author = message.AuthorUserId is { } authorId
-            ? await userDirectory.FindByIdAsync(authorId, cancellationToken)
-            : null;
-        return Result.Success(ToDto(message, author));
+        return Result.Success((await ToDtosAsync([message], cancellationToken))[0]);
+    }
+
+    public async Task<Result<MessagePageDto>> GetThreadRepliesAsync(GetThreadRepliesQuery query, CancellationToken cancellationToken)
+    {
+        if (query.ActorUserId == Guid.Empty || query.SpaceId == Guid.Empty || query.RootMessageId == Guid.Empty
+            || query.Limit is < 1 or > 100)
+            return Result.Failure<MessagePageDto>(MessagingErrors.InvalidMessage);
+        if (!TryParseCursor(query.BeforeSequence, allowZero: false, out var before)
+            || !TryParseCursor(query.AfterSequence, allowZero: true, out var after)
+            || !TryParseCursor(query.ThroughSequence, allowZero: true, out var through)
+            || (before is not null && after is not null)
+            || (through is not null && after is null)
+            || (after is not null && through is not null && after > through))
+            return Result.Failure<MessagePageDto>(MessagingErrors.InvalidMessageCursor);
+        if (await userDirectory.FindByIdAsync(query.ActorUserId, cancellationToken) is null)
+            return Result.Failure<MessagePageDto>(MessagingErrors.AccountUnavailable);
+        var space = await dbContext.Spaces.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == query.SpaceId && item.Status != SpaceStatus.Deleted, cancellationToken);
+        if (space is null || !(await spaceAccess.CheckAsync(query.ActorUserId, space, cancellationToken)).CanRead)
+            return Result.Failure<MessagePageDto>(MessagingErrors.ResourceNotFound);
+        var root = await dbContext.Messages.AsNoTracking().SingleOrDefaultAsync(
+            message => message.Id == query.RootMessageId && message.SpaceId == query.SpaceId, cancellationToken);
+        if (root is null) return Result.Failure<MessagePageDto>(MessagingErrors.ResourceNotFound);
+        if (root.ThreadRootId is not null || root.MessageType is not (MessageType.Text or MessageType.Attachment))
+            return Result.Failure<MessagePageDto>(MessagingErrors.InvalidMessage);
+
+        var replies = dbContext.Messages.AsNoTracking()
+            .Where(message => message.SpaceId == query.SpaceId && message.ThreadRootId == query.RootMessageId);
+        var highWatermark = await replies.Select(message => (long?)message.SequenceNo).MaxAsync(cancellationToken) ?? 0;
+        if (after is not null)
+        {
+            var boundary = through ?? highWatermark;
+            var rows = await replies.Where(message => message.SequenceNo > after && message.SequenceNo <= boundary)
+                .OrderBy(message => message.SequenceNo).Take(query.Limit + 1).ToListAsync(cancellationToken);
+            var page = rows.Take(query.Limit).ToArray();
+            return Result.Success(new MessagePageDto(await ToDtosAsync(page, cancellationToken),
+                rows.Count > query.Limit, null,
+                rows.Count > query.Limit ? ToSequence(page[^1].SequenceNo) : null, ToSequence(boundary)));
+        }
+        if (before is not null) replies = replies.Where(message => message.SequenceNo < before);
+        var historyRows = await replies.OrderByDescending(message => message.SequenceNo)
+            .Take(query.Limit + 1).ToListAsync(cancellationToken);
+        var historyPage = historyRows.Take(query.Limit).OrderBy(message => message.SequenceNo).ToArray();
+        return Result.Success(new MessagePageDto(await ToDtosAsync(historyPage, cancellationToken),
+            historyRows.Count > query.Limit,
+            historyRows.Count > query.Limit ? ToSequence(historyPage[0].SequenceNo) : null,
+            null, ToSequence(highWatermark)));
     }
 
     public async Task<Result<MessageDto>> EditAsync(EditMessageCommand command, CancellationToken cancellationToken)
@@ -363,9 +439,12 @@ internal sealed class MessageService(
         return content.Length > 0 && content.EnumerateRunes().Count() <= 10_000;
     }
 
-    private static string ComputePayloadHash(MessageType messageType, string content)
+    private static string ComputePayloadHash(MessageType messageType, string content, Guid? replyToMessageId, Guid? threadRootId)
     {
-        var bytes = Encoding.UTF8.GetBytes($"{(short)messageType}:{content}");
+        var canonical = replyToMessageId is null && threadRootId is null
+            ? $"{(short)messageType}:{content}"
+            : $"{(short)messageType}:{content.Length}:{content}:{replyToMessageId:N}:{threadRootId:N}";
+        var bytes = Encoding.UTF8.GetBytes(canonical);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
 
@@ -379,9 +458,20 @@ internal sealed class MessageService(
             .Distinct()
             .ToArray();
         var authors = await userDirectory.FindByIdsAsync(authorIds, cancellationToken);
+        var rootIds = messages.Where(message => message.ThreadRootId is null)
+            .Select(message => message.Id).ToArray();
+        var counts = rootIds.Length == 0
+            ? new Dictionary<Guid, int>()
+            : await dbContext.Messages.AsNoTracking()
+                .Where(message => message.ThreadRootId != null && rootIds.Contains(message.ThreadRootId.Value)
+                                  && message.DeletedAt == null)
+                .GroupBy(message => message.ThreadRootId!.Value)
+                .Select(group => new { RootId = group.Key, Count = group.Count() })
+                .ToDictionaryAsync(row => row.RootId, row => row.Count, cancellationToken);
         return messages.Select(message => ToDto(
             message,
-            message.AuthorUserId is { } authorId && authors.TryGetValue(authorId, out var author) ? author : null))
+            message.AuthorUserId is { } authorId && authors.TryGetValue(authorId, out var author) ? author : null,
+            counts.GetValueOrDefault(message.Id)))
             .ToArray();
     }
 
@@ -408,7 +498,7 @@ internal sealed class MessageService(
 
     private static string ToSequence(long sequence) => sequence.ToString(CultureInfo.InvariantCulture);
 
-    private static MessageDto ToDto(Message message, UserSummary? author) => new(
+    private static MessageDto ToDto(Message message, UserSummary? author, int threadCount = 0) => new(
         message.Id,
         message.SpaceId,
         message.ClientMessageId,
@@ -420,10 +510,10 @@ internal sealed class MessageService(
         message.CreatedAt,
         message.EditedAt,
         message.DeletedAt,
-        ReplyToMessageId: null,
-        ThreadRootId: null,
+        ReplyToMessageId: message.ReplyToMessageId,
+        ThreadRootId: message.ThreadRootId,
         Attachments: [],
         Reactions: [],
         IsPinned: false,
-        ThreadCount: 0);
+        ThreadCount: threadCount);
 }

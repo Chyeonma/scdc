@@ -317,11 +317,17 @@ export function getMessageHistory(spaceId, {
   return api(`/spaces/${spaceId}/messages?${query}`, { signal });
 }
 
-export function sendMessage(spaceId, { clientMessageId, content }) {
+export function sendMessage(spaceId, { clientMessageId, content, replyToMessageId, threadRootId }) {
   return api(`/spaces/${spaceId}/messages`, {
     method: 'POST',
-    body: { clientMessageId, messageType: 1, content },
+    body: { clientMessageId, messageType: 1, content, replyToMessageId, threadRootId },
   });
+}
+
+export function getThreadReplies(spaceId, rootMessageId, { limit = 50, beforeSequence, signal } = {}) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (beforeSequence) query.set('beforeSequence', beforeSequence);
+  return api(`/spaces/${spaceId}/messages/${rootMessageId}/replies?${query}`, { signal });
 }
 
 export function getMessage(spaceId, messageId) {

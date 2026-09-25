@@ -8,7 +8,7 @@ import {
 } from '../messaging/messageState.js';
 
 export function useMessageSender({ currentUser, setMessagesMap }) {
-  const send = useCallback(async ({ spaceId, content, clientMessageId }) => {
+  const send = useCallback(async ({ spaceId, content, clientMessageId, replyToMessageId, threadRootId }) => {
     if (!spaceId) {
       throw new Error('Chọn một cuộc trò chuyện trước khi gửi tin nhắn.');
     }
@@ -20,12 +20,12 @@ export function useMessageSender({ currentUser, setMessagesMap }) {
         ? existing.map((message, index) => index === localIndex
           ? { ...message, deliveryState: 'pending', sendError: null }
           : message)
-        : [...existing, createPendingMessage({ spaceId, clientMessageId, content, author: currentUser })];
+        : [...existing, createPendingMessage({ spaceId, clientMessageId, content, author: currentUser, replyToMessageId, threadRootId })];
       return { ...previous, [spaceId]: nextMessages };
     });
 
     try {
-      const sent = await sendMessage(spaceId, { clientMessageId, content });
+      const sent = await sendMessage(spaceId, { clientMessageId, content, replyToMessageId, threadRootId });
       setMessagesMap((previous) => ({
         ...previous,
         [spaceId]: mergeMessages(previous[spaceId] || [], [sent]),
@@ -47,6 +47,8 @@ export function useMessageSender({ currentUser, setMessagesMap }) {
     spaceId: message.spaceId,
     content: message.content,
     clientMessageId: message.clientMessageId,
+    replyToMessageId: message.replyToMessageId,
+    threadRootId: message.threadRootId,
   }), [send]);
 
   return { send, retry };

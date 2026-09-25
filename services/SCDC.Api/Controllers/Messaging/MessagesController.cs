@@ -46,7 +46,9 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
                 spaceId,
                 request.ClientMessageId,
                 request.MessageType,
-                request.Content),
+                request.Content,
+                request.ReplyToMessageId,
+                request.ThreadRootId),
             cancellationToken);
         if (result.IsFailure)
         {
@@ -63,6 +65,16 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
             ? Created($"/api/v1/spaces/{spaceId}/messages/{sent.Message.Id}", sent.Message)
             : Ok(sent.Message);
     }
+
+    [HttpGet("{messageId:guid}/replies")]
+    [ProducesResponseType<MessagePageDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessagePageDto>> GetReplies(
+        Guid spaceId, Guid messageId, [FromQuery] int? limit,
+        [FromQuery] string? beforeSequence, [FromQuery] string? afterSequence,
+        [FromQuery] string? throughSequence, CancellationToken cancellationToken) =>
+        FromResult(await messageService.GetThreadRepliesAsync(new GetThreadRepliesQuery(
+            User.GetUserId(), spaceId, messageId, limit ?? 50,
+            beforeSequence, afterSequence, throughSequence), cancellationToken));
 
     [HttpGet("{messageId:guid}")]
     [ProducesResponseType<MessageDto>(StatusCodes.Status200OK)]
@@ -91,6 +103,8 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
 public sealed record SendMessageRequest(
     Guid ClientMessageId,
     short MessageType,
-    string? Content);
+    string? Content,
+    Guid? ReplyToMessageId,
+    Guid? ThreadRootId);
 
 public sealed record EditMessageRequest(string? Content, int ExpectedVersion);
