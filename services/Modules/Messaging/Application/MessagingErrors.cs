@@ -70,6 +70,10 @@ public static class MessagingErrors
         "Messaging.InvalidCursor",
         "The message history cursor is invalid.");
 
+    public static readonly Error InvalidSearch = Error.Validation(
+        "Messaging.InvalidSearch",
+        "Search needs text, author, or a complete date range; text must be 2-120 characters, dates at most 366 days apart, and page size 1-50.");
+
     public static readonly Error InvalidReadState = Error.Validation(
         "Messaging.InvalidReadState",
         "The read position must identify a message in this space.");
