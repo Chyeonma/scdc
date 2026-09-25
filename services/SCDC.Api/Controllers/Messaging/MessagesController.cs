@@ -54,7 +54,8 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
                 request.MessageType,
                 request.Content,
                 request.ReplyToMessageId,
-                request.ThreadRootId),
+                request.ThreadRootId,
+                request.AttachmentIds),
             cancellationToken);
         if (result.IsFailure)
         {
@@ -111,6 +112,7 @@ public sealed record SendMessageRequest(
     short MessageType,
     string? Content,
     Guid? ReplyToMessageId,
-    Guid? ThreadRootId);
+    Guid? ThreadRootId,
+    IReadOnlyList<Guid>? AttachmentIds);
 
 public sealed record EditMessageRequest(string? Content, int ExpectedVersion);

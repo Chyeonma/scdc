@@ -7,11 +7,19 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
       Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
+      Modules__Messaging__Attachments__Endpoint: http://object-storage:8333
+      Modules__Messaging__Attachments__AccessKey: scdc_dev
+      Modules__Messaging__Attachments__SecretKey: scdc_minio_dev_password
+      Modules__Messaging__Attachments__ClamAvHost: clamav
     ports:
       - "5026:8080"
     depends_on:
       postgres:
         condition: service_healthy
+      object-storage:
+        condition: service_started
+      clamav:
+        condition: service_started
     restart: unless-stopped
 
   web-client:
@@ -43,5 +51,25 @@ services:
       - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
       - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro
 
+  object-storage:
+    image: chrislusf/seaweedfs@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    environment:
+      AWS_ACCESS_KEY_ID: scdc_dev
+      AWS_SECRET_ACCESS_KEY: scdc_minio_dev_password
+      S3_BUCKET: scdc-messaging
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - scdc-object-data:/data
+
+  clamav:
+    image: clamav/clamav:1.4
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - scdc-clamav-data:/var/lib/clamav
+
 volumes:
   scdc-postgres-data:
+  scdc-object-data:
+  scdc-clamav-data:

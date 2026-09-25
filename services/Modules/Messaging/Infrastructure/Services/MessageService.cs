@@ -17,6 +17,7 @@ internal sealed class MessageService(
     IUserDirectory userDirectory,
     SpaceMessageAccess spaceAccess,
     IRealtimeSpaceAccess realtimeSpaceAccess,
+    IAttachmentObjectStore objectStore,
     MessageRateLimiter rateLimiter,
     TimeProvider timeProvider) : IMessageService
 {
@@ -34,8 +35,15 @@ internal sealed class MessageService(
             return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
         }
 
-        if (command.MessageType != (short)MessageType.Text
-            || !TryNormalizeText(command.Content, out var content))
+        var attachmentIds = command.AttachmentIds?.ToArray() ?? [];
+        if (attachmentIds.Length > 5 || attachmentIds.Any(id => id == Guid.Empty)
+            || attachmentIds.Distinct().Count() != attachmentIds.Length)
+            return Result.Failure<SendMessageResult>(MessagingErrors.InvalidAttachment);
+        var hasText = TryNormalizeText(command.Content, out var content);
+        var messageType = (MessageType)command.MessageType;
+        if (messageType != MessageType.Text && messageType != MessageType.Attachment
+            || messageType == MessageType.Text && !hasText
+            || messageType == MessageType.Attachment && (attachmentIds.Length == 0 || !string.IsNullOrWhiteSpace(command.Content)))
         {
             return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
         }
@@ -52,7 +60,7 @@ internal sealed class MessageService(
         }
 
         var effectiveReplyId = command.ReplyToMessageId ?? command.ThreadRootId;
-        var payloadHash = ComputePayloadHash(MessageType.Text, content, effectiveReplyId, command.ThreadRootId);
+        var payloadHash = ComputePayloadHash(messageType, content, effectiveReplyId, command.ThreadRootId, attachmentIds);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         var space = await dbContext.Spaces
@@ -122,7 +130,15 @@ internal sealed class MessageService(
         }
 
         var now = timeProvider.GetUtcNow();
-        var mentions = await ResolveMentionsAsync(command.SpaceId, command.ActorUserId, content, cancellationToken);
+        var uploads = attachmentIds.Length == 0 ? [] : await dbContext.AttachmentUploads
+            .Where(upload => attachmentIds.Contains(upload.Id)).ToArrayAsync(cancellationToken);
+        if (uploads.Length != attachmentIds.Length || uploads.Any(upload => upload.SpaceId != command.SpaceId
+            || upload.OwnerUserId != command.ActorUserId || upload.ScanStatus != 1
+            || upload.ExpiresAt <= now || upload.AttachedMessageId is not null))
+            return Result.Failure<SendMessageResult>(MessagingErrors.AttachmentUnavailable);
+        var mentions = messageType == MessageType.Text
+            ? await ResolveMentionsAsync(command.SpaceId, command.ActorUserId, content, cancellationToken)
+            : [];
         var message = new Message
         {
             Id = Guid.CreateVersion7(),
@@ -131,8 +147,8 @@ internal sealed class MessageService(
             ClientMessageId = command.ClientMessageId,
             ReplyToMessageId = effectiveReplyId,
             ThreadRootId = command.ThreadRootId,
-            MessageType = MessageType.Text,
-            Content = content,
+            MessageType = messageType,
+            Content = messageType == MessageType.Text ? content : null,
             IdempotencyPayloadHash = payloadHash,
             Version = 1,
             CreatedAt = now
@@ -143,6 +159,18 @@ internal sealed class MessageService(
         {
             MessageId = message.Id, MentionedUserId = user.Id, CreatedAt = now
         }));
+        foreach (var upload in uploads)
+        {
+            upload.AttachedMessageId = message.Id;
+            dbContext.MessageAttachments.Add(new MessageAttachment
+            {
+                Id = upload.Id, MessageId = message.Id, StorageProvider = "s3",
+                BucketName = objectStore.BucketName, ObjectKey = upload.ObjectKey,
+                OriginalName = upload.OriginalName, MimeType = upload.MimeType,
+                SizeBytes = upload.SizeBytes, ChecksumSha256 = upload.ChecksumSha256,
+                ScanStatus = 1, CreatedAt = now
+            });
+        }
 
         if (command.ThreadRootId is null)
         {
@@ -499,11 +527,14 @@ internal sealed class MessageService(
         return content.Length > 0 && content.EnumerateRunes().Count() <= 10_000;
     }
 
-    private static string ComputePayloadHash(MessageType messageType, string content, Guid? replyToMessageId, Guid? threadRootId)
+    private static string ComputePayloadHash(MessageType messageType, string content, Guid? replyToMessageId,
+        Guid? threadRootId, IReadOnlyList<Guid> attachmentIds)
     {
         var canonical = replyToMessageId is null && threadRootId is null
             ? $"{(short)messageType}:{content}"
             : $"{(short)messageType}:{content.Length}:{content}:{replyToMessageId:N}:{threadRootId:N}";
+        if (attachmentIds.Count > 0)
+            canonical += $":attachments:{string.Join(',', attachmentIds.Select(id => id.ToString("N")))}";
         var bytes = Encoding.UTF8.GetBytes(canonical);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
@@ -529,6 +560,15 @@ internal sealed class MessageService(
             .ToDictionary(group => group.Key, group => (IReadOnlyList<MentionSummaryDto>)group
                 .Select(mention => new MentionSummaryDto(mention.MentionedUserId,
                     mentionedUsers[mention.MentionedUserId].Username)).ToArray());
+        var attachments = await dbContext.MessageAttachments.AsNoTracking()
+            .Where(attachment => messageIds.Contains(attachment.MessageId)
+                                 && attachment.DeletedAt == null && attachment.ScanStatus == 1)
+            .OrderBy(attachment => attachment.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var attachmentsByMessage = attachments.GroupBy(attachment => attachment.MessageId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<AttachmentSummaryDto>)group
+                .Select(attachment => new AttachmentSummaryDto(attachment.Id, attachment.OriginalName,
+                    attachment.MimeType, ToSequence(attachment.SizeBytes), null, null)).ToArray());
         var rootIds = messages.Where(message => message.ThreadRootId is null)
             .Select(message => message.Id).ToArray();
         var counts = rootIds.Length == 0
@@ -543,7 +583,8 @@ internal sealed class MessageService(
             message,
             message.AuthorUserId is { } authorId && authors.TryGetValue(authorId, out var author) ? author : null,
             counts.GetValueOrDefault(message.Id),
-            message.DeletedAt is null ? mentionsByMessage.GetValueOrDefault(message.Id) ?? [] : []))
+            message.DeletedAt is null ? mentionsByMessage.GetValueOrDefault(message.Id) ?? [] : [],
+            message.DeletedAt is null ? attachmentsByMessage.GetValueOrDefault(message.Id) ?? [] : []))
             .ToArray();
     }
 
@@ -571,7 +612,8 @@ internal sealed class MessageService(
     private static string ToSequence(long sequence) => sequence.ToString(CultureInfo.InvariantCulture);
 
     private static MessageDto ToDto(Message message, UserSummary? author, int threadCount = 0,
-        IReadOnlyList<MentionSummaryDto>? mentions = null) => new(
+        IReadOnlyList<MentionSummaryDto>? mentions = null,
+        IReadOnlyList<AttachmentSummaryDto>? attachments = null) => new(
         message.Id,
         message.SpaceId,
         message.ClientMessageId,
@@ -585,7 +627,7 @@ internal sealed class MessageService(
         message.DeletedAt,
         ReplyToMessageId: message.ReplyToMessageId,
         ThreadRootId: message.ThreadRootId,
-        Attachments: [],
+        Attachments: attachments ?? [],
         Reactions: [],
         IsPinned: false,
         ThreadCount: threadCount,

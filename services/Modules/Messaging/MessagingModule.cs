@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Minio;
 using SCDC.BuildingBlocks.Application;
 using SCDC.Contracts.Messaging;
 using SCDC.Modules.Messaging.Application;
@@ -32,6 +33,31 @@ public static class MessagingModule
             .Validate(options => options.InitialRetryDelay > TimeSpan.Zero, "Outbox retry delay must be positive.")
             .Validate(options => options.MaxRetryDelay >= options.InitialRetryDelay, "Outbox max retry delay must not be shorter than the initial delay.")
             .ValidateOnStart();
+        services.AddOptions<AttachmentStorageOptions>()
+            .Bind(configuration.GetSection(AttachmentStorageOptions.SectionName))
+            .Validate(options => Uri.TryCreate(options.Endpoint, UriKind.Absolute, out var endpoint)
+                && endpoint.Scheme is "http" or "https"
+                && !string.IsNullOrWhiteSpace(options.AccessKey)
+                && !string.IsNullOrWhiteSpace(options.SecretKey)
+                && !string.IsNullOrWhiteSpace(options.Bucket)
+                && !string.IsNullOrWhiteSpace(options.ClamAvHost)
+                && options.ClamAvPort is > 0 and <= 65535,
+                "Attachment storage endpoint, bucket, credentials, and scanner must be configured.")
+            .ValidateOnStart();
+        services.AddSingleton<IMinioClient>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<AttachmentStorageOptions>>().Value;
+            var endpoint = new Uri(options.Endpoint);
+            var client = new MinioClient()
+                .WithEndpoint(endpoint.Host, endpoint.Port)
+                .WithCredentials(options.AccessKey, options.SecretKey);
+            return (endpoint.Scheme == "https" ? client.WithSSL() : client).Build();
+        });
+        services.AddSingleton<IAttachmentObjectStore, MinioAttachmentObjectStore>();
+        services.AddSingleton<IFileScanner, ClamAvFileScanner>();
+        services.AddScoped<IAttachmentUploadService, AttachmentUploadService>();
+        services.AddScoped<IAttachmentCleanupService, AttachmentCleanupService>();
+        services.AddHostedService<AttachmentCleanupWorker>();
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddScoped<IGroupConversationService, GroupConversationService>();
         services.AddSingleton<MessageRateLimiter>();
