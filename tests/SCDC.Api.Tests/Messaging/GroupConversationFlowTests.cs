@@ -17,6 +17,66 @@ public sealed class GroupConversationFlowTests(SCDCWebApplicationFactory factory
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
+    public async Task Block_prevents_actor_from_inviting_target_but_preserves_group_access()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var owner = await CreateActorAsync("BlkOwner");
+            var admin = await CreateActorAsync("BlkAdmin");
+            var member = await CreateActorAsync("BlkMember");
+            var target = await CreateActorAsync("BlkTarget");
+            actors.AddRange([owner, admin, member, target]);
+            var create = await SendAuthorizedAsync(HttpMethod.Post, "/api/v1/conversations/group",
+                owner.AccessToken, new { name = "Blocked invite", memberUserIds = new[] { admin.UserId, member.UserId }, maxMembers = 4 });
+            Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+            var group = await create.Content.ReadFromJsonAsync<JsonElement>();
+            var spaceId = group.GetProperty("spaceId").GetGuid();
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAuthorizedAsync(HttpMethod.Put,
+                    $"/api/v1/conversations/group/{spaceId}/members/{admin.UserId}/role",
+                    owner.AccessToken, new { role = 2 })).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAuthorizedAsync(HttpMethod.Put,
+                    $"/api/v1/users/me/blocks/{target.UserId}", owner.AccessToken)).StatusCode);
+
+            var addPath = $"/api/v1/conversations/group/{spaceId}/members";
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAuthorizedAsync(HttpMethod.Post, addPath, owner.AccessToken,
+                    new { userId = target.UserId })).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAuthorizedAsync(HttpMethod.Post, addPath, admin.AccessToken,
+                    new { userId = target.UserId })).StatusCode);
+            Assert.Equal(HttpStatusCode.Created,
+                (await SendAuthorizedAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages",
+                    target.AccessToken, new { clientMessageId = Guid.NewGuid(), messageType = 1,
+                        content = "Shared group remains usable" })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAuthorizedAsync(HttpMethod.Get, $"/api/v1/spaces/{spaceId}/messages",
+                    owner.AccessToken)).StatusCode);
+            var ownerProfile = await SendAuthorizedAsync(HttpMethod.Get, "/api/v1/users/me", owner.AccessToken);
+            var ownerName = (await ownerProfile.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("username").GetString();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAuthorizedAsync(HttpMethod.Put, $"/api/v1/spaces/{spaceId}/preferences",
+                    owner.AccessToken, new { notificationLevel = 1, mutedUntil = (DateTimeOffset?)null,
+                        isHidden = false, isPinned = false })).StatusCode);
+            Assert.Equal(HttpStatusCode.Created,
+                (await SendAuthorizedAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages",
+                    target.AccessToken, new { clientMessageId = Guid.NewGuid(), messageType = 1,
+                        content = $"@{ownerName} shared group mention" })).StatusCode);
+            var ownerView = await SendAuthorizedAsync(HttpMethod.Get,
+                $"/api/v1/conversations/group/{spaceId}", owner.AccessToken);
+            Assert.Equal(0, (await ownerView.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("notificationCount").GetInt32());
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
     public async Task Group_lifecycle_enforces_membership_roles_limits_and_message_access()
     {
         var actors = new List<TestActor>();

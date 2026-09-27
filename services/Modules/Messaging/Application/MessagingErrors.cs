@@ -4,6 +4,12 @@ namespace SCDC.Modules.Messaging.Application;
 
 public static class MessagingErrors
 {
+    public static readonly Error InvalidBlockTarget = Error.Validation(
+        "Messaging.InvalidBlockTarget", "A user ID is required.");
+
+    public static readonly Error SelfBlockNotAllowed = Error.Validation(
+        "Messaging.SelfBlockNotAllowed", "You cannot block yourself.");
+
     public static readonly Error InvalidRecipient = Error.Validation(
         "Messaging.ValidationFailed",
         "A recipient user ID is required.");
