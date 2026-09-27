@@ -224,6 +224,17 @@ internal sealed class RegistrationService(
         }
 
         var normalizedEmail = command.Email.Trim().ToLowerInvariant();
+        var userId = await dbContext.UserEmails
+            .Where(item => item.NormalizedEmail == normalizedEmail && item.IsPrimary)
+            .Select(item => (Guid?)item.UserId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (userId is null)
+        {
+            return Result.Success(genericResponse);
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId.Value, cancellationToken);
         var email = await dbContext.UserEmails
             .Include(item => item.User)
             .SingleOrDefaultAsync(
@@ -275,6 +286,7 @@ internal sealed class RegistrationService(
             new { user_id = email.UserId, email = email.Email, account_token_id = accountToken.Id }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success(new PasswordResetRequestedResponse(
             true,
             _options.ExposeDevelopmentTokens ? rawToken.Value : null));
@@ -291,6 +303,18 @@ internal sealed class RegistrationService(
         }
 
         var tokenHash = tokenService.HashOpaqueToken(command.Token);
+        var userId = await dbContext.AccountTokens
+            .Where(token => token.TokenHash == tokenHash
+                && token.Purpose == AccountTokenPurpose.ResetPassword)
+            .Select(token => (Guid?)token.UserId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (userId is null)
+        {
+            return Result.Failure(IdentityErrors.InvalidAccountToken);
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId.Value, cancellationToken);
         var accountToken = await dbContext.AccountTokens
             .Include(token => token.User)
             .ThenInclude(user => user.PasswordCredential)
@@ -359,6 +383,7 @@ internal sealed class RegistrationService(
             new { user_id = accountToken.UserId, reason = "password_reset" }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success();
     }
 

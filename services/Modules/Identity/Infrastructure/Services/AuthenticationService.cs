@@ -24,15 +24,24 @@ internal sealed class AuthenticationService(
         CancellationToken cancellationToken)
     {
         var normalizedLogin = command.Login.Trim().ToLowerInvariant();
+        var userId = await dbContext.Users
+            .Where(item => item.NormalizedUsername == normalizedLogin
+                || item.Emails.Any(email => email.NormalizedEmail == normalizedLogin))
+            .Select(item => (Guid?)item.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (userId is null)
+        {
+            return Result.Failure<AuthResponse>(IdentityErrors.InvalidCredentials);
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId.Value, cancellationToken);
         var user = await dbContext.Users
             .Include(item => item.Profile)
             .Include(item => item.Emails)
             .Include(item => item.PasswordCredential)
             .Include(item => item.SecurityState)
-            .SingleOrDefaultAsync(
-                item => item.NormalizedUsername == normalizedLogin
-                    || item.Emails.Any(email => email.NormalizedEmail == normalizedLogin),
-                cancellationToken);
+            .SingleOrDefaultAsync(item => item.Id == userId.Value, cancellationToken);
 
         if (user?.PasswordCredential is null || user.SecurityState is null || user.Profile is null)
         {
@@ -64,6 +73,7 @@ internal sealed class AuthenticationService(
                 now,
                 new { reason = "invalid_password", failed_count = user.SecurityState.FailedLoginCount }));
             await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
 
             return user.SecurityState.LockedUntil > now
                 ? Result.Failure<AuthResponse>(IdentityErrors.AccountLocked(user.SecurityState.LockedUntil.Value))
@@ -129,6 +139,7 @@ internal sealed class AuthenticationService(
             new { session_id = session.Id }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success(CreateAuthResponse(user, session, rawRefreshToken.Value));
     }
 
@@ -137,7 +148,14 @@ internal sealed class AuthenticationService(
         CancellationToken cancellationToken)
     {
         var tokenHash = tokenService.HashOpaqueToken(command.RefreshToken);
+        var userId = await FindTokenUserIdAsync(tokenHash, cancellationToken);
+        if (userId is null)
+        {
+            return Result.Failure<AuthResponse>(IdentityErrors.InvalidRefreshToken);
+        }
+
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId.Value, cancellationToken);
         var currentToken = await dbContext.RefreshTokens
             .FromSqlInterpolated($$"""
                 SELECT id, session_id, parent_token_id, replaced_by_token_id,
@@ -225,6 +243,14 @@ internal sealed class AuthenticationService(
         CancellationToken cancellationToken)
     {
         var tokenHash = tokenService.HashOpaqueToken(command.RefreshToken);
+        var userId = await FindTokenUserIdAsync(tokenHash, cancellationToken);
+        if (userId is null)
+        {
+            return Result.Success();
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId.Value, cancellationToken);
         var token = await dbContext.RefreshTokens
             .Include(item => item.Session)
             .ThenInclude(session => session.RefreshTokens)
@@ -244,6 +270,7 @@ internal sealed class AuthenticationService(
             now,
             new { session_id = token.SessionId }));
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success();
     }
 
@@ -252,6 +279,8 @@ internal sealed class AuthenticationService(
         RequestContext context,
         CancellationToken cancellationToken)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId, cancellationToken);
         var sessions = await dbContext.AuthSessions
             .Include(session => session.RefreshTokens)
             .Where(session => session.UserId == userId && session.RevokedAt == null)
@@ -270,6 +299,7 @@ internal sealed class AuthenticationService(
             now,
             new { session_count = sessions.Count }));
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success();
     }
 
@@ -305,6 +335,8 @@ internal sealed class AuthenticationService(
         RequestContext context,
         CancellationToken cancellationToken)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId, cancellationToken);
         var session = await dbContext.AuthSessions
             .Include(item => item.RefreshTokens)
             .SingleOrDefaultAsync(
@@ -328,8 +360,15 @@ internal sealed class AuthenticationService(
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success();
     }
+
+    private Task<Guid?> FindTokenUserIdAsync(string tokenHash, CancellationToken cancellationToken) =>
+        dbContext.RefreshTokens
+            .Where(token => token.TokenHash == tokenHash)
+            .Select(token => (Guid?)token.Session.UserId)
+            .SingleOrDefaultAsync(cancellationToken);
 
     private PasswordVerificationResult VerifyPassword(User user, string hash, string password)
     {

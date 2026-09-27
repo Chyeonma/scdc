@@ -1,31 +1,52 @@
 const API_ROOT = '/api/v1';
 const SESSION_KEY = 'scdc.chat.session.v1';
+const SESSION_LOCK = `${SESSION_KEY}.refresh`;
+// Without Web Locks, keep tokens in this tab only so tabs never rotate the same token.
+const shareSession = Boolean(window.navigator?.locks?.request);
 
 const listeners = new Set();
 let refreshPromise = null;
 let session = readStoredSession();
 
-function readStoredSession() {
+function readStoredSession(fallback = null) {
+  if (!shareSession) return fallback;
   try {
     const value = window.localStorage.getItem(SESSION_KEY);
     return value ? JSON.parse(value) : null;
   } catch {
-    return null;
+    return fallback;
   }
 }
 
-export function emitSession(nextSession) {
+function applySession(nextSession) {
+  if (JSON.stringify(session) === JSON.stringify(nextSession)) return;
   session = nextSession;
-  try {
-    if (nextSession) {
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-    } else {
-      window.localStorage.removeItem(SESSION_KEY);
-    }
-  } catch {
-    // Storage might be restricted
-  }
   listeners.forEach((listener) => listener());
+}
+
+function syncStoredSession() {
+  applySession(readStoredSession(session));
+}
+
+window.addEventListener('storage', (event) => {
+  if (shareSession && (event.key === SESSION_KEY || event.key === null)) {
+    syncStoredSession();
+  }
+});
+
+export function emitSession(nextSession) {
+  if (shareSession) {
+    try {
+      if (nextSession) {
+        window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+      } else {
+        window.localStorage.removeItem(SESSION_KEY);
+      }
+    } catch {
+      // Storage might be restricted
+    }
+  }
+  applySession(nextSession);
 }
 
 export const sessionStore = {
@@ -67,47 +88,58 @@ async function readError(response) {
   return new ApiError(message, response.status, problem);
 }
 
-async function refreshSession() {
-  if (!session?.refreshToken) {
-    emitSession(null);
-    return null;
-  }
-
+async function refreshSession(failedAccessToken) {
   if (!refreshPromise) {
-    refreshPromise = fetch(`${API_ROOT}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: session.refreshToken }),
-    })
-      .then(async (response) => {
+    const rotate = async () => {
+      // Another tab may have rotated or cleared the session while we waited for the lock.
+      syncStoredSession();
+      if (!session?.refreshToken || session.accessToken !== failedAccessToken) return session;
+
+      const previousSession = session;
+      try {
+        const response = await fetch(`${API_ROOT}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: previousSession.refreshToken }),
+        });
         if (!response.ok) {
           throw await readError(response);
         }
         const tokens = await response.json();
-        const nextSession = { ...session, ...tokens };
-        emitSession(nextSession);
-        return nextSession;
-      })
-      .catch((error) => {
+        syncStoredSession();
+        // Do not restore a session after logout or overwrite a newer login.
+        if (session?.refreshToken === previousSession.refreshToken) {
+          emitSession({ ...previousSession, ...tokens });
+        }
+        return session;
+      } catch (error) {
+        syncStoredSession();
+        if (session?.refreshToken !== previousSession.refreshToken) return session;
         emitSession(null);
         throw error;
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
+      }
+    };
+
+    const rotation = shareSession
+      ? window.navigator.locks.request(SESSION_LOCK, rotate)
+      : rotate();
+    refreshPromise = rotation.finally(() => {
+      refreshPromise = null;
+    });
   }
 
   return refreshPromise;
 }
 
 export async function getAccessToken() {
+  syncStoredSession();
   if (!session) {
     return '';
   }
 
   const expiresAt = Date.parse(session.accessTokenExpiresAt);
   if (Number.isFinite(expiresAt) && expiresAt - Date.now() < 30_000) {
-    await refreshSession();
+    await refreshSession(session.accessToken);
   }
 
   return session?.accessToken ?? '';
@@ -128,8 +160,9 @@ export async function api(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (auth && session?.accessToken) {
-    headers.Authorization = `Bearer ${session.accessToken}`;
+  const accessToken = auth ? await getAccessToken() : '';
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const response = await fetch(`${API_ROOT}${path}`, {
@@ -140,7 +173,7 @@ export async function api(path, options = {}) {
   });
 
   if (response.status === 401 && auth && retry && session?.refreshToken) {
-    await refreshSession();
+    await refreshSession(accessToken);
     return api(path, { ...options, retry: false });
   }
 
