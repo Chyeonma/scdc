@@ -369,7 +369,7 @@ P7-T02 tải file qua API xác thực riêng cho mỗi request; không phát URL
 
 ### P9-T03 — Đóng gói và bàn giao [OPS, BE, FE]
 
-- [ ] **P9-T03.1** Cập nhật Swagger, hướng dẫn chạy, cấu hình storage/worker, SQL nâng cấp không phá dữ liệu và bước rollback phù hợp.
+- [x] **P9-T03.1** Cập nhật Swagger, hướng dẫn chạy, cấu hình storage/worker, SQL nâng cấp không phá dữ liệu và bước rollback phù hợp.
 - [ ] **P9-T03.2** Diễn tập backup/restore PostgreSQL và file; chốt retention cho message edit, attachment và outbox đã xử lý.
 - [ ] **P9-T03.3** Kiểm tra bản Compose qua Nginx, WebSocket, health/readiness và cấu hình secrets của môi trường triển khai.
 - [ ] **P9-T03.4** Trước phát hành công khai: hoàn thiện email delivery/Identity cần thiết, loại bỏ dữ liệu demo khỏi luồng thật và chạy smoke test với user mới.
