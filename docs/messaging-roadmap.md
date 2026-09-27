@@ -295,20 +295,24 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P7-T01 — Upload và metadata [BE, DB, OPS]
 
-- [ ] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
-- [ ] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
-- [ ] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
-- [ ] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
-- [ ] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+- [x] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose dùng SeaweedFS S3-compatible.
+- [x] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
+- [x] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
+- [x] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
+- [x] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+
+P7-T01 đã triển khai trên [PR #20](https://github.com/Chyeonma/scdc/pull/20); contract và cấu hình ở [messaging-attachments.md trên nhánh P7-T01](https://github.com/Chyeonma/scdc/blob/feat/msg-p7-t01-attachment-upload/docs/messaging-attachments.md).
 
 **Nghiệm thu:** file thật nằm trong storage, DB chỉ lưu metadata; file của user khác không thể bị gắn vào tin tùy ý.
 
 ### P7-T02 — Hiển thị và tải xuống [BE, FE, QA]
 
-- [ ] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
-- [ ] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
-- [ ] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
-- [ ] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+- [x] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
+- [x] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
+- [x] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
+- [x] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+
+P7-T02 đã triển khai trên [PR #21](https://github.com/Chyeonma/scdc/pull/21). Hai PR Phase 7 vẫn đang mở; checkbox theo dõi tiến độ task, còn nhánh P8-T01 này chưa chứa code Phase 7 cho tới khi các PR được merge.
 
 **Nghiệm thu:** gửi file giữa hai tài khoản và tải được sau refresh; không thể tải file chỉ bằng cách đoán attachment ID.
 
