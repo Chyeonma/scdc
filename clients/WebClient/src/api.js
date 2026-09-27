@@ -321,6 +321,17 @@ export function getMessageHistory(spaceId, {
   return api(`/spaces/${spaceId}/messages?${query}`, { signal });
 }
 
+export function searchMessages(spaceId, { q, authorUserId, from, to,
+  limit = 20, beforeSequence, signal } = {}) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (q) query.set('q', q);
+  if (authorUserId) query.set('authorUserId', authorUserId);
+  if (from) query.set('from', from);
+  if (to) query.set('to', to);
+  if (beforeSequence) query.set('beforeSequence', beforeSequence);
+  return api(`/spaces/${spaceId}/messages/search?${query}`, { signal });
+}
+
 export function sendMessage(spaceId, { clientMessageId, content, replyToMessageId, threadRootId }) {
   return api(`/spaces/${spaceId}/messages`, {
     method: 'POST',

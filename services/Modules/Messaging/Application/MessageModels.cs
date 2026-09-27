@@ -25,6 +25,13 @@ public sealed record GetMessagesQuery(
     string? AfterSequence,
     string? ThroughSequence);
 
+public sealed record SearchMessagesQuery(Guid ActorUserId, Guid SpaceId, string? Text,
+    Guid? AuthorUserId, DateTimeOffset? From, DateTimeOffset? To,
+    int Limit, string? BeforeSequence);
+
+public sealed record MessageSearchPageDto(IReadOnlyList<MessageDto> Items,
+    bool HasMore, string? NextBeforeSequence);
+
 public sealed record GetThreadRepliesQuery(
     Guid ActorUserId, Guid SpaceId, Guid RootMessageId, int Limit,
     string? BeforeSequence, string? AfterSequence, string? ThroughSequence);

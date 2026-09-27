@@ -48,6 +48,7 @@ import {
 import { ServerRail } from './components/ServerRail.jsx';
 import { SubSidebar } from './components/SubSidebar.jsx';
 import { ChatHeader } from './components/ChatHeader.jsx';
+import { MessageSearchPanel } from './components/MessageSearchPanel.jsx';
 import { MessageItem } from './components/MessageItem.jsx';
 import { MessageComposer } from './components/MessageComposer.jsx';
 import { RightPanel } from './components/RightPanel.jsx';
@@ -120,6 +121,7 @@ export default function App() {
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [connectionState, setConnectionState] = useState('online');
 
   const timelineRef = useRef(null);
@@ -344,6 +346,8 @@ export default function App() {
           setActiveDmId((current) => current === spaceId ? null : current);
         }
         setMessagesMap((previous) => ({ ...previous, [spaceId]: [] }));
+        setSearchQuery('');
+        setSearchOpen(false);
         setThreadsMap({});
         setReplyTargets({});
         replyCacheGenerationRef.current++;
@@ -360,13 +364,19 @@ export default function App() {
     }
   }, [notify, session?.accessToken]);
 
-  // Active Messages list
-  const currentMessages = useMemo(() => {
-    const list = (messagesMap[currentSpaceId] || []).filter((message) => !message.threadRootId);
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter((m) => m.content?.toLowerCase().includes(q));
-  }, [messagesMap, currentSpaceId, searchQuery]);
+  // Search has its own server-backed result list; the timeline stays intact.
+  const currentMessages = useMemo(() =>
+    (messagesMap[currentSpaceId] || []).filter((message) => !message.threadRootId),
+  [messagesMap, currentSpaceId]);
+
+  const searchAuthors = useMemo(() => {
+    const people = isHomeActive && activeDm?.spaceType === 1
+      ? [currentUser, activeDm?.user]
+      : [currentUser, ...members];
+    return [...new Map(people.filter(Boolean).map((person) => [person.id || person.userId, {
+      id: person.id || person.userId, displayName: person.displayName, username: person.username,
+    }]).filter(([id]) => id)).values()];
+  }, [currentUser, activeDm?.user, activeDm?.spaceType, isHomeActive, members]);
 
   useEffect(() => {
     if (threadSelectionRef.current && threadSelectionRef.current.spaceId !== currentSpaceId) {
@@ -376,6 +386,8 @@ export default function App() {
       setRightPanelMode('memberList');
     }
     setReplyingTo(null);
+    setSearchQuery('');
+    setSearchOpen(false);
   }, [currentSpaceId]);
 
   useEffect(() => {
@@ -1197,7 +1209,8 @@ export default function App() {
             setRightPanelMode((prev) => (prev === 'pinned' ? null : 'pinned'))
           }
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={(value) => { setSearchQuery(value); setSearchOpen(true); }}
+          onSearchFocus={() => setSearchOpen(true)}
           isDirectMessage={isHomeActive && activeDm?.spaceType === 1}
           onOpenGroupSettings={isHomeActive && activeDm?.spaceType === 2 ? () => setShowGroupSettings(true) : undefined}
           statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
@@ -1231,6 +1244,17 @@ export default function App() {
               {currentPreferences.isHidden ? 'Hiện lại' : 'Ẩn hội thoại'}
             </button>
           </div>
+        )}
+
+        {currentSpaceId && searchOpen && (
+          <MessageSearchPanel key={currentSpaceId} spaceId={currentSpaceId}
+            query={searchQuery} authors={searchAuthors}
+            onClose={() => { setSearchQuery(''); setSearchOpen(false); }}
+            onJump={(messageId) => {
+              setSearchQuery('');
+              setSearchOpen(false);
+              return handleJumpToMessage(messageId);
+            }} />
         )}
 
         {/* Message Timeline */}

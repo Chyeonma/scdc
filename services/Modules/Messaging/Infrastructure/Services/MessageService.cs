@@ -264,6 +264,51 @@ internal sealed class MessageService(
             HighWatermark: ToSequence(highWatermark)));
     }
 
+    public async Task<Result<MessageSearchPageDto>> SearchAsync(SearchMessagesQuery query,
+        CancellationToken cancellationToken)
+    {
+        var text = string.IsNullOrWhiteSpace(query.Text) ? null : query.Text.Trim();
+        if (query.ActorUserId == Guid.Empty || query.SpaceId == Guid.Empty
+            || query.AuthorUserId == Guid.Empty || query.Limit is < 1 or > 50
+            || text is { Length: < 2 or > 120 }
+            || text?.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 12
+            || (query.From is null) != (query.To is null)
+            || query.From > query.To
+            || query.To - query.From > TimeSpan.FromDays(366)
+            || (string.IsNullOrWhiteSpace(text) && query.AuthorUserId is null && query.From is null))
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.InvalidSearch);
+        if (!TryParseCursor(query.BeforeSequence, allowZero: false, out var before))
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.InvalidMessageCursor);
+        if (await userDirectory.FindByIdAsync(query.ActorUserId, cancellationToken) is null)
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.AccountUnavailable);
+        var space = await dbContext.Spaces.AsNoTracking().SingleOrDefaultAsync(
+            item => item.Id == query.SpaceId && item.Status != SpaceStatus.Deleted, cancellationToken);
+        if (space is null || !(await spaceAccess.CheckAsync(query.ActorUserId, space, cancellationToken)).CanRead)
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.ResourceNotFound);
+
+        // Target the generated vector; PostgreSQL can use its partial GIN index.
+        IQueryable<Message> matches = string.IsNullOrWhiteSpace(text)
+            ? dbContext.Messages.AsNoTracking()
+            : dbContext.Messages.FromSqlInterpolated($"SELECT * FROM messaging.messages WHERE deleted_at IS NULL AND search_vector @@ plainto_tsquery('simple', {text})").AsNoTracking();
+        matches = matches.Where(message => message.SpaceId == query.SpaceId
+            && message.DeletedAt == null && message.MessageType != MessageType.System);
+        if (query.AuthorUserId is { } authorId)
+            matches = matches.Where(message => message.AuthorUserId == authorId);
+        if (query.From is { } from)
+            matches = matches.Where(message => message.CreatedAt >= from);
+        if (query.To is { } to)
+            matches = matches.Where(message => message.CreatedAt < to);
+        if (before is { } sequence)
+            matches = matches.Where(message => message.SequenceNo < sequence);
+
+        var rows = await matches.OrderByDescending(message => message.SequenceNo)
+            .Take(query.Limit + 1).ToListAsync(cancellationToken);
+        var hasMore = rows.Count > query.Limit;
+        var page = rows.Take(query.Limit).ToArray();
+        return Result.Success(new MessageSearchPageDto(await ToDtosAsync(page, cancellationToken),
+            hasMore, hasMore ? ToSequence(page[^1].SequenceNo) : null));
+    }
+
     public async Task<Result<MessageDto>> GetAsync(Guid actorUserId, Guid spaceId, Guid messageId, CancellationToken cancellationToken)
     {
         if (actorUserId == Guid.Empty || spaceId == Guid.Empty || messageId == Guid.Empty)

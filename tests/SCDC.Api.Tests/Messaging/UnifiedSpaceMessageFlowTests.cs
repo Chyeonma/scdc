@@ -17,6 +17,101 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
+    public async Task Search_finds_unloaded_history_and_respects_edits_deletes_filters_and_revoked_access()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var author = await CreateActorAsync("search_author");
+            var reader = await CreateActorAsync("search_reader");
+            var outsider = await CreateActorAsync("search_outsider");
+            actors.AddRange([author, reader, outsider]);
+            var dm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = reader.Id });
+            var spaceId = (await dm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var path = $"/api/v1/spaces/{spaceId}/messages";
+            async Task<JsonElement> SendText(string content, TestActor actor)
+            {
+                var response = await SendAsync(HttpMethod.Post, path, actor.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1, content });
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                return await response.Content.ReadFromJsonAsync<JsonElement>();
+            }
+
+            var old = await SendText("Chào bạn, từ lịch sử cũ", author);
+            var newer = await SendText("Chào bạn lần nữa", author);
+            await SendText("Tin mới nhất", reader);
+            var otherDm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = outsider.Id });
+            var otherSpaceId = (await otherDm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            Assert.Equal(HttpStatusCode.Created,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/spaces/{otherSpaceId}/messages", author.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1,
+                        content = "Chào ở cuộc trò chuyện khác" })).StatusCode);
+            var search = $"{path}/search?q={Uri.EscapeDataString("Chào")}";
+            var latestOnly = await SendAsync(HttpMethod.Get, $"{path}?limit=1", reader.Token);
+            Assert.DoesNotContain((await latestOnly.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == old.GetProperty("id").GetGuid());
+
+            var first = await SendAsync(HttpMethod.Get, $"{search}&limit=1", reader.Token);
+            Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+            var firstPage = await first.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(firstPage.GetProperty("hasMore").GetBoolean());
+            Assert.Equal(newer.GetProperty("id").GetGuid(),
+                firstPage.GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid());
+            var cursor = firstPage.GetProperty("nextBeforeSequence").GetString();
+            var second = await SendAsync(HttpMethod.Get, $"{search}&limit=1&beforeSequence={cursor}", reader.Token);
+            Assert.Equal(old.GetProperty("id").GetGuid(),
+                (await second.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items")
+                    .EnumerateArray().Single().GetProperty("id").GetGuid());
+            var accentless = await SendAsync(HttpMethod.Get, $"{path}/search?q=chao", reader.Token);
+            Assert.Empty((await accentless.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+            var from = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(-5).ToString("O"));
+            var to = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(5).ToString("O"));
+            var filtered = await SendAsync(HttpMethod.Get,
+                $"{path}/search?authorUserId={author.Id}&from={from}&to={to}", reader.Token);
+            Assert.Equal(2, (await filtered.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items").GetArrayLength());
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Get, $"{path}/search?q=a", reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Get, $"{search}&limit=51", reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Get, $"{search}&from={from}", reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, search, outsider.Token)).StatusCode);
+
+            var oldId = old.GetProperty("id").GetGuid();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Patch, $"{path}/{oldId}", author.Token,
+                    new { content = "Đã sửa nội dung", expectedVersion = 1 })).StatusCode);
+            var afterEdit = await SendAsync(HttpMethod.Get, search, reader.Token);
+            Assert.Single((await afterEdit.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+            var edited = await SendAsync(HttpMethod.Get, $"{path}/search?q={Uri.EscapeDataString("Đã sửa")}", reader.Token);
+            Assert.Equal(oldId, (await edited.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid());
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAsync(HttpMethod.Delete, $"{path}/{oldId}?expectedVersion=2", author.Token)).StatusCode);
+            edited = await SendAsync(HttpMethod.Get, $"{path}/search?q={Uri.EscapeDataString("Đã sửa")}", reader.Token);
+            Assert.Empty((await edited.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+            await using var revoke = new NpgsqlCommand("""
+                UPDATE messaging.space_members SET membership_status = 2, left_at = now()
+                WHERE space_id = @space_id AND user_id = @user_id
+                """, connection);
+            revoke.Parameters.AddWithValue("space_id", spaceId);
+            revoke.Parameters.AddWithValue("user_id", reader.Id);
+            await revoke.ExecuteNonQueryAsync();
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, search, reader.Token)).StatusCode);
+        }
+        finally { await CleanupAsync(actors); }
+    }
+
+    [Fact]
     public async Task Mentions_are_scoped_idempotent_and_follow_edits_deletes_and_preferences()
     {
         var actors = new List<TestActor>();
