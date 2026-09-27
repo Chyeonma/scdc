@@ -295,20 +295,24 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P7-T01 — Upload và metadata [BE, DB, OPS]
 
-- [ ] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
-- [ ] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
-- [ ] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
-- [ ] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
-- [ ] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+- [x] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
+- [x] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
+- [x] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
+- [x] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
+- [x] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+
+P7-T01 dùng SeaweedFS S3-compatible trong Compose, MinIO .NET SDK ở backend và ClamAV để quét trước khi ghi object. API multipart tạo staging upload 24 giờ; tối đa 10 MiB/file, 5 file/message, định dạng PNG/JPEG/GIF/WEBP/PDF/UTF-8 text. `messageType=3` cho attachment-only, `messageType=1` cho text kèm file. Chi tiết contract, cấu hình và cleanup ở [messaging-attachments.md](messaging-attachments.md).
 
 **Nghiệm thu:** file thật nằm trong storage, DB chỉ lưu metadata; file của user khác không thể bị gắn vào tin tùy ý.
 
 ### P7-T02 — Hiển thị và tải xuống [BE, FE, QA]
 
-- [ ] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
-- [ ] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
-- [ ] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
-- [ ] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+- [x] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
+- [x] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
+- [x] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
+- [x] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+
+P7-T02 tải file qua API xác thực riêng cho mỗi request; không phát URL ký. Quyền được kiểm tra lúc bắt đầu download, nên request đang chạy có thể hoàn tất sau khi quyền bị thu hồi; request mới nhận 404 và response không được cache. Chi tiết ở [messaging-attachments.md](messaging-attachments.md).
 
 **Nghiệm thu:** gửi file giữa hai tài khoản và tải được sau refresh; không thể tải file chỉ bằng cách đoán attachment ID.
 

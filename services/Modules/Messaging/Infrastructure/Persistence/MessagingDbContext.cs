@@ -15,6 +15,8 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<MessageEdit> MessageEdits => Set<MessageEdit>();
     public DbSet<MessageMention> MessageMentions => Set<MessageMention>();
+    public DbSet<AttachmentUpload> AttachmentUploads => Set<AttachmentUpload>();
+    public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -28,6 +30,8 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         ConfigureMessage(modelBuilder);
         ConfigureMessageEdit(modelBuilder);
         ConfigureMessageMention(modelBuilder);
+        ConfigureAttachmentUpload(modelBuilder);
+        ConfigureMessageAttachment(modelBuilder);
         ConfigureOutbox(modelBuilder);
     }
 
@@ -183,6 +187,45 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         entity.Property(mention => mention.MessageId).HasColumnName("message_id");
         entity.Property(mention => mention.MentionedUserId).HasColumnName("mentioned_user_id");
         entity.Property(mention => mention.CreatedAt).HasColumnName("created_at");
+    }
+
+    private static void ConfigureAttachmentUpload(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<AttachmentUpload>();
+        entity.ToTable("attachment_uploads", "messaging");
+        entity.HasKey(upload => upload.Id);
+        entity.Property(upload => upload.Id).HasColumnName("id");
+        entity.Property(upload => upload.ClientUploadId).HasColumnName("client_upload_id");
+        entity.Property(upload => upload.SpaceId).HasColumnName("space_id");
+        entity.Property(upload => upload.OwnerUserId).HasColumnName("owner_user_id");
+        entity.Property(upload => upload.ObjectKey).HasColumnName("object_key").HasMaxLength(500);
+        entity.Property(upload => upload.OriginalName).HasColumnName("original_name").HasMaxLength(255);
+        entity.Property(upload => upload.MimeType).HasColumnName("mime_type").HasMaxLength(100);
+        entity.Property(upload => upload.SizeBytes).HasColumnName("size_bytes");
+        entity.Property(upload => upload.ChecksumSha256).HasColumnName("checksum_sha256").HasMaxLength(64);
+        entity.Property(upload => upload.ScanStatus).HasColumnName("scan_status");
+        entity.Property(upload => upload.CreatedAt).HasColumnName("created_at");
+        entity.Property(upload => upload.ExpiresAt).HasColumnName("expires_at");
+        entity.Property(upload => upload.AttachedMessageId).HasColumnName("attached_message_id");
+    }
+
+    private static void ConfigureMessageAttachment(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<MessageAttachment>();
+        entity.ToTable("attachments", "messaging");
+        entity.HasKey(attachment => attachment.Id);
+        entity.Property(attachment => attachment.Id).HasColumnName("id");
+        entity.Property(attachment => attachment.MessageId).HasColumnName("message_id");
+        entity.Property(attachment => attachment.StorageProvider).HasColumnName("storage_provider").HasMaxLength(20);
+        entity.Property(attachment => attachment.BucketName).HasColumnName("bucket_name").HasMaxLength(100);
+        entity.Property(attachment => attachment.ObjectKey).HasColumnName("object_key").HasMaxLength(500);
+        entity.Property(attachment => attachment.OriginalName).HasColumnName("original_name").HasMaxLength(255);
+        entity.Property(attachment => attachment.MimeType).HasColumnName("mime_type").HasMaxLength(100);
+        entity.Property(attachment => attachment.SizeBytes).HasColumnName("size_bytes");
+        entity.Property(attachment => attachment.ChecksumSha256).HasColumnName("checksum_sha256").HasMaxLength(64);
+        entity.Property(attachment => attachment.ScanStatus).HasColumnName("scan_status");
+        entity.Property(attachment => attachment.CreatedAt).HasColumnName("created_at");
+        entity.Property(attachment => attachment.DeletedAt).HasColumnName("deleted_at");
     }
 
     private static void ConfigureOutbox(ModelBuilder modelBuilder)

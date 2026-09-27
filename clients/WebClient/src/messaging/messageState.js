@@ -4,13 +4,13 @@ export function createClientMessageId() {
   return crypto.randomUUID();
 }
 
-export function createPendingMessage({ spaceId, clientMessageId, content, author, replyToMessageId, threadRootId }) {
+export function createPendingMessage({ spaceId, clientMessageId, content, author, replyToMessageId, threadRootId, attachmentIds = [], attachments = [] }) {
   return {
     id: `${LOCAL_MESSAGE_PREFIX}${clientMessageId}`,
     spaceId,
     clientMessageId,
     sequenceNo: null,
-    messageType: 1,
+    messageType: content?.trim() ? 1 : 3,
     author: author ? {
       id: author.id,
       username: author.username,
@@ -24,7 +24,8 @@ export function createPendingMessage({ spaceId, clientMessageId, content, author
     editedAt: null,
     deletedAt: null,
     replyTo: null,
-    attachments: [],
+    attachmentIds,
+    attachments,
     reactions: [],
     deliveryState: 'pending',
     sendError: null,

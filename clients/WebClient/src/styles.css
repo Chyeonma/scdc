@@ -1116,6 +1116,14 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   max-width: 320px;
+  min-width: 0;
+}
+
+.attachment-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
 }
 
 .attachment-icon {
@@ -1149,6 +1157,10 @@ button:disabled {
 .attachment-download:hover {
   color: var(--text-header);
 }
+
+.attachment-download:disabled { opacity: 0.5; cursor: not-allowed; }
+.attachment-error, .composer-error { color: var(--red, #e05a5a); }
+.composer-error { margin: 4px 8px; font-size: 0.8rem; }
 
 /* Reactions Bar */
 .message__reactions {
@@ -2584,7 +2596,17 @@ button:disabled {
   border-bottom: 1px solid var(--border, #3f4147);
   background: var(--bg-secondary, #2b2d31);
   font-size: 0.78rem;
+  max-width: 100%;
 }
+
+.composer-attachment-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.composer-attachment-chip__status { color: var(--text-muted); white-space: nowrap; }
 
 .conversation-preferences button,
 .conversation-preferences select,

@@ -44,6 +44,24 @@ public static class MessagingErrors
         "Messaging.ValidationFailed",
         "The message content or type is invalid.");
 
+    public static readonly Error InvalidAttachment = Error.Validation(
+        "Messaging.InvalidAttachment", "The attachment is invalid, too large, or has an unsupported format.");
+
+    public static readonly Error AttachmentUnavailable = Error.Conflict(
+        "Messaging.AttachmentUnavailable", "The attachment upload is unavailable for this message.");
+
+    public static readonly Error AttachmentRejected = Error.Validation(
+        "Messaging.AttachmentRejected", "The attachment did not pass the security scan.");
+
+    public static readonly Error AttachmentScanUnavailable = Error.ServiceUnavailable(
+        "Messaging.AttachmentScanUnavailable", "Attachment scanning is temporarily unavailable.");
+
+    public static readonly Error AttachmentStorageUnavailable = Error.ServiceUnavailable(
+        "Messaging.AttachmentStorageUnavailable", "Attachment storage is temporarily unavailable.");
+
+    public static readonly Error AttachmentUploadLimitReached = Error.TooManyRequests(
+        "Messaging.AttachmentUploadLimitReached", "Too many unattached uploads are pending for this account.");
+
     public static readonly Error ActionNotAllowed = Error.Forbidden(
         "Messaging.ActionNotAllowed",
         "You cannot perform this action in the space.");
