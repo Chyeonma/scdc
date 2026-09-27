@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { initials } from './ServerRail.jsx';
-import { getSessions, revokeSession, logoutAll, changePassword, updateMe, logout } from '../api.js';
+import { getSessions, revokeSession, logoutAll, changePassword, updateMe, logout,
+  getUserBlocks, unblockUser } from '../api.js';
 
 export function UserSettingsModal({
   currentUser,
   onClose,
   onUserUpdated,
   notify,
+  onBlockChanged,
 }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
@@ -31,12 +33,41 @@ export function UserSettingsModal({
     }
   ]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
+  const [savingBlockedId, setSavingBlockedId] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'sessions') {
       loadSessions();
     }
+    if (activeTab === 'blocks') void loadBlocks();
   }, [activeTab]);
+
+  async function loadBlocks() {
+    setLoadingBlocks(true);
+    try {
+      setBlockedUsers(await getUserBlocks());
+    } catch (error) {
+      notify?.('error', error.message || 'Không thể tải danh sách đã chặn.');
+    } finally {
+      setLoadingBlocks(false);
+    }
+  }
+
+  async function handleUnblock(userId) {
+    setSavingBlockedId(userId);
+    try {
+      await unblockUser(userId);
+      setBlockedUsers((previous) => previous.filter((item) => item.userId !== userId));
+      onBlockChanged?.();
+      notify?.('success', 'Đã bỏ chặn người dùng.');
+    } catch (error) {
+      notify?.('error', error.message || 'Không thể bỏ chặn người dùng.');
+    } finally {
+      setSavingBlockedId(null);
+    }
+  }
 
   async function loadSessions() {
     setLoadingSessions(true);
@@ -149,6 +180,11 @@ export function UserSettingsModal({
             >
               💻 Phiên đăng nhập
             </button>
+            <button type="button"
+              className={`settings-nav-item ${activeTab === 'blocks' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('blocks')}>
+              Người đã chặn
+            </button>
             <button
               type="button"
               className={`settings-nav-item ${activeTab === 'appearance' ? 'is-active' : ''}`}
@@ -178,6 +214,7 @@ export function UserSettingsModal({
               {activeTab === 'profile' && 'Hồ sơ của tôi'}
               {activeTab === 'security' && 'Bảo mật & Mật khẩu'}
               {activeTab === 'sessions' && 'Quản lý Phiên đăng nhập (Active Sessions)'}
+              {activeTab === 'blocks' && 'Người đã chặn'}
               {activeTab === 'appearance' && 'Tuỳ chỉnh Giao diện'}
             </h2>
             <button type="button" className="settings-close-btn" onClick={onClose} title="Đóng cài đặt (Esc)">
@@ -331,7 +368,30 @@ export function UserSettingsModal({
             </div>
           )}
 
-          {/* Tab 4: Appearance */}
+          {activeTab === 'blocks' && (
+            <div className="settings-sections">
+              <p>Người bạn chặn không thể mở hoặc gửi tin nhắn riêng với bạn. Lịch sử cũ vẫn đọc được.</p>
+              {loadingBlocks ? <p>Đang tải...</p> : blockedUsers.length === 0 ?
+                <p>Bạn chưa chặn người dùng nào.</p> :
+                <div className="sessions-list">
+                  {blockedUsers.map((item) => (
+                    <div className="session-card" key={item.userId}>
+                      <div className="session-info">
+                        <strong>{item.displayName || item.username || 'Tài khoản không còn hoạt động'}</strong>
+                        {item.username && <small>@{item.username}</small>}
+                      </div>
+                      <button type="button" className="btn btn--secondary btn-sm"
+                        disabled={savingBlockedId === item.userId}
+                        onClick={() => void handleUnblock(item.userId)}>
+                        Bỏ chặn
+                      </button>
+                    </div>
+                  ))}
+                </div>}
+            </div>
+          )}
+
+          {/* Tab 5: Appearance */}
           {activeTab === 'appearance' && (
             <div className="settings-sections">
               <div className="theme-selector-grid">

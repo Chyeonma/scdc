@@ -51,6 +51,9 @@ internal sealed class UnreadCountReader(MessagingDbContext dbContext, TimeProvid
                   && message.SequenceNo > (state == null ? 0 : state.LastReadSequence ?? 0)
                   && message.AuthorUserId != userId
                   && message.DeletedAt == null
+                  && !dbContext.UserBlocks.Any(block =>
+                      block.BlockerUserId == userId && block.BlockedUserId == message.AuthorUserId
+                      || block.BlockerUserId == message.AuthorUserId && block.BlockedUserId == userId)
             group message by message.SpaceId into grouped
             select new { SpaceId = grouped.Key, Count = grouped.Count() })
             .ToDictionaryAsync(row => row.SpaceId, row => row.Count, cancellationToken);
@@ -67,6 +70,9 @@ internal sealed class UnreadCountReader(MessagingDbContext dbContext, TimeProvid
                   && message.AuthorUserId != userId
                   && message.DeletedAt == null
                   && message.ThreadRootId != null
+                  && !dbContext.UserBlocks.Any(block =>
+                      block.BlockerUserId == userId && block.BlockedUserId == message.AuthorUserId
+                      || block.BlockerUserId == message.AuthorUserId && block.BlockedUserId == userId)
             group message by message.SpaceId into grouped
             select new { SpaceId = grouped.Key, Count = grouped.Count() })
             .ToDictionaryAsync(row => row.SpaceId, row => row.Count, cancellationToken);

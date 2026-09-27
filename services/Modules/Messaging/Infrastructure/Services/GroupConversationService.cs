@@ -79,6 +79,12 @@ internal sealed class GroupConversationService(
         };
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await UserBlockPairLock.LockManyAsync(dbContext, command.ActorUserId, memberIds, cancellationToken);
+        if (await dbContext.UserBlocks.AsNoTracking().AnyAsync(block =>
+            memberIds.Contains(block.BlockerUserId) && block.BlockedUserId == command.ActorUserId
+            || memberIds.Contains(block.BlockedUserId) && block.BlockerUserId == command.ActorUserId,
+            cancellationToken))
+            return Result.Failure<GroupConversationDto>(MessagingErrors.GroupMemberUnavailable);
         dbContext.Spaces.Add(space);
         dbContext.GroupConversations.Add(group);
         dbContext.SpaceMembers.AddRange(allUserIds.Select(userId => new SpaceMember
@@ -192,6 +198,7 @@ internal sealed class GroupConversationService(
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var locked = await FindLockedAsync(command.SpaceId, command.ActorUserId, cancellationToken);
         if (locked is null || !CanManage(locked.ActorMember, includeOwner: true)) return Result.Failure(MessagingErrors.ResourceNotFound);
+        await UserBlockPairLock.LockAsync(dbContext, command.ActorUserId, command.MemberUserId, cancellationToken);
         var isBlocked = await dbContext.UserBlocks.AsNoTracking().AnyAsync(block =>
             (block.BlockerUserId == command.ActorUserId && block.BlockedUserId == command.MemberUserId)
             || (block.BlockerUserId == command.MemberUserId && block.BlockedUserId == command.ActorUserId), cancellationToken);

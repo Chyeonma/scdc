@@ -331,12 +331,14 @@ P8-T01 dùng `plainto_tsquery('simple', q)` trên `search_vector`/GIN sẵn có.
 
 ### P8-T02 — Chặn người dùng [BE, DB, FE]
 
-- [ ] **P8-T02.1** API block/unblock/list block qua `user_blocks`, idempotent và không cho tự block.
-- [ ] **P8-T02.2** Áp dụng policy P0: đề xuất chặn DM mới/gửi DM khi một bên block; lịch sử cũ và hành vi trong nhóm/channel phải được quyết định riêng.
-- [ ] **P8-T02.3** Áp dụng rule vào HTTP, realtime, invite nhóm và notification phù hợp phạm vi; cập nhật UI khi trạng thái block thay đổi.
+- [x] **P8-T02.1** API block/unblock/list block qua `user_blocks`, idempotent và không cho tự block.
+- [x] **P8-T02.2** Áp dụng policy P0: đề xuất chặn DM mới/gửi DM khi một bên block; lịch sử cũ và hành vi trong nhóm/channel phải được quyết định riêng.
+- [x] **P8-T02.3** Áp dụng rule vào HTTP, realtime, invite nhóm và notification phù hợp phạm vi; cập nhật UI khi trạng thái block thay đổi.
 - [ ] **P8-T02.4** Test gửi đồng thời với block và unblock, tránh chỉ vô hiệu hóa nút trên giao diện.
 
 **Nghiệm thu:** không vượt qua block bằng gọi API trực tiếp; hành vi nhóm/channel khớp policy công bố.
+
+Triển khai P8-T02: [`docs/messaging/user-blocks.md`](messaging/user-blocks.md). Test integration P8-T02.4 cần PostgreSQL test trước khi tích.
 
 ### P8-T03 — Report và xử lý tin vi phạm [BE, FE, QA]
 

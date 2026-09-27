@@ -295,7 +295,8 @@ export default function App() {
   const currentPreferences = (isHomeActive ? activeDm?.preferences : activeChannel?.preferences)
     || { notificationLevel: 2, mutedUntil: null, isHidden: false, isPinned: false };
   const canSendCurrentSpace = isHomeActive
-    ? Boolean(activeDm && activeDm.status === 1)
+    ? Boolean(activeDm && activeDm.status === 1
+        && (activeDm.spaceType !== 1 || activeDm.capabilities?.canSend))
     : Boolean(activeChannel?.canSend && activeChannel.status === 1);
   activeSpaceRef.current = currentSpaceId;
   messagesRef.current = messagesMap;
@@ -777,6 +778,12 @@ export default function App() {
       }
 
       if (event.eventType === 'SpaceUpdated') {
+        if (event.spaceId) setTypingBySpace((previous) => {
+          if (!previous[event.spaceId]) return previous;
+          const next = { ...previous };
+          delete next[event.spaceId];
+          return next;
+        });
         refreshBadges(event.spaceId);
         return;
       }
@@ -1424,6 +1431,7 @@ export default function App() {
           onClose={() => setShowUserSettings(false)}
           onUserUpdated={(updated) => setCurrentUser(updated)}
           notify={notify}
+          onBlockChanged={() => void loadInboxRef.current?.()}
         />
       )}
 
@@ -1525,6 +1533,11 @@ export default function App() {
           onClose={() => setInspectingUser(null)}
           onStartDm={(user) => handleStartDm(user.username)}
           currentUser={currentUser}
+          notify={notify}
+          onBlockChanged={() => {
+            setTypingBySpace({});
+            void loadInboxRef.current?.();
+          }}
         />
       )}
 

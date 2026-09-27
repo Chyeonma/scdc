@@ -249,6 +249,18 @@ export async function updateMe(profile) {
   });
 }
 
+export function getUserBlocks() {
+  return api('/users/me/blocks');
+}
+
+export function blockUser(userId) {
+  return api(`/users/me/blocks/${userId}`, { method: 'PUT' });
+}
+
+export function unblockUser(userId) {
+  return api(`/users/me/blocks/${userId}`, { method: 'DELETE' });
+}
+
 export function getSpaces({ limit = 50, cursor, includeHidden = false, signal } = {}) {
   const query = new URLSearchParams({ limit: String(limit) });
   if (cursor) query.set('cursor', cursor);

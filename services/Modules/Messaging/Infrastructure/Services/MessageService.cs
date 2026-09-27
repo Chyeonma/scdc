@@ -86,6 +86,7 @@ internal sealed class MessageService(
             var peerUserId = directConversation.UserLowId == command.ActorUserId
                 ? directConversation.UserHighId
                 : directConversation.UserLowId;
+            await UserBlockPairLock.LockAsync(dbContext, command.ActorUserId, peerUserId, cancellationToken);
             if (await userDirectory.FindByIdAsync(peerUserId, cancellationToken) is null
                 || await IsBlockedAsync(command.ActorUserId, peerUserId, cancellationToken))
                 return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
@@ -447,6 +448,7 @@ internal sealed class MessageService(
         {
             var pair = await dbContext.DirectConversations.AsNoTracking().SingleAsync(x => x.SpaceId == command.SpaceId, cancellationToken);
             var peer = pair.UserLowId == command.ActorUserId ? pair.UserHighId : pair.UserLowId;
+            await UserBlockPairLock.LockAsync(dbContext, command.ActorUserId, peer, cancellationToken);
             if (await IsBlockedAsync(command.ActorUserId, peer, cancellationToken))
                 return Result.Failure<MessageDto>(MessagingErrors.ActionNotAllowed);
         }
@@ -562,7 +564,12 @@ internal sealed class MessageService(
             var user = await userDirectory.FindByUsernameAsync(name, cancellationToken);
             if (user is not null && user.Id != actorUserId && readableIds.Contains(user.Id)) users.Add(user);
         }
-        return users;
+        await UserBlockPairLock.LockManyAsync(dbContext, actorUserId, users.Select(user => user.Id), cancellationToken);
+        var blockedIds = (await dbContext.UserBlocks.AsNoTracking()
+            .Where(block => block.BlockerUserId == actorUserId || block.BlockedUserId == actorUserId)
+            .Select(block => block.BlockerUserId == actorUserId ? block.BlockedUserId : block.BlockerUserId)
+            .ToArrayAsync(cancellationToken)).ToHashSet();
+        return users.Where(user => !blockedIds.Contains(user.Id)).ToArray();
     }
 
     private static bool TryNormalizeText(string? value, out string content)

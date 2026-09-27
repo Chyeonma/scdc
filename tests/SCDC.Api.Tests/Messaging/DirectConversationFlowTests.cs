@@ -18,6 +18,103 @@ public sealed class DirectConversationFlowTests(SCDCWebApplicationFactory factor
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
+    public async Task Block_api_is_idempotent_and_enforces_both_directions_without_hiding_history()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("BlockA");
+            var actorB = await CreateActorAsync("BlockB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            await SendTextAsync(actorA, spaceId, "Before block");
+            var blockPath = $"/api/v1/users/me/blocks/{actorB.UserId}";
+
+            var selfBlock = await SendAuthorizedAsync(HttpMethod.Put,
+                $"/api/v1/users/me/blocks/{actorA.UserId}", actorA.AccessToken);
+            Assert.Equal(HttpStatusCode.BadRequest, selfBlock.StatusCode);
+            for (var attempt = 0; attempt < 2; attempt++)
+                Assert.Equal(HttpStatusCode.NoContent,
+                    (await SendAuthorizedAsync(HttpMethod.Put, blockPath, actorA.AccessToken)).StatusCode);
+
+            var list = await SendAuthorizedAsync(HttpMethod.Get, "/api/v1/users/me/blocks", actorA.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+            var blocks = await list.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Single(blocks.EnumerateArray());
+            Assert.Equal(actorB.UserId, blocks[0].GetProperty("userId").GetGuid());
+            var otherList = await SendAuthorizedAsync(HttpMethod.Get, "/api/v1/users/me/blocks", actorB.AccessToken);
+            Assert.Empty((await otherList.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+
+            foreach (var actor in new[] { actorA, actorB })
+            {
+                var peer = actor == actorA ? actorB : actorA;
+                var open = await SendAuthorizedAsync(HttpMethod.Post, "/api/v1/conversations/direct",
+                    actor.AccessToken, new { recipientUserId = peer.UserId });
+                Assert.Equal(HttpStatusCode.Forbidden, open.StatusCode);
+                var send = await SendAuthorizedAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages",
+                    actor.AccessToken, new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "Blocked" });
+                Assert.Equal(HttpStatusCode.Forbidden, send.StatusCode);
+                var history = await SendAuthorizedAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{spaceId}/messages", actor.AccessToken);
+                Assert.Equal(HttpStatusCode.OK, history.StatusCode);
+                var space = await SendAuthorizedAsync(HttpMethod.Get, $"/api/v1/spaces/{spaceId}", actor.AccessToken);
+                Assert.False((await space.Content.ReadFromJsonAsync<JsonElement>())
+                    .GetProperty("capabilities").GetProperty("canSend").GetBoolean());
+            }
+
+            for (var attempt = 0; attempt < 2; attempt++)
+                Assert.Equal(HttpStatusCode.NoContent,
+                    (await SendAuthorizedAsync(HttpMethod.Delete, blockPath, actorA.AccessToken)).StatusCode);
+            var afterUnblock = await SendAuthorizedAsync(HttpMethod.Post,
+                $"/api/v1/spaces/{spaceId}/messages", actorB.AccessToken,
+                new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "After unblock" });
+            Assert.Equal(HttpStatusCode.Created, afterUnblock.StatusCode);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_block_and_send_have_a_single_ordering_point()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var actorA = await CreateActorAsync("RaceBlockA");
+            var actorB = await CreateActorAsync("RaceBlockB");
+            actors.AddRange([actorA, actorB]);
+            var spaceId = await CreateDirectConversationAsync(actorA, actorB);
+            var path = $"/api/v1/users/me/blocks/{actorB.UserId}";
+            var sendPath = $"/api/v1/spaces/{spaceId}/messages";
+            var block = SendAuthorizedAsync(HttpMethod.Put, path, actorA.AccessToken);
+            var send = SendAuthorizedAsync(HttpMethod.Post, sendPath, actorB.AccessToken,
+                new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "Racing block" });
+            await Task.WhenAll(block, send);
+            Assert.Equal(HttpStatusCode.NoContent, (await block).StatusCode);
+            Assert.Contains((await send).StatusCode, new[] { HttpStatusCode.Created, HttpStatusCode.Forbidden });
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await SendAuthorizedAsync(HttpMethod.Post, sendPath, actorB.AccessToken,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "After block" })).StatusCode);
+
+            var unblock = SendAuthorizedAsync(HttpMethod.Delete, path, actorA.AccessToken);
+            var retry = SendAuthorizedAsync(HttpMethod.Post, sendPath, actorB.AccessToken,
+                new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "Racing unblock" });
+            await Task.WhenAll(unblock, retry);
+            Assert.Equal(HttpStatusCode.NoContent, (await unblock).StatusCode);
+            Assert.Contains((await retry).StatusCode, new[] { HttpStatusCode.Created, HttpStatusCode.Forbidden });
+            Assert.Equal(HttpStatusCode.Created,
+                (await SendAuthorizedAsync(HttpMethod.Post, sendPath, actorB.AccessToken,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1, content = "After unblock" })).StatusCode);
+        }
+        finally
+        {
+            await CleanupActorsAsync(actors);
+        }
+    }
+
+    [Fact]
     public async Task Direct_conversation_is_created_once_and_only_members_can_read_it()
     {
         var actors = new List<TestActor>();

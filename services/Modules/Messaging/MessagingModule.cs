@@ -60,6 +60,7 @@ public static class MessagingModule
         services.AddScoped<IAttachmentCleanupService, AttachmentCleanupService>();
         services.AddHostedService<AttachmentCleanupWorker>();
         services.AddScoped<IDirectConversationService, DirectConversationService>();
+        services.AddScoped<IUserBlockService, UserBlockService>();
         services.AddScoped<IGroupConversationService, GroupConversationService>();
         services.AddSingleton<MessageRateLimiter>();
         services.AddScoped<MessageService>();
