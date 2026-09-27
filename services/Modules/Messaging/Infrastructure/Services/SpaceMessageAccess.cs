@@ -20,7 +20,7 @@ internal sealed class SpaceMessageAccess(MessagingDbContext dbContext, IChannelA
         {
             var channel = await channelAccess.CheckAsync(userId, space.Id, cancellationToken);
             return new(channel.CanRead, channel.CanSend && space.Status == SpaceStatus.Active,
-                channel.CanEditOwn && space.Status == SpaceStatus.Active, channel.CanDeleteOthers);
+                channel.CanEditOwn && space.Status == SpaceStatus.Active, channel.CanDeleteOthers, channel.ServerId);
         }
 
         if (space.SpaceType is not (SpaceType.Direct or SpaceType.Group))

@@ -35,7 +35,9 @@ public static class MessagingModule
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddScoped<IGroupConversationService, GroupConversationService>();
         services.AddSingleton<MessageRateLimiter>();
-        services.AddScoped<IMessageService, MessageService>();
+        services.AddScoped<MessageService>();
+        services.AddScoped<IMessageService>(provider => provider.GetRequiredService<MessageService>());
+        services.AddScoped<IModerationMessageGateway, ModerationMessageGateway>();
         services.AddScoped<IReadStateService, ReadStateService>();
         services.AddScoped<ISpacePreferencesService, SpacePreferencesService>();
         services.AddScoped<IUnreadCountReader, UnreadCountReader>();

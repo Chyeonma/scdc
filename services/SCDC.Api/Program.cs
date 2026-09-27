@@ -6,6 +6,7 @@ using SCDC.Modules.Community;
 using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
 using SCDC.Modules.Messaging.Hubs;
+using SCDC.Modules.Moderation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
+builder.Services.AddModerationModule(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();

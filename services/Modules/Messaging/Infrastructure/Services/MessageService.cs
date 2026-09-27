@@ -404,7 +404,14 @@ internal sealed class MessageService(
         return Result.Success((await ToDtosAsync([message], cancellationToken))[0]);
     }
 
-    public async Task<Result> DeleteAsync(DeleteMessageCommand command, CancellationToken cancellationToken)
+    public Task<Result> DeleteAsync(DeleteMessageCommand command, CancellationToken cancellationToken) =>
+        DeleteCoreAsync(command, platformReview: false, cancellationToken);
+
+    internal Task<Result> DeleteForPlatformReviewAsync(DeleteMessageCommand command, CancellationToken cancellationToken) =>
+        DeleteCoreAsync(command, platformReview: true, cancellationToken);
+
+    private async Task<Result> DeleteCoreAsync(DeleteMessageCommand command, bool platformReview,
+        CancellationToken cancellationToken)
     {
         if (command.ActorUserId == Guid.Empty || command.SpaceId == Guid.Empty || command.MessageId == Guid.Empty
             || command.ExpectedVersion < 1)
@@ -418,10 +425,10 @@ internal sealed class MessageService(
         if (space is null || space.Status == SpaceStatus.Deleted)
             return Result.Failure(MessagingErrors.ResourceNotFound);
         var access = await spaceAccess.CheckAsync(command.ActorUserId, space, cancellationToken);
-        if (!access.CanRead) return Result.Failure(MessagingErrors.ResourceNotFound);
+        if (!platformReview && !access.CanRead) return Result.Failure(MessagingErrors.ResourceNotFound);
         var message = await dbContext.Messages.SingleOrDefaultAsync(x => x.Id == command.MessageId && x.SpaceId == command.SpaceId, cancellationToken);
         if (message is null) return Result.Failure(MessagingErrors.ResourceNotFound);
-        if (message.MessageType == MessageType.System || (message.AuthorUserId != command.ActorUserId
+        if (message.MessageType == MessageType.System || (!platformReview && message.AuthorUserId != command.ActorUserId
             && !(space.SpaceType == SpaceType.Channel && access.CanDeleteOthers)
             && !(space.SpaceType == SpaceType.Group && await dbContext.SpaceMembers.AsNoTracking().AnyAsync(
                 member => member.SpaceId == command.SpaceId && member.UserId == command.ActorUserId

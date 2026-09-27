@@ -348,6 +348,30 @@ export function deleteMessage(spaceId, messageId, expectedVersion) {
   return api(`/spaces/${spaceId}/messages/${messageId}?expectedVersion=${expectedVersion}`, { method: 'DELETE' });
 }
 
+export function reportMessage(spaceId, messageId, reasonCode, details) {
+  return api(`/spaces/${spaceId}/message-reports`, {
+    method: 'POST', body: { messageId, reasonCode, details },
+  });
+}
+
+export function getPendingMessageReports(spaceId) {
+  return api(`/spaces/${spaceId}/message-reports`);
+}
+
+export function getPlatformReviewAccess() {
+  return api('/message-reports/access');
+}
+
+export function getPlatformMessageReports() {
+  return api('/message-reports');
+}
+
+export function resolveMessageReport(spaceId, reportId, decision, note) {
+  return api(`/spaces/${spaceId}/message-reports/${reportId}/resolve`, {
+    method: 'POST', body: { decision, note },
+  });
+}
+
 export function updateReadState(spaceId, lastReadSequence) {
   return api(`/spaces/${spaceId}/read-state`, {
     method: 'PUT',
