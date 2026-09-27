@@ -17,6 +17,144 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
+    public async Task Reports_require_message_access_and_moderator_actions_remove_with_audit()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var owner = await CreateActorAsync("report_owner");
+            var member = await CreateActorAsync("report_member");
+            var outsider = await CreateActorAsync("report_outsider");
+            actors.AddRange([owner, member, outsider]);
+            var server = await SendAsync(HttpMethod.Post, "/api/v1/servers", owner.Token,
+                new { name = "Report test server" });
+            var serverId = (await server.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var invite = await SendAsync(HttpMethod.Post, $"/api/v1/servers/{serverId}/invites", owner.Token, new { });
+            var code = (await invite.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString();
+            Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post,
+                $"/api/v1/invites/{code}/join", member.Token, new { })).StatusCode);
+            var spaceId = await CreateChannelAsync(owner, serverId, "reports", 1);
+            var message = await SendTextAsync(member, spaceId);
+            var messageId = message.GetProperty("id").GetGuid();
+            var reportsPath = $"/api/v1/spaces/{spaceId}/message-reports";
+            var payload = new { messageId, reasonCode = "spam", details = "Repeated links" };
+            Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Post,
+                reportsPath, outsider.Token, payload)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await SendAsync(HttpMethod.Post,
+                reportsPath, member.Token, new { messageId, reasonCode = "unknown" })).StatusCode);
+            var reported = await SendAsync(HttpMethod.Post, reportsPath, member.Token, payload);
+            Assert.Equal(HttpStatusCode.OK, reported.StatusCode);
+            var reportId = (await reported.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(HttpMethod.Post,
+                reportsPath, member.Token, payload)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Get,
+                reportsPath, member.Token)).StatusCode);
+            var queue = await SendAsync(HttpMethod.Get, reportsPath, owner.Token);
+            Assert.Equal(HttpStatusCode.OK, queue.StatusCode);
+            Assert.Single((await queue.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+            var resolvePath = $"{reportsPath}/{reportId}/resolve";
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Post,
+                resolvePath, member.Token, new { decision = "remove" })).StatusCode);
+            var removed = await SendAsync(HttpMethod.Post, resolvePath, owner.Token,
+                new { decision = "remove", note = "Confirmed spam" });
+            Assert.Equal(HttpStatusCode.OK, removed.StatusCode);
+            Assert.Equal(2, (await removed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetInt32());
+            var tombstone = await SendAsync(HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages/{messageId}", member.Token);
+            Assert.Equal(JsonValueKind.String,
+                (await tombstone.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("deletedAt").ValueKind);
+            Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(HttpMethod.Post,
+                resolvePath, owner.Token, new { decision = "remove" })).StatusCode);
+            Assert.Empty((await (await SendAsync(HttpMethod.Get, reportsPath, owner.Token))
+                .Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+
+            var second = await SendTextAsync(member, spaceId);
+            var secondId = second.GetProperty("id").GetGuid();
+            var secondReport = await SendAsync(HttpMethod.Post, reportsPath, member.Token,
+                new { messageId = secondId, reasonCode = "other" });
+            var secondReportId = (await secondReport.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("id").GetGuid();
+            var dismissed = await SendAsync(HttpMethod.Post, $"{reportsPath}/{secondReportId}/resolve",
+                owner.Token, new { decision = "dismiss" });
+            Assert.Equal(HttpStatusCode.OK, dismissed.StatusCode);
+            Assert.Equal(3, (await dismissed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetInt32());
+            var retained = await SendAsync(HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages/{secondId}", member.Token);
+            Assert.Equal(JsonValueKind.Null,
+                (await retained.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("deletedAt").ValueKind);
+
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+            await using var audit = new NpgsqlCommand(
+                "SELECT count(*) FROM moderation.actions WHERE id = @id AND action_type = 'remove_message'", connection);
+            audit.Parameters.AddWithValue("id", reportId);
+            Assert.Equal(1L, (long)(await audit.ExecuteScalarAsync())!);
+            await using var dismissalAudit = new NpgsqlCommand(
+                "SELECT count(*) FROM moderation.actions WHERE id = @id AND action_type = 'dismiss_report'", connection);
+            dismissalAudit.Parameters.AddWithValue("id", secondReportId);
+            Assert.Equal(1L, (long)(await dismissalAudit.ExecuteScalarAsync())!);
+        }
+        finally { await CleanupAsync(actors); }
+    }
+
+    [Fact]
+    public async Task Platform_reviewer_can_process_dm_reports_without_server_moderator_access()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var sender = await CreateActorAsync("dm_report_sender");
+            var recipient = await CreateActorAsync("dm_report_recipient");
+            var reviewer = await CreateActorAsync("dm_report_reviewer");
+            actors.AddRange([sender, recipient, reviewer]);
+            var dm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", sender.Token,
+                new { recipientUserId = recipient.Id });
+            var spaceId = (await dm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var message = await SendTextAsync(sender, spaceId);
+            var messageId = message.GetProperty("id").GetGuid();
+            var reportsPath = $"/api/v1/spaces/{spaceId}/message-reports";
+            Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, reportsPath, recipient.Token,
+                new { messageId, reasonCode = "harassment" })).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Get, reportsPath, sender.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(HttpMethod.Get,
+                "/api/v1/message-reports", reviewer.Token)).StatusCode);
+            Assert.False((await (await SendAsync(HttpMethod.Get,
+                "/api/v1/message-reports/access", reviewer.Token)).Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("canReview").GetBoolean());
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using (var connection = new NpgsqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                await using var grant = new NpgsqlCommand(
+                    "INSERT INTO moderation.reviewers (user_id) VALUES (@id)", connection);
+                grant.Parameters.AddWithValue("id", reviewer.Id);
+                await grant.ExecuteNonQueryAsync();
+            }
+            var queue = await SendAsync(HttpMethod.Get, "/api/v1/message-reports", reviewer.Token);
+            Assert.Equal(HttpStatusCode.OK, queue.StatusCode);
+            Assert.True((await (await SendAsync(HttpMethod.Get,
+                "/api/v1/message-reports/access", reviewer.Token)).Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("canReview").GetBoolean());
+            var report = (await queue.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+                .Single(x => x.GetProperty("messageId").GetGuid() == messageId);
+            var reportId = report.GetProperty("id").GetGuid();
+            Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages/{messageId}", reviewer.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Delete,
+                $"/api/v1/spaces/{spaceId}/messages/{messageId}?expectedVersion=1", reviewer.Token)).StatusCode);
+            var removed = await SendAsync(HttpMethod.Post, $"{reportsPath}/{reportId}/resolve", reviewer.Token,
+                new { decision = "remove" });
+            Assert.Equal(HttpStatusCode.OK, removed.StatusCode);
+            var tombstone = await SendAsync(HttpMethod.Get,
+                $"/api/v1/spaces/{spaceId}/messages/{messageId}", recipient.Token);
+            Assert.Equal(JsonValueKind.String,
+                (await tombstone.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("deletedAt").ValueKind);
+        }
+        finally { await CleanupAsync(actors); }
+    }
+
+    [Fact]
     public async Task Mentions_are_scoped_idempotent_and_follow_edits_deletes_and_preferences()
     {
         var actors = new List<TestActor>();
@@ -750,6 +888,8 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         await using var transaction = await connection.BeginTransactionAsync();
         foreach (var sql in new[]
                  {
+                     "DELETE FROM moderation.actions WHERE target_message_id IN (SELECT id FROM messaging.messages WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids)))",
+                     "DELETE FROM moderation.message_reports WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",
                      "DELETE FROM integration.outbox_events WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",
                      "DELETE FROM messaging.messages WHERE thread_root_id IS NOT NULL AND space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",
                      "DELETE FROM messaging.messages WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id = ANY(@ids))",

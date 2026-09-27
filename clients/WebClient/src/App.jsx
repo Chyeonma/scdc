@@ -29,6 +29,7 @@ import {
   sendMessage,
   editMessage,
   deleteMessage,
+  getPlatformReviewAccess,
   getSpaces,
   removeGroupMember,
   sessionStore,
@@ -60,6 +61,7 @@ import { CreateDmModal } from './components/CreateDmModal.jsx';
 import { GroupSettingsModal } from './components/GroupSettingsModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
+import { ModerationQueueModal } from './components/ModerationQueueModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
 import { useMessageSender } from './hooks/useMessageSender.js';
 import { mergeMessages, tombstoneMessage } from './messaging/messageState.js';
@@ -115,6 +117,9 @@ export default function App() {
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [reportingMessage, setReportingMessage] = useState(null);
+  const [moderationSpaceId, setModerationSpaceId] = useState(null);
+  const [showPlatformQueue, setShowPlatformQueue] = useState(false);
+  const [canPlatformReview, setCanPlatformReview] = useState(false);
   const [inspectingUser, setInspectingUser] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
 
@@ -162,6 +167,18 @@ export default function App() {
   useEffect(() => {
     if (session?.user?.id) setIsHomeActive(true);
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.accessToken) {
+      setCanPlatformReview(false);
+      return;
+    }
+    let active = true;
+    getPlatformReviewAccess().then((value) => {
+      if (active) setCanPlatformReview(Boolean(value.canReview));
+    }).catch(() => { if (active) setCanPlatformReview(false); });
+    return () => { active = false; };
+  }, [session?.accessToken]);
 
   const toDm = useCallback((space) => ({
     ...space,
@@ -1178,6 +1195,11 @@ export default function App() {
 
       {/* COLUMN 3: MAIN CHAT STAGE */}
       <main className="main-chat">
+        {canPlatformReview && (
+          <div className="conversation-preferences">
+            <button type="button" onClick={() => setShowPlatformQueue(true)}>Hàng đợi báo cáo nền tảng</button>
+          </div>
+        )}
         {/* Chat Header */}
         <ChatHeader
           title={isHomeActive ? (activeDm?.name || activeDm?.user?.displayName || 'Tin nhắn trực tiếp') : (activeChannel?.name ? `#${activeChannel.name}` : 'Kênh')}
@@ -1205,6 +1227,13 @@ export default function App() {
 
         {currentSpaceId && (
           <div className="conversation-preferences" aria-label="Tùy chỉnh hội thoại">
+            {((!isHomeActive && activeChannel?.canDeleteOthers)
+              || (isHomeActive && activeDm?.spaceType === 2
+                && (activeDm?.ownerUserId === currentUser?.id
+                  || members.some((member) => member.userId === currentUser?.id
+                    && (member.roleName === 'Owner' || member.roleName === 'Moderator'))))) && (
+              <button type="button" onClick={() => setModerationSpaceId(currentSpaceId)}>Kiểm duyệt báo cáo</button>
+            )}
             <button type="button" disabled={preferenceSaving}
               onClick={() => void savePreferences({ isPinned: !currentPreferences.isPinned })}>
               {currentPreferences.isPinned ? '★ Bỏ ghim' : '☆ Ghim hội thoại'}
@@ -1449,9 +1478,19 @@ export default function App() {
       {reportingMessage && (
         <ReportModal
           message={reportingMessage}
+          spaceId={reportingMessage.spaceId || currentSpaceId}
           onClose={() => setReportingMessage(null)}
           notify={notify}
         />
+      )}
+      {moderationSpaceId && (
+        <ModerationQueueModal spaceId={moderationSpaceId}
+          onClose={() => setModerationSpaceId(null)} notify={notify}
+          onRemoved={(spaceId) => { if (spaceId === currentSpaceId) void loadHistory(currentSpaceId); }} />
+      )}
+      {showPlatformQueue && (
+        <ModerationQueueModal platform onClose={() => setShowPlatformQueue(false)} notify={notify}
+          onRemoved={(spaceId) => { if (spaceId === currentSpaceId) void loadHistory(currentSpaceId); }} />
       )}
 
       {/* USER PROFILE MODAL */}

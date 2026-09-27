@@ -16,7 +16,7 @@ internal sealed class ChannelAccessChecker(CommunityDbContext dbContext) : IChan
         if (member?.Status != MemberStatus.Active) return ChannelAccessDecision.Denied;
         var server = await dbContext.Servers.AsNoTracking().SingleOrDefaultAsync(x => x.Id == channel.ServerId && x.Status == ServerStatus.Active, cancellationToken);
         if (server is null) return ChannelAccessDecision.Denied;
-        if (server.OwnerUserId == userId) return new(true, true, true, true);
+        if (server.OwnerUserId == userId) return new(true, true, true, true, channel.ServerId);
 
         var roleIds = await dbContext.MemberRoles.AsNoTracking().Where(x => x.ServerId == channel.ServerId && x.UserId == userId).Select(x => x.RoleId).ToListAsync(cancellationToken);
         var defaultRoles = await dbContext.Roles.AsNoTracking().Where(x => x.ServerId == channel.ServerId && x.IsDefault).Select(x => x.Id).ToListAsync(cancellationToken);
@@ -33,7 +33,7 @@ internal sealed class ChannelAccessChecker(CommunityDbContext dbContext) : IChan
         canSend = canRead && (canManage || Apply("channel.send", canSend, roleOverrides, userOverrides));
         var canEditOwn = canRead && canSend && Apply("message.edit_own", canManage || permissions.Contains("message.edit_own"), roleOverrides, userOverrides);
         var canDeleteOthers = canRead && Apply("message.delete", canManage || permissions.Contains("message.delete"), roleOverrides, userOverrides);
-        return new(canRead, canSend, canEditOwn, canDeleteOthers);
+        return new(canRead, canSend, canEditOwn, canDeleteOthers, channel.ServerId);
     }
 
     public async Task<IReadOnlyList<Guid>> ListReadableMemberIdsAsync(Guid spaceId, CancellationToken cancellationToken)

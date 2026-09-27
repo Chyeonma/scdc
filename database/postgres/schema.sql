@@ -883,8 +883,14 @@ CREATE TABLE messaging.user_blocks (
 
 CREATE INDEX ix_user_blocks_blocked ON messaging.user_blocks (blocked_user_id, blocker_user_id);
 
+CREATE TABLE moderation.reviewers (
+    user_id       uuid PRIMARY KEY REFERENCES identity.users (id) ON DELETE CASCADE,
+    granted_at    timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+
 CREATE TABLE moderation.message_reports (
     id                  uuid PRIMARY KEY DEFAULT uuidv7(),
+    space_id            uuid NOT NULL,
     message_id          uuid NOT NULL,
     reporter_user_id    uuid NOT NULL,
     reason_code         varchar(50) NOT NULL,
@@ -897,6 +903,8 @@ CREATE TABLE moderation.message_reports (
     resolved_at         timestamptz,
     CONSTRAINT fk_message_reports_message FOREIGN KEY (message_id)
         REFERENCES messaging.messages (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_message_reports_space FOREIGN KEY (space_id)
+        REFERENCES messaging.spaces (id) ON DELETE RESTRICT,
     CONSTRAINT fk_message_reports_reporter FOREIGN KEY (reporter_user_id)
         REFERENCES identity.users (id) ON DELETE RESTRICT,
     CONSTRAINT fk_message_reports_reviewer FOREIGN KEY (reviewed_by_user_id)
@@ -907,6 +915,8 @@ CREATE TABLE moderation.message_reports (
 );
 
 CREATE INDEX ix_message_reports_pending ON moderation.message_reports (created_at)
+    WHERE status IN (0, 1);
+CREATE INDEX ix_message_reports_space_pending ON moderation.message_reports (space_id, created_at)
     WHERE status IN (0, 1);
 
 CREATE TABLE moderation.actions (

@@ -229,5 +229,5 @@ internal sealed class CommunityService(
     private static ChannelDto ToDto(Channel c, SCDC.Contracts.Community.ChannelAccessDecision a, short status) =>
         new(c.SpaceId, c.ServerId, c.Name, c.Topic, (short)c.Visibility, c.Position,
             status, a.CanRead, a.CanSend && status == 1,
-            Preferences: new UserSpacePreferencesDto(2, null, false, false));
+            Preferences: new UserSpacePreferencesDto(2, null, false, false), CanDeleteOthers: a.CanDeleteOthers);
 }

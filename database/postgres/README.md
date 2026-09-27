@@ -37,6 +37,8 @@ Sau khi ket noi, mo `Schemas` va chon hien thi `identity`, `community`,
   chat, server channel, role, permission, attachment, reaction va outbox.
 - `migrations/20260924_p6_t01_message_permissions.sql`: them permission sua/xoa
   tin cho database da ton tai; chay mot lan truoc khi cap quyen channel.
+- `migrations/20260927_p8_t03_report_space.sql`: gan space cho report da co va
+  them index hang doi; chay mot lan truoc khi bat API Moderation tren database cu.
 
 Du lieu password/token trong `seed.sql` chi de minh hoa va khong dang nhap duoc.
 

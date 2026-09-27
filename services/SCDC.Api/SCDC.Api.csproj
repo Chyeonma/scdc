@@ -19,6 +19,7 @@
     <ProjectReference Include="../Modules/Identity/SCDC.Identity.csproj" />
     <ProjectReference Include="../Modules/Community/SCDC.Community.csproj" />
     <ProjectReference Include="../Modules/Messaging/SCDC.Messaging.csproj" />
+    <ProjectReference Include="../Modules/Moderation/SCDC.Moderation.csproj" />
   </ItemGroup>
 
 </Project>

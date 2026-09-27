@@ -334,10 +334,12 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P8-T03 — Report và xử lý tin vi phạm [BE, FE, QA]
 
-- [ ] **P8-T03.1** Tạo module Moderation theo ranh giới kiến trúc hiện có; triển khai report qua `moderation.message_reports` và nối `ReportModal`.
-- [ ] **P8-T03.2** Chỉ cho report tin được phép xem; chốt reason, chống spam/lặp và tránh log nội dung nhạy cảm không cần thiết.
-- [ ] **P8-T03.3** Queue review và hành động moderator qua contract Messaging/Community; không truy cập implementation hoặc ghi thẳng bảng của module khác.
-- [ ] **P8-T03.4** Ghi action/audit, phát event xóa/ẩn/thu hồi quyền; bổ sung trạng thái/schema nếu chọn hành vi ẩn khác với soft delete hiện tại.
+- [x] **P8-T03.1** Tạo module Moderation theo ranh giới kiến trúc hiện có; triển khai report qua `moderation.message_reports` và nối `ReportModal`.
+- [x] **P8-T03.2** Chỉ cho report tin được phép xem; chốt reason, chống spam/lặp và tránh log nội dung nhạy cảm không cần thiết.
+- [x] **P8-T03.3** Queue review và hành động moderator qua contract Messaging/Community; không truy cập implementation hoặc ghi thẳng bảng của module khác.
+- [x] **P8-T03.4** Ghi action/audit, phát event xóa/ẩn/thu hồi quyền; bổ sung trạng thái/schema nếu chọn hành vi ẩn khác với soft delete hiện tại.
+
+**Kiểm chứng còn chờ:** test tích hợp PostgreSQL thực tế cho P8-T03 chưa chạy được ở môi trường local. DM chỉ mở cho reviewer nền tảng được cấp quyền riêng trong Moderation; moderator server/channel không được xem bằng chứng DM.
 
 **Nghiệm thu:** report tồn tại thật, moderator xử lý đúng phạm vi quyền, có dấu vết quyết định và UI được đồng bộ.
 
