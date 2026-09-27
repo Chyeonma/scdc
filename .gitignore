@@ -54,4 +54,6 @@ Thumbs.db
 compose.override.yaml
 docker-compose.override.yml
 .docker-data/
-docs/
+# Keep existing reference documents local; expose the project lifecycle records.
+/docs/*
+!/docs/project/

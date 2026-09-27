@@ -12,4 +12,5 @@ Module nay so huu schema PostgreSQL `identity`.
 
 MFA, recovery code va external identity thuoc Identity v2.
 
-Tai lieu chi tiet: [`docs/identity/identity-v1.md`](../../../docs/identity/identity-v1.md).
+Tai lieu tong hop trach nhiem, du lieu va tat ca cac luong:
+[`IDENTITY-FLOWS.md`](IDENTITY-FLOWS.md).
