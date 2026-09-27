@@ -3,26 +3,27 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-EST-001 |
-| Phiên bản | 1.3 |
+| Phiên bản | 1.5 |
 | Cập nhật | 2026-09-27 |
-| Trạng thái | Dự toán sơ bộ phục vụ lập kế hoạch |
+| Trạng thái | Cần ước lượng lại theo cơ cấu nhân sự đã xác định |
 | Căn cứ | [Phạm vi dự án — SCDC-BRF-001](01-project-brief.md) |
 
-## 1. Tổng mức dự toán
+## 1. Tình trạng dự toán
 
-**500.000.000 VNĐ** cho thời gian thực hiện dự kiến khoảng 3 tháng, bao gồm
-nhân sự, hạ tầng/công cụ trong thời gian dự án và dự phòng.
+**Dự toán ban đầu: 500.000.000 VNĐ**, cho thời gian mục tiêu khoảng 3 tháng,
+bao gồm nhân sự, hạ tầng/công cụ và dự phòng.
 
-Dự toán sử dụng đơn giá và công sức ước tính. Giá trị hợp đồng và kế hoạch
-ngân sách chi tiết cần được xác lập sau khi hoàn thiện yêu cầu, giải pháp
-kỹ thuật và phương án nguồn lực.
+Giả định ba kỹ sư có kinh nghiệm (AS-001) không còn phù hợp với đội ngũ đã
+xác định: Vg, Sáng và Thái tham gia toàn thời gian, trong đó Thái cần đào tạo
+dưới sự hướng dẫn của Vg. Phân công kiêm nhiệm BA/UX/UI và QA chưa hoàn thiện.
+Xem [SCDC-ORG-001](04-team-and-discovery-plan.md).
 
-Phạm vi phiên bản 1.3 đã loại nhóm chat riêng ngoài server và cuộc gọi trong
-loại nhóm này. Chưa có ước lượng chi tiết về phần công sức giảm; mức
-500.000.000 VNĐ tiếp tục là mốc dự trù để đối chiếu khi cập nhật chi phí và
-tiến độ theo phạm vi mới.
+Cần lập lại ước lượng theo công việc, năng lực, thời gian hướng dẫn và các
+vai trò kiêm nhiệm; đồng thời tính ảnh hưởng của việc loại nhóm chat riêng
+ngoài server. Chưa có dự toán điều chỉnh. Các khoản dưới đây được giữ làm
+mốc đối chiếu với dự toán ban đầu.
 
-## 2. Chi phí dự kiến
+## 2. Cơ cấu dự toán ban đầu
 
 | Mã | Hạng mục | Cơ sở tính | Thành tiền |
 |---|---|---|---:|
@@ -34,18 +35,25 @@ tiến độ theo phạm vi mới.
 | | **Tổng trước dự phòng** | | **415.000.000 VNĐ** |
 | | **Tổng dự toán** | | **500.000.000 VNĐ** |
 
-Đơn giá nhân sự là đầu vào ước tính, cần được thay bằng đơn giá cung cấp thực
-tế khi xác lập kế hoạch chi phí.
+Các đơn giá và tháng công trong bảng thuộc phương án ước tính ban đầu, chưa
+phản ánh chi phí của từng thành viên hiện tại. Đơn giá thực tế và phương án
+tính công sức kiêm nhiệm cần được xác định khi cập nhật dự toán.
 
-## 3. Nguồn lực dự kiến
+## 3. Nguồn lực và công sức cần ước lượng lại
 
-- Ba kỹ sư làm toàn thời gian trong ba tháng. Một kỹ sư kiêm Tech Lead,
-  điều phối và chuẩn bị triển khai.
-- QA tham gia từ giai đoạn yêu cầu, tổng công sức tương đương hai tháng.
-- BA/UX/UI có tổng công sức tương đương một tháng, phân bổ theo nhu cầu phân
-  tích, thiết kế và rà soát.
+- Ba thành viên có thể dành toàn thời gian cho dự án.
+- Vg phụ trách kiến trúc tổng thể, lựa chọn công nghệ và trực tiếp lập trình,
+  đồng thời điều phối, đại diện sản phẩm và hướng dẫn Thái; cần phân bổ
+  thời gian cho từng trách nhiệm trong quỹ thời gian của một người.
+- Sáng phụ trách kỹ thuật backend và trực tiếp lập trình cùng Vg; cần tính
+  cả thiết kế chi tiết, tích hợp và rà soát bên cạnh phát triển tính năng.
+- Thái là thành viên mới; công sức độc lập được đánh giá theo kết quả học
+  và hoàn thành công việc có hướng dẫn.
+- QA 2 tháng công và BA/UX/UI 1 tháng công là giả định khối lượng từ dự toán
+  ban đầu; chưa có nhân sự riêng được xác định cho các vai trò này.
 
-Phân công cụ thể và khả năng kiêm nhiệm được kiểm tra khi lập kế hoạch công việc.
+Khi lập lịch, tổng phân bổ của mỗi người phải bao gồm công việc kiêm nhiệm,
+học, hướng dẫn và rà soát; tránh tính cùng một khoảng thời gian cho nhiều vai trò.
 
 ## 4. Cơ sở ước lượng hạ tầng
 
@@ -66,13 +74,14 @@ sử dụng cụ thể trước khi lựa chọn dịch vụ.
 
 ## 5. Giả định lập kế hoạch
 
-Các giả định dưới đây đang chờ kiểm chứng. Chúng là đầu vào ước tính công
-sức và chi phí, chưa phải cam kết năng lực hoặc hạn mức đăng ký của sản phẩm.
+AS-001 đã được đối chiếu với cơ cấu nhân sự hiện tại và không còn phù hợp.
+Các giả định còn lại đang chờ kiểm chứng. Chúng là đầu vào ước tính công sức
+và chi phí, chưa phải cam kết năng lực hoặc hạn mức đăng ký của sản phẩm.
 
 | Mã | Giả định | Cách kiểm chứng | Đầu mối dự kiến |
 |---|---|---|---|
-| AS-001 | Có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Xác nhận nhân sự, năng lực và lịch phân bổ. | Quản lý dự án, Tech Lead |
-| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Ước lượng theo yêu cầu, màn hình và kế hoạch kiểm thử. | BA/UX/UI, QA, quản lý dự án |
+| AS-001 | Giả định ban đầu: có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Không còn phù hợp: đội ngũ gồm 3 thành viên toàn thời gian, có 1 thành viên mới cần hướng dẫn; phải ước lượng lại theo phân công và năng lực. | Vg, Sáng |
+| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Ước lượng theo yêu cầu, màn hình, kế hoạch kiểm thử và năng lực kiêm nhiệm của nhóm. | Vg, đầu mối BA/UX/UI và QA khi được phân công |
 | AS-003 | Tích hợp nền tảng media có sẵn cho thoại/video và chia sẻ màn hình. | Đánh giá tính phù hợp, khả năng tích hợp, chi phí và vận hành. | Tech Lead, kỹ sư media |
 | AS-004 | Quy mô dự trù 1.000 tài khoản. | Xác định nhóm người dùng ban đầu và nhu cầu lưu trữ. | Khách hàng, BA |
 | AS-005 | Có khoảng 100 người trực tuyến đồng thời trên toàn hệ thống. | Xác định nhu cầu tải dự kiến; kiểm chứng khả năng đáp ứng bằng kiểm thử tải. | Khách hàng, Tech Lead, QA |
@@ -97,7 +106,8 @@ kết quả đánh giá kỹ thuật.
 | RSK-001 | Phòng thoại trong server và gọi riêng hai người có video/chia sẻ màn hình; yêu cầu chất lượng chưa đầy đủ. | Tăng công sức tích hợp, kiểm thử và kéo dài tiến độ. | Làm rõ ma trận chức năng, giới hạn và điều kiện nghiệm thu trước khi ước lượng chi tiết. | Tech Lead, QA |
 | RSK-002 | Chưa xác định lượng sử dụng media và quy mô phòng. | Chi phí hạ tầng vượt dự trù. | Tính chi phí theo thời lượng, dữ liệu truyền tải và theo dõi mức sử dụng. | Phụ trách vận hành |
 | RSK-003 | Kiến trúc microservices phát sinh phụ thuộc giữa các dịch vụ. | Tăng công sức triển khai, kiểm thử tích hợp và vận hành. | Xác định ranh giới dịch vụ, trách nhiệm dữ liệu và công việc vận hành trong kế hoạch. | Tech Lead |
-| RSK-004 | Chưa chốt nhân sự, trình duyệt hỗ trợ và trách nhiệm quản trị nền tảng công khai. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Giải quyết các vấn đề liên quan trước khi xác nhận kế hoạch thực hiện. | Quản lý dự án, khách hàng |
+| RSK-004 | Chưa chốt phân công frontend, UX/UI, QA, trình duyệt hỗ trợ và trách nhiệm quản trị nền tảng công khai. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Xác định trách nhiệm, năng lực và khối lượng kiêm nhiệm trước khi xác nhận kế hoạch thực hiện. | Vg, Sáng |
+| RSK-005 | Thời gian đào tạo, hướng dẫn và rà soát của thành viên mới chưa được lượng hóa. | Giảm thời gian dành cho các công việc khác và tăng độ bất định của tiến độ. | Chia công việc nhỏ, bố trí thời gian hướng dẫn và đánh giá công sức theo kết quả thực hiện. | Vg, Sáng |
 
 ## 8. Điều kiện cập nhật dự toán
 
@@ -114,5 +124,7 @@ ngân sách hoặc thay đổi phạm vi bàn giao.
 | 1.1 | 2026-09-27 | Chuẩn hóa căn cứ và mô tả giả định. |
 | 1.2 | 2026-09-27 | Làm rõ đơn vị công sức, đầu vào tính hạ tầng và trách nhiệm xử lý rủi ro; giữ nguyên tổng dự toán. |
 | 1.3 | 2026-09-27 | Ghi nhận phạm vi giao tiếp thu hẹp và yêu cầu ước lượng lại; cập nhật rủi ro media. |
+| 1.4 | 2026-09-27 | Ghi nhận AS-001 không còn phù hợp; giữ dự toán ban đầu để đối chiếu và bổ sung công sức đào tạo, kiêm nhiệm khi ước lượng lại. |
+| 1.5 | 2026-09-27 | Bổ sung công sức kiến trúc, lựa chọn công nghệ và lập trình của Vg vào cơ sở phân bổ nguồn lực. |
 
 [Mục lục hồ sơ](../README.md)
