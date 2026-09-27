@@ -39,7 +39,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "SCDC modular monolith. Identity v1 is active; Community and Messaging are at foundation stage."
+        Description = "SCDC modular monolith. Identity, Community and Messaging APIs are available. Chat realtime uses /hubs/chat. See /api/v1/health/ready for database readiness."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -63,7 +63,7 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>

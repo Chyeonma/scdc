@@ -40,6 +40,11 @@ Sau khi ket noi, mo `Schemas` va chon hien thi `identity`, `community`,
 - `migrations/20260925_p7_t01_attachment_uploads.sql`: them staging upload
   cho database da ton tai; chay mot lan truoc khi bat API attachment.
 
+Khong chay `schema.sql` tren database dang co du lieu: dau file xoa va tao lai
+schema. Ban Compose ban giao chi mount file nay de khoi tao volume PostgreSQL
+moi, khong mount `seed.sql`. Quy trinh backup, migration, rollback va restore:
+[`docs/messaging/release-handoff.md`](../../docs/messaging/release-handoff.md).
+
 Du lieu password/token trong `seed.sql` chi de minh hoa va khong dang nhap duoc.
 
 ## Query de quan sat luong du lieu

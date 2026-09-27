@@ -1,7 +1,8 @@
 # SCDC
 
-SCDC dang duoc xay lai theo modular monolith. Backend hien tai la foundation
-sach; Identity v1 da duoc trien khai, Community va Messaging dang o foundation.
+SCDC la modular monolith voi Identity, Community va Messaging API. Luong chat
+da co DM, group, channel, realtime va attachment; ban phat hanh cong khai van
+can hoan tat cac buoc trong `docs/messaging/release-handoff.md`.
 
 Tai lieu tong quan: [`docs/architecture/overview.md`](docs/architecture/overview.md).
 
@@ -87,19 +88,21 @@ trace hay chi tiet exception cho client.
 
 Tai lieu chi tiet: [`docs/api/error-handling.md`](docs/api/error-handling.md).
 
-## Podman Compose
+## Compose
 
 ```bash
-podman compose up -d --build
+docker compose up -d --build
 ```
 
 - Web client: `http://localhost:3000`
 - API: `http://localhost:5026`
 - PostgreSQL: `localhost:5432`
 
-Script trong `database/postgres` chi tu dong chay khi PostgreSQL khoi tao mot
-data volume moi. Web client cu van duoc giu lai nhung cac luong dang nhap/chat
-se chua hoat dong cho den khi cac vertical slice moi duoc trien khai.
+`compose.yaml` chi danh cho phat trien local va co du lieu seed. Cau hinh
+`compose.release.yaml` khong nap seed va yeu cau secret rieng. Xem
+[`docs/messaging/release-handoff.md`](docs/messaging/release-handoff.md) truoc
+khi nang cap, backup hoac phuc hoi. Health `/api/v1/health` kiem tra host;
+`/api/v1/health/ready` kiem tra ket noi PostgreSQL.
 
 ## DBeaver
 

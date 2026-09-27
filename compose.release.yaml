@@ -1,0 +1,71 @@
+# Single-host release candidate. Supply the required variables from a private
+# environment file; see docs/messaging/release-handoff.md. No demo seed is mounted.
+services:
+  chat-service:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=${SCDC_DB_PASSWORD:?set SCDC_DB_PASSWORD}
+      Modules__Identity__SigningKey: ${SCDC_SIGNING_KEY:?set SCDC_SIGNING_KEY}
+      Modules__Identity__ExposeDevelopmentTokens: "false"
+      Modules__Messaging__Attachments__Endpoint: http://object-storage:8333
+      Modules__Messaging__Attachments__AccessKey: ${SCDC_S3_ACCESS_KEY:?set SCDC_S3_ACCESS_KEY}
+      Modules__Messaging__Attachments__SecretKey: ${SCDC_S3_SECRET_KEY:?set SCDC_S3_SECRET_KEY}
+      Modules__Messaging__Attachments__ClamAvHost: clamav
+    depends_on:
+      postgres:
+        condition: service_healthy
+      object-storage:
+        condition: service_started
+      clamav:
+        condition: service_started
+    restart: unless-stopped
+
+  web-client:
+    build:
+      context: ./clients/WebClient
+    ports:
+      - "${SCDC_WEB_PORT:-3000}:80"
+    depends_on:
+      chat-service:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_chat
+      POSTGRES_USER: scdc
+      POSTGRES_PASSWORD: ${SCDC_DB_PASSWORD:?set SCDC_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scdc -d scdc_chat"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - scdc-postgres-data:/var/lib/postgresql
+      - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    restart: unless-stopped
+
+  object-storage:
+    image: chrislusf/seaweedfs@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    environment:
+      AWS_ACCESS_KEY_ID: ${SCDC_S3_ACCESS_KEY:?set SCDC_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${SCDC_S3_SECRET_KEY:?set SCDC_S3_SECRET_KEY}
+      S3_BUCKET: scdc-messaging
+    volumes:
+      - scdc-object-data:/data
+    restart: unless-stopped
+
+  clamav:
+    image: clamav/clamav:1.4
+    volumes:
+      - scdc-clamav-data:/var/lib/clamav
+    restart: unless-stopped
+
+volumes:
+  scdc-postgres-data:
+  scdc-object-data:
+  scdc-clamav-data:
