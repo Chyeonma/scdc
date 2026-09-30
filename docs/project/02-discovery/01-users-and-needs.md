@@ -3,21 +3,23 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-DIS-001 |
-| Phiên bản | 0.6 |
+| Phiên bản | 0.15 |
 | Cập nhật | 2026-09-30 |
-| Trạng thái | Đã ghi nhận đầu vào từ đại diện sản phẩm — đang làm rõ |
+| Trạng thái | Đầu vào từ đại diện sản phẩm — chưa kiểm chứng với người dùng bên ngoài |
 | Liên quan | OQ-001, OQ-003, OQ-012 tại [sổ vấn đề cần làm rõ](../01-initiation/03-discovery-and-decision-log.md) |
 
 ## 1. Mục đích
 
 Làm rõ nhóm người dùng đầu tiên, hoàn cảnh sử dụng, vấn đề cần giải quyết
-và hành trình ưu tiên để chuẩn bị khảo sát. Tài liệu này ghi nhận đầu vào
-và kết quả làm rõ nhu cầu; nhân sự, phương án tiếp cận và lịch khảo sát
-được quản lý tại [SCDC-ORG-001](../01-initiation/04-team-and-discovery-plan.md).
+và hành trình ưu tiên để đặc tả yêu cầu. Tài liệu này ghi nhận đầu vào
+và kết quả làm rõ nhu cầu; nhân sự và phương án thực hiện được quản lý tại
+[SCDC-ORG-001](../01-initiation/04-team-and-discovery-plan.md).
 
 Thông tin do đại diện sản phẩm cung cấp là định hướng hoặc giả định sản
-phẩm. Kết luận từ người dùng cần có nguồn ghi nhận riêng. Hiện chưa có
-kết quả khảo sát người dùng bên ngoài.
+phẩm. Kết luận từ người dùng cần có nguồn ghi nhận riêng. Theo
+[DEC-030](../01-initiation/03-discovery-and-decision-log.md), đợt hiện tại
+không khảo sát người dùng bên ngoài; các nhận định dưới đây chưa được kiểm
+chứng theo cách đó.
 
 ## 2. Cơ sở đã ghi nhận
 
@@ -38,7 +40,10 @@ Việc chọn một hành trình để phân tích trước không tự động 
 các hành trình còn lại khỏi
 [phạm vi phiên bản đầu](../01-initiation/01-project-brief.md).
 
-## 3. Nội dung làm rõ đầu tiên với đại diện sản phẩm
+## 3. Câu trả lời đã ghi nhận theo từng lượt
+
+Các câu trả lời được giữ theo trình tự trao đổi. Nội dung còn mở ở lượt
+trước có thể đã được giải quyết ở lượt sau; mục 5 nêu trạng thái hiện hành.
 
 | Nội dung | Câu hỏi | Ghi nhận |
 |---|---|---|
@@ -54,6 +59,41 @@ các hành trình còn lại khỏi
 | Trạng thái tin nhắn | Chỉ đã gửi/lỗi gửi, thêm đã nhận, hay thêm đã đọc? | Chọn hiển thị đã gửi và lỗi gửi trong đợt đầu; ý nghĩa chính xác của “đã gửi” cần đặc tả. |
 | Tham gia cộng đồng | Qua liên kết mời, tìm kiếm, hay cả hai? | Chọn cả liên kết mời và tìm kiếm; cộng đồng nào xuất hiện trong tìm kiếm và điều kiện tham gia còn cần xác định. |
 | File trong phòng theo chủ đề | Gửi file tài liệu ngay trong đợt đầu hay để sau? | Chọn để gửi file sang đợt sau. |
+| Giới hạn sửa tin nhắn | Bất cứ lúc nào, trong 15 phút, hay trong một giờ? | Chọn cho người gửi sửa tin nhắn của mình bất cứ lúc nào; quy tắc ghi nhận tin đã sửa còn mở. |
+| Phạm vi xóa tin nhắn | Xóa cho cả hai người hay cho người gửi chọn xóa riêng mình/cả hai? | Chọn xóa tin của người gửi cho cả hai người; cách hiển thị tin đã xóa còn mở. |
+| Cộng đồng trong tìm kiếm | Chỉ cộng đồng công khai hay cả cộng đồng riêng tư? | Chọn chỉ cộng đồng công khai xuất hiện trong tìm kiếm. |
+| Tham gia cộng đồng tìm được | Vào ngay hay cần duyệt? | Tùy cấu hình của từng cộng đồng: vào ngay hoặc chờ duyệt. Giá trị mặc định và hành vi với liên kết mời chưa xác định. |
+| Tạo phòng theo chủ đề | Chỉ chủ sở hữu/người được cấp quyền hay mọi thành viên? | Chọn chỉ chủ sở hữu hoặc người được cấp quyền. Quy tắc cấp quyền chi tiết còn mở. |
+| Cấu hình tham gia mặc định | Cộng đồng công khai mới tạo cho vào ngay hay chờ duyệt? | Chọn vào ngay theo mặc định; có thể chuyển sang chế độ chờ duyệt. Ai được đổi cấu hình còn cần làm rõ. |
+| Tham gia qua liên kết mời | Vào ngay hay vẫn theo chế độ tham gia của cộng đồng? | Chọn vào ngay khi dùng liên kết mời hợp lệ; quy tắc tạo, thời hạn và thu hồi lời mời còn mở. |
+| Hiển thị tin đã xóa | Biến mất hoàn toàn hay hiện dòng thay thế? | Chọn hiển thị “Tin nhắn đã bị xóa” cho cả hai người. |
+| Gửi tin bị lỗi | Người gửi bấm thử lại hay ứng dụng tự thử lại khi có mạng? | Chọn người gửi bấm thử lại; quy tắc tránh tạo hai tin giống nhau còn cần đặc tả. |
+| Hiển thị phòng theo chủ đề | Thành viên thấy mọi phòng hay chỉ phòng được cấp quyền xem? | Chọn chỉ hiển thị những phòng thành viên được cấp quyền xem; cách cấp quyền mặc định còn mở. |
+| Khớp kết quả tìm người | Cần nhập đúng tên hay có thể nhập một phần? | Chọn tìm theo một phần tên tài khoản hoặc tên hiển thị; cách phân biệt người trùng tên còn mở. |
+| Ý nghĩa trạng thái “Đã gửi” | Hệ thống đã lưu tin hay thiết bị người nhận đã nhận tin? | Chọn hệ thống đã lưu tin; việc nhận khi ngoại tuyến cần đặc tả. |
+| Dấu hiệu tin đã sửa | Hiển thị dấu “Đã sửa” hay chỉ hiện nội dung mới? | Chọn hiển thị dấu “Đã sửa” cùng nội dung hiện hành. |
+| Thời hạn liên kết mời | Không hết hạn hay người tạo chọn thời hạn? | Chọn người tạo liên kết mời đặt thời hạn; điều kiện tạo và xử lý liên kết hết hạn còn mở. |
+| Người đổi chế độ tham gia | Chỉ chủ sở hữu hay cả người được cấp quyền? | Chọn chủ sở hữu và người được cấp quyền. Cách cấp hoặc thu hồi quyền còn mở. |
+| Người tạo liên kết mời | Ai được tạo liên kết mời vào cộng đồng? | Chọn chủ sở hữu và người được cấp quyền. |
+| Người duyệt yêu cầu tham gia | Ai được duyệt yêu cầu khi cộng đồng bật chờ duyệt? | Chọn chủ sở hữu và người được cấp quyền. |
+| Quyền xem phòng mới | Phòng theo chủ đề mới tạo mặc định ai xem được? | Mọi thành viên, trừ khi giới hạn quyền. |
+| Tin văn bản trong phòng | Đợt đầu tin nhắn trong phòng có được sửa và xóa không? | Có, thao tác sửa/xóa như tin riêng. |
+| Người nhận không mở ứng dụng | Tin đã được hệ thống lưu khi người nhận không mở ứng dụng có xuất hiện khi họ quay lại không? | Có; B thấy tin A gửi khi B mở lại ứng dụng. |
+| Tài khoản | Đợt nhắn tin riêng đầu đăng ký và đăng nhập bằng gì? | Chọn cả email và tên tài khoản; chi tiết luồng được diễn giải trong bản nháp SCDC-FR-ACC-001. |
+| Tránh gửi trùng | Bấm thử lại khi không rõ lần gửi trước đã lưu hay chưa có được tạo hai tin không? | Không; cùng thao tác chỉ có một tin trong hội thoại. |
+| Lịch sử phòng với thành viên mới | Người mới tham gia có thấy tin cũ trong phòng được phép xem không? | Có, được xem lịch sử cũ. |
+| Người đổi quyền xem phòng | Ai được thay danh sách người có quyền xem? | Chủ sở hữu và người được cấp quyền. |
+| Quyền gửi tin trong phòng | Ai được gửi tin ở phòng mình xem được trong đợt đầu? | Mọi thành viên có quyền xem phòng. |
+| Xác minh email | Có cần xác minh email trước khi nhắn tin không? | Có, xác minh trước. |
+| Quên mật khẩu | Đợt đầu có đặt lại mật khẩu qua email không? | Có. |
+| Cộng đồng riêng tư | Có thể tham gia bằng cách nào? | Qua liên kết mời hoặc được thêm trực tiếp; người có quyền thêm chưa xác định. |
+| Thu hồi lời mời | Người có quyền tạo lời mời có được thu hồi trước hạn không? | Có. |
+| Rời cộng đồng | Thành viên thường có tự rời được không? | Có. |
+| Nhận cuộc gọi riêng | Người nhận có cần bấm chấp nhận trước khi bắt đầu? | Có. |
+| Cuộc gọi nhỡ | Có lưu cuộc gọi nhỡ trong hội thoại ở đợt đầu? | Để sang đợt sau. |
+| Vào phòng thoại | Thành viên thấy phòng thoại có được vào ngay? | Có. |
+| Chia sẻ màn hình đồng thời | Một hay nhiều người cùng chia sẻ trong phòng thoại? | Nhiều người; chưa chọn số tối đa. |
+| Mất mạng khi gọi | Khi mạng trở lại, kết nối lại tự động hay người dùng bấm? | Tự kết nối lại; thời gian chờ còn mở. |
 
 Nguồn: câu trả lời của đại diện sản phẩm trong trao đổi ngày 2026-09-30.
 Đây là định hướng sản phẩm và mô tả vấn đề từ đại diện sản phẩm; chưa phải
@@ -70,23 +110,24 @@ theo dõi cuộc trò chuyện theo chủ đề và tìm lại tin nhắn, tài 
 ngữ cảnh. Chưa có tiêu chí đo hoặc kết quả kiểm chứng giá trị này.
 
 Mô tả người dùng tạm thời theo nhu cầu: các nhóm có nhiều người trao đổi
-nhiều chủ đề và chia sẻ tài liệu. Đây là cách diễn giải phục vụ khảo sát,
+nhiều chủ đề và chia sẻ tài liệu. Đây là cách diễn giải phục vụ đặc tả,
 không phải quyết định giới hạn đối tượng sản phẩm.
 
 ## 5. Nội dung làm rõ tiếp theo
 
 | Nội dung | Cần xác định | Liên quan |
 |---|---|---|
-| Chi tiết tìm người và nhận tin riêng | Đã chọn tìm bằng tên tài khoản và tên hiển thị rồi nhắn ngay. Còn cần xác định cách khớp tên, phân biệt người trùng tên và kết quả không tìm thấy. Việc xử lý khi người nhận không muốn nhận tin được để sang đợt sau (DEC-018). | OQ-002, OQ-005 |
-| Nhắn tin cơ bản | Đợt đầu chỉ hỗ trợ văn bản, cho sửa/xóa; hiển thị đã gửi/lỗi gửi. Cần làm rõ giới hạn sửa/xóa, ý nghĩa trạng thái, mất mạng, gửi lại và cách kiểm chứng kết quả. | OQ-005 |
-| Tổ chức phòng theo chủ đề | Cách đặt chủ đề, người được tạo phòng và quyền truy cập từng phòng. Định hướng nhiều phòng đã được lựa chọn; quy tắc chi tiết còn mở. | OQ-003, OQ-004, OQ-005 |
-| Tham gia cộng đồng | Đã chọn liên kết mời và tìm kiếm. Cần xác định cộng đồng nào xuất hiện trong tìm kiếm, điều kiện được tham gia và cách rời cộng đồng. | OQ-003 |
+| Chi tiết tìm người và nhận tin riêng | Đã chọn tìm theo một phần tên tài khoản hoặc tên hiển thị rồi nhắn ngay. Còn cần phân biệt người trùng tên và xử lý khi không tìm thấy. Việc xử lý khi người nhận không muốn nhận tin được để sang đợt sau (DEC-018). | OQ-002, OQ-005 |
+| Nhắn tin cơ bản | Đợt đầu chỉ hỗ trợ văn bản; người gửi sửa bất cứ lúc nào với dấu “Đã sửa”, xóa cho cả hai người với dòng thay thế; “Đã gửi” nghĩa là hệ thống đã lưu tin, khi lỗi cho bấm thử lại. Người nhận thấy tin đã lưu khi mở lại ứng dụng; thử lại cùng thao tác không tạo tin trùng. Cần làm rõ giới hạn nội dung và cách kiểm chứng kết quả. | OQ-005 |
+| Tổ chức phòng theo chủ đề | Chủ sở hữu hoặc người được cấp quyền mới tạo phòng và quản lý danh sách xem; thành viên chỉ thấy phòng được cấp quyền xem. Phòng mới mặc định cho mọi thành viên xem, trừ khi giới hạn quyền. Mọi thành viên xem được cũng gửi được tin; thành viên mới thấy lịch sử cũ. Tin văn bản trong phòng được sửa/xóa như tin riêng. Cần làm rõ ma trận quyền chi tiết. | OQ-003, OQ-004, OQ-005 |
+| Tham gia cộng đồng | Có liên kết mời và tìm kiếm; tìm kiếm chỉ hiện cộng đồng công khai. Mặc định cộng đồng công khai cho vào ngay; có thể cấu hình chờ duyệt. Liên kết mời hợp lệ cho vào ngay; người tạo chọn thời hạn. Chủ sở hữu và người được cấp quyền đổi chế độ tham gia, tạo/thu hồi liên kết mời và duyệt yêu cầu. Cộng đồng riêng tư vào qua mời hoặc được thêm trực tiếp; thành viên thường tự rời được. Còn mở người có quyền thêm trực tiếp và hệ quả khi rời. | OQ-003 |
 | Theo dõi tài liệu | Đã để gửi file trong phòng sang đợt sau. Hành vi mong muốn khi xem lại tài liệu và mối liên hệ với chủ đề; chưa chốt tính năng tìm kiếm hoặc kho tài liệu. | OQ-005 |
-| Kiểm chứng nhu cầu | Nhóm có thể tiếp cận để khảo sát, tình huống thực tế, kết quả mong muốn và cách đánh giá. | OQ-012, OQ-013 |
+| Đánh giá nhu cầu | Xác định kết quả mong muốn và cách đánh giá từ đại diện sản phẩm; ghi rõ những nhận định chưa có bằng chứng từ người dùng bên ngoài. | OQ-001, OQ-012 |
 | Ngôn ngữ và khu vực | Ngôn ngữ giao diện và khu vực sử dụng ban đầu. | OQ-001 |
+| Thoại/video/chia sẻ màn hình | Đã chọn nhận cuộc gọi riêng, vào phòng thoại theo quyền xem, nhiều nguồn chia sẻ đồng thời và tự kết nối lại; cần xác định giới hạn người/luồng, trường hợp ngoại lệ và ngưỡng chất lượng. | OQ-006, OQ-007, OQ-010 |
 
 Hành trình nhắn tin riêng dự kiến để tiếp tục phân tích: đăng nhập → tìm
-người nhận bằng tên tài khoản hoặc tên hiển thị → mở hội thoại → gửi/nhận
+người nhận bằng một phần tên tài khoản hoặc tên hiển thị → mở hội thoại → gửi/nhận
 tin nhắn → mở lại lịch sử. Người dùng được nhắn ngay, không cần kết bạn
 hoặc cùng cộng đồng (DEC-016, DEC-019). Các trạng thái giao diện và quy
 tắc ngoại lệ cần đặc tả tiếp.
@@ -103,14 +144,37 @@ Trường hợp người nhận không muốn nhận tin từ một tài khoản
 xử lý ở đợt sau (DEC-018). Chưa chọn cơ chế chặn tài khoản hay tắt thông
 báo riêng cho trường hợp này.
 
-Trong đợt đầu, người gửi có thể sửa và xóa tin nhắn văn bản (DEC-020),
-giao diện thể hiện trạng thái đã gửi và lỗi gửi (DEC-021). Quy tắc sửa/xóa
-và ý nghĩa trạng thái cần được xác định trước khi viết tiêu chí chấp nhận.
+Trong đợt đầu, người gửi có thể sửa tin nhắn văn bản của mình bất cứ lúc
+nào và xóa cho cả hai người (DEC-020). Giao diện thể hiện trạng thái đã
+gửi và lỗi gửi (DEC-021). “Đã gửi” nghĩa là hệ thống đã lưu tin.
+Tin đã sửa có dấu “Đã sửa”; tin đã xóa hiện dòng “Tin nhắn đã bị xóa” cho
+cả hai. Khi lỗi gửi, người gửi bấm thử lại; ứng dụng không tự thử lại.
+Người nhận thấy tin đã lưu khi mở lại ứng dụng (DEC-035). Thử lại cùng
+thao tác không tạo tin trùng (DEC-037); cơ chế kỹ thuật cần thiết kế.
 
-Hành trình tham gia cộng đồng sẽ có cả liên kết mời và tìm kiếm (DEC-022).
-Việc gửi file tài liệu trong phòng theo chủ đề được để sang đợt sau
-(DEC-023). Quy tắc hiển thị cộng đồng trong tìm kiếm và điều kiện tham gia
-còn cần làm rõ.
+Hành trình tham gia cộng đồng có cả liên kết mời và tìm kiếm (DEC-022).
+Chỉ cộng đồng công khai xuất hiện trong tìm kiếm (DEC-024). Cộng đồng tìm
+được cho vào ngay hoặc yêu cầu chờ duyệt, tùy cấu hình của cộng đồng đó
+(DEC-025). Chỉ chủ sở hữu hoặc người được cấp quyền mới tạo phòng theo
+chủ đề (DEC-026). Việc gửi file tài liệu trong phòng được để sang đợt sau
+(DEC-023). Cộng đồng công khai mới tạo mặc định cho vào ngay; có thể
+chuyển sang chờ duyệt. Liên kết mời hợp lệ cho vào ngay dù cộng đồng đang
+ở chế độ chờ duyệt (DEC-025). Thành viên chỉ thấy các phòng mình được cấp
+quyền xem (DEC-027). Người tạo liên kết mời chọn thời hạn (DEC-028);
+chủ sở hữu và người được cấp quyền có thể đổi chế độ tham gia (DEC-029).
+Chỉ chủ sở hữu hoặc người được cấp quyền được tạo liên kết mời và duyệt
+yêu cầu tham gia (DEC-031, DEC-032). Phòng mới mặc định cho mọi thành viên
+xem được, trừ khi giới hạn quyền (DEC-033). Tin văn bản trong phòng cho
+sửa/xóa như tin riêng (DEC-034). Cách hiển thị lời mời bị thu hồi và phân
+quyền chi tiết còn cần làm rõ.
+Thành viên mới được xem lịch sử phòng có quyền xem (DEC-038); chủ sở hữu
+và người được cấp quyền quản lý danh sách xem (DEC-039). Mọi thành viên
+có quyền xem phòng được gửi tin trong đợt đầu (DEC-040). Tài khoản dùng
+cả email và tên tài khoản theo DEC-036; phải xác minh email trước khi nhắn
+tin và có đặt lại mật khẩu qua email (DEC-041, DEC-042). Cộng đồng riêng
+tư có thể vào qua mời hoặc được thêm trực tiếp; người có quyền tạo mời
+có thể thu hồi trước hạn, thành viên thường tự rời được (DEC-043–045).
+Luồng tài khoản chi tiết ở SCDC-FR-ACC-001.
 
 ## 6. Cách ghi nhận và tổng hợp
 
@@ -121,14 +185,15 @@ cần kiểm tra tiếp.
 
 Đầu ra cần đạt của phần này:
 
-- Mô tả một nhóm người dùng ưu tiên đủ cụ thể để tìm người tham gia khảo sát.
+- Mô tả nhóm người dùng dự kiến đủ cụ thể để thiết kế và kiểm tra hành trình.
 - Mô tả tình huống, cách xử lý hiện tại và vấn đề cần kiểm chứng.
 - Xác định hành trình cần phân tích trước cùng lý do lựa chọn.
 - Ghi kết quả mong muốn, cách đánh giá dự kiến và những giả định còn mở.
 
 Khi có kết luận, cập nhật nội dung liên quan trong sổ vấn đề cần làm rõ.
-OQ-001 và OQ-012 tiếp tục mở cho đến khi đủ thông tin tương ứng; việc tạo
-bản nháp này chưa đánh dấu hoàn tất khảo sát hay giai đoạn khởi tạo.
+OQ-001 và OQ-012 tiếp tục mở cho đến khi đủ thông tin tương ứng. Việc bỏ
+khảo sát bên ngoài trong đợt này không biến giả định thành bằng chứng từ
+người dùng hoặc tự động hoàn tất giai đoạn khởi tạo.
 
 ## 7. Lịch sử phiên bản
 
@@ -140,5 +205,14 @@ bản nháp này chưa đánh dấu hoàn tất khảo sát hay giai đoạn kh�
 | 0.4 | 2026-09-30 | Ghi nhận đợt triển khai nhắn tin riêng đầu tiên chỉ hỗ trợ văn bản. |
 | 0.5 | 2026-09-30 | Ghi nhận xử lý trường hợp người nhận không muốn nhận tin từ một tài khoản ở đợt sau. |
 | 0.6 | 2026-09-30 | Ghi nhận tìm người theo tên tài khoản/tên hiển thị, sửa/xóa tin, trạng thái gửi/lỗi, tham gia cộng đồng qua mời/tìm kiếm và để gửi file sang đợt sau. |
+| 0.7 | 2026-09-30 | Làm rõ sửa tin không giới hạn thời gian, xóa cho cả hai, tìm cộng đồng công khai, chế độ tham gia tùy cấu hình và quyền tạo phòng. |
+| 0.8 | 2026-09-30 | Làm rõ chế độ tham gia mặc định và qua lời mời, tin đã xóa, thử lại khi gửi lỗi và khả năng nhìn thấy phòng. |
+| 0.9 | 2026-09-30 | Làm rõ tìm theo một phần tên, ý nghĩa “Đã gửi”, dấu “Đã sửa”, thời hạn liên kết mời và quyền đổi chế độ tham gia. |
+| 0.10 | 2026-09-30 | Ghi nhận không khảo sát người dùng bên ngoài trong đợt này; phân biệt đầu vào từ đại diện sản phẩm với bằng chứng từ người dùng. |
+| 0.11 | 2026-09-30 | Ghi nhận quyền tạo mời/duyệt, quyền xem phòng mặc định và thao tác tin trong phòng; giữ câu hỏi ngoại tuyến ở trạng thái đang chờ. |
+| 0.12 | 2026-09-30 | Ghi nhận xác nhận người nhận thấy tin đã lưu khi mở lại ứng dụng. |
+| 0.13 | 2026-09-30 | Ghi nhận lựa chọn tài khoản, tránh tin trùng, lịch sử phòng và quyền xem/gửi. |
+| 0.14 | 2026-09-30 | Ghi nhận xác minh email, khôi phục mật khẩu, cộng đồng riêng tư, thu hồi mời và tự rời. |
+| 0.15 | 2026-09-30 | Ghi nhận năm lựa chọn sản phẩm cho thoại, video và chia sẻ màn hình. |
 
 [Mục lục hồ sơ](../README.md)

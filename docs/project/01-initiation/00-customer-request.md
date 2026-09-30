@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-REQ-001 |
-| Phiên bản | 1.7 |
+| Phiên bản | 2.1 |
 | Cập nhật | 2026-09-30 |
 | Trạng thái | Đã ghi nhận yêu cầu cấp cao |
 
@@ -26,15 +26,16 @@ khiến tin nhắn bị trôi, khó theo dõi liên tục; file tài liệu cũn
 đề tương tự. Ưu tiên trước mắt là nhắn tin và tham gia cộng đồng, vì chức
 năng nhắn tin cơ bản là nền tảng để phát triển thêm tính năng. Nhắn tin
 riêng giữa hai người được ưu tiên trước; cộng đồng được tổ chức bằng nhiều
-phòng theo chủ đề trước. Người dùng có thể tìm bằng tên tài khoản và nhắn
-riêng ngay, không cần kết bạn hoặc cùng cộng đồng. Người dùng có thể tìm
-người theo tên tài khoản hoặc tên hiển thị. Đợt nhắn tin riêng đầu hỗ trợ
-văn bản, sửa và xóa tin, hiển thị trạng thái đã gửi hoặc lỗi gửi. Người
-dùng tham gia cộng đồng qua liên kết mời hoặc tìm kiếm; việc gửi file trong
-phòng theo chủ đề được để sang đợt sau. Quy tắc chi tiết còn cần làm rõ.
+phòng theo chủ đề trước. Các quyết định về cách tìm người để nhắn riêng,
+tin nhắn văn bản và cách tham gia cộng đồng được ghi tại
+[SCDC-DIS-001](../02-discovery/01-users-and-needs.md). Đặc tả hành vi
+nhắn tin riêng đợt đầu được quản lý tại
+[SCDC-FR-DM-001](../03-requirements/01-direct-messaging.md).
 
-Đầu vào và các giả định cần kiểm chứng được ghi tại
-[SCDC-DIS-001](../02-discovery/01-users-and-needs.md).
+Đợt hiện tại không khảo sát người dùng bên ngoài theo
+[DEC-030](03-discovery-and-decision-log.md). Đầu vào từ đại diện sản phẩm
+được dùng để đặc tả yêu cầu và vẫn được đánh dấu là chưa kiểm chứng với
+người dùng bên ngoài.
 
 Discord là sản phẩm tham chiếu về trải nghiệm giao tiếp và cách tổ chức
 cộng đồng. Danh sách yêu cầu dưới đây xác định phạm vi cần phát triển.
@@ -93,5 +94,8 @@ Những quy tắc nghiệp vụ và giới hạn cần xác định được the
 | 1.5 | 2026-09-30 | Bổ sung vấn đề trôi tin nhắn/tài liệu; ghi nhận ưu tiên nhắn tin riêng trước và cộng đồng có nhiều phòng theo chủ đề. |
 | 1.6 | 2026-09-30 | Ghi nhận tìm người bằng tên tài khoản và nhắn riêng ngay, không cần kết bạn hoặc cùng cộng đồng. |
 | 1.7 | 2026-09-30 | Ghi nhận tìm theo tên tài khoản/tên hiển thị, thao tác và trạng thái DM; tham gia cộng đồng qua mời/tìm kiếm và thứ tự triển khai file. |
-.
+| 1.8 | 2026-09-30 | Làm rõ thao tác sửa/xóa tin, cộng đồng công khai trong tìm kiếm, chế độ tham gia tùy cấu hình và quyền tạo phòng. |
+| 1.9 | 2026-09-30 | Ghi nhận tin đã xóa có dòng thay thế, bấm thử lại khi gửi lỗi, chế độ tham gia mặc định, liên kết mời và quyền xem phòng. |
+| 2.0 | 2026-09-30 | Giữ yêu cầu ban đầu ở mức cấp cao; dẫn chiếu các quyết định chi tiết và đặc tả nhắn tin riêng sang hồ sơ chuyên trách. |
+| 2.1 | 2026-09-30 | Ghi rõ việc không khảo sát người dùng bên ngoài trong đợt hiện tại và trạng thái chưa kiểm chứng của đầu vào. |
 [Mục lục hồ sơ](../README.md)

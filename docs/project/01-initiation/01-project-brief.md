@@ -3,8 +3,8 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-BRF-001 |
-| Phiên bản | 1.6 |
-| Cập nhật | 2026-09-27 |
+| Phiên bản | 1.7 |
+| Cập nhật | 2026-09-30 |
 | Trạng thái | Định hướng và phạm vi sơ bộ đã thống nhất |
 | Căn cứ | [Yêu cầu ban đầu — SCDC-REQ-001](00-customer-request.md) |
 
@@ -47,7 +47,7 @@ Các chức năng bổ sung được đánh giá theo quy trình quản lý thay
 
 Quy mô tải là giả định phục vụ dự toán. Cơ cấu nhân sự hiện có khác với giả
 định ba kỹ sư có kinh nghiệm ban đầu; cần tính công sức kiêm nhiệm và hướng
-dẫn khi đánh giá tiến độ, chi phí. Xem [nhân sự và chuẩn bị khảo sát](04-team-and-discovery-plan.md)
+dẫn khi đánh giá tiến độ, chi phí. Xem [nhân sự và phương án làm rõ nhu cầu](04-team-and-discovery-plan.md)
 và [dự toán và giả định](02-budget-and-assumptions.md).
 
 Ảnh hưởng của việc thu hẹp phạm vi nhắn tin và cuộc gọi đến công sức, chi
@@ -112,5 +112,6 @@ và nguồn lực được quản lý tại [SCDC-EST-001](02-budget-and-assumpt
 | 1.4 | 2026-09-27 | Ghi nhận nhân sự toàn thời gian, nhu cầu đào tạo và yêu cầu đánh giá lại tiến độ, dự toán. |
 | 1.5 | 2026-09-27 | Làm rõ vai trò kiến trúc, lựa chọn công nghệ và lập trình của Vg cùng trách nhiệm backend của Sáng. |
 | 1.6 | 2026-09-27 | Ghi nhận Vg phụ trách UX/UI, Thái phụ trách frontend và kiểm thử. |
+| 1.7 | 2026-09-30 | Cập nhật dẫn chiếu hồ sơ nhân sự và phương án làm rõ nhu cầu hiện hành. |
 
 [Mục lục hồ sơ](../README.md)

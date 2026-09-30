@@ -1,11 +1,11 @@
-# SCDC — Nhân sự và chuẩn bị khảo sát
+# SCDC — Nhân sự và phương án làm rõ nhu cầu
 
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-ORG-001 |
-| Phiên bản | 0.5 |
+| Phiên bản | 0.6 |
 | Cập nhật | 2026-09-30 |
-| Trạng thái | Đã ghi nhận nhân sự; kế hoạch khảo sát đang xây dựng |
+| Trạng thái | Đã ghi nhận nhân sự; không khảo sát người dùng bên ngoài trong đợt hiện tại |
 | Liên quan | OQ-009, OQ-013 tại [sổ quyết định](03-discovery-and-decision-log.md) |
 
 ## 1. Nhân sự đã xác định
@@ -24,7 +24,7 @@ Nhóm hiện tại chưa đáp ứng giả định ba kỹ sư có kinh nghiệm
 
 | Hạng mục | Phụ trách đề xuất | Cách phối hợp |
 |---|---|---|
-| Làm rõ yêu cầu và tổ chức khảo sát | Vg | Sáng góp ý tính khả thi; Thái hỗ trợ ghi nhận và tổng hợp theo biểu mẫu. |
+| Làm rõ yêu cầu với đại diện sản phẩm | Vg | Sáng góp ý tính khả thi; Thái hỗ trợ ghi nhận, đối chiếu với giao diện và tiêu chí kiểm thử. |
 | Kiến trúc tổng thể và lựa chọn công nghệ | Vg | Sáng góp ý khả năng triển khai, các ràng buộc backend và tích hợp. |
 | Thiết kế chi tiết backend | Sáng | Phối hợp với Vg để bảo đảm phù hợp với kiến trúc tổng thể và công nghệ đã lựa chọn. |
 | Lập trình và tích hợp | Vg, Sáng và Thái | Vg và Sáng trực tiếp lập trình; Thái triển khai frontend dưới sự hướng dẫn của Vg. Phân chia công việc cụ thể khi có thiết kế và phối hợp tích hợp, rà soát mã nguồn. |
@@ -38,39 +38,36 @@ phối hợp trong bảng là đề xuất để lập kế hoạch chi tiết. 
 hướng dẫn, phát triển, kiểm thử và rà soát cần được phân bổ cụ thể; sản lượng
 độc lập của Thái chưa được dùng làm cơ sở cam kết tiến độ.
 
-## 3. Tình trạng chuẩn bị khảo sát
+## 3. Phương án làm rõ nhu cầu trong đợt hiện tại
 
 | Nội dung | Tình trạng |
 |---|---|
-| Người tham gia khảo sát | Chưa có người được xác định hoặc xác nhận tham gia. |
-| Khả năng bố trí thời gian | Nhóm có thể sắp xếp thời gian linh hoạt. |
-| Lịch khảo sát cụ thể | Chưa xác lập; phụ thuộc phương án tiếp cận và lịch của người tham gia. |
+| Khảo sát người dùng bên ngoài | Không thực hiện trong đợt hiện tại theo DEC-030. |
+| Người tham gia và lịch khảo sát | Không tuyển người hoặc lập lịch trong đợt hiện tại. |
 | Đầu vào từ đại diện sản phẩm | Ba nhu cầu tại SCDC-REQ-001; cập nhật 2026-09-30: vấn đề trôi tin nhắn/tài liệu, ưu tiên DM trước, cộng đồng có nhiều phòng theo chủ đề và tham gia qua liên kết mời hoặc tìm kiếm. Chi tiết tại SCDC-DIS-001. |
-| Nội dung cần làm rõ | Người dùng khảo sát và chi tiết hành trình ưu tiên (OQ-001), quy tắc hiển thị/tư cách tham gia cộng đồng (OQ-003), giá trị sản phẩm và cách đánh giá (OQ-012). |
-| Kết quả khảo sát | Chưa có. |
+| Nội dung cần làm rõ | Người dùng đại diện cụ thể và chi tiết hành trình ưu tiên (OQ-001), quy tắc cộng đồng (OQ-003), giá trị sản phẩm và cách đánh giá (OQ-012). |
+| Bằng chứng từ người dùng bên ngoài | Chưa có; đầu vào hiện tại do đại diện sản phẩm cung cấp. |
 
 Đầu vào làm rõ nhu cầu và các câu hỏi tiếp theo được quản lý tại
 [SCDC-DIS-001](../02-discovery/01-users-and-needs.md).
 
-Đề xuất cho đợt đầu là tìm 3–5 người đang tham gia nhóm bạn hoặc cộng đồng,
-trao đổi khoảng 20–30 phút mỗi người. Phương án này cần xác nhận trước khi
-lập lịch và phân công thực hiện.
+Phương án phỏng vấn 3–5 người từng được đề xuất nhưng không áp dụng trong
+đợt hiện tại. [Bộ câu hỏi](../02-discovery/02-interview-guide.md) được
+giữ làm tài liệu dự phòng nếu dự án quyết định khảo sát về sau. Những nhận
+định về người dùng chưa có bằng chứng bên ngoài tiếp tục được đánh dấu là
+giả định trong SCDC-DIS-001.
 
-Mục đích là kiểm chứng các giả định về nhu cầu và tình huống sử dụng. Có thể
-làm rõ yêu cầu với đại diện sản phẩm trước, sau đó đánh giá bản thiết kế
-tương tác với người dùng. Phương pháp và thời điểm lấy phản hồi chưa được chốt.
-
-## 4. Công việc chuẩn bị đề xuất
+## 4. Công việc làm rõ nhu cầu tiếp theo
 
 | Công việc | Kết quả cần có | Điều kiện thực hiện |
 |---|---|---|
-| Chuẩn bị nội dung khảo sát | Mục tiêu, nhóm nội dung cần tìm hiểu và biểu mẫu ghi nhận. | Sau khi thống nhất phương án khảo sát. |
-| Tìm và mời người tham gia | Danh sách người nhận lời và thời gian có thể tham gia. | Có đầu mối phụ trách tiếp cận. |
-| Xếp lịch và phân công | Lịch trao đổi, người chủ trì và người ghi nhận cho từng buổi. | Người tham gia đã xác nhận. |
-| Tổng hợp kết quả | Các nhu cầu, tình huống sử dụng, khác biệt và giả định còn mở. | Có ghi nhận từ các buổi khảo sát. |
+| Làm rõ quy tắc còn mở với đại diện sản phẩm | Kết luận hoặc giả định có đầu mối tại SCDC-LOG-001. | Các câu hỏi ảnh hưởng đến hành trình và tiêu chí chấp nhận đã được xác định. |
+| Rà soát bản nháp đặc tả | Hành vi, ngoại lệ và tiêu chí chấp nhận nhất quán với phạm vi đã thống nhất. | Có đầu vào trong SCDC-DIS-001 và quyết định tương ứng. |
+| Lập kế hoạch kiểm thử và nghiệm thu | Kịch bản kiểm tra chức năng, phân quyền, mất kết nối và kết quả mong đợi. | Quy tắc đủ rõ để QA viết kịch bản. |
 
 Các nhận định nội bộ được quản lý như giả định sản phẩm cho đến khi có bằng
-chứng kiểm chứng. OQ-013 còn mở đối với phương án tiếp cận và lịch khảo sát.
+chứng kiểm chứng. OQ-013 được xử lý cho đợt này bằng DEC-030; OQ-001 và
+OQ-012 vẫn mở về người dùng đại diện và cách đánh giá giá trị sản phẩm.
 
 ## 5. Ảnh hưởng đến kế hoạch
 
@@ -90,5 +87,6 @@ chứng kiểm chứng. OQ-013 còn mở đối với phương án tiếp cận 
 | 0.3 | 2026-09-27 | Ghi nhận Vg phụ trách UX/UI, Thái phụ trách frontend và kiểm thử; cập nhật đầu vào làm rõ nhu cầu và công sức kiêm nhiệm. |
 | 0.4 | 2026-09-30 | Dẫn chiếu đầu vào làm rõ vấn đề, ưu tiên nhắn tin riêng và tổ chức phòng theo chủ đề tại SCDC-DIS-001. |
 | 0.5 | 2026-09-30 | Cập nhật hai cách tham gia cộng đồng đã được lựa chọn và nội dung khảo sát còn mở. |
+| 0.6 | 2026-09-30 | Ghi nhận quyết định không khảo sát bên ngoài trong đợt hiện tại và chuyển sang làm rõ yêu cầu, rà soát đặc tả. |
 
 [Mục lục hồ sơ](../README.md)

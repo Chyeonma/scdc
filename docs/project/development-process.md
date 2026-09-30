@@ -3,8 +3,8 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-PRC-001 |
-| Phiên bản | 1.1 |
-| Cập nhật | 2026-09-27 |
+| Phiên bản | 1.2 |
+| Cập nhật | 2026-09-30 |
 | Trạng thái | Đề xuất áp dụng |
 
 ## 1. Phạm vi áp dụng
@@ -18,7 +18,7 @@ kiểm thử có thể diễn ra song song khi đủ đầu vào; kết quả đ
 hồi để điều chỉnh yêu cầu và kế hoạch liên quan.
 
 Đánh giá khả thi và lập kế hoạch bắt đầu từ giai đoạn khởi tạo, gồm nguồn
-lực, thời gian, chi phí, rủi ro và kế hoạch khảo sát sơ bộ. Sau khi yêu cầu và
+lực, thời gian, chi phí, rủi ro và phương án làm rõ nhu cầu sơ bộ. Sau khi yêu cầu và
 thiết kế rõ hơn, kế hoạch được chi tiết hóa và cập nhật theo từng đợt bàn giao.
 
 ## 2. Vai trò và trách nhiệm
@@ -41,8 +41,8 @@ người chịu trách nhiệm và thẩm quyền xác nhận cho từng đầu 
 
 | Giai đoạn | Chủ trì | Đầu ra | Điều kiện hoàn tất |
 |---|---|---|---|
-| 1. Khởi tạo | Khách hàng, BA, quản lý dự án | Yêu cầu ban đầu, Project Brief, đầu mối xác nhận, đánh giá khả thi và dự toán sơ bộ, kế hoạch khảo sát, quyết định và vấn đề cần làm rõ. | Thống nhất định hướng, phạm vi sơ bộ và ràng buộc; xác định đầu mối và kế hoạch để bắt đầu khảo sát. |
-| 2. Khảo sát nhu cầu | BA, UX | Hồ sơ người dùng, vấn đề cần giải quyết, giá trị mong muốn, hành trình ưu tiên và giả định cần kiểm chứng. | Có căn cứ xác định nhu cầu ưu tiên, cách đánh giá giá trị và nội dung cần phân tích. |
+| 1. Khởi tạo | Khách hàng, BA, quản lý dự án | Yêu cầu ban đầu, Project Brief, đầu mối xác nhận, đánh giá khả thi và dự toán sơ bộ, phương án làm rõ nhu cầu, quyết định và vấn đề cần làm rõ. | Thống nhất định hướng, phạm vi sơ bộ, ràng buộc, đầu mối và cách làm rõ nhu cầu. |
+| 2. Làm rõ nhu cầu | BA, UX | Mô tả người dùng dự kiến, vấn đề cần giải quyết, giá trị mong muốn, hành trình ưu tiên, giả định và mức độ kiểm chứng. | Có đầu vào để xác định nhu cầu ưu tiên và nội dung cần phân tích; giả định chưa kiểm chứng và cách đánh giá giá trị được ghi rõ. |
 | 3. Đặc tả yêu cầu | BA, phối hợp khách hàng và QA | Quy tắc nghiệp vụ, luồng chính/ngoại lệ, ma trận quyền, yêu cầu chất lượng và tiêu chí chấp nhận. | Các yêu cầu có phạm vi rõ, kiểm chứng được và được khách hàng xác nhận. |
 | 4. Thiết kế UX/UI | UX/UI, phối hợp BA và kỹ sư | Sơ đồ màn hình, luồng thao tác, bản thiết kế tương tác và đặc tả giao diện. | Luồng sử dụng và trạng thái giao diện đáp ứng yêu cầu; các vấn đề qua đánh giá được xử lý. |
 | 5. Thiết kế kỹ thuật | Tech Lead, kỹ sư, vận hành | Kiến trúc microservices, dữ liệu, hợp đồng API/sự kiện, thiết kế chi tiết và phương án vận hành. | Giải pháp được rà soát về khả thi, tích hợp, hiệu năng và chi phí. |
@@ -55,6 +55,12 @@ người chịu trách nhiệm và thẩm quyền xác nhận cho từng đầu 
 Các điều kiện hoàn tất áp dụng cho phần công việc được bàn giao. Những vấn
 đề chưa ảnh hưởng đến phần đó có thể tiếp tục xử lý nếu đã xác định người
 phụ trách, thời hạn và tác động.
+
+Khảo sát người dùng bên ngoài là một cách làm rõ nhu cầu, không phải điều
+kiện bắt buộc cho mọi đợt. Nếu bỏ qua, quyết định và giới hạn bằng chứng
+phải được ghi tại sổ quyết định; đặc tả không được trình bày giả định của
+nhóm như kết quả khảo sát. Đợt hiện tại áp dụng
+[DEC-030](01-initiation/03-discovery-and-decision-log.md).
 
 ## 4. Nội dung hồ sơ thiết kế chi tiết
 
@@ -119,5 +125,6 @@ Kết quả giải quyết vấn đề và thay đổi quyết định được 
 |---|---|---|
 | 1.0 | 2026-09-27 | Xác định vai trò, các giai đoạn, đầu ra và cơ chế quản lý hồ sơ dự án. |
 | 1.1 | 2026-09-27 | Làm rõ đầu ra khởi tạo, mục tiêu khảo sát và việc đánh giá khả thi, lập kế hoạch từ đầu dự án. |
+| 1.2 | 2026-09-30 | Cho phép làm rõ nhu cầu từ đầu vào đại diện sản phẩm khi không khảo sát bên ngoài; yêu cầu ghi rõ giả định và giới hạn bằng chứng. |
 
 [Mục lục hồ sơ](README.md)
