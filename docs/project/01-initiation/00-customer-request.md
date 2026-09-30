@@ -93,5 +93,5 @@ Những quy tắc nghiệp vụ và giới hạn cần xác định được the
 | 1.5 | 2026-09-30 | Bổ sung vấn đề trôi tin nhắn/tài liệu; ghi nhận ưu tiên nhắn tin riêng trước và cộng đồng có nhiều phòng theo chủ đề. |
 | 1.6 | 2026-09-30 | Ghi nhận tìm người bằng tên tài khoản và nhắn riêng ngay, không cần kết bạn hoặc cùng cộng đồng. |
 | 1.7 | 2026-09-30 | Ghi nhận tìm theo tên tài khoản/tên hiển thị, thao tác và trạng thái DM; tham gia cộng đồng qua mời/tìm kiếm và thứ tự triển khai file. |
-
+.
 [Mục lục hồ sơ](../README.md)
