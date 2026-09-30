@@ -3,9 +3,9 @@ name: Sync Markdown to Trello
 on:
   push:
     branches:
-      - main  # Hoặc master tùy theo nhánh chính của bạn
+      - main
     paths:
-      - 'docs/project/01-initiation/00-customer-request.md' # Đổi thành đường dẫn file .md bạn muốn đồng bộ (ví dụ: docs/task.md)
+      - 'docs/project/01-initiation/00-customer-request.md'
 
 jobs:
   sync:
@@ -20,11 +20,13 @@ jobs:
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           CARD_ID: ${{ secrets.TRELLO_CARD_ID_TONGQUAN }}
         run: |
-          FILE_PATH="docs/project/01-initiation/00-customer-request.md" # Đổi đường dẫn trùng với file bạn cấu hình ở trên
+          FILE_PATH="docs/project/01-initiation/00-customer-request.md"
 
-          # Dùng curl gửi trực tiếp nội dung file lên Trello API
+          # 1. Dùng jq đọc nội dung file md và encode thành chuỗi JSON hợp lệ (giữ nguyên \n, tab, dấu nháy)
+          jq -n --rawfile content "$FILE_PATH" '{desc: $content}' > payload.json
+
+          # 2. Gửi request PUT dưới dạng application/json
           curl --fail --show-error --request PUT \
-            --url "https://api.trello.com/1/cards/${CARD_ID}" \
-            --data-urlencode "key=${TRELLO_KEY}" \
-            --data-urlencode "token=${TRELLO_TOKEN}" \
-            --data-urlencode "desc@${FILE_PATH}"
+            --url "https://api.trello.com/1/cards/${CARD_ID}?key=${TRELLO_KEY}&token=${TRELLO_TOKEN}" \
+            --header "Content-Type: application/json; charset=utf-8" \
+            --data @payload.json
