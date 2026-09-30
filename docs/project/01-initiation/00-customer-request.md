@@ -3,16 +3,38 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-REQ-001 |
-| Phiên bản | 1.3 |
-| Cập nhật | 2026-09-27 |
+| Phiên bản | 1.7 |
+| Cập nhật | 2026-09-30 |
 | Trạng thái | Đã ghi nhận yêu cầu cấp cao |
 
 ## 1. Nhu cầu
 
 Xây dựng ứng dụng giao tiếp trực tuyến dành cho nhóm bạn và cộng đồng không
-giới hạn chủ đề. Người sử dụng có thể tổ chức không gian sinh hoạt chung,
-nhắn tin, tham gia phòng thoại, gọi video và chia sẻ màn hình. Người quản lý
-cộng đồng có thể tổ chức phòng, quản lý thành viên và cấp quyền cơ bản.
+giới hạn chủ đề, phục vụ ba nhu cầu sử dụng:
+
+- Kết nối với một cộng đồng hiện có và giao tiếp với các thành viên.
+- Tạo một cộng đồng và tổ chức không gian giao tiếp chung.
+- Nhắn tin riêng giữa hai người.
+
+Người sử dụng có thể nhắn tin, tham gia phòng thoại, gọi video và chia sẻ
+màn hình. Người quản lý cộng đồng có thể tổ chức phòng, quản lý thành viên
+và cấp quyền cơ bản.
+
+Ngày 2026-09-30, đại diện sản phẩm xác định đối tượng là một nhóm người bất
+kỳ và nêu vấn đề của nhóm chat một luồng: nhiều người trao đổi khác chủ đề
+khiến tin nhắn bị trôi, khó theo dõi liên tục; file tài liệu cũng gặp vấn
+đề tương tự. Ưu tiên trước mắt là nhắn tin và tham gia cộng đồng, vì chức
+năng nhắn tin cơ bản là nền tảng để phát triển thêm tính năng. Nhắn tin
+riêng giữa hai người được ưu tiên trước; cộng đồng được tổ chức bằng nhiều
+phòng theo chủ đề trước. Người dùng có thể tìm bằng tên tài khoản và nhắn
+riêng ngay, không cần kết bạn hoặc cùng cộng đồng. Người dùng có thể tìm
+người theo tên tài khoản hoặc tên hiển thị. Đợt nhắn tin riêng đầu hỗ trợ
+văn bản, sửa và xóa tin, hiển thị trạng thái đã gửi hoặc lỗi gửi. Người
+dùng tham gia cộng đồng qua liên kết mời hoặc tìm kiếm; việc gửi file trong
+phòng theo chủ đề được để sang đợt sau. Quy tắc chi tiết còn cần làm rõ.
+
+Đầu vào và các giả định cần kiểm chứng được ghi tại
+[SCDC-DIS-001](../02-discovery/01-users-and-needs.md).
 
 Discord là sản phẩm tham chiếu về trải nghiệm giao tiếp và cách tổ chức
 cộng đồng. Danh sách yêu cầu dưới đây xác định phạm vi cần phát triển.
@@ -22,6 +44,7 @@ cộng đồng. Danh sách yêu cầu dưới đây xác định phạm vi cần
 | Nhóm | Nhu cầu sử dụng |
 |---|---|
 | Nhóm bạn | Giao tiếp chung trong các phòng của server hoặc riêng giữa hai người; sử dụng thoại/video và chia sẻ màn hình. |
+| Người nhắn tin riêng | Trao đổi trực tiếp với một người khác qua hội thoại riêng. |
 | Thành viên cộng đồng | Tham gia các phòng để trao đổi và giao tiếp theo chủ đề. |
 | Người tạo và quản lý cộng đồng | Tạo không gian chung, tổ chức phòng, mời và quản lý thành viên, thiết lập quyền. |
 
@@ -66,5 +89,9 @@ Những quy tắc nghiệp vụ và giới hạn cần xác định được the
 | 1.1 | 2026-09-27 | Chuẩn hóa mô tả yêu cầu và liên kết tài liệu. |
 | 1.2 | 2026-09-27 | Tập trung nội dung vào yêu cầu khách hàng và thống nhất thuật ngữ sản phẩm. |
 | 1.3 | 2026-09-27 | Loại REQ-006; giới hạn REQ-008 ở cuộc gọi riêng hai người và cập nhật ngữ cảnh video/chia sẻ màn hình tại REQ-009. |
+| 1.4 | 2026-09-27 | Làm rõ ba nhu cầu sử dụng: kết nối với cộng đồng, tạo cộng đồng và nhắn tin riêng giữa hai người. |
+| 1.5 | 2026-09-30 | Bổ sung vấn đề trôi tin nhắn/tài liệu; ghi nhận ưu tiên nhắn tin riêng trước và cộng đồng có nhiều phòng theo chủ đề. |
+| 1.6 | 2026-09-30 | Ghi nhận tìm người bằng tên tài khoản và nhắn riêng ngay, không cần kết bạn hoặc cùng cộng đồng. |
+| 1.7 | 2026-09-30 | Ghi nhận tìm theo tên tài khoản/tên hiển thị, thao tác và trạng thái DM; tham gia cộng đồng qua mời/tìm kiếm và thứ tự triển khai file. |
 
 [Mục lục hồ sơ](../README.md)

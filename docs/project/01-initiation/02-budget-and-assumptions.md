@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-EST-001 |
-| Phiên bản | 1.5 |
+| Phiên bản | 1.6 |
 | Cập nhật | 2026-09-27 |
 | Trạng thái | Cần ước lượng lại theo cơ cấu nhân sự đã xác định |
 | Căn cứ | [Phạm vi dự án — SCDC-BRF-001](01-project-brief.md) |
@@ -15,7 +15,8 @@ bao gồm nhân sự, hạ tầng/công cụ và dự phòng.
 
 Giả định ba kỹ sư có kinh nghiệm (AS-001) không còn phù hợp với đội ngũ đã
 xác định: Vg, Sáng và Thái tham gia toàn thời gian, trong đó Thái cần đào tạo
-dưới sự hướng dẫn của Vg. Phân công kiêm nhiệm BA/UX/UI và QA chưa hoàn thiện.
+dưới sự hướng dẫn của Vg. Vg kiêm nhiệm UX/UI; Thái phụ trách frontend và
+kiểm thử. Công sức kiêm nhiệm và phân tích nghiệp vụ cần được làm rõ.
 Xem [SCDC-ORG-001](04-team-and-discovery-plan.md).
 
 Cần lập lại ước lượng theo công việc, năng lực, thời gian hướng dẫn và các
@@ -42,15 +43,17 @@ tính công sức kiêm nhiệm cần được xác định khi cập nhật d�
 ## 3. Nguồn lực và công sức cần ước lượng lại
 
 - Ba thành viên có thể dành toàn thời gian cho dự án.
-- Vg phụ trách kiến trúc tổng thể, lựa chọn công nghệ và trực tiếp lập trình,
-  đồng thời điều phối, đại diện sản phẩm và hướng dẫn Thái; cần phân bổ
-  thời gian cho từng trách nhiệm trong quỹ thời gian của một người.
+- Vg phụ trách kiến trúc tổng thể, lựa chọn công nghệ, thiết kế UX/UI và trực
+  tiếp lập trình, đồng thời điều phối, đại diện sản phẩm và hướng dẫn Thái;
+  cần phân bổ thời gian cho từng trách nhiệm trong quỹ thời gian của một người.
 - Sáng phụ trách kỹ thuật backend và trực tiếp lập trình cùng Vg; cần tính
   cả thiết kế chi tiết, tích hợp và rà soát bên cạnh phát triển tính năng.
-- Thái là thành viên mới; công sức độc lập được đánh giá theo kết quả học
-  và hoàn thành công việc có hướng dẫn.
+- Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn; công sức
+  cần bao gồm học, phát triển giao diện, chuẩn bị và thực hiện kiểm thử,
+  sửa lỗi, kiểm tra lại và thời gian rà soát cùng Vg hoặc Sáng.
 - QA 2 tháng công và BA/UX/UI 1 tháng công là giả định khối lượng từ dự toán
-  ban đầu; chưa có nhân sự riêng được xác định cho các vai trò này.
+  ban đầu; cần ước lượng lại theo phân công kiêm nhiệm hiện có và làm rõ
+  công việc phân tích nghiệp vụ.
 
 Khi lập lịch, tổng phân bổ của mỗi người phải bao gồm công việc kiêm nhiệm,
 học, hướng dẫn và rà soát; tránh tính cùng một khoảng thời gian cho nhiều vai trò.
@@ -81,7 +84,7 @@ và chi phí, chưa phải cam kết năng lực hoặc hạn mức đăng ký c
 | Mã | Giả định | Cách kiểm chứng | Đầu mối dự kiến |
 |---|---|---|---|
 | AS-001 | Giả định ban đầu: có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Không còn phù hợp: đội ngũ gồm 3 thành viên toàn thời gian, có 1 thành viên mới cần hướng dẫn; phải ước lượng lại theo phân công và năng lực. | Vg, Sáng |
-| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Ước lượng theo yêu cầu, màn hình, kế hoạch kiểm thử và năng lực kiêm nhiệm của nhóm. | Vg, đầu mối BA/UX/UI và QA khi được phân công |
+| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Ước lượng theo yêu cầu, màn hình, kế hoạch kiểm thử và năng lực kiêm nhiệm của nhóm; làm rõ công việc phân tích nghiệp vụ. | Vg, Thái; Sáng hỗ trợ đánh giá kỹ thuật |
 | AS-003 | Tích hợp nền tảng media có sẵn cho thoại/video và chia sẻ màn hình. | Đánh giá tính phù hợp, khả năng tích hợp, chi phí và vận hành. | Tech Lead, kỹ sư media |
 | AS-004 | Quy mô dự trù 1.000 tài khoản. | Xác định nhóm người dùng ban đầu và nhu cầu lưu trữ. | Khách hàng, BA |
 | AS-005 | Có khoảng 100 người trực tuyến đồng thời trên toàn hệ thống. | Xác định nhu cầu tải dự kiến; kiểm chứng khả năng đáp ứng bằng kiểm thử tải. | Khách hàng, Tech Lead, QA |
@@ -106,7 +109,7 @@ kết quả đánh giá kỹ thuật.
 | RSK-001 | Phòng thoại trong server và gọi riêng hai người có video/chia sẻ màn hình; yêu cầu chất lượng chưa đầy đủ. | Tăng công sức tích hợp, kiểm thử và kéo dài tiến độ. | Làm rõ ma trận chức năng, giới hạn và điều kiện nghiệm thu trước khi ước lượng chi tiết. | Tech Lead, QA |
 | RSK-002 | Chưa xác định lượng sử dụng media và quy mô phòng. | Chi phí hạ tầng vượt dự trù. | Tính chi phí theo thời lượng, dữ liệu truyền tải và theo dõi mức sử dụng. | Phụ trách vận hành |
 | RSK-003 | Kiến trúc microservices phát sinh phụ thuộc giữa các dịch vụ. | Tăng công sức triển khai, kiểm thử tích hợp và vận hành. | Xác định ranh giới dịch vụ, trách nhiệm dữ liệu và công việc vận hành trong kế hoạch. | Tech Lead |
-| RSK-004 | Chưa chốt phân công frontend, UX/UI, QA, trình duyệt hỗ trợ và trách nhiệm quản trị nền tảng công khai. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Xác định trách nhiệm, năng lực và khối lượng kiêm nhiệm trước khi xác nhận kế hoạch thực hiện. | Vg, Sáng |
+| RSK-004 | Khối lượng kiêm nhiệm frontend, UX/UI và kiểm thử chưa được ước lượng; trình duyệt hỗ trợ và trách nhiệm quản trị nền tảng công khai chưa được xác định. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Ước lượng công sức theo phân công hiện có; chốt trình duyệt hỗ trợ và trách nhiệm quản trị trước khi xác nhận kế hoạch thực hiện. | Vg, Sáng, Thái |
 | RSK-005 | Thời gian đào tạo, hướng dẫn và rà soát của thành viên mới chưa được lượng hóa. | Giảm thời gian dành cho các công việc khác và tăng độ bất định của tiến độ. | Chia công việc nhỏ, bố trí thời gian hướng dẫn và đánh giá công sức theo kết quả thực hiện. | Vg, Sáng |
 
 ## 8. Điều kiện cập nhật dự toán
@@ -126,5 +129,6 @@ ngân sách hoặc thay đổi phạm vi bàn giao.
 | 1.3 | 2026-09-27 | Ghi nhận phạm vi giao tiếp thu hẹp và yêu cầu ước lượng lại; cập nhật rủi ro media. |
 | 1.4 | 2026-09-27 | Ghi nhận AS-001 không còn phù hợp; giữ dự toán ban đầu để đối chiếu và bổ sung công sức đào tạo, kiêm nhiệm khi ước lượng lại. |
 | 1.5 | 2026-09-27 | Bổ sung công sức kiến trúc, lựa chọn công nghệ và lập trình của Vg vào cơ sở phân bổ nguồn lực. |
+| 1.6 | 2026-09-27 | Cập nhật cơ sở ước lượng theo phân công UX/UI, frontend và kiểm thử; điều chỉnh AS-002 và RSK-004. |
 
 [Mục lục hồ sơ](../README.md)

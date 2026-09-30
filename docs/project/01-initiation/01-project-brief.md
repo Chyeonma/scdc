@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Mã tài liệu | SCDC-BRF-001 |
-| Phiên bản | 1.5 |
+| Phiên bản | 1.6 |
 | Cập nhật | 2026-09-27 |
 | Trạng thái | Định hướng và phạm vi sơ bộ đã thống nhất |
 | Căn cứ | [Yêu cầu ban đầu — SCDC-REQ-001](00-customer-request.md) |
@@ -42,7 +42,7 @@ Các chức năng bổ sung được đánh giá theo quy trình quản lý thay
 | Kiến trúc | Microservices; ranh giới dịch vụ và mô hình triển khai được xác định trong thiết kế kỹ thuật. |
 | Thời gian mục tiêu | Khoảng 3 tháng từ ngày khởi động. Ngày bắt đầu và các mốc bàn giao cụ thể chưa xác định. |
 | Dự toán ban đầu | 500.000.000 VNĐ; cần ước lượng lại theo phạm vi và cơ cấu nhân sự đã xác định. |
-| Nhân sự hiện có | Vg, Sáng và Thái có thể tham gia toàn thời gian. Vg là trưởng nhóm, phụ trách kiến trúc tổng thể, lựa chọn công nghệ, trực tiếp lập trình và hướng dẫn Thái; Sáng phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg; Thái là thành viên mới cần đào tạo. |
+| Nhân sự hiện có | Vg, Sáng và Thái có thể tham gia toàn thời gian. Vg là trưởng nhóm, phụ trách kiến trúc tổng thể, lựa chọn công nghệ, UX/UI, trực tiếp lập trình và hướng dẫn Thái; Sáng phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg; Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn. |
 | Quy mô dự trù | 1.000 tài khoản, 100 người trực tuyến đồng thời và 20 người tham gia gọi đồng thời trên toàn hệ thống. |
 
 Quy mô tải là giả định phục vụ dự toán. Cơ cấu nhân sự hiện có khác với giả
@@ -87,11 +87,11 @@ xác định trước nghiệm thu.
 | Tech Lead và kỹ sư | Thiết kế kỹ thuật, đánh giá khả năng tái sử dụng, phát triển, tích hợp và chuẩn bị vận hành. |
 | QA | Lập kế hoạch kiểm thử, kiểm chứng chất lượng và hỗ trợ nghiệm thu. |
 
-Vg là đại diện sản phẩm/trưởng nhóm, phụ trách kiến trúc tổng thể và lựa chọn
-công nghệ, đồng thời trực tiếp lập trình cùng Sáng. Sáng phụ trách kỹ thuật
-backend, phối hợp thiết kế chi tiết và phát triển theo kiến trúc tổng thể.
-Thái thực hiện công việc dưới sự hướng dẫn của Vg. Phân công chi tiết
-frontend, UX/UI và kiểm thử còn cần xác định tại
+Vg là đại diện sản phẩm/trưởng nhóm, phụ trách kiến trúc tổng thể, lựa chọn
+công nghệ và thiết kế UX/UI, đồng thời trực tiếp lập trình cùng Sáng. Sáng
+phụ trách kỹ thuật backend, phối hợp thiết kế chi tiết và phát triển theo
+kiến trúc tổng thể. Thái phụ trách frontend và kiểm thử dưới sự hướng dẫn
+của Vg. Vai trò và phương án phối hợp được ghi tại
 [hồ sơ nhân sự](04-team-and-discovery-plan.md).
 
 ## 7. Các vấn đề cần giải quyết
@@ -111,5 +111,6 @@ và nguồn lực được quản lý tại [SCDC-EST-001](02-budget-and-assumpt
 | 1.3 | 2026-09-27 | Loại nhóm chat riêng ngoài server và cuộc gọi trong loại nhóm này; cập nhật SCP-005 đến SCP-007. |
 | 1.4 | 2026-09-27 | Ghi nhận nhân sự toàn thời gian, nhu cầu đào tạo và yêu cầu đánh giá lại tiến độ, dự toán. |
 | 1.5 | 2026-09-27 | Làm rõ vai trò kiến trúc, lựa chọn công nghệ và lập trình của Vg cùng trách nhiệm backend của Sáng. |
+| 1.6 | 2026-09-27 | Ghi nhận Vg phụ trách UX/UI, Thái phụ trách frontend và kiểm thử. |
 
 [Mục lục hồ sơ](../README.md)

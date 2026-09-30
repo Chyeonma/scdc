@@ -1,0 +1,30 @@
+name: Sync Markdown to Trello
+
+on:
+  push:
+    branches:
+      - main  # Hoặc master tùy theo nhánh chính của bạn
+    paths:
+      - 'docs/project.md' # Đổi thành đường dẫn file .md bạn muốn đồng bộ (ví dụ: docs/task.md)
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Push content to Trello
+        env:
+          TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          CARD_ID: ${{ secrets.TRELLO_CARD_ID }}
+        run: |
+          FILE_PATH="docs/project.md" # Đổi đường dẫn trùng với file bạn cấu hình ở trên
+
+          # Dùng curl gửi trực tiếp nội dung file lên Trello API
+          curl --fail --show-error --request PUT \
+            --url "https://api.trello.com/1/cards/${CARD_ID}" \
+            --data-urlencode "key=${TRELLO_KEY}" \
+            --data-urlencode "token=${TRELLO_TOKEN}" \
+            --data-urlencode "desc@${FILE_PATH}"
