@@ -3,9 +3,9 @@ name: Sync Markdown to Trello
 on:
   push:
     branches:
-      - main
+      - main  # Hoặc master tùy theo nhánh chính của bạn
     paths:
-      - 'docs/project/01-initiation/00-customer-request.md'
+      - 'docs/project/**'
 
 jobs:
   sync:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Push content to Trello
+      - name: Push content to Trello - Customer Request
         env:
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
@@ -22,11 +22,32 @@ jobs:
         run: |
           FILE_PATH="docs/project/01-initiation/00-customer-request.md"
 
-          # 1. Dùng jq đọc nội dung file md và encode thành chuỗi JSON hợp lệ (giữ nguyên \n, tab, dấu nháy)
-          jq -n --rawfile content "$FILE_PATH" '{desc: $content}' > payload.json
+          if [ -f "$FILE_PATH" ]; then
+            # Dùng jq đọc nội dung file md và encode thành chuỗi JSON hợp lệ
+            jq -n --rawfile content "$FILE_PATH" '{desc: $content}' > payload.json
 
-          # 2. Gửi request PUT dưới dạng application/json
-          curl --fail --show-error --request PUT \
-            --url "https://api.trello.com/1/cards/${CARD_ID}?key=${TRELLO_KEY}&token=${TRELLO_TOKEN}" \
-            --header "Content-Type: application/json; charset=utf-8" \
-            --data @payload.json
+            # Gửi request PUT dưới dạng application/json
+            curl --fail --show-error --request PUT \
+              --url "https://api.trello.com/1/cards/${CARD_ID}?key=${TRELLO_KEY}&token=${TRELLO_TOKEN}" \
+              --header "Content-Type: application/json; charset=utf-8" \
+              --data @payload.json
+          fi
+
+      - name: Sync Card 2 - Project Brief
+        env:
+          TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          CARD_ID: ${{ secrets.TRELLO_CARD_ID_HOSODUAN }}
+        run: |
+          # Nếu secret chưa tạo thì tự động lấy ID mặc định này
+          TARGET_CARD_ID="${CARD_ID:-6ab8b19194ed291cdef4fa5c}"
+          FILE_PATH="docs/project/README.md"
+
+          if [ -f "$FILE_PATH" ]; then
+            jq -n --rawfile content "$FILE_PATH" '{desc: $content}' > payload2.json
+
+            curl --fail --show-error --request PUT \
+              --url "https://api.trello.com/1/cards/${TARGET_CARD_ID}?key=${TRELLO_KEY}&token=${TRELLO_TOKEN}" \
+              --header "Content-Type: application/json; charset=utf-8" \
+              --data @payload2.json
+          fi
