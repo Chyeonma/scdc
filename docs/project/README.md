@@ -135,3 +135,4 @@ dung đó để tránh duy trì nhiều bản không thống nhất.
 | 1.21 | 2026-09-30 | Ghi nhận xác minh/khôi phục tài khoản và các quy tắc tham gia/rời cộng đồng tiếp theo. |
 | 1.22 | 2026-09-30 | Bổ sung khung yêu cầu thoại, video và chia sẻ màn hình. |
 | 1.23 | 2026-09-30 | Ghi nhận năm quyết định media và cập nhật luồng/kiểm thử khung. |
+
