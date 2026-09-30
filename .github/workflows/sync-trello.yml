@@ -18,7 +18,7 @@ jobs:
         env:
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          CARD_ID: ${{ secrets.TRELLO_CARD_ID }}
+          CARD_ID: ${{ secrets.TRELLO_CARD_ID_TONGQUAN }}
         run: |
           FILE_PATH="docs/project/01-initiation/00-customer-request.md" # Đổi đường dẫn trùng với file bạn cấu hình ở trên
 
