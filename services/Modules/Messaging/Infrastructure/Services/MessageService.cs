@@ -17,6 +17,7 @@ internal sealed class MessageService(
     IUserDirectory userDirectory,
     SpaceMessageAccess spaceAccess,
     IRealtimeSpaceAccess realtimeSpaceAccess,
+    IAttachmentObjectStore objectStore,
     MessageRateLimiter rateLimiter,
     TimeProvider timeProvider) : IMessageService
 {
@@ -34,16 +35,20 @@ internal sealed class MessageService(
             return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
         }
 
-        if (command.MessageType != (short)MessageType.Text
-            || !TryNormalizeText(command.Content, out var content))
+        var attachmentIds = command.AttachmentIds?.ToArray() ?? [];
+        if (attachmentIds.Length > 5 || attachmentIds.Any(id => id == Guid.Empty)
+            || attachmentIds.Distinct().Count() != attachmentIds.Length)
+            return Result.Failure<SendMessageResult>(MessagingErrors.InvalidAttachment);
+        var hasText = TryNormalizeText(command.Content, out var content);
+        var messageType = (MessageType)command.MessageType;
+        if (messageType != MessageType.Text && messageType != MessageType.Attachment
+            || messageType == MessageType.Text && !hasText
+            || messageType == MessageType.Attachment && (attachmentIds.Length == 0 || !string.IsNullOrWhiteSpace(command.Content)))
         {
             return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
         }
 
-        if (!rateLimiter.TryAcquire(command.ActorUserId))
-        {
-            return Result.Failure<SendMessageResult>(MessagingErrors.RateLimited);
-        }
+        var ratePermit = rateLimiter.TryAcquire(command.ActorUserId);
 
         var actor = await userDirectory.FindByIdAsync(command.ActorUserId, cancellationToken);
         if (actor is null)
@@ -52,7 +57,7 @@ internal sealed class MessageService(
         }
 
         var effectiveReplyId = command.ReplyToMessageId ?? command.ThreadRootId;
-        var payloadHash = ComputePayloadHash(MessageType.Text, content, effectiveReplyId, command.ThreadRootId);
+        var payloadHash = ComputePayloadHash(messageType, content, effectiveReplyId, command.ThreadRootId, attachmentIds);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         var space = await dbContext.Spaces
@@ -78,6 +83,7 @@ internal sealed class MessageService(
             var peerUserId = directConversation.UserLowId == command.ActorUserId
                 ? directConversation.UserHighId
                 : directConversation.UserLowId;
+            await UserBlockPairLock.LockAsync(dbContext, command.ActorUserId, peerUserId, cancellationToken);
             if (await userDirectory.FindByIdAsync(peerUserId, cancellationToken) is null
                 || await IsBlockedAsync(command.ActorUserId, peerUserId, cancellationToken))
                 return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
@@ -95,6 +101,12 @@ internal sealed class MessageService(
                 ? Result.Success(new SendMessageResult((await ToDtosAsync([existing], cancellationToken))[0], Created: false))
                 : Result.Failure<SendMessageResult>(MessagingErrors.IdempotencyConflict);
         }
+        if (attachmentIds.Length > 0 && !access.CanAttach)
+            return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
+        // A retry of an already committed request must return its result even when the
+        // current rate window is full. New messages still require a rate permit.
+        if (!ratePermit)
+            return Result.Failure<SendMessageResult>(MessagingErrors.RateLimited);
 
         if (effectiveReplyId is { } replyId)
         {
@@ -122,7 +134,15 @@ internal sealed class MessageService(
         }
 
         var now = timeProvider.GetUtcNow();
-        var mentions = await ResolveMentionsAsync(command.SpaceId, command.ActorUserId, content, cancellationToken);
+        var uploads = attachmentIds.Length == 0 ? [] : await dbContext.AttachmentUploads
+            .Where(upload => attachmentIds.Contains(upload.Id)).ToArrayAsync(cancellationToken);
+        if (uploads.Length != attachmentIds.Length || uploads.Any(upload => upload.SpaceId != command.SpaceId
+            || upload.OwnerUserId != command.ActorUserId || upload.ScanStatus != 1
+            || upload.ExpiresAt <= now || upload.AttachedMessageId is not null))
+            return Result.Failure<SendMessageResult>(MessagingErrors.AttachmentUnavailable);
+        var mentions = messageType == MessageType.Text
+            ? await ResolveMentionsAsync(command.SpaceId, command.ActorUserId, content, cancellationToken)
+            : [];
         var message = new Message
         {
             Id = Guid.CreateVersion7(),
@@ -131,8 +151,8 @@ internal sealed class MessageService(
             ClientMessageId = command.ClientMessageId,
             ReplyToMessageId = effectiveReplyId,
             ThreadRootId = command.ThreadRootId,
-            MessageType = MessageType.Text,
-            Content = content,
+            MessageType = messageType,
+            Content = messageType == MessageType.Text ? content : null,
             IdempotencyPayloadHash = payloadHash,
             Version = 1,
             CreatedAt = now
@@ -143,6 +163,18 @@ internal sealed class MessageService(
         {
             MessageId = message.Id, MentionedUserId = user.Id, CreatedAt = now
         }));
+        foreach (var upload in uploads)
+        {
+            upload.AttachedMessageId = message.Id;
+            dbContext.MessageAttachments.Add(new MessageAttachment
+            {
+                Id = upload.Id, MessageId = message.Id, StorageProvider = "s3",
+                BucketName = objectStore.BucketName, ObjectKey = upload.ObjectKey,
+                OriginalName = upload.OriginalName, MimeType = upload.MimeType,
+                SizeBytes = upload.SizeBytes, ChecksumSha256 = upload.ChecksumSha256,
+                ScanStatus = 1, CreatedAt = now
+            });
+        }
 
         if (command.ThreadRootId is null)
         {
@@ -264,6 +296,51 @@ internal sealed class MessageService(
             HighWatermark: ToSequence(highWatermark)));
     }
 
+    public async Task<Result<MessageSearchPageDto>> SearchAsync(SearchMessagesQuery query,
+        CancellationToken cancellationToken)
+    {
+        var text = string.IsNullOrWhiteSpace(query.Text) ? null : query.Text.Trim();
+        if (query.ActorUserId == Guid.Empty || query.SpaceId == Guid.Empty
+            || query.AuthorUserId == Guid.Empty || query.Limit is < 1 or > 50
+            || text is { Length: < 2 or > 120 }
+            || text?.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 12
+            || (query.From is null) != (query.To is null)
+            || query.From > query.To
+            || query.To - query.From > TimeSpan.FromDays(366)
+            || (string.IsNullOrWhiteSpace(text) && query.AuthorUserId is null && query.From is null))
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.InvalidSearch);
+        if (!TryParseCursor(query.BeforeSequence, allowZero: false, out var before))
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.InvalidMessageCursor);
+        if (await userDirectory.FindByIdAsync(query.ActorUserId, cancellationToken) is null)
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.AccountUnavailable);
+        var space = await dbContext.Spaces.AsNoTracking().SingleOrDefaultAsync(
+            item => item.Id == query.SpaceId && item.Status != SpaceStatus.Deleted, cancellationToken);
+        if (space is null || !(await spaceAccess.CheckAsync(query.ActorUserId, space, cancellationToken)).CanRead)
+            return Result.Failure<MessageSearchPageDto>(MessagingErrors.ResourceNotFound);
+
+        // Target the generated vector; PostgreSQL can use its partial GIN index.
+        IQueryable<Message> matches = string.IsNullOrWhiteSpace(text)
+            ? dbContext.Messages.AsNoTracking()
+            : dbContext.Messages.FromSqlInterpolated($"SELECT * FROM messaging.messages WHERE deleted_at IS NULL AND search_vector @@ plainto_tsquery('simple', {text})").AsNoTracking();
+        matches = matches.Where(message => message.SpaceId == query.SpaceId
+            && message.DeletedAt == null && message.MessageType != MessageType.System);
+        if (query.AuthorUserId is { } authorId)
+            matches = matches.Where(message => message.AuthorUserId == authorId);
+        if (query.From is { } from)
+            matches = matches.Where(message => message.CreatedAt >= from);
+        if (query.To is { } to)
+            matches = matches.Where(message => message.CreatedAt < to);
+        if (before is { } sequence)
+            matches = matches.Where(message => message.SequenceNo < sequence);
+
+        var rows = await matches.OrderByDescending(message => message.SequenceNo)
+            .Take(query.Limit + 1).ToListAsync(cancellationToken);
+        var hasMore = rows.Count > query.Limit;
+        var page = rows.Take(query.Limit).ToArray();
+        return Result.Success(new MessageSearchPageDto(await ToDtosAsync(page, cancellationToken),
+            hasMore, hasMore ? ToSequence(page[^1].SequenceNo) : null));
+    }
+
     public async Task<Result<MessageDto>> GetAsync(Guid actorUserId, Guid spaceId, Guid messageId, CancellationToken cancellationToken)
     {
         if (actorUserId == Guid.Empty || spaceId == Guid.Empty || messageId == Guid.Empty)
@@ -374,6 +451,7 @@ internal sealed class MessageService(
         {
             var pair = await dbContext.DirectConversations.AsNoTracking().SingleAsync(x => x.SpaceId == command.SpaceId, cancellationToken);
             var peer = pair.UserLowId == command.ActorUserId ? pair.UserHighId : pair.UserLowId;
+            await UserBlockPairLock.LockAsync(dbContext, command.ActorUserId, peer, cancellationToken);
             if (await IsBlockedAsync(command.ActorUserId, peer, cancellationToken))
                 return Result.Failure<MessageDto>(MessagingErrors.ActionNotAllowed);
         }
@@ -489,7 +567,12 @@ internal sealed class MessageService(
             var user = await userDirectory.FindByUsernameAsync(name, cancellationToken);
             if (user is not null && user.Id != actorUserId && readableIds.Contains(user.Id)) users.Add(user);
         }
-        return users;
+        await UserBlockPairLock.LockManyAsync(dbContext, actorUserId, users.Select(user => user.Id), cancellationToken);
+        var blockedIds = (await dbContext.UserBlocks.AsNoTracking()
+            .Where(block => block.BlockerUserId == actorUserId || block.BlockedUserId == actorUserId)
+            .Select(block => block.BlockerUserId == actorUserId ? block.BlockedUserId : block.BlockerUserId)
+            .ToArrayAsync(cancellationToken)).ToHashSet();
+        return users.Where(user => !blockedIds.Contains(user.Id)).ToArray();
     }
 
     private static bool TryNormalizeText(string? value, out string content)
@@ -506,11 +589,14 @@ internal sealed class MessageService(
         return content.Length > 0 && content.EnumerateRunes().Count() <= 10_000;
     }
 
-    private static string ComputePayloadHash(MessageType messageType, string content, Guid? replyToMessageId, Guid? threadRootId)
+    private static string ComputePayloadHash(MessageType messageType, string content, Guid? replyToMessageId,
+        Guid? threadRootId, IReadOnlyList<Guid> attachmentIds)
     {
         var canonical = replyToMessageId is null && threadRootId is null
             ? $"{(short)messageType}:{content}"
             : $"{(short)messageType}:{content.Length}:{content}:{replyToMessageId:N}:{threadRootId:N}";
+        if (attachmentIds.Count > 0)
+            canonical += $":attachments:{string.Join(',', attachmentIds.Select(id => id.ToString("N")))}";
         var bytes = Encoding.UTF8.GetBytes(canonical);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
@@ -536,6 +622,15 @@ internal sealed class MessageService(
             .ToDictionary(group => group.Key, group => (IReadOnlyList<MentionSummaryDto>)group
                 .Select(mention => new MentionSummaryDto(mention.MentionedUserId,
                     mentionedUsers[mention.MentionedUserId].Username)).ToArray());
+        var attachments = await dbContext.MessageAttachments.AsNoTracking()
+            .Where(attachment => messageIds.Contains(attachment.MessageId)
+                                 && attachment.DeletedAt == null && attachment.ScanStatus == 1)
+            .OrderBy(attachment => attachment.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var attachmentsByMessage = attachments.GroupBy(attachment => attachment.MessageId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<AttachmentSummaryDto>)group
+                .Select(attachment => new AttachmentSummaryDto(attachment.Id, attachment.OriginalName,
+                    attachment.MimeType, ToSequence(attachment.SizeBytes), null, null)).ToArray());
         var rootIds = messages.Where(message => message.ThreadRootId is null)
             .Select(message => message.Id).ToArray();
         var counts = rootIds.Length == 0
@@ -550,7 +645,8 @@ internal sealed class MessageService(
             message,
             message.AuthorUserId is { } authorId && authors.TryGetValue(authorId, out var author) ? author : null,
             counts.GetValueOrDefault(message.Id),
-            message.DeletedAt is null ? mentionsByMessage.GetValueOrDefault(message.Id) ?? [] : []))
+            message.DeletedAt is null ? mentionsByMessage.GetValueOrDefault(message.Id) ?? [] : [],
+            message.DeletedAt is null ? attachmentsByMessage.GetValueOrDefault(message.Id) ?? [] : []))
             .ToArray();
     }
 
@@ -578,7 +674,8 @@ internal sealed class MessageService(
     private static string ToSequence(long sequence) => sequence.ToString(CultureInfo.InvariantCulture);
 
     private static MessageDto ToDto(Message message, UserSummary? author, int threadCount = 0,
-        IReadOnlyList<MentionSummaryDto>? mentions = null) => new(
+        IReadOnlyList<MentionSummaryDto>? mentions = null,
+        IReadOnlyList<AttachmentSummaryDto>? attachments = null) => new(
         message.Id,
         message.SpaceId,
         message.ClientMessageId,
@@ -592,7 +689,7 @@ internal sealed class MessageService(
         message.DeletedAt,
         ReplyToMessageId: message.ReplyToMessageId,
         ThreadRootId: message.ThreadRootId,
-        Attachments: [],
+        Attachments: attachments ?? [],
         Reactions: [],
         IsPinned: false,
         ThreadCount: threadCount,

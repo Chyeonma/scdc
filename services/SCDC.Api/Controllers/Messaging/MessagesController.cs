@@ -10,6 +10,17 @@ namespace SCDC.Api.Controllers.Messaging;
 [Route("api/v1/spaces/{spaceId:guid}/messages")]
 public sealed class MessagesController(IMessageService messageService) : ApiControllerBase
 {
+    [HttpGet("search")]
+    [ProducesResponseType<MessageSearchPageDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessageSearchPageDto>> Search(Guid spaceId,
+        [FromQuery] string? q, [FromQuery] Guid? authorUserId,
+        [FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to,
+        [FromQuery] int? limit, [FromQuery] string? beforeSequence,
+        CancellationToken cancellationToken) =>
+        FromResult(await messageService.SearchAsync(new SearchMessagesQuery(
+            User.GetUserId(), spaceId, q, authorUserId, from, to, limit ?? 20, beforeSequence),
+            cancellationToken));
+
     [HttpGet("mentions/suggestions")]
     [ProducesResponseType<IReadOnlyList<MentionSummaryDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<MentionSummaryDto>>> SuggestMentions(
@@ -54,7 +65,8 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
                 request.MessageType,
                 request.Content,
                 request.ReplyToMessageId,
-                request.ThreadRootId),
+                request.ThreadRootId,
+                request.AttachmentIds),
             cancellationToken);
         if (result.IsFailure)
         {
@@ -111,6 +123,7 @@ public sealed record SendMessageRequest(
     short MessageType,
     string? Content,
     Guid? ReplyToMessageId,
-    Guid? ThreadRootId);
+    Guid? ThreadRootId,
+    IReadOnlyList<Guid>? AttachmentIds);
 
 public sealed record EditMessageRequest(string? Content, int ExpectedVersion);

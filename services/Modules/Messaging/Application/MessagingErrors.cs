@@ -4,6 +4,12 @@ namespace SCDC.Modules.Messaging.Application;
 
 public static class MessagingErrors
 {
+    public static readonly Error InvalidBlockTarget = Error.Validation(
+        "Messaging.InvalidBlockTarget", "A user ID is required.");
+
+    public static readonly Error SelfBlockNotAllowed = Error.Validation(
+        "Messaging.SelfBlockNotAllowed", "You cannot block yourself.");
+
     public static readonly Error InvalidRecipient = Error.Validation(
         "Messaging.ValidationFailed",
         "A recipient user ID is required.");
@@ -44,6 +50,24 @@ public static class MessagingErrors
         "Messaging.ValidationFailed",
         "The message content or type is invalid.");
 
+    public static readonly Error InvalidAttachment = Error.Validation(
+        "Messaging.InvalidAttachment", "The attachment is invalid, too large, or has an unsupported format.");
+
+    public static readonly Error AttachmentUnavailable = Error.Conflict(
+        "Messaging.AttachmentUnavailable", "The attachment upload is unavailable for this message.");
+
+    public static readonly Error AttachmentRejected = Error.Validation(
+        "Messaging.AttachmentRejected", "The attachment did not pass the security scan.");
+
+    public static readonly Error AttachmentScanUnavailable = Error.ServiceUnavailable(
+        "Messaging.AttachmentScanUnavailable", "Attachment scanning is temporarily unavailable.");
+
+    public static readonly Error AttachmentStorageUnavailable = Error.ServiceUnavailable(
+        "Messaging.AttachmentStorageUnavailable", "Attachment storage is temporarily unavailable.");
+
+    public static readonly Error AttachmentUploadLimitReached = Error.TooManyRequests(
+        "Messaging.AttachmentUploadLimitReached", "Too many unattached uploads are pending for this account.");
+
     public static readonly Error ActionNotAllowed = Error.Forbidden(
         "Messaging.ActionNotAllowed",
         "You cannot perform this action in the space.");
@@ -69,6 +93,10 @@ public static class MessagingErrors
     public static readonly Error InvalidMessageCursor = Error.Validation(
         "Messaging.InvalidCursor",
         "The message history cursor is invalid.");
+
+    public static readonly Error InvalidSearch = Error.Validation(
+        "Messaging.InvalidSearch",
+        "Search needs text, author, or a complete date range; text must be 2-120 characters, dates at most 366 days apart, and page size 1-50.");
 
     public static readonly Error InvalidReadState = Error.Validation(
         "Messaging.InvalidReadState",

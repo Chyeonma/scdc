@@ -49,6 +49,9 @@ internal sealed class DirectConversationService(
 
         var (userLowId, userHighId) = OrderUserIds(command.ActorUserId, command.RecipientUserId);
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await UserBlockPairLock.LockAsync(dbContext, command.ActorUserId, command.RecipientUserId, cancellationToken);
+
         if (await IsBlockedAsync(command.ActorUserId, command.RecipientUserId, cancellationToken))
         {
             return Result.Failure<CreateDirectConversationResult>(MessagingErrors.DirectConversationUnavailable);
@@ -75,7 +78,6 @@ internal sealed class DirectConversationService(
 
         try
         {
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             dbContext.Spaces.Add(space);
             dbContext.DirectConversations.Add(new DirectConversation
             {
@@ -100,6 +102,7 @@ internal sealed class DirectConversationService(
         }
         catch (DbUpdateException exception) when (IsDirectConversationPairConflict(exception))
         {
+            await transaction.RollbackAsync(cancellationToken);
             dbContext.ChangeTracker.Clear();
             var concurrentConversation = await FindDirectConversationAsync(userLowId, userHighId, cancellationToken);
             if (concurrentConversation is not null)
@@ -160,7 +163,8 @@ internal sealed class DirectConversationService(
                 cancellationToken);
 
         var unread = await unreadCountReader.GetAsync(actorUserId, [spaceId], cancellationToken);
-        return Result.Success(ToSpaceSummary(directConversation.Space, peer, state, unread[spaceId]));
+        var blocked = await IsBlockedAsync(actorUserId, peerUserId, cancellationToken);
+        return Result.Success(ToSpaceSummary(directConversation.Space, peer, state, unread[spaceId], blocked));
     }
 
     public async Task<Result<SpacePageDto>> ListAsync(
@@ -233,6 +237,11 @@ internal sealed class DirectConversationService(
             .ToArray();
         var peers = await userDirectory.FindByIdsAsync(peerIds, cancellationToken);
         var unread = await unreadCountReader.GetAsync(query.ActorUserId, pageRows.Select(row => row.Space.Id).ToArray(), cancellationToken);
+        var blockedPeers = (await dbContext.UserBlocks.AsNoTracking()
+            .Where(block => block.BlockerUserId == query.ActorUserId && peerIds.Contains(block.BlockedUserId)
+                || block.BlockedUserId == query.ActorUserId && peerIds.Contains(block.BlockerUserId))
+            .Select(block => block.BlockerUserId == query.ActorUserId ? block.BlockedUserId : block.BlockerUserId)
+            .ToArrayAsync(cancellationToken)).ToHashSet();
 
         var items = pageRows
             .Where(row => peers.ContainsKey(GetPeerUserId(row.Conversation, query.ActorUserId)))
@@ -240,7 +249,8 @@ internal sealed class DirectConversationService(
                 row.Space,
                 peers[GetPeerUserId(row.Conversation, query.ActorUserId)],
                 row.State,
-                unread[row.Space.Id]))
+                unread[row.Space.Id],
+                blockedPeers.Contains(GetPeerUserId(row.Conversation, query.ActorUserId))))
             .ToArray();
 
         var nextCursor = hasMore && pageRows.Length > 0
@@ -386,7 +396,8 @@ internal sealed class DirectConversationService(
         ChatSpace space,
         UserSummary peer,
         SpaceUserState? state,
-        SpaceUnreadState? unread = null)
+        SpaceUnreadState? unread = null,
+        bool isBlocked = false)
     {
         return new SpaceSummaryDto(
             space.Id,
@@ -408,13 +419,13 @@ internal sealed class DirectConversationService(
                 state?.IsPinned ?? false),
             new SpaceCapabilitiesDto(
                 CanRead: true,
-                CanSend: space.Status == SpaceStatus.Active,
-                CanEditOwn: space.Status == SpaceStatus.Active,
+                CanSend: space.Status == SpaceStatus.Active && !isBlocked,
+                CanEditOwn: space.Status == SpaceStatus.Active && !isBlocked,
                 CanDeleteOwn: true,
                 CanDeleteOthers: false,
-                CanPin: space.Status == SpaceStatus.Active,
-                CanReact: space.Status == SpaceStatus.Active,
-                CanAttach: space.Status == SpaceStatus.Active),
+                CanPin: space.Status == SpaceStatus.Active && !isBlocked,
+                CanReact: space.Status == SpaceStatus.Active && !isBlocked,
+                CanAttach: space.Status == SpaceStatus.Active && !isBlocked),
             NotificationCount: unread?.NotificationCount ?? 0);
     }
 

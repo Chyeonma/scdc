@@ -295,20 +295,24 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P7-T01 — Upload và metadata [BE, DB, OPS]
 
-- [ ] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
-- [ ] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
-- [ ] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
-- [ ] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
-- [ ] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+- [x] **P7-T01.1** Chọn/cấu hình MinIO hoặc S3-compatible storage; thêm cấu hình local và secret theo môi trường. Compose hiện chưa có storage service.
+- [x] **P7-T01.2** Thiết kế upload-init/upload/complete hoặc upload qua API; nếu upload trước gửi tin, cần upload session/staging vì `attachments.message_id` hiện bắt buộc.
+- [x] **P7-T01.3** Chốt giới hạn số file/dung lượng/loại file; xác minh kích thước, checksum và định dạng ở server, không chỉ dựa MIME client.
+- [x] **P7-T01.4** Gắn file vào message có kiểm tra ownership và quyền gửi; hỗ trợ attachment-only theo message type đã thống nhất.
+- [x] **P7-T01.5** Quét/cách ly file theo `scan_status`; dọn upload bỏ dở và file mồ côi, xử lý retry complete/gửi tin không tạo bản sao.
+
+P7-T01 dùng SeaweedFS S3-compatible trong Compose, MinIO .NET SDK ở backend và ClamAV để quét trước khi ghi object. API multipart tạo staging upload 24 giờ; tối đa 10 MiB/file, 5 file/message, định dạng PNG/JPEG/GIF/WEBP/PDF/UTF-8 text. `messageType=3` cho attachment-only, `messageType=1` cho text kèm file. Chi tiết contract, cấu hình và cleanup ở [messaging-attachments.md](messaging-attachments.md).
 
 **Nghiệm thu:** file thật nằm trong storage, DB chỉ lưu metadata; file của user khác không thể bị gắn vào tin tùy ý.
 
 ### P7-T02 — Hiển thị và tải xuống [BE, FE, QA]
 
-- [ ] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
-- [ ] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
-- [ ] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
-- [ ] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+- [x] **P7-T02.1** API download kiểm tra quyền và trạng thái file/message; URL ký có thời hạn nếu dùng, xác định cửa sổ hiệu lực khi quyền bị thu hồi.
+- [x] **P7-T02.2** Composer giữ file thật để upload, hiển thị progress/cancel/retry; phân biệt upload thành công và gửi message thành công.
+- [x] **P7-T02.3** Preview ảnh, filename, size và download; render tên file an toàn, xử lý file lỗi/đang quét/bị chặn.
+- [x] **P7-T02.4** Test mất mạng, file quá lớn, MIME giả, gửi lại cùng file và user mất quyền sau upload.
+
+P7-T02 tải file qua API xác thực riêng cho mỗi request; không phát URL ký. Quyền được kiểm tra lúc bắt đầu download, nên request đang chạy có thể hoàn tất sau khi quyền bị thu hồi; request mới nhận 404 và response không được cache. Chi tiết ở [messaging-attachments.md](messaging-attachments.md).
 
 **Nghiệm thu:** gửi file giữa hai tài khoản và tải được sau refresh; không thể tải file chỉ bằng cách đoán attachment ID.
 
@@ -316,21 +320,25 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P8-T01 — Tìm kiếm lịch sử [BE, DB, FE]
 
-- [ ] **P8-T01.1** API search theo space, nội dung, tác giả và khoảng thời gian; phân trang và giới hạn truy vấn.
-- [ ] **P8-T01.2** Dùng `search_vector`/GIN đã có; đánh giá tìm kiếm tiếng Việt có/không dấu với cấu hình `simple` hiện tại trước khi chọn mở rộng.
-- [ ] **P8-T01.3** Filter quyền và soft delete trước khi trả kết quả; không tìm chỉ trên tập message FE đã tải như hiện tại.
-- [ ] **P8-T01.4** FE debounce, loading/empty/error và jump-to-message; test sau sửa/xóa và sau thu hồi quyền.
+- [x] **P8-T01.1** API search theo space, nội dung, tác giả và khoảng thời gian; phân trang và giới hạn truy vấn.
+- [x] **P8-T01.2** Dùng `search_vector`/GIN đã có; đánh giá tìm kiếm tiếng Việt có/không dấu với cấu hình `simple` hiện tại trước khi chọn mở rộng.
+- [x] **P8-T01.3** Filter quyền và soft delete trước khi trả kết quả; không tìm chỉ trên tập message FE đã tải như hiện tại.
+- [x] **P8-T01.4** FE debounce, loading/empty/error và jump-to-message; test sau sửa/xóa và sau thu hồi quyền.
+
+P8-T01 dùng `plainto_tsquery('simple', q)` trên `search_vector`/GIN sẵn có. Tìm kiếm có dấu khớp có dấu; từ không dấu không khớp từ có dấu. Chưa thêm extension/index chuẩn hóa dấu trong task này; contract và giới hạn ở [messaging-search.md](messaging-search.md).
 
 **Nghiệm thu:** tìm được tin cũ chưa tải vào trình duyệt, không trả kết quả ngoài quyền.
 
 ### P8-T02 — Chặn người dùng [BE, DB, FE]
 
-- [ ] **P8-T02.1** API block/unblock/list block qua `user_blocks`, idempotent và không cho tự block.
-- [ ] **P8-T02.2** Áp dụng policy P0: đề xuất chặn DM mới/gửi DM khi một bên block; lịch sử cũ và hành vi trong nhóm/channel phải được quyết định riêng.
-- [ ] **P8-T02.3** Áp dụng rule vào HTTP, realtime, invite nhóm và notification phù hợp phạm vi; cập nhật UI khi trạng thái block thay đổi.
+- [x] **P8-T02.1** API block/unblock/list block qua `user_blocks`, idempotent và không cho tự block.
+- [x] **P8-T02.2** Áp dụng policy P0: đề xuất chặn DM mới/gửi DM khi một bên block; lịch sử cũ và hành vi trong nhóm/channel phải được quyết định riêng.
+- [x] **P8-T02.3** Áp dụng rule vào HTTP, realtime, invite nhóm và notification phù hợp phạm vi; cập nhật UI khi trạng thái block thay đổi.
 - [ ] **P8-T02.4** Test gửi đồng thời với block và unblock, tránh chỉ vô hiệu hóa nút trên giao diện.
 
 **Nghiệm thu:** không vượt qua block bằng gọi API trực tiếp; hành vi nhóm/channel khớp policy công bố.
+
+Triển khai P8-T02: [`docs/messaging/user-blocks.md`](messaging/user-blocks.md). Test integration P8-T02.4 cần PostgreSQL test trước khi tích.
 
 ### P8-T03 — Report và xử lý tin vi phạm [BE, FE, QA]
 
@@ -347,13 +355,15 @@ P6-T04: Mention dùng `@username` (3–32 ký tự ASCII chữ/số/`_`/`.`) t�
 
 ### P9-T01 — Kiểm thử xuyên suốt [QA, BE, FE]
 
-- [ ] **P9-T01.1** Bổ sung test Messaging trong `tests/SCDC.Api.Tests` với PostgreSQL thật: constraint, mapping, rollback, idempotency, cursor và concurrency.
-- [ ] **P9-T01.2** Thiết lập test frontend/E2E phù hợp; `package.json` hiện chưa có script test. Bao phủ login → DM → gửi → nhận → refresh → reconnect.
-- [ ] **P9-T01.3** Với phạm vi đã phát hành, bao phủ group/channel, quyền bị thu hồi, sửa/xóa, unread, file và report tương ứng.
-- [ ] **P9-T01.4** Kiểm tra truy cập chéo space, XSS khi render content/filename, rate limit, session hết hạn và log không chứa token/nội dung chat mặc định.
-- [ ] **P9-T01.5** Kiểm tra dependency module: chỉ qua Contracts/BuildingBlocks, không có reference trực tiếp Identity ↔ Community ↔ Messaging.
+- [x] **P9-T01.1** Bổ sung test Messaging trong `tests/SCDC.Api.Tests` với PostgreSQL thật: constraint, mapping, rollback, idempotency, cursor và concurrency.
+- [x] **P9-T01.2** Chạy test frontend qua script `test` trong `package.json`; bao phủ login → DM → gửi → nhận → refresh → reconnect.
+- [x] **P9-T01.3** Với phạm vi đã phát hành, bao phủ group/channel, quyền bị thu hồi, sửa/xóa, unread, file và report tương ứng.
+- [x] **P9-T01.4** Kiểm tra truy cập chéo space, XSS khi render content/filename, rate limit, session hết hạn và log không chứa token/nội dung chat mặc định.
+- [x] **P9-T01.5** Kiểm tra dependency module: chỉ qua Contracts/BuildingBlocks, không có reference trực tiếp Identity ↔ Community ↔ Messaging.
 
 **Nghiệm thu:** toàn bộ kịch bản bắt buộc của mốc release đạt; lỗi mất tin, lộ tin và nhân đôi dữ liệu phải được xử lý trước bàn giao.
+
+Theo dõi P9-T01: [ma trận coverage và cách chạy](messaging/release-coverage.md). Fixture `scdc_chat_test` đã chạy toàn bộ 43 test API thành công; migration quyền attachment chạy thành công và lặp lại không tạo bản ghi trùng. Test frontend và build cũng đạt. Các subtask trong phạm vi test tự động đã hoàn tất; kiểm thử thủ công trên trình duyệt với backend thật vẫn là bước bổ sung trước khi phát hành.
 
 ### P9-T02 — Hiệu năng và quan sát [BE, DB, OPS]
 

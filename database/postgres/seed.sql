@@ -113,7 +113,8 @@ VALUES
     ('delete_messages', 'Xoa tin nhan cua thanh vien'),
     ('attach_files', 'Gui file dinh kem'),
     ('add_reactions', 'Them reaction'),
-    ('mention_everyone', 'Mention tat ca thanh vien');
+    ('mention_everyone', 'Mention tat ca thanh vien')
+ON CONFLICT (code) DO NOTHING;
 
 -- One direct conversation, one group conversation and two server channels.
 INSERT INTO messaging.spaces

@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -8,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using SCDC.Api.Tests.Infrastructure;
+using SCDC.Modules.Messaging.Application;
 
 namespace SCDC.Api.Tests.Messaging;
 
@@ -15,6 +18,101 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
     : IClassFixture<SCDCWebApplicationFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
+
+    [Fact]
+    public async Task Search_finds_unloaded_history_and_respects_edits_deletes_filters_and_revoked_access()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var author = await CreateActorAsync("search_author");
+            var reader = await CreateActorAsync("search_reader");
+            var outsider = await CreateActorAsync("search_outsider");
+            actors.AddRange([author, reader, outsider]);
+            var dm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = reader.Id });
+            var spaceId = (await dm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var path = $"/api/v1/spaces/{spaceId}/messages";
+            async Task<JsonElement> SendText(string content, TestActor actor)
+            {
+                var response = await SendAsync(HttpMethod.Post, path, actor.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1, content });
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                return await response.Content.ReadFromJsonAsync<JsonElement>();
+            }
+
+            var old = await SendText("Chào bạn, từ lịch sử cũ", author);
+            var newer = await SendText("Chào bạn lần nữa", author);
+            await SendText("Tin mới nhất", reader);
+            var otherDm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = outsider.Id });
+            var otherSpaceId = (await otherDm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            Assert.Equal(HttpStatusCode.Created,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/spaces/{otherSpaceId}/messages", author.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 1,
+                        content = "Chào ở cuộc trò chuyện khác" })).StatusCode);
+            var search = $"{path}/search?q={Uri.EscapeDataString("Chào")}";
+            var latestOnly = await SendAsync(HttpMethod.Get, $"{path}?limit=1", reader.Token);
+            Assert.DoesNotContain((await latestOnly.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == old.GetProperty("id").GetGuid());
+
+            var first = await SendAsync(HttpMethod.Get, $"{search}&limit=1", reader.Token);
+            Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+            var firstPage = await first.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(firstPage.GetProperty("hasMore").GetBoolean());
+            Assert.Equal(newer.GetProperty("id").GetGuid(),
+                firstPage.GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid());
+            var cursor = firstPage.GetProperty("nextBeforeSequence").GetString();
+            var second = await SendAsync(HttpMethod.Get, $"{search}&limit=1&beforeSequence={cursor}", reader.Token);
+            Assert.Equal(old.GetProperty("id").GetGuid(),
+                (await second.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items")
+                    .EnumerateArray().Single().GetProperty("id").GetGuid());
+            var accentless = await SendAsync(HttpMethod.Get, $"{path}/search?q=chao", reader.Token);
+            Assert.Empty((await accentless.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+            var from = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(-5).ToString("O"));
+            var to = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(5).ToString("O"));
+            var filtered = await SendAsync(HttpMethod.Get,
+                $"{path}/search?authorUserId={author.Id}&from={from}&to={to}", reader.Token);
+            Assert.Equal(2, (await filtered.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items").GetArrayLength());
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Get, $"{path}/search?q=a", reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Get, $"{search}&limit=51", reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Get, $"{search}&from={from}", reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, search, outsider.Token)).StatusCode);
+
+            var oldId = old.GetProperty("id").GetGuid();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Patch, $"{path}/{oldId}", author.Token,
+                    new { content = "Đã sửa nội dung", expectedVersion = 1 })).StatusCode);
+            var afterEdit = await SendAsync(HttpMethod.Get, search, reader.Token);
+            Assert.Single((await afterEdit.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+            var edited = await SendAsync(HttpMethod.Get, $"{path}/search?q={Uri.EscapeDataString("Đã sửa")}", reader.Token);
+            Assert.Equal(oldId, (await edited.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid());
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await SendAsync(HttpMethod.Delete, $"{path}/{oldId}?expectedVersion=2", author.Token)).StatusCode);
+            edited = await SendAsync(HttpMethod.Get, $"{path}/search?q={Uri.EscapeDataString("Đã sửa")}", reader.Token);
+            Assert.Empty((await edited.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+            await using var revoke = new NpgsqlCommand("""
+                UPDATE messaging.space_members SET membership_status = 2, left_at = now()
+                WHERE space_id = @space_id AND user_id = @user_id
+                """, connection);
+            revoke.Parameters.AddWithValue("space_id", spaceId);
+            revoke.Parameters.AddWithValue("user_id", reader.Id);
+            await revoke.ExecuteNonQueryAsync();
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, search, reader.Token)).StatusCode);
+        }
+        finally { await CleanupAsync(actors); }
+    }
 
     [Fact]
     public async Task Reports_require_message_access_and_moderator_actions_remove_with_audit()
@@ -152,6 +250,247 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
                 (await tombstone.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("deletedAt").ValueKind);
         }
         finally { await CleanupAsync(actors); }
+    }
+    [Fact]
+    public async Task Attachment_upload_is_scanned_staged_and_owned_by_the_sender_and_space()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var author = await CreateActorAsync("file_author");
+            var reader = await CreateActorAsync("file_reader");
+            var outsider = await CreateActorAsync("file_outsider");
+            actors.AddRange([author, reader, outsider]);
+            var dm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = reader.Id });
+            var spaceId = (await dm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var otherDm = await SendAsync(HttpMethod.Post, "/api/v1/conversations/direct", author.Token,
+                new { recipientUserId = outsider.Id });
+            var otherSpaceId = (await otherDm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var file = Encoding.UTF8.GetBytes("hello attachment");
+            var clientUploadId = Guid.NewGuid();
+            var upload = await UploadFileAsync(author, spaceId, file, "note.txt", "image/png",
+                clientUploadId: clientUploadId);
+            Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+            var staged = await upload.Content.ReadFromJsonAsync<JsonElement>();
+            var attachmentId = staged.GetProperty("id").GetGuid();
+            Assert.Equal("text/plain", staged.GetProperty("mimeType").GetString());
+            Assert.Equal(1, staged.GetProperty("scanStatus").GetInt32());
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{spaceId}/attachments/{attachmentId}/download", author.Token)).StatusCode);
+            var uploadRetry = await UploadFileAsync(author, spaceId, file, "note.txt", "image/png",
+                clientUploadId: clientUploadId);
+            Assert.Equal(HttpStatusCode.OK, uploadRetry.StatusCode);
+            Assert.Equal(attachmentId,
+                (await uploadRetry.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid());
+            Assert.Equal(HttpStatusCode.Conflict,
+                (await UploadFileAsync(author, spaceId, Encoding.UTF8.GetBytes("changed file"),
+                    "note.txt", "text/plain", clientUploadId: clientUploadId)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await UploadFileAsync(outsider, spaceId, file, "note.txt", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await UploadFileAsync(author, spaceId, file, "note.txt", "text/plain", new string('0', 64))).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await UploadFileAsync(author, spaceId, [0, 1, 2, 3], "bad.bin", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await UploadFileAsync(author, spaceId, new byte[10 * 1024 * 1024 + 1],
+                    "too-large.txt", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await UploadFileAsync(author, spaceId, Encoding.UTF8.GetBytes("EICAR test"), "virus.txt", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable,
+                (await UploadFileAsync(author, spaceId, Encoding.UTF8.GetBytes("SCAN_ERROR"), "scan.txt", "text/plain")).StatusCode);
+
+            var messagePath = $"/api/v1/spaces/{spaceId}/messages";
+            var request = new { clientMessageId = Guid.NewGuid(), messageType = 3,
+                content = (string?)null, attachmentIds = new[] { attachmentId } };
+            Assert.Equal(HttpStatusCode.Conflict,
+                (await SendAsync(HttpMethod.Post, messagePath, reader.Token, request)).StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/spaces/{otherSpaceId}/messages", author.Token, request)).StatusCode);
+            var sent = await SendAsync(HttpMethod.Post, messagePath, author.Token, request);
+            Assert.Equal(HttpStatusCode.Created, sent.StatusCode);
+            var body = await sent.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(3, body.GetProperty("messageType").GetInt32());
+            Assert.Equal(JsonValueKind.Null, body.GetProperty("content").ValueKind);
+            Assert.Equal(attachmentId, body.GetProperty("attachments").EnumerateArray().Single().GetProperty("id").GetGuid());
+            var downloadPath = $"/api/v1/spaces/{spaceId}/attachments/{attachmentId}/download";
+            Assert.Equal(HttpStatusCode.Unauthorized, (await _client.GetAsync(downloadPath)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, downloadPath, outsider.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{otherSpaceId}/attachments/{attachmentId}/download", author.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get,
+                    $"/api/v1/spaces/{spaceId}/attachments/{Guid.NewGuid()}/download", reader.Token)).StatusCode);
+            var downloaded = await SendAsync(HttpMethod.Get, downloadPath, reader.Token);
+            Assert.Equal(HttpStatusCode.OK, downloaded.StatusCode);
+            Assert.Equal(file, await downloaded.Content.ReadAsByteArrayAsync());
+            Assert.Equal("attachment", downloaded.Content.Headers.ContentDisposition?.DispositionType);
+            Assert.Equal("no-store", downloaded.Headers.CacheControl?.ToString());
+            var reportPath = $"/api/v1/spaces/{spaceId}/message-reports";
+            var report = new { messageId = body.GetProperty("id").GetGuid(), reasonCode = "security" };
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Post, reportPath, reader.Token, report)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, messagePath, author.Token, request)).StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict,
+                (await SendAsync(HttpMethod.Post, messagePath, author.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 3, attachmentIds = new[] { attachmentId } })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await SendAsync(HttpMethod.Post, messagePath, author.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 3,
+                        attachmentIds = Enumerable.Range(0, 6).Select(_ => Guid.NewGuid()).ToArray() })).StatusCode);
+
+            var captionUpload = await UploadFileAsync(author, spaceId, Encoding.UTF8.GetBytes("caption file"),
+                "caption.txt", "text/plain");
+            Assert.Equal(HttpStatusCode.OK, captionUpload.StatusCode);
+            var captionUploadId = (await captionUpload.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var captioned = await SendAsync(HttpMethod.Post, messagePath, author.Token,
+                new { clientMessageId = Guid.NewGuid(), messageType = 1,
+                    content = "Caption", attachmentIds = new[] { captionUploadId } });
+            Assert.Equal(HttpStatusCode.Created, captioned.StatusCode);
+            Assert.Single((await captioned.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("attachments").EnumerateArray());
+
+            var history = await SendAsync(HttpMethod.Get, $"{messagePath}?limit=10", reader.Token);
+            Assert.Contains((await history.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray(),
+                item => item.GetProperty("id").GetGuid() == body.GetProperty("id").GetGuid()
+                    && item.GetProperty("attachments").GetArrayLength() == 1);
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+            await using var keyQuery = new NpgsqlCommand(
+                "SELECT object_key FROM messaging.attachment_uploads WHERE id = @id AND attached_message_id = @message_id", connection);
+            keyQuery.Parameters.AddWithValue("id", attachmentId);
+            keyQuery.Parameters.AddWithValue("message_id", body.GetProperty("id").GetGuid());
+            var objectKey = (string)(await keyQuery.ExecuteScalarAsync())!;
+            Assert.Equal(file, factory.AttachmentStore.Objects[objectKey]);
+
+            var abandoned = await UploadFileAsync(author, spaceId, Encoding.UTF8.GetBytes("abandoned"),
+                "old.txt", "text/plain");
+            Assert.Equal(HttpStatusCode.OK, abandoned.StatusCode);
+            var abandonedId = (await abandoned.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            await using var expire = new NpgsqlCommand("""
+                UPDATE messaging.attachment_uploads
+                SET created_at = now() - interval '2 days', expires_at = now() - interval '1 day'
+                WHERE id = @id
+                RETURNING object_key
+                """, connection);
+            expire.Parameters.AddWithValue("id", abandonedId);
+            var abandonedKey = (string)(await expire.ExecuteScalarAsync())!;
+            using var scope = factory.Services.CreateScope();
+            var removed = await scope.ServiceProvider.GetRequiredService<IAttachmentCleanupService>()
+                .CleanupExpiredAsync(CancellationToken.None);
+            Assert.True(removed >= 1);
+            Assert.False(factory.AttachmentStore.Objects.ContainsKey(abandonedKey));
+            Assert.True(factory.AttachmentStore.Objects.ContainsKey(objectKey));
+            var readerUpload = await UploadFileAsync(reader, spaceId, Encoding.UTF8.GetBytes("reader draft"),
+                "reader.txt", "text/plain");
+            Assert.Equal(HttpStatusCode.OK, readerUpload.StatusCode);
+            var readerUploadId = (await readerUpload.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            await using var revoke = new NpgsqlCommand("""
+                UPDATE messaging.space_members SET membership_status = 2, left_at = now()
+                WHERE space_id = @space_id AND user_id = @user_id
+                """, connection);
+            revoke.Parameters.AddWithValue("space_id", spaceId);
+            revoke.Parameters.AddWithValue("user_id", reader.Id);
+            await revoke.ExecuteNonQueryAsync();
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, downloadPath, reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Post, reportPath, reader.Token, report)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Post, messagePath, reader.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 3,
+                        attachmentIds = new[] { readerUploadId } })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Get, downloadPath, author.Token)).StatusCode);
+
+            await using var softDelete = new NpgsqlCommand("""
+                UPDATE messaging.messages SET deleted_at = now(), deleted_by_user_id = @user_id
+                WHERE id = @message_id
+                """, connection);
+            softDelete.Parameters.AddWithValue("user_id", author.Id);
+            softDelete.Parameters.AddWithValue("message_id", body.GetProperty("id").GetGuid());
+            await softDelete.ExecuteNonQueryAsync();
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Get, downloadPath, author.Token)).StatusCode);
+        }
+        finally
+        {
+            await CleanupAsync(actors);
+        }
+    }
+
+    [Fact]
+    public async Task Channel_attachment_permission_is_independent_of_text_send_permission()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var owner = await CreateActorAsync("attachown");
+            var member = await CreateActorAsync("attachmem");
+            actors.AddRange([owner, member]);
+            var server = await SendAsync(HttpMethod.Post, "/api/v1/servers", owner.Token,
+                new { name = "Attachment rights" });
+            Assert.Equal(HttpStatusCode.Created, server.StatusCode);
+            var serverId = (await server.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var invite = await SendAsync(HttpMethod.Post, $"/api/v1/servers/{serverId}/invites", owner.Token, new { });
+            var code = (await invite.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/invites/{code}/join", member.Token, new { })).StatusCode);
+            var spaceId = await CreateChannelAsync(owner, serverId, "attachment-rights", 1);
+            var file = Encoding.UTF8.GetBytes("channel attachment");
+            var staged = await UploadFileAsync(member, spaceId, file, "allowed.txt", "text/plain");
+            Assert.Equal(HttpStatusCode.OK, staged.StatusCode);
+            var stagedId = (await staged.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using (var connection = new NpgsqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                await using var revoke = new NpgsqlCommand("""
+                    DELETE FROM community.role_permissions
+                    WHERE permission_code = 'attach_files'
+                      AND role_id IN (SELECT id FROM community.roles WHERE server_id = @server_id AND is_default)
+                    """, connection);
+                revoke.Parameters.AddWithValue("server_id", serverId);
+                Assert.Equal(1, await revoke.ExecuteNonQueryAsync());
+            }
+
+            var channels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", member.Token);
+            Assert.Equal(HttpStatusCode.OK, channels.StatusCode);
+            var channel = (await channels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+                .Single(item => item.GetProperty("spaceId").GetGuid() == spaceId);
+            Assert.True(channel.GetProperty("canSend").GetBoolean());
+            Assert.False(channel.GetProperty("canAttach").GetBoolean());
+            await SendTextAsync(member, spaceId);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await UploadFileAsync(member, spaceId, file, "denied.txt", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages", member.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 3,
+                        attachmentIds = new[] { stagedId } })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK,
+                (await UploadFileAsync(owner, spaceId, file, "owner.txt", "text/plain")).StatusCode);
+        }
+        finally { await CleanupAsync(actors); }
+    }
+
+    private async Task<HttpResponseMessage> UploadFileAsync(TestActor actor, Guid spaceId, byte[] bytes,
+        string fileName, string claimedMime, string? checksum = null, Guid? clientUploadId = null)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/attachments");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", actor.Token);
+        using var form = new MultipartFormDataContent();
+        var part = new ByteArrayContent(bytes);
+        part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(claimedMime);
+        form.Add(part, "file", fileName);
+        form.Add(new StringContent(checksum ?? Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()),
+            "checksumSha256");
+        form.Add(new StringContent((clientUploadId ?? Guid.NewGuid()).ToString()), "clientUploadId");
+        request.Content = form;
+        return await _client.SendAsync(request);
     }
 
     [Fact]

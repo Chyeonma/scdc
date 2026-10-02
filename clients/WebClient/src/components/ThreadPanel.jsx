@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { initials } from './ServerRail.jsx';
+import { MessageAttachment } from './MessageAttachment.jsx';
 
 function contentWithMentions(message) {
   const names = new Set((message.mentions || []).map((mention) => mention.username.toLowerCase()));
@@ -75,6 +76,8 @@ export function ThreadPanel({
             <small>{new Date(rootMessage.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
           </div>
           <p className="thread-root-card__content">{rootMessage.deletedAt ? 'Tin nhắn đã bị xóa' : contentWithMentions(rootMessage)}</p>
+          {!rootMessage.deletedAt && rootMessage.attachments?.map((attachment) =>
+            <MessageAttachment key={attachment.id} attachment={attachment} spaceId={rootMessage.spaceId} />)}
         </div>
 
         <div className="thread-divider">
@@ -108,6 +111,8 @@ export function ThreadPanel({
                   </button>
                 )}
                 <p>{reply.deletedAt ? 'Tin nhắn đã bị xóa' : contentWithMentions(reply)}</p>
+                {!reply.deletedAt && reply.attachments?.map((attachment) =>
+                  <MessageAttachment key={attachment.id} attachment={attachment} spaceId={reply.spaceId} />)}
               </div>
             </div>
           ))}
