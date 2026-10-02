@@ -17,7 +17,7 @@ internal sealed class CommunityService(
     IRealtimeAccessRevoker revoker,
     TimeProvider clock) : ICommunityService
 {
-    private static readonly string[] OwnerPermissions = ["channel.read", "channel.send", "channel.manage", "server.manage", "member.manage", "invite.create"];
+    private static readonly string[] OwnerPermissions = ["channel.read", "channel.send", "attach_files", "channel.manage", "server.manage", "member.manage", "invite.create"];
 
     public async Task<Result<IReadOnlyList<ServerDto>>> ListServersAsync(Guid actor, CancellationToken ct)
     {
@@ -50,6 +50,7 @@ internal sealed class CommunityService(
         await db.SaveChangesAsync(ct);
         db.MemberRoles.Add(new MemberRole { ServerId = id, UserId = command.ActorUserId, RoleId = ownerRole.Id });
         db.RolePermissions.AddRange(OwnerPermissions.Select(code => new RolePermission { RoleId = ownerRole.Id, PermissionCode = code }));
+        db.RolePermissions.Add(new RolePermission { RoleId = everyoneRole.Id, PermissionCode = "attach_files" });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return Result.Success(new ServerDto(id, name, slug, Normalize(command.Description, 500), command.ActorUserId, (short)ServerStatus.Active));
@@ -229,5 +230,6 @@ internal sealed class CommunityService(
     private static ChannelDto ToDto(Channel c, SCDC.Contracts.Community.ChannelAccessDecision a, short status) =>
         new(c.SpaceId, c.ServerId, c.Name, c.Topic, (short)c.Visibility, c.Position,
             status, a.CanRead, a.CanSend && status == 1,
-            Preferences: new UserSpacePreferencesDto(2, null, false, false), CanDeleteOthers: a.CanDeleteOthers);
+            Preferences: new UserSpacePreferencesDto(2, null, false, false), CanDeleteOthers: a.CanDeleteOthers,
+            CanAttach: a.CanAttach && status == 1);
 }

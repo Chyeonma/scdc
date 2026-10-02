@@ -20,7 +20,8 @@ internal sealed class SpaceMessageAccess(MessagingDbContext dbContext, IChannelA
         {
             var channel = await channelAccess.CheckAsync(userId, space.Id, cancellationToken);
             return new(channel.CanRead, channel.CanSend && space.Status == SpaceStatus.Active,
-                channel.CanEditOwn && space.Status == SpaceStatus.Active, channel.CanDeleteOthers, channel.ServerId);
+                channel.CanEditOwn && space.Status == SpaceStatus.Active, channel.CanDeleteOthers, channel.ServerId,
+                channel.CanAttach && space.Status == SpaceStatus.Active);
         }
 
         if (space.SpaceType is not (SpaceType.Direct or SpaceType.Group))
@@ -37,7 +38,8 @@ internal sealed class SpaceMessageAccess(MessagingDbContext dbContext, IChannelA
             ? await dbContext.DirectConversations.AsNoTracking().AnyAsync(item => item.SpaceId == space.Id, cancellationToken)
             : await dbContext.GroupConversations.AsNoTracking().AnyAsync(item => item.SpaceId == space.Id, cancellationToken);
         return conversationExists
-            ? new ChannelAccessDecision(true, space.Status == SpaceStatus.Active)
+            ? new ChannelAccessDecision(true, space.Status == SpaceStatus.Active,
+                CanAttach: space.Status == SpaceStatus.Active)
             : ChannelAccessDecision.Denied;
     }
 }

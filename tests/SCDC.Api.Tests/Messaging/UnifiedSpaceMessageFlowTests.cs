@@ -422,6 +422,61 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         }
     }
 
+    [Fact]
+    public async Task Channel_attachment_permission_is_independent_of_text_send_permission()
+    {
+        var actors = new List<TestActor>();
+        try
+        {
+            var owner = await CreateActorAsync("attach_channel_owner");
+            var member = await CreateActorAsync("attach_channel_member");
+            actors.AddRange([owner, member]);
+            var server = await SendAsync(HttpMethod.Post, "/api/v1/servers", owner.Token,
+                new { name = "Attachment rights" });
+            Assert.Equal(HttpStatusCode.Created, server.StatusCode);
+            var serverId = (await server.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+            var invite = await SendAsync(HttpMethod.Post, $"/api/v1/servers/{serverId}/invites", owner.Token, new { });
+            var code = (await invite.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString();
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/invites/{code}/join", member.Token, new { })).StatusCode);
+            var spaceId = await CreateChannelAsync(owner, serverId, "attachment-rights", 1);
+            var file = Encoding.UTF8.GetBytes("channel attachment");
+            var staged = await UploadFileAsync(member, spaceId, file, "allowed.txt", "text/plain");
+            Assert.Equal(HttpStatusCode.OK, staged.StatusCode);
+            var stagedId = (await staged.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+            var connectionString = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+            await using (var connection = new NpgsqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                await using var revoke = new NpgsqlCommand("""
+                    DELETE FROM community.role_permissions
+                    WHERE permission_code = 'attach_files'
+                      AND role_id IN (SELECT id FROM community.roles WHERE server_id = @server_id AND is_default)
+                    """, connection);
+                revoke.Parameters.AddWithValue("server_id", serverId);
+                Assert.Equal(1, await revoke.ExecuteNonQueryAsync());
+            }
+
+            var channels = await SendAsync(HttpMethod.Get, $"/api/v1/servers/{serverId}/channels", member.Token);
+            Assert.Equal(HttpStatusCode.OK, channels.StatusCode);
+            var channel = (await channels.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+                .Single(item => item.GetProperty("spaceId").GetGuid() == spaceId);
+            Assert.True(channel.GetProperty("canSend").GetBoolean());
+            Assert.False(channel.GetProperty("canAttach").GetBoolean());
+            await SendTextAsync(member, spaceId);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await UploadFileAsync(member, spaceId, file, "denied.txt", "text/plain")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await SendAsync(HttpMethod.Post, $"/api/v1/spaces/{spaceId}/messages", member.Token,
+                    new { clientMessageId = Guid.NewGuid(), messageType = 3,
+                        attachmentIds = new[] { stagedId } })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK,
+                (await UploadFileAsync(owner, spaceId, file, "owner.txt", "text/plain")).StatusCode);
+        }
+        finally { await CleanupAsync(actors); }
+    }
+
     private async Task<HttpResponseMessage> UploadFileAsync(TestActor actor, Guid spaceId, byte[] bytes,
         string fileName, string claimedMime, string? checksum = null, Guid? clientUploadId = null)
     {

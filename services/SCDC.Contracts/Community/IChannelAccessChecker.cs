@@ -10,7 +10,7 @@ public interface IChannelAccessChecker
     Task<IReadOnlyList<Guid>> ListReadableMemberIdsAsync(Guid spaceId, CancellationToken cancellationToken);
 }
 
-public sealed record ChannelAccessDecision(bool CanRead, bool CanSend, bool CanEditOwn = false, bool CanDeleteOthers = false, Guid? ServerId = null)
+public sealed record ChannelAccessDecision(bool CanRead, bool CanSend, bool CanEditOwn = false, bool CanDeleteOthers = false, Guid? ServerId = null, bool CanAttach = false)
 {
     public static ChannelAccessDecision Denied { get; } = new(false, false);
 }

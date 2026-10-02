@@ -48,10 +48,7 @@ internal sealed class MessageService(
             return Result.Failure<SendMessageResult>(MessagingErrors.InvalidMessage);
         }
 
-        if (!rateLimiter.TryAcquire(command.ActorUserId))
-        {
-            return Result.Failure<SendMessageResult>(MessagingErrors.RateLimited);
-        }
+        var ratePermit = rateLimiter.TryAcquire(command.ActorUserId);
 
         var actor = await userDirectory.FindByIdAsync(command.ActorUserId, cancellationToken);
         if (actor is null)
@@ -104,6 +101,12 @@ internal sealed class MessageService(
                 ? Result.Success(new SendMessageResult((await ToDtosAsync([existing], cancellationToken))[0], Created: false))
                 : Result.Failure<SendMessageResult>(MessagingErrors.IdempotencyConflict);
         }
+        if (attachmentIds.Length > 0 && !access.CanAttach)
+            return Result.Failure<SendMessageResult>(MessagingErrors.ActionNotAllowed);
+        // A retry of an already committed request must return its result even when the
+        // current rate window is full. New messages still require a rate permit.
+        if (!ratePermit)
+            return Result.Failure<SendMessageResult>(MessagingErrors.RateLimited);
 
         if (effectiveReplyId is { } replyId)
         {

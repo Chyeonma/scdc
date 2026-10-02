@@ -43,7 +43,7 @@ internal sealed class AttachmentUploadService(
         var access = await spaceAccess.CheckAsync(actorUserId, space, cancellationToken);
         if (!access.CanRead) return Result.Failure<AttachmentUploadDto>(MessagingErrors.ResourceNotFound);
         if (space.Status != SpaceStatus.Active) return Result.Failure<AttachmentUploadDto>(MessagingErrors.SpaceNotWritable);
-        if (!access.CanSend) return Result.Failure<AttachmentUploadDto>(MessagingErrors.ActionNotAllowed);
+        if (!access.CanAttach) return Result.Failure<AttachmentUploadDto>(MessagingErrors.ActionNotAllowed);
         if (space.SpaceType == SpaceType.Direct)
         {
             var pair = await dbContext.DirectConversations.AsNoTracking().SingleAsync(
@@ -92,7 +92,7 @@ internal sealed class AttachmentUploadService(
         var lockedAccess = lockedSpace is null ? null
             : await spaceAccess.CheckAsync(actorUserId, lockedSpace, cancellationToken);
         if (lockedSpace is null || lockedSpace.Status != SpaceStatus.Active
-            || lockedAccess is null || !lockedAccess.CanRead || !lockedAccess.CanSend)
+            || lockedAccess is null || !lockedAccess.CanRead || !lockedAccess.CanAttach)
             return Result.Failure<AttachmentUploadDto>(MessagingErrors.ActionNotAllowed);
         var existing = await dbContext.AttachmentUploads.AsNoTracking().SingleOrDefaultAsync(upload =>
             upload.SpaceId == spaceId && upload.OwnerUserId == actorUserId

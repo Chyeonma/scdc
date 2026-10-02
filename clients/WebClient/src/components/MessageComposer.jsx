@@ -43,6 +43,14 @@ export function MessageComposer({
   useEffect(() => () => activeUploadRef.current?.controller.abort(), []);
 
   useEffect(() => {
+    if (!textOnlyMode) return;
+    activeUploadRef.current?.controller.abort();
+    setAttachedFiles([]);
+    clientMessageIdRef.current = null;
+    lastSubmissionContentRef.current = null;
+  }, [textOnlyMode]);
+
+  useEffect(() => {
     if (!isTyping || !onTypingChange) return undefined;
     onTypingChange(true);
     const heartbeat = setInterval(() => onTypingChange(true), 3000);

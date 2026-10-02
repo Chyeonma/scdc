@@ -546,6 +546,7 @@ CREATE TABLE community.permissions (
 INSERT INTO community.permissions (code, description) VALUES
     ('channel.read', 'Read messages in a channel'),
     ('channel.send', 'Send messages in a channel'),
+    ('attach_files', 'Attach files to messages in a channel'),
     ('message.edit_own', 'Edit own messages in a channel'),
     ('message.delete', 'Delete other users messages in a channel'),
     ('channel.manage', 'Create, archive, and configure channels'),

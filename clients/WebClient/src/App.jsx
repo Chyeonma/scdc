@@ -298,6 +298,9 @@ export default function App() {
     ? Boolean(activeDm && activeDm.status === 1
         && (activeDm.spaceType !== 1 || activeDm.capabilities?.canSend))
     : Boolean(activeChannel?.canSend && activeChannel.status === 1);
+  const canAttachCurrentSpace = canSendCurrentSpace && (isHomeActive
+    ? Boolean(activeDm?.capabilities?.canAttach)
+    : Boolean(activeChannel?.canAttach));
   activeSpaceRef.current = currentSpaceId;
   messagesRef.current = messagesMap;
 
@@ -1393,6 +1396,7 @@ export default function App() {
           onSendMessage={handleSendMessage}
           onTypingChange={setLocalTyping}
           typingUsers={Object.values(typingBySpace[currentSpaceId] || {}).map((entry) => entry.displayName)}
+          textOnlyMode={!canAttachCurrentSpace}
           disabled={!currentSpaceId || !canSendCurrentSpace}
         />
       </main>
