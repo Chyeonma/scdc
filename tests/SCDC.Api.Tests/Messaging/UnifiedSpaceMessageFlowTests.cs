@@ -329,6 +329,10 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             Assert.Equal(file, await downloaded.Content.ReadAsByteArrayAsync());
             Assert.Equal("attachment", downloaded.Content.Headers.ContentDisposition?.DispositionType);
             Assert.Equal("no-store", downloaded.Headers.CacheControl?.ToString());
+            var reportPath = $"/api/v1/spaces/{spaceId}/message-reports";
+            var report = new { messageId = body.GetProperty("id").GetGuid(), reasonCode = "security" };
+            Assert.Equal(HttpStatusCode.OK,
+                (await SendAsync(HttpMethod.Post, reportPath, reader.Token, report)).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Post, messagePath, author.Token, request)).StatusCode);
             Assert.Equal(HttpStatusCode.Conflict,
                 (await SendAsync(HttpMethod.Post, messagePath, author.Token,
@@ -393,6 +397,8 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
             await revoke.ExecuteNonQueryAsync();
             Assert.Equal(HttpStatusCode.NotFound,
                 (await SendAsync(HttpMethod.Get, downloadPath, reader.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound,
+                (await SendAsync(HttpMethod.Post, reportPath, reader.Token, report)).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound,
                 (await SendAsync(HttpMethod.Post, messagePath, reader.Token,
                     new { clientMessageId = Guid.NewGuid(), messageType = 3,

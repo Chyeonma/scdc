@@ -356,12 +356,14 @@ Triển khai P8-T02: [`docs/messaging/user-blocks.md`](messaging/user-blocks.md)
 ### P9-T01 — Kiểm thử xuyên suốt [QA, BE, FE]
 
 - [ ] **P9-T01.1** Bổ sung test Messaging trong `tests/SCDC.Api.Tests` với PostgreSQL thật: constraint, mapping, rollback, idempotency, cursor và concurrency.
-- [ ] **P9-T01.2** Thiết lập test frontend/E2E phù hợp; `package.json` hiện chưa có script test. Bao phủ login → DM → gửi → nhận → refresh → reconnect.
+- [x] **P9-T01.2** Chạy test frontend qua script `test` trong `package.json`; bao phủ login → DM → gửi → nhận → refresh → reconnect.
 - [ ] **P9-T01.3** Với phạm vi đã phát hành, bao phủ group/channel, quyền bị thu hồi, sửa/xóa, unread, file và report tương ứng.
 - [ ] **P9-T01.4** Kiểm tra truy cập chéo space, XSS khi render content/filename, rate limit, session hết hạn và log không chứa token/nội dung chat mặc định.
-- [ ] **P9-T01.5** Kiểm tra dependency module: chỉ qua Contracts/BuildingBlocks, không có reference trực tiếp Identity ↔ Community ↔ Messaging.
+- [x] **P9-T01.5** Kiểm tra dependency module: chỉ qua Contracts/BuildingBlocks, không có reference trực tiếp Identity ↔ Community ↔ Messaging.
 
 **Nghiệm thu:** toàn bộ kịch bản bắt buộc của mốc release đạt; lỗi mất tin, lộ tin và nhân đôi dữ liệu phải được xử lý trước bàn giao.
+
+Theo dõi P9-T01: [ma trận coverage và cách chạy](messaging/release-coverage.md). Các test cần PostgreSQL thật đã bổ sung nhưng còn phải chạy trên fixture `scdc_chat_test` trước khi tích P9-T01.1/.3/.4 và nghiệm thu toàn task.
 
 ### P9-T02 — Hiệu năng và quan sát [BE, DB, OPS]
 
