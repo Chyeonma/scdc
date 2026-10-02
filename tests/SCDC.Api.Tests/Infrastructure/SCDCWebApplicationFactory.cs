@@ -14,7 +14,7 @@ public class SCDCWebApplicationFactory : WebApplicationFactory<Program>
 
     public SCDCWebApplicationFactory() : this(false) { }
 
-    public SCDCWebApplicationFactory(bool useRealtimePublisher, ILoggerProvider? additionalLogger = null)
+    internal SCDCWebApplicationFactory(bool useRealtimePublisher, ILoggerProvider? additionalLogger = null)
     {
         _useRealtimePublisher = useRealtimePublisher;
         _additionalLogger = additionalLogger;

@@ -1,6 +1,6 @@
 # P9-T01 — Ma trận kiểm thử Messaging cho mốc phát hành
 
-Nhánh `test/msg-p9-t01-release-coverage` được xếp chồng lên `feat/msg-p8-t03-moderation`. Các thay đổi chưa vào `main` của P7-T02, P8-T01 và P8-T02 đã được tích hợp vào nhánh này để kiểm tra chung attachment, search, block và moderation. PR của task này cần giữ dạng draft cho tới khi toàn bộ integration test chạy trên PostgreSQL test và đạt.
+Nhánh `test/msg-p9-t01-release-coverage` được xếp chồng lên `feat/msg-p8-t03-moderation`. Các thay đổi chưa vào `main` của P7-T02, P8-T01 và P8-T02 đã được tích hợp vào nhánh này để kiểm tra chung attachment, search, block và moderation.
 
 | Phạm vi | Test | Điều kiện cần chứng minh |
 |---|---|---|
@@ -25,6 +25,8 @@ dotnet build SCDC.slnx
 
 Các test frontend dùng HTTP mock và SSR component; chúng không thay thế kiểm thử trình duyệt với backend thật. Suite API dùng `SCDCWebApplicationFactory`, Identity API thật, PostgreSQL thật và SignalR test server. Test tạo actor riêng và dọn dữ liệu theo ID. Không chạy suite với database development/production.
 
-Tại thời điểm lập PR này, frontend test, build, và test ranh giới module đã chạy đạt; PostgreSQL `localhost:5433` chưa hoạt động và Docker daemon không sẵn sàng. Vì vậy các hàng cần PostgreSQL chỉ mới được biên dịch, chưa được nghiệm thu. Sau khi fixture hoạt động, chạy toàn bộ lệnh trên, sửa bất kỳ lỗi mất/lộ/nhân đôi dữ liệu nào, rồi mới chuyển PR khỏi draft và đánh dấu các subtask còn lại trong roadmap.
+Ngày 02/10/2026, fixture PostgreSQL `scdc_chat_test` trên cổng `5433` đã chạy và toàn bộ suite API đạt **43/43 test**. Frontend test đạt **8/8**, frontend build và solution build đạt. Test frontend dùng mock/SSR; chưa có phiên kiểm thử trình duyệt với backend thật.
 
-Rà soát tĩnh đã phát hiện hai lỗi và nhánh này đã sửa ở mức code: retry cùng `clientMessageId` trả lại tin đã lưu ngay cả khi cửa sổ rate limit đầy; upload và gửi tin có file trong channel đòi `CanAttach` độc lập với `CanSend`. Migration `20261002_p9_t01_channel_attachments.sql` cấp `attach_files` cho default/Owner role hiện hữu; role tùy chỉnh cần cấp quyền này rõ ràng. Server mới cấp quyền cho role mặc định/Owner khi tạo. Test hồi quy đã bổ sung, nhưng hai sửa đổi vẫn cần kiểm chứng với PostgreSQL thật trước khi nghiệm thu.
+Rà soát tĩnh đã phát hiện hai lỗi và nhánh này đã sửa: retry cùng `clientMessageId` trả lại tin đã lưu ngay cả khi cửa sổ rate limit đầy; upload và gửi tin có file trong channel đòi `CanAttach` độc lập với `CanSend`. Các test hồi quy cho hai lỗi đã đạt trên PostgreSQL thật. Role tùy chỉnh cần được cấp `attach_files` rõ ràng; server mới cấp quyền này cho role mặc định/Owner khi tạo.
+
+Trên **chỉ database test** `scdc_chat_test`, đã chạy `20261002_p9_t01_channel_attachments.sql` hai lần bằng `psql -v ON_ERROR_STOP=1`. Lần đầu thêm quyền cho 4 role hiện hữu; lần hai thêm 0 bản ghi. Khi suite phát hiện volume cũ còn thiếu `20260927_p8_t03_report_space.sql`, migration P8 cũng được áp dụng vào database test trước khi chạy lại suite. Kiểm tra cuối cho thấy không còn default/Owner role thiếu `attach_files`. Migration P9 đã kiểm chứng tính lặp lại trên volume test có dữ liệu; không áp dụng migration nào lên database development hoặc production.

@@ -355,15 +355,15 @@ Triển khai P8-T02: [`docs/messaging/user-blocks.md`](messaging/user-blocks.md)
 
 ### P9-T01 — Kiểm thử xuyên suốt [QA, BE, FE]
 
-- [ ] **P9-T01.1** Bổ sung test Messaging trong `tests/SCDC.Api.Tests` với PostgreSQL thật: constraint, mapping, rollback, idempotency, cursor và concurrency.
+- [x] **P9-T01.1** Bổ sung test Messaging trong `tests/SCDC.Api.Tests` với PostgreSQL thật: constraint, mapping, rollback, idempotency, cursor và concurrency.
 - [x] **P9-T01.2** Chạy test frontend qua script `test` trong `package.json`; bao phủ login → DM → gửi → nhận → refresh → reconnect.
-- [ ] **P9-T01.3** Với phạm vi đã phát hành, bao phủ group/channel, quyền bị thu hồi, sửa/xóa, unread, file và report tương ứng.
-- [ ] **P9-T01.4** Kiểm tra truy cập chéo space, XSS khi render content/filename, rate limit, session hết hạn và log không chứa token/nội dung chat mặc định.
+- [x] **P9-T01.3** Với phạm vi đã phát hành, bao phủ group/channel, quyền bị thu hồi, sửa/xóa, unread, file và report tương ứng.
+- [x] **P9-T01.4** Kiểm tra truy cập chéo space, XSS khi render content/filename, rate limit, session hết hạn và log không chứa token/nội dung chat mặc định.
 - [x] **P9-T01.5** Kiểm tra dependency module: chỉ qua Contracts/BuildingBlocks, không có reference trực tiếp Identity ↔ Community ↔ Messaging.
 
 **Nghiệm thu:** toàn bộ kịch bản bắt buộc của mốc release đạt; lỗi mất tin, lộ tin và nhân đôi dữ liệu phải được xử lý trước bàn giao.
 
-Theo dõi P9-T01: [ma trận coverage và cách chạy](messaging/release-coverage.md). Các test cần PostgreSQL thật đã bổ sung nhưng còn phải chạy trên fixture `scdc_chat_test` trước khi tích P9-T01.1/.3/.4 và nghiệm thu toàn task.
+Theo dõi P9-T01: [ma trận coverage và cách chạy](messaging/release-coverage.md). Fixture `scdc_chat_test` đã chạy toàn bộ 43 test API thành công; migration quyền attachment chạy thành công và lặp lại không tạo bản ghi trùng. Test frontend và build cũng đạt. Các subtask trong phạm vi test tự động đã hoàn tất; kiểm thử thủ công trên trình duyệt với backend thật vẫn là bước bổ sung trước khi phát hành.
 
 ### P9-T02 — Hiệu năng và quan sát [BE, DB, OPS]
 

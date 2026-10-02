@@ -428,8 +428,8 @@ public sealed class UnifiedSpaceMessageFlowTests(SCDCWebApplicationFactory facto
         var actors = new List<TestActor>();
         try
         {
-            var owner = await CreateActorAsync("attach_channel_owner");
-            var member = await CreateActorAsync("attach_channel_member");
+            var owner = await CreateActorAsync("attachown");
+            var member = await CreateActorAsync("attachmem");
             actors.AddRange([owner, member]);
             var server = await SendAsync(HttpMethod.Post, "/api/v1/servers", owner.Token,
                 new { name = "Attachment rights" });
