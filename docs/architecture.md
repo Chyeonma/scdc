@@ -1,100 +1,140 @@
-# Kiến trúc hệ thống SCDC
+# SCDC — Kiến trúc và quy ước tích hợp
 
-Tài liệu này mô tả thiết kế kiến trúc tổng thể, ranh giới các module nghiệp vụ, luồng dữ liệu và cơ chế thời gian thực của nền tảng giao tiếp SCDC.
+Cập nhật: 2026-10-03. MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
 
----
+Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. DM, phân quyền phòng và media còn có thiết kế đề xuất; microservices thuộc đợt sau.
 
-## 1. Chiến lược kiến trúc: Monolith First
+## Mục lục
 
-Hệ thống áp dụng chiến lược **Monolith First** (Martin Fowler) để tối ưu hóa tốc độ phát triển và kiểm soát ranh giới nghiệp vụ:
+- [Hệ thống hiện tại](#current)
+- [Ranh giới module và dữ liệu](#boundaries)
+- [Hợp đồng và lỗi chung](#contracts)
+- [Hành trình xuyên tính năng](#journeys)
+- [Định hướng đợt sau](#future)
+- [Điều kiện rà soát](#review)
 
-- **Giai đoạn 1 (Modular Monolith):** Toàn bộ nghiệp vụ được đóng gói trong cùng một giải pháp phần mềm trên nền tảng .NET 10. Các domain được tách biệt thành các Class Library riêng biệt (`SCDC.Identity`, `SCDC.Community`, `SCDC.Messaging`), sở hữu schema CSDL độc lập trong PostgreSQL và chỉ giao tiếp với nhau qua abstractions tại `SCDC.Contracts`. Toàn bộ chạy chung trong một tiến trình host tại `SCDC.Api` (cổng 5026).
-- **Giai đoạn 2 (Microservices Migration):** Bóc tách các module thành các dịch vụ phân tán độc lập (chạy trên các cổng riêng biệt 5001–5004), định tuyến qua API Gateway (YARP), giao tiếp liên dịch vụ qua gRPC/HTTP và xử lý sự kiện qua RabbitMQ / Transactional Outbox.
+<a id="current"></a>
 
----
-
-## 2. Sơ đồ kiến trúc hệ thống
+## 1. Hệ thống hiện tại
 
 ```mermaid
-flowchart TD
-    Client[WebClient / React + Vite]
-    Gateway[API Gateway / YARP\nPort 5000]
-
-    subgraph CoreServices[Dịch vụ nghiệp vụ .NET 10]
-        Identity[Identity Service\nPort 5001\nXác thực & Tài khoản]
-        Community[Community Service\nPort 5002\nServer, Channel & Phân quyền Bitwise]
-        Messaging[Messaging Service\nPort 5003\nChat, Cursor Pagination & SignalR Hub]
-        FileService[File & Media Service\nPort 5004\nMinIO Presigned URL]
+flowchart LR
+    Web[WebClient · React 19 / Vite] -->|HTTP /api/v1| Api[SCDC.Api · .NET 10 · cổng 5026]
+    subgraph Host[Module trong cùng tiến trình API]
+        Identity[Identity · Active]
+        Community[Community · Foundation]
+        Messaging[Messaging · Foundation]
     end
-
-    subgraph Infrastructure[Hạ tầng dữ liệu & Dịch vụ nền]
-        Postgres[(PostgreSQL 18\n7 Schemas Độc Lập)]
-        Redis[(Redis Cache &\nSignalR Backplane)]
-        MinIO[(MinIO Object Storage\nS3 Compatible)]
-        LiveKit[LiveKit SFU\nWebRTC Media]
-        Worker[Background Worker\nOutbox & Email]
-    end
-
-    Client -->|HTTP / WSS| Gateway
-    Gateway --> Identity
-    Gateway --> Community
-    Gateway --> Messaging
-    Gateway --> FileService
-
-    Identity -->|identity schema| Postgres
-    Community -->|community schema| Postgres
-    Messaging -->|messaging schema| Postgres
-    Messaging <-->|Pub/Sub Backplane| Redis
-    FileService -->|Presigned URL| MinIO
-    Client -.->|Upload trực tiếp| MinIO
-    Client <-->|WebRTC Media| LiveKit
-    Worker -->|Đọc outbox_events| Postgres
+    Api --> Identity
+    Api --> Community
+    Api --> Messaging
+    Identity -->|EF Core| Pg[(PostgreSQL 18)]
 ```
 
----
+Compose hiện có ba service: `web-client` (cổng 3000), `chat-service` (5026) và `postgres` (5432). Không có Gateway, Redis, MinIO, LiveKit hoặc worker đang chạy trong compose.
 
-## 3. Ranh giới Module và Phân quyền Cơ sở dữ liệu
+`SCDC.Api` đăng ký ba module và map controllers. Identity có endpoint và implementation. Community/Messaging đăng ký mô tả module; chưa có API nghiệp vụ hoặc SignalR Hub. Giao diện chat/cộng đồng có dữ liệu mẫu, không chứng minh backend các tính năng đã hoạt động.
 
-Nguyên tắc bắt buộc: Mỗi module toàn quyền sở hữu schema tương ứng trong PostgreSQL. Tuyệt đối không cho phép truy vấn trực tiếp (`JOIN` hoặc `SELECT`) xuyên schema từ mã nguồn ứng dụng. Mọi tương tác phải thông qua các interface tại `SCDC.Contracts`.
+Nguồn đối chiếu: [Program.cs](../services/SCDC.Api/Program.cs), [compose.yaml](../compose.yaml), [package.json](../clients/WebClient/package.json), [CommunityModule](../services/Modules/Community/CommunityModule.cs), [MessagingModule](../services/Modules/Messaging/MessagingModule.cs).
 
-| Module | Schema CSDL | Trách nhiệm chính | Giao diện nội bộ (`SCDC.Contracts`) |
+Health endpoint `/api/v1/health` trả trạng thái module và thời điểm; hiện không truy vấn DB, nên không dùng riêng endpoint này làm bằng chứng database hoặc toàn bộ hành trình đã sẵn sàng.
+
+<a id="boundaries"></a>
+
+## 2. Ranh giới module và dữ liệu
+
+| Thành phần | Trách nhiệm | Dữ liệu / hợp đồng | Tình trạng |
 |---|---|---|---|
-| **Identity** | `identity` | Quản lý tài khoản, hồ sơ, mật khẩu, JWT, Refresh Token rotation, đa phiên (Session), lockout sau 5 lần sai. | `IUserDirectory` |
-| **Community** | `community` | Quản lý Server, Channel, Category, Thành viên, Lời mời và ma trận phân quyền Bitwise RBAC. | `IChannelAccessChecker` |
-| **Messaging** | `messaging` | Lõi trò chuyện (DM 1-1, Channel chat), phân trang Cursor-based Pagination, SignalR Hub, Reaction, Pin. | `IMessagingService` |
-| **File Storage** | `messaging.attachments` / `files` | Cấp MinIO Presigned URL cho client upload trực tiếp, worker nén ảnh và tạo thumbnail. | `IFileStorageService` |
-| **Calls & Media** | `calls` | Điều phối phòng thoại, cuộc gọi 1-1, cấp LiveKit Room Token cho kết nối WebRTC. | `ICallCoordinator` |
-| **Integration** | `integration` | Quản lý sự kiện bất đồng bộ qua Transactional Outbox và Inbox Idempotency. | `IOutboxDispatcher` |
+| Identity | Tài khoản, mật khẩu, xác minh, phiên, hồ sơ | `identity`; `IUserDirectory` | Có implementation và test tự động |
+| Community | Cộng đồng, thành viên, phòng, lời mời và quyền | `community`; `IChannelAccessChecker` | Nền module; thuật toán quyền trong đặc tả Community |
+| Messaging | DM, tin phòng, lịch sử, thử lại và cập nhật | `messaging`; `IRealtimeAccessRevoker` | Nền module; hợp đồng DM đề xuất |
+| WebClient | Giao diện, điều hướng và trạng thái phiên | `clients/WebClient`; Identity gọi API thật, phần chat dùng dữ liệu mẫu | Có code frontend; cần tích hợp các tính năng còn lại |
+| PostgreSQL | Lưu trữ nghiệp vụ | `identity`, `community`, `messaging`, `moderation`, `audit`, `integration`, `common` | Có schema/seed; có bảng không đồng nghĩa đã có tính năng |
 
----
+Mỗi module sở hữu dữ liệu của mình; giao tiếp qua interfaces trong `SCDC.Contracts`, không tham chiếu trực tiếp implementation của module khác. Mã ứng dụng không đọc/JOIN bảng của module khác. Các view quan sát trong SQL phục vụ kiểm tra dữ liệu và không thay thế hợp đồng nghiệp vụ.
 
-## 4. Các giải pháp kỹ thuật cốt lõi
+Identity có `IdentityDbContext`; không mô tả Community/Messaging như đã có DbContext hoặc implementation chưa tồn tại. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
-### 4.1. Phân quyền ma trận Bitwise RBAC (Community)
-Quyền trong máy chủ cộng đồng được mã hóa dưới dạng mặt nạ bit 64-bit (`long`).
-- **Chủ sở hữu (Server Owner):** Toàn quyền tuyệt đối trên mọi kênh.
-- **Quyền theo vai trò (Role Permissions):** Hợp (`OR`) các bit quyền của các vai trò mà người dùng đang nắm giữ.
-- **Ghi đè theo kênh (Channel Overrides):** Áp dụng quyền từ chối (`DENY`) trước, sau đó áp dụng quyền cho phép (`ALLOW`) theo vai trò hoặc theo từng cá nhân cụ thể.
+Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [đặc tả Community](features/community.md#permissions).
 
-### 4.2. Phân trang con trỏ (Cursor-based Pagination trong Messaging)
-Thay vì sử dụng `OFFSET / LIMIT` truyền thống (gây chậm dần khi bảng tin nhắn đạt hàng triệu bản ghi), hệ thống sử dụng con trỏ cặp `(sequence_no, id)` kết hợp Composite Index:
+Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành.
 
-```sql
-SELECT id, space_id, sender_id, content, sequence_no, created_at
-FROM messaging.messages
-WHERE space_id = @spaceId
-  AND sequence_no < @cursorSequenceNo
-ORDER BY sequence_no DESC
-LIMIT @limit;
+<a id="contracts"></a>
+
+## 3. Hợp đồng và lỗi chung
+
+API hiện tại dùng prefix `/api/v1`. ID dùng định danh ổn định; actor lấy từ phiên xác thực. Thời điểm truyền theo UTC. Hợp đồng DM đề xuất truyền `sequence`/`version` dưới dạng chuỗi số nguyên để client xử lý chính xác.
+
+Theo DEC-061, lỗi dùng `application/problem+json` với các trường `type`, `title`, `status`, `detail`, `instance`, `errorCode`, `traceId`; lỗi validation có thêm `errors`. Các trường mở rộng xuất hiện ở cấp ngoài cùng, không nằm trong object `extensions`.
+
+```json
+{
+  "type": "https://scdc.dev/problems/validation",
+  "title": "Validation failed.",
+  "status": 400,
+  "detail": "One or more validation errors occurred.",
+  "instance": "/api/v1/auth/register",
+  "errorCode": "Common.ValidationFailed",
+  "traceId": "example-trace-id",
+  "errors": { "username": ["Username is required."] }
+}
 ```
-- Độ trễ truy vấn ổn định dưới 10ms bất kể số lượng dữ liệu trong CSDL.
-- Không bị nhảy tin nhắn hoặc sót tin khi có tin mới gửi vào trong lúc người dùng đang cuộn màn hình.
 
-### 4.3. Chống trùng lặp tin nhắn (Idempotency)
-Client tự sinh `clientMessageId` (UUID v4) khi gửi tin nhắn. Bảng `messaging.messages` có ràng buộc duy nhất trên cặp `(space_id, client_message_id)`. Nếu xảy ra mất mạng khiến client gửi lại yêu cầu, server sẽ nhận diện được khóa trùng và trả về tin nhắn cũ mà không nhân đôi dữ liệu.
+| HTTP | Ý nghĩa và cách dùng |
+|---|---|
+| 400 | Validation đầu vào theo `ErrorType.Validation` hiện tại |
+| 401 | Thiếu hoặc không còn phiên hợp lệ; cần xác thực lại |
+| 403 | Không đủ quyền/điều kiện cho thao tác được phép biết |
+| 404 | Không tồn tại; hợp đồng DM đề xuất cũng dùng cho tài nguyên người gọi không được biết |
+| 409 | Xung đột dữ liệu, phiên bản hoặc khóa thao tác |
+| 429 | Vượt giới hạn / bị khóa tạm; chi tiết retry của endpoint tương lai cần đặc tả |
+| 503 | Phụ thuộc tạm không đáp ứng |
 
-### 4.4. Cơ chế thời gian thực (SignalR Hub & Redis Backplane)
-- **Endpoint:** `/hubs/chat`
-- **Xác thực:** Bearer Token truyền qua query parameter `access_token` khi bắt tay WebSocket.
-- **Phân vùng phòng:** Mỗi hội thoại hoặc kênh tương ứng với một `spaceId`. Client tham gia lắng nghe thông qua phương thức `JoinSpace(spaceId)`. Server phát tin nhắn đến nhóm bằng `Clients.Group(spaceId).SendAsync("ReceiveMessage", message)`.
-- **Mở rộng ngang:** Tích hợp Redis Backplane (`AddStackExchangeRedis`) cho phép nhiều node server đồng bộ các sự kiện realtime mà không bị giới hạn trên một máy vật lý.
+Hợp đồng đề xuất DM áp dụng cùng ánh xạ validation 400 này; các mã lỗi DM còn cần rà soát trước triển khai. Client xử lý theo `errorCode` và `errors`, không phụ thuộc câu chữ `detail`. Không đưa stack trace, mật khẩu, token hoặc nội dung chat vào response lỗi hay log.
+
+OpenAPI cho endpoint đã triển khai được sinh từ source: `/swagger/v1/swagger.json` trong môi trường Development; UI tại `/swagger`. Hợp đồng tương lai vẫn được đánh dấu đề xuất trong đặc tả tính năng, chưa coi là endpoint có thể gọi. Thay đổi schema phải cập nhật frontend, backend, mock, docs và dữ liệu thử liên quan.
+
+Nguồn: [ApiProblemDetails](../services/SCDC.Api/Errors/ApiProblemDetails.cs), [ApiErrorMapper](../services/SCDC.Api/Errors/ApiErrorMapper.cs), [ApiErrorDefaults](../services/SCDC.Api/Errors/ApiErrorDefaults.cs).
+
+<a id="journeys"></a>
+
+## 4. Hành trình xuyên tính năng
+
+```mermaid
+flowchart LR
+    Register[Đăng ký] --> Verify[Xác minh email]
+    Verify --> Login[Đăng nhập]
+    Login --> DM[Tìm người và DM]
+    Login --> Community[Khám phá / tham gia cộng đồng]
+    Community --> Channel[Phòng được phép xem]
+    DM --> Call[Cuộc gọi riêng]
+    Channel --> Voice[Phòng thoại]
+```
+
+Sơ đồ thể hiện phạm vi sản phẩm, gồm các tính năng chưa triển khai. Luồng tài khoản hiện có code; DM/cộng đồng/media đọc chi tiết trong đặc tả tương ứng. Quyền được kiểm tra phía máy chủ khi đọc, ghi và nhận cập nhật; thay đổi quyền/phiên phải có cơ chế thu hồi kết nối, không chỉ ẩn giao diện.
+
+Gửi tin phải lưu bền trước khi hiển thị “Đã gửi”. Realtime bổ sung thông báo cho người đang online; lịch sử đã lưu là nguồn khôi phục khi mở lại. Ràng buộc transaction, idempotency, commit order và reconnect được quản lý tập trung trong [đặc tả DM](features/direct-messaging.md#contracts).
+
+<a id="future"></a>
+
+## 5. Định hướng đợt sau
+
+Theo DEC-060, MVP không bắt buộc có Gateway hoặc dịch vụ độc lập. Việc tách module thành microservices cần quyết định riêng về thời điểm, tải, công sức và vận hành.
+
+| Phương án từng được nêu | Tình trạng |
+|---|---|
+| YARP Gateway, gRPC/HTTP và RabbitMQ | Định hướng tách dịch vụ; chưa có triển khai hoặc lịch được xác nhận |
+| SignalR và Redis Backplane | Phương án realtime; chưa có Hub/backplane trong backend hiện tại |
+| MinIO / presigned upload | Phương án file ở đợt sau; chưa có lựa chọn triển khai được duyệt |
+| LiveKit SFU | Phương án cần thử nghiệm cho media; media vẫn thuộc MVP, nhà cung cấp chưa được chốt |
+| Kubernetes và k6 | Công cụ từng được đề xuất; chưa có manifest hoặc kịch bản tải trong repo |
+
+Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đồ hiện tại như hạ tầng đã tồn tại. Phòng gọi, giới hạn và chi phí media cần thử nghiệm trước khi chọn giải pháp. Mở rộng ngang và ngưỡng hiệu năng phải có phép đo cụ thể.
+
+<a id="review"></a>
+
+## 6. Điều kiện rà soát kỹ thuật
+
+Vg/Sáng rà soát ranh giới module, quyền sở hữu dữ liệu, hợp đồng, giao dịch, thu hồi phiên/quyền và cách quan sát. Thái đối chiếu trạng thái UI với lỗi API và ca kiểm thử. Những lựa chọn chưa chốt tiếp tục thuộc OQ-008.
+
+Một gói được bàn giao khi có hành vi rõ, thiết kế thống nhất, người phụ trách và phương pháp kiểm chứng. Các bằng chứng cần có được quản lý tại [bảng sẵn sàng](project.md#readiness). Thiết kế DM có thể tiến hành độc lập với quyết định media còn mở.

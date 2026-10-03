@@ -1,16 +1,8 @@
-# Identity module
+# Module Identity
 
-Identity v1 da trien khai:
+Đặc tả nghiệp vụ, dữ liệu/API, UX và kiểm thử được quản lý tại
+[accounts.md](../../../docs/features/accounts.md).
+Ranh giới module và trạng thái source nằm trong [kiến trúc](../../../docs/architecture.md#boundaries).
+Setup và lệnh kiểm thử nằm trong [hướng dẫn phát triển](../../../docs/development.md).
 
-1. Register va verify email.
-2. Login, lockout va auth session.
-3. Refresh-token rotation, reuse detection va logout.
-4. Current user/profile va session management.
-5. Change password va forgot/reset password.
-
-Module nay so huu schema PostgreSQL `identity`.
-
-MFA, recovery code va external identity thuoc Identity v2.
-
-Tai lieu tong hop trach nhiem, du lieu va tat ca cac luong:
-[`IDENTITY-FLOWS.md`](IDENTITY-FLOWS.md).
+Module sở hữu schema `identity`; giao tiếp liên module qua `SCDC.Contracts`.

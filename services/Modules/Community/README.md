@@ -1,11 +1,8 @@
-# Community module
+# Module Community
 
-Thu tu vertical slice du kien:
+Đặc tả nghiệp vụ, dữ liệu/API, UX và kiểm thử được quản lý tại
+[community.md](../../../docs/features/community.md).
+Ranh giới module và trạng thái source nằm trong [kiến trúc](../../../docs/architecture.md#boundaries).
+Setup và lệnh kiểm thử nằm trong [hướng dẫn phát triển](../../../docs/development.md).
 
-1. Create/list server.
-2. Membership va invite.
-3. Channel metadata.
-4. Role va permission.
-5. Kick, ban va channel override.
-
-Module nay so huu schema PostgreSQL `community`.
+Module sở hữu schema `community`; giao tiếp liên module qua `SCDC.Contracts`.

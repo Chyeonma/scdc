@@ -1,11 +1,8 @@
-# Messaging module
+# Module Messaging
 
-Thu tu vertical slice du kien:
+Đặc tả nghiệp vụ, dữ liệu/API, UX và kiểm thử được quản lý tại
+[direct-messaging.md](../../../docs/features/direct-messaging.md).
+Ranh giới module và trạng thái source nằm trong [kiến trúc](../../../docs/architecture.md#boundaries).
+Setup và lệnh kiểm thử nằm trong [hướng dẫn phát triển](../../../docs/development.md).
 
-1. Chat space va direct conversation.
-2. Send/history message va idempotency.
-3. Outbox va SignalR.
-4. Group chat va server-channel message.
-5. Attachment, reaction, mention va read state.
-
-Module nay so huu schema PostgreSQL `messaging`.
+Module sở hữu schema `messaging`; giao tiếp liên module qua `SCDC.Contracts`.

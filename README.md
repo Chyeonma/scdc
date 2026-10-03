@@ -1,129 +1,54 @@
-# SCDC - Nền tảng giao tiếp thời gian thực (Real-time Communication Platform)
+# SCDC — Nền tảng giao tiếp trên web
 
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue.svg)](https://www.postgresql.org/)
-[![React](https://img.shields.io/badge/React-18-cyan.svg)](https://react.dev/)
-[![SignalR](https://img.shields.io/badge/Realtime-SignalR-blueviolet.svg)](https://dotnet.microsoft.com/apps/aspnet/signalr)
-[![Docker](https://img.shields.io/badge/Container-Docker%20%7C%20Podman-2496ED.svg)](https://www.docker.com/)
+SCDC phát triển ứng dụng giao tiếp cho nhóm bạn và cộng đồng: tài khoản, nhắn tin riêng, phòng theo chủ đề, phân quyền, thoại/video và chia sẻ màn hình. [Requirements và scope MVP](docs/project.md#scope) xác định phạm vi bàn giao.
 
-SCDC là nền tảng giao tiếp thời gian thực hỗ trợ trò chuyện trực tiếp (DM 1-1), kênh cộng đồng (Server & Channel), phân quyền ma trận Bitwise RBAC, lưu trữ tệp phân tán và điều phối cuộc gọi thoại/video.
+MVP dùng **Modular Monolith** theo DEC-060; tách microservices ở đợt sau. Source hiện tại có Identity API; Community và Messaging ở nền module, giao diện chat/cộng đồng còn dùng dữ liệu mẫu. Media chưa triển khai. Tình trạng đặc tả và bằng chứng bàn giao ở [tài liệu dự án](docs/project.md#readiness).
 
-Hệ thống được xây dựng theo chiến lược **Monolith First**: Giai đoạn đầu vận hành dưới dạng **Modular Monolith** trên .NET 10 với các ranh giới module độc lập và schema CSDL PostgreSQL riêng biệt, sẵn sàng bóc tách thành cụm **Microservices** phân tán định tuyến qua **API Gateway (YARP)**.
+## Khởi chạy nhanh
 
----
-
-## 1. Khởi chạy nhanh (Quickstart)
-
-### Khởi chạy bằng Docker / Podman Compose
-
-Chạy toàn bộ hệ thống gồm PostgreSQL 18, Backend API (.NET 10) và WebClient (React) với 1 câu lệnh:
+Chuẩn bị Docker với Compose, chạy từ root repo:
 
 ```bash
 docker compose up -d --build
 ```
 
-**Các cổng dịch vụ:**
-- **Web Client (React):** `http://localhost:3000`
-- **Backend API & Swagger:** `http://localhost:5026/swagger`
-- **Health Check Endpoint:** `http://localhost:5026/api/v1/health`
-- **PostgreSQL Database:** `localhost:5432` (Database: `scdc_chat`, User: `scdc`, Password: `scdc_dev`)
+| Thành phần | Địa chỉ |
+|---|---|
+| WebClient — React 19 / Vite | `http://localhost:3000` |
+| Backend — .NET 10 / Swagger | `http://localhost:5026/swagger` |
+| Health | `http://localhost:5026/api/v1/health` |
+| PostgreSQL 18 | `localhost:5432`, database `scdc_chat`, user `scdc`, password `scdc_dev` |
 
-### Khởi chạy Backend Local để Debug
+Compose và các thông tin kết nối trên phục vụ Development. Hướng dẫn debug backend/frontend, tạo tài khoản local, dữ liệu và kiểm thử tại [development.md](docs/development.md).
 
-```bash
-# 1. Khởi động CSDL PostgreSQL
-docker compose up -d postgres
+## Tài liệu
 
-# 2. Build solution
-dotnet restore SCDC.slnx
-dotnet build SCDC.slnx --no-restore
+Điểm bắt đầu là [mục lục docs](docs/README.md). Mỗi tính năng có một đặc tả chứa phạm vi, requirements, UX, hợp đồng, ngoại lệ, tiêu chí chấp nhận và kiểm thử.
 
-# 3. Khởi chạy Backend API
-dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
-```
+- [Dự án: requirements, scope, nguồn lực và kế hoạch](docs/project.md)
+- [Quyết định và vấn đề còn mở](docs/decisions.md)
+- [Kiến trúc và quy ước tích hợp](docs/architecture.md)
+- [Phát triển và kiểm thử kỹ thuật](docs/development.md)
+- [Nghiệm thu, phát hành và vận hành](docs/release-operations.md)
+- [Lịch sử và bản đồ chuyển đổi tài liệu](docs/archive/README.md)
 
-API sẽ lắng nghe tại `http://localhost:5026`.
+## Kiểm tra
 
-### Kiểm thử tự động
+Backend (các test tích hợp cần PostgreSQL Development):
 
 ```bash
 dotnet test SCDC.slnx --configuration Release
 ```
 
----
+Frontend, chạy trong `clients/WebClient` sau `npm ci`:
 
-## 2. Kiến trúc hệ thống
-
-```mermaid
-flowchart TD
-    Client[WebClient / React + Vite]
-    Gateway[API Gateway / YARP\nPort 5000]
-
-    subgraph CoreServices[Dịch vụ nghiệp vụ .NET 10]
-        Identity[Identity Service\nPort 5001\nXác thực & Tài khoản]
-        Community[Community Service\nPort 5002\nServer, Channel & Phân quyền Bitwise]
-        Messaging[Messaging Service\nPort 5003\nChat, Cursor Pagination & SignalR Hub]
-        FileService[File & Media Service\nPort 5004\nMinIO Presigned URL]
-    end
-
-    subgraph Infrastructure[Hạ tầng dữ liệu & Dịch vụ nền]
-        Postgres[(PostgreSQL 18\n7 Schemas Độc Lập)]
-        Redis[(Redis Cache &\nSignalR Backplane)]
-        MinIO[(MinIO Object Storage\nS3 Compatible)]
-        LiveKit[LiveKit SFU\nWebRTC Media]
-        Worker[Background Worker\nOutbox & Email]
-    end
-
-    Client -->|HTTP / WSS| Gateway
-    Gateway --> Identity
-    Gateway --> Community
-    Gateway --> Messaging
-    Gateway --> FileService
-
-    Identity -->|identity schema| Postgres
-    Community -->|community schema| Postgres
-    Messaging -->|messaging schema| Postgres
-    Messaging <-->|Pub/Sub Backplane| Redis
-    FileService -->|Presigned URL| MinIO
-    Client -.->|Upload trực tiếp| MinIO
-    Client <-->|WebRTC Media| LiveKit
-    Worker -->|Đọc outbox_events| Postgres
+```bash
+npm test
+npm run build
 ```
 
-### Ranh giới Module nghiệp vụ
+Link và anchor tài liệu, chạy từ root:
 
-| Module | Schema CSDL | Trách nhiệm chính | Trạng thái hiện tại |
-|---|---|---|:---:|
-| **Identity** | `identity` | Tài khoản, JWT, Refresh Token rotation chống reuse, Session đa thiết bị, Account Lockout. | Hoàn thành v1 |
-| **Community** | `community` | Quản lý Server, Channel, Category, Thành viên, Phân quyền ma trận Bitwise RBAC. | Đang hoàn thiện |
-| **Messaging** | `messaging` | Chat DM 1-1, Channel chat, phân trang con trỏ (Cursor Pagination), chống trùng tin, SignalR Hub. | Đang hoàn thiện |
-| **File Storage** | `messaging.attachments` | MinIO Presigned URL upload trực tiếp, worker nén ảnh thumbnail. | Kế hoạch |
-| **Calls & Media** | `calls` | Điều phối phòng thoại, cuộc gọi và chia sẻ màn hình qua LiveKit SFU (WebRTC). | Kế hoạch |
-
----
-
-## 3. Tài liệu kỹ thuật
-
-Dự án duy trì các tài liệu kỹ thuật cốt lõi:
-
-| Tài liệu | Nội dung chính |
-|---|---|
-| [Kiến trúc hệ thống](docs/architecture.md) | Thiết kế Modular Monolith sang Microservices, ranh giới dữ liệu, SignalR và thuật toán Cursor Pagination. |
-| [Đặc tả CSDL PostgreSQL](database/postgres/README.md) | Cấu trúc 7 schema, views quan sát dữ liệu và kịch bản nạp dữ liệu mẫu (seed data). |
-| [Hướng dẫn phát triển](docs/development.md) | Phân công trách nhiệm 3 thành viên, quy chuẩn code C#, xử lý lỗi `Result<T>` và quy trình Git. |
-| [Hồ sơ lưu trữ dự án](docs/archive/project-specs/README.md) | Toàn bộ hồ sơ quy trình phát triển phần mềm (7 giai đoạn từ Khởi tạo đến Kiểm thử). |
-
----
-
-## 4. Kết nối Cơ sở dữ liệu
-
-```text
-Host:      localhost
-Port:      5432
-Database:  scdc_chat
-Username:  scdc
-Password:  scdc_dev
-SSL Mode:  disable
+```bash
+python3 scripts/check_docs.py
 ```
-
-Các schema nghiệp vụ: `identity`, `community`, `messaging`, `moderation`, `audit`, `integration`, `common`.

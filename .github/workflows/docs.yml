@@ -1,0 +1,29 @@
+name: Documentation links
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'database/postgres/README.md'
+      - 'services/Modules/**/README.md'
+      - 'scripts/check_docs.py'
+      - '.github/workflows/docs.yml'
+  push:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'database/postgres/README.md'
+      - 'services/Modules/**/README.md'
+      - 'scripts/check_docs.py'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/check_docs.py
