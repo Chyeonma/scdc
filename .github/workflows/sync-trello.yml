@@ -5,7 +5,7 @@ on:
     branches:
       - main  # Hoặc master tùy theo nhánh chính của bạn
     paths:
-      - 'docs/project/**'
+      - 'docs/archive/project-specs/**'
 
 jobs:
   sync:
@@ -20,7 +20,7 @@ jobs:
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           CARD_ID: ${{ secrets.TRELLO_CARD_ID_TONGQUAN }}
         run: |
-          FILE_PATH="docs/project/01-initiation/00-customer-request.md"
+          FILE_PATH="docs/archive/project-specs/01-initiation/00-customer-request.md"
 
           if [ -f "$FILE_PATH" ]; then
             # Dùng jq đọc nội dung file md và encode thành chuỗi JSON hợp lệ
