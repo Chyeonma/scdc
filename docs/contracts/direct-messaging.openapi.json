@@ -1,0 +1,1171 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SCDC Direct Messaging — proposed contract",
+    "version": "0.1.0-draft",
+    "description": "Hợp đồng DM đề xuất, endpoint chưa triển khai. Chính sách DEC-068–071 và công nghệ DEC-081 đã chốt; schema/lỗi/mapping SQL cần rà soát cùng mock và thử nghiệm. Nguồn nghiệp vụ: docs/features/direct-messaging.md."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "paths": {
+    "/users/search": {
+      "get": {
+        "operationId": "searchUsers",
+        "summary": "Tìm người đủ điều kiện nhận DM; không trả email/chính người tìm",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSearchPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "x-scdc-utf16-length": {
+                "min": 2,
+                "max": 64
+              }
+            },
+            "description": "DEC-069: không phân biệt hoa/thường, phân biệt dấu; ưu tiên username khớp đúng."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Con trỏ opaque; thuật toán/định dạng cần rà soát."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": ""
+          }
+        ]
+      }
+    },
+    "/direct-conversations": {
+      "post": {
+        "operationId": "openDirectConversation",
+        "summary": "Tạo hoặc lấy DM duy nhất của cặp",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectConversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenConversationRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listDirectConversations",
+        "summary": "Liệt kê DM của chính người gọi",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Con trỏ opaque; thuật toán/định dạng cần rà soát."
+          }
+        ]
+      }
+    },
+    "/direct-conversations/{id}/messages": {
+      "get": {
+        "operationId": "getDirectMessages",
+        "summary": "Tải lịch sử hoặc bù tin tới mốc throughSequence",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+            },
+            "description": "Người gọi phải là một trong hai người của hội thoại."
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Con trỏ lịch sử; không kết hợp after/through."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Con trỏ bù tin; through chốt ở lần đầu, giữ cho các trang sau."
+          },
+          {
+            "name": "through",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+            },
+            "description": "Chỉ dùng với after; mốc sequence đã commit."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "operationId": "sendDirectMessage",
+        "summary": "Lưu tin, khóa chống trùng và outbox cùng transaction",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+            },
+            "description": "Người gọi phải là một trong hai người của hội thoại."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/direct-conversations/{id}/messages/{messageId}": {
+      "patch": {
+        "operationId": "editDirectMessage",
+        "summary": "Tác giả sửa tin hiện hành; kiểm tra expectedVersion",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+            },
+            "description": "Người gọi phải là một trong hai người của hội thoại."
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+            },
+            "description": "ID tin thuộc đúng hội thoại."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMessageRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteDirectMessage",
+        "summary": "Tác giả xóa tin; trả tombstone, xóa lặp không hồi sinh nội dung",
+        "tags": [
+          "Direct messaging draft"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công; mutation trả sau commit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+            },
+            "description": "Người gọi phải là một trong hai người của hội thoại."
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+            },
+            "description": "ID tin thuộc đúng hội thoại."
+          },
+          {
+            "name": "expectedVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            },
+            "description": ""
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "DirectConversation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          },
+          "participants": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/UserSummary"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSequence": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+          }
+        },
+        "required": [
+          "id",
+          "participants"
+        ],
+        "additionalProperties": false
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "clientMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+            "description": "UUIDv4, tạo một lần khi người dùng gửi; giữ nguyên khi thử lại (DEC-081)."
+          },
+          "sequence": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-scdc-utf16-length": {
+              "max": 2000
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "author",
+          "clientMessageId",
+          "sequence",
+          "version",
+          "content",
+          "createdAt",
+          "editedAt",
+          "deletedAt"
+        ],
+        "additionalProperties": false,
+        "description": "Tin hiện hành; khi deletedAt khác null thì content phải null. Không trả nội dung phiên bản cũ."
+      },
+      "OpenConversationRequest": {
+        "type": "object",
+        "properties": {
+          "peerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          }
+        },
+        "required": [
+          "peerUserId"
+        ],
+        "additionalProperties": false
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "properties": {
+          "clientMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+            "description": "UUIDv4, tạo một lần khi người dùng gửi; giữ nguyên khi thử lại (DEC-081)."
+          },
+          "content": {
+            "type": "string",
+            "description": "Văn bản thuần, tối đa 2.000 đơn vị UTF-16 theo DEC-068; không chỉ khoảng trắng. Chuẩn hóa LF là thiết kế đề xuất.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 2000
+            }
+          }
+        },
+        "required": [
+          "clientMessageId",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "EditMessageRequest": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Văn bản thuần, tối đa 2.000 đơn vị UTF-16 theo DEC-068; không chỉ khoảng trắng. Chuẩn hóa LF là thiết kế đề xuất.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 2000
+            }
+          },
+          "expectedVersion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "required": [
+          "content",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "UserSearchPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "ConversationPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectConversation"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "MessagePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "throughSequence": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "throughSequence"
+        ],
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "errorCode",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "x-scdc-status": "design-draft",
+  "x-scdc-review-required": [
+    "schema and error code integration",
+    "SQL constraints and commit order",
+    "cursor protection implementation",
+    "revocation proof within 5 seconds"
+  ],
+  "x-scdc-length-rule": "UTF-16 limits use x-scdc-utf16-length; JSON Schema minLength/maxLength count code points and cannot alone enforce DEC-068.",
+  "x-scdc-decisions": [
+    "DEC-068",
+    "DEC-069",
+    "DEC-070",
+    "DEC-071",
+    "DEC-081",
+    "DEC-083"
+  ]
+}

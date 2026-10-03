@@ -1,6 +1,6 @@
 # SCDC — Nhắn tin riêng giữa hai người
 
-Cập nhật: 2026-10-03. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
+Cập nhật: 2026-10-04. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
 
 Quy tắc cốt lõi đã xác nhận. UX và hợp đồng dưới đây còn đề xuất; Messaging mới ở nền module, chưa có DM API/Hub. Các ca TC chưa có kết quả chạy được ghi nhận.
 
@@ -64,7 +64,10 @@ phạm vi phiên bản đầu trong Project Brief.
 | DM-009 | Bấm thử lại cùng một thao tác gửi không tạo tin trùng, kể cả khi kết quả lần đầu không rõ. | DEC-037 |
 | DM-010 | Người gửi phải xác minh email trước khi gửi tin riêng. | DEC-041, SCDC-FR-ACC-001 |
 | DM-011 | Chỉ giữ nội dung mới nhất sau khi sửa, không cung cấp lịch sử phiên bản cũ; vẫn hiện dấu “Đã sửa”. | DEC-052 |
-| DM-012 | Mỗi tin tối đa 2.000 ký tự; cho xuống dòng và emoji; từ chối tin rỗng/chỉ có khoảng trắng. | DEC-053 |
+| DM-012 | Mỗi tin tối đa 2.000 đơn vị UTF-16; cho xuống dòng/emoji; từ chối tin rỗng/chỉ có khoảng trắng. | DEC-053, DEC-068 |
+| DM-013 | Từ khóa tìm người 2–64 UTF-16, một phần username/displayName; không phân biệt hoa/thường, giữ dấu; ưu tiên username khớp đúng; trang mặc định 20, tối đa 50. | DEC-069 |
+| DM-014 | Tin không tự hết hạn trong MVP; sửa/xóa vẫn theo quy tắc đã chốt, sao lưu/xóa tài khoản có chính sách riêng. | DEC-070 |
+| DM-015 | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng, nút Gửi gửi tin. | DEC-071 |
 
 Các quyết định DEC-* được ghi tại
 [sổ quyết định](../decisions.md#decisions).
@@ -189,8 +192,7 @@ Tin đã xóa không có thao tác sửa. Các quy tắc này được chi tiế
 | UX-DM-08 | Sửa/xóa thất bại | Giữ nội dung xác nhận gần nhất; lỗi không làm tin biến mất; cho tải bản hiện tại nếu xung đột | AC-DM-04, AC-DM-05 |
 | UX-DM-09 | Chưa xác minh email | Không gửi tin; có hướng dẫn xác minh theo luồng tài khoản | AC-DM-09 |
 
-Nút “Gửi” là thao tác chắc chắn gửi tin; phím tắt Enter/Shift+Enter cần
-chốt trong rà soát UX. Không đưa đọc/đã nhận, file, chặn tài khoản hoặc
+Nút “Gửi” gửi tin trên mọi thiết bị. Desktop dùng Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng theo DEC-071. Không gửi trong khi IME đang composition; hành vi bàn phím ảo phải kiểm thử trên ma trận thiết bị. Không đưa đọc/đã nhận, file, chặn tài khoản hoặc
 cuộc gọi vào wireframe của đợt DM văn bản.
 
 ### Bàn giao và nội dung còn cần rà soát
@@ -200,8 +202,8 @@ Sáng đối chiếu các phản hồi với hợp đồng API. Chưa có kết 
 hoặc kiểm thử khả dụng được ghi nhận trong tài liệu này.
 
 Trước khi giao frontend cần xác nhận ma trận trình duyệt/kích thước,
-quy tắc liên kết email, phép đếm ký tự, thao tác bàn phím và cách xử lý
-xung đột. Wireframe cộng đồng là đầu ra riêng tại
+thiết kế liên kết email, fixture UTF-16, hành vi bàn phím/IME và cách xử lý
+xung đột. Chính sách đếm/tìm kiếm và phím gửi đã chốt tại DEC-068/069/071. Wireframe cộng đồng là đầu ra riêng tại
 [SCDC-UX-COM-001](community.md#ux).
 
 <a id="contracts"></a>
@@ -210,9 +212,11 @@ xung đột. Wireframe cộng đồng là đầu ra riêng tại
 
 Thiết kế bên dưới cụ thể hóa hành vi đã chốt, chưa phải API đã triển khai hoặc đã duyệt. Tài khoản sở hữu danh tính/phiên; Messaging sở hữu hội thoại/tin/thao tác. Giao tiếp qua `SCDC.Contracts` trong Modular Monolith; DM không đọc bảng tài khoản và không phụ thuộc Community.
 
+[OpenAPI dự thảo](../contracts/direct-messaging.openapi.json) biểu diễn schema HTTP bên dưới; trạng thái `design-draft`, endpoint chưa triển khai. REST/SignalR, UUID và cursor bảo vệ đã chốt DEC-081; mã lỗi/schema vẫn cần rà soát cùng mock/thử nghiệm. Giới hạn UTF-16 được ghi bằng extension, không dùng minLength/maxLength để thay thế validation server.
+
 Prefix đề xuất `/api/v1`. API hiện tại của Accounts ở [đặc tả tài khoản](accounts.md#api-current). Lỗi DM dùng [ProblemDetails chung](../architecture.md#contracts) theo DEC-061, validation 400; mã lỗi DM được nêu là đề xuất, chưa phải mã đang hoạt động.
 
-`sequence`/`version` truyền dưới dạng chuỗi số nguyên; thời điểm theo UTC. Actor lấy từ phiên. ID/cursor/transport và các schema đề xuất cần rà soát với frontend/backend trước khi triển khai.
+`sequence`/`version` truyền dưới dạng chuỗi số nguyên; thời điểm theo UTC. Actor lấy từ phiên. ID/cursor/transport đã chọn DEC-081; schema, mock và mapping SQL cần rà soát trước triển khai.
 
 <a id="contract-4"></a>
 
@@ -258,7 +262,7 @@ sequence, version, content, createdAt, editedAt, deletedAt`.
 
 ```json
 {
-  "clientMessageId": "operation-generated-by-client",
+  "clientMessageId": "7c8e7c59-b35a-4d12-b22f-965b96ff4e44",
   "content": "Chào bạn!"
 }
 ```
@@ -266,29 +270,28 @@ sequence, version, content, createdAt, editedAt, deletedAt`.
 `clientMessageId` được tạo **một lần khi người dùng bấm gửi**, giữ nguyên
 trong tin tạm và mọi lần “Thử lại”. Response và sự kiện có cùng ID này
 để client thay tin tạm bằng đúng tin đã lưu. Ví dụ trên minh họa cấu trúc;
-định dạng ID cụ thể sẽ được khóa trong rà soát hợp đồng.
+định dạng `clientMessageId` là UUIDv4 theo DEC-081; server tạo UUIDv7 cho conversation/message.
 
-Đề xuất giới hạn kỹ thuật cho tìm người: chuỗi tìm từ 2 đến 64 ký tự,
+Quy tắc tìm người đã chốt DEC-069: chuỗi tìm từ 2 đến 64 đơn vị UTF-16,
 không phân biệt hoa/thường, không tự bỏ dấu; khớp một phần, ưu tiên khớp
 đúng tên tài khoản, sau đó thứ tự tên tài khoản và ID để phân trang ổn
 định. Trang mặc định 20, tối đa 50. Chỉ trả người đủ điều kiện nhận DM;
-không trả chính người tìm. Các giá trị này là đề xuất cần rà soát OQ-005,
-chưa phải quyết định sản phẩm. Không dùng endpoint tìm kiếm để lộ email.
+không trả chính người tìm. Các giới hạn/cách khớp đã xác nhận; thứ tự username/ID và cursor ổn định là thiết kế cần rà soát. Không dùng endpoint tìm kiếm để lộ email.
 
 <a id="contract-6"></a>
 
 ### Hợp đồng 6 — Chuẩn hóa và kiểm tra nội dung
 
-Theo DEC-053, tin tối đa 2.000 ký tự, nhận xuống dòng và emoji, từ chối
-tin chỉ có khoảng trắng. Đề xuất cách đếm thống nhất:
+Theo DEC-053/068, tin tối đa 2.000 đơn vị UTF-16, nhận xuống dòng và emoji, từ chối tin chỉ có khoảng trắng. Phép đếm đã chốt; chuẩn hóa và bộ ký tự trắng/vô hình bên dưới là thiết kế cần kiểm chứng:
 
 1. Chuẩn hóa CRLF/CR thành LF; không cắt khoảng trắng đầu/cuối của một
    tin có nội dung và không diễn giải HTML/Markdown.
-2. Đếm theo cụm ký tự hiển thị (grapheme): emoji ghép tính là một cụm;
-   một LF tính là một ký tự. Client và server dùng cùng quy tắc, server
-   là nơi quyết định hợp lệ. Không dùng số byte hoặc số đơn vị UTF-16.
+2. Đếm đơn vị UTF-16 sau chuẩn hóa xuống dòng bằng `.Length` của .NET
+   và `string.length` của JavaScript. LF tính một đơn vị; emoji ngoài BMP
+   tính hai, emoji ghép/ký tự tổ hợp có thể tính nhiều đơn vị. Server
+   quyết định hợp lệ; client không được cắt giữa một cặp surrogate.
 3. Tin trống hoặc chỉ gồm ký tự khoảng trắng/xuống dòng bị từ chối.
-   Bộ ký tự vô hình và phiên bản thuật toán tách cụm phải được khóa
+   Bộ ký tự trắng/vô hình và cách xử lý surrogate không hợp lệ phải được khóa
    cùng dữ liệu kiểm thử trước khi hoàn tất thiết kế chi tiết.
 4. Sửa tin áp dụng cùng giới hạn. Vượt giới hạn trả `400 CONTENT_TOO_LONG`;
    trống trả `400 CONTENT_EMPTY`; không lưu tin hoặc phát sự kiện.
@@ -392,14 +395,41 @@ Cursor tin mới không phát hiện được việc sửa/xóa một tin cũ. V
 Outbox chỉ được phát sau commit. Worker lỗi được thử lại; handler nhận
 lặp không tạo thêm tin. Phát cập nhật cần kiểm tra phiên/người nhận còn
 hợp lệ; đăng xuất hoặc thu hồi phiên phải ngừng định tuyến kết nối cũ,
-không chỉ gửi yêu cầu tự đăng xuất cho giao diện. Thời hạn thu hồi, cơ
-chế retry worker, cảnh báo backlog và transport realtime cần thử nghiệm
-trước khi ký xác nhận kỹ thuật.
+không chỉ gửi yêu cầu tự đăng xuất cho giao diện. Thời hạn thu hồi đã chốt ≤5 giây (DEC-083), transport SignalR (DEC-081); cơ chế retry worker, cảnh báo backlog và đáp ứng ngưỡng vẫn phải thử nghiệm.
 
 Log tối thiểu: request ID, mã lỗi, thời lượng, ID thao tác/tin khi phù
 hợp; không ghi mật khẩu, token, email link hoặc nội dung chat. Đo các
 kịch bản commit rồi mất response, hai request đồng thời, worker dừng,
 sự kiện trùng/đảo thứ tự, reconnect và tài khoản thứ ba truy cập.
+
+### Thiết kế tích hợp theo DEC-081/083
+
+- HTTP dùng Bearer như Identity hiện tại; mutation chỉ qua REST. SignalR `/hubs/chat` chỉ subscribe/unsubscribe và thông báo `MessageChanged`; không tạo đường gửi tin tự retry qua Hub.
+- ID server UUIDv7, clientMessageId UUIDv4. Writer chuẩn hóa thứ tự cặp UUID theo thứ tự DB, có fixture đối chiếu; không dùng username hoặc displayName làm khóa hội thoại.
+- Sequence được cấp dưới khóa row/counter hội thoại trong cùng transaction với tin, SendOperation và outbox; writer thứ hai chỉ cấp sau writer trước commit/rollback. Sequence/version truyền chuỗi số nguyên, client so sánh BigInt. Counter đề xuất ánh xạ `spaces.last_message_sequence`; không dùng identity toàn cục hiện tại làm mốc commit.
+- Cursor dùng cơ chế bảo vệ có mã hóa và xác thực (đề xuất ASP.NET Core Data Protection), gồm actor/resource/hướng/filter/mốc through và vị trí sort. Hạn kỹ thuật đề xuất 24 giờ; key ring phải bền qua restart/deploy. Token không dùng được giữa hai user/resource; cursor lỗi/hết hạn trả validation, client tải lại lịch sử, không tự gửi mutation.
+- Tìm người trim/NFC/chuyển chữ thường để tạo search key là thiết kế đề xuất; giữ dấu, khớp substring sau chuẩn hóa, username khớp đúng xếp trước rồi username/ID. Key hiển thị/tên tài khoản trả vẫn theo hồ sơ; không chuẩn hóa NFC nội dung tin. Cần fixture Unicode để SQL/service cho cùng kết quả.
+- Nội dung chuẩn hóa CRLF/CR thành LF rồi đếm UTF-16. Bộ khoảng trắng đề xuất dùng Unicode White_Space (`0009–000D`, `0020`, `0085`, `00A0`, `1680`, `2000–200A`, `2028–2029`, `202F`, `205F`, `3000`); từ chối chuỗi chỉ gồm tập này. Ký tự vô hình khác và surrogate không hợp lệ cần khóa fixture trước bàn giao; không âm thầm bỏ nội dung để vượt validation.
+- Hub kiểm tra phiên/quyền hiện hành khi subscribe. Dispatcher không phát nội dung cho connection/space bị thu hồi; revoker định tuyến theo session ID/space ID, bỏ subscription và đóng connection phù hợp. Dùng outbox sau commit cộng đối soát tối đa 1 giây là thiết kế đề xuất để đạt deadline thu hồi 5 giây; lỗi kiểm tra quyền phải dừng phát, không tiếp tục dùng cache không còn xác nhận.
+
+SignalR giữ principal của lúc kết nối và không tự phản ánh việc thu hồi phiên/quyền trong thời gian kết nối; vì vậy cần kiểm tra dữ liệu hiện hành và đóng/bỏ định tuyến connection. Bật `CloseOnAuthenticationExpiration` chỉ giải quyết hết hạn token, không thay thế thu hồi nghiệp vụ. Xem [tài liệu xác thực SignalR của Microsoft](https://learn.microsoft.com/en-us/aspnet/core/signalr/authn-and-authz?view=aspnetcore-10.0). JavaScript dùng `accessTokenFactory`; query token của WebSocket chỉ được nhận đúng route Hub và bị loại khỏi log proxy/API. Map user routing theo `sub` ổn định, không displayName.
+
+Interface phiên/thu hồi theo session là phần mở rộng cần thiết kế trong `SCDC.Contracts`: `IUserDirectory` hiện chỉ trả thông tin user, `IRealtimeAccessRevoker` hiện chỉ nhận user/space ID. Không đọc DB Identity trực tiếp từ Messaging để thay interface còn thiếu. Mọi cơ chế trên vẫn phải thử nghiệm rollback, concurrent commit, mất response, worker dừng và revoke khi reconnect.
+
+### Đối chiếu SQL trước triển khai
+
+Đọc schema ngày 2026-10-04; chưa có writer Messaging để kiểm chứng. Các dòng này là đầu việc kỹ thuật, không thay đổi SQL trong lần hoàn thiện docs.
+
+| Mã | Schema hiện tại | Đầu ra cần có |
+|---|---|---|
+| DM-SQL-01 | `direct_conversations` unique `(user_low_id,user_high_id)`, kiểm tra low < high | Chọn cùng thứ tự UUID giữa writer/DB; tạo space/cặp cùng transaction; chứng minh mở đồng thời trả cùng DM |
+| DM-SQL-02 | `messages.sequence_no` là identity toàn cục, cấp trước commit và có thể có khoảng trống | Thiết kế khóa/counter theo hội thoại bảo đảm thứ tự commit; identity hiện tại không chứng minh bù tin không sót |
+| DM-SQL-03 | Unique `(space_id,author_user_id,client_message_id)` đã có | Bổ sung SendOperation/fingerprint còn tồn tại sau xóa; unique tin đơn thuần chưa giải quyết payload khác hoặc thử lại sau sửa/xóa |
+| DM-SQL-04 | Constraint văn bản dùng `char_length` tối đa 10.000; text message yêu cầu content khác null | Ràng buộc 2.000 UTF-16 ở service; điều chỉnh constraint để tombstone có content null; không dùng char_length thay phép đếm đã chốt |
+| DM-SQL-05 | Có `message_edits.previous_content` trong schema/seed | Writer MVP không ghi nội dung cũ theo DEC-052; chọn migration/cleanup phù hợp trước dùng dữ liệu thật |
+| DM-SQL-06 | Có outbox chung nhưng chưa có dispatcher Messaging | Transaction tin/khóa/outbox; sự kiện chỉ tham chiếu; dispatcher đọc bản hiện hành, merge ID/version, kiểm tra quyền/phiên |
+
+Nguồn: [schema.sql](../../database/postgres/schema.sql). Các trường/schema cho nhóm chat, file, reactions/read state trong seed không tự mở rộng scope DM văn bản.
 
 <a id="contract-10"></a>
 
@@ -432,14 +462,17 @@ Các tiêu chí dưới đây mô tả hành vi quan sát được, cần rà so
 | AC-DM-08 | Kết quả gửi lần đầu không rõ; người gửi bấm “Thử lại” cho chính tin đó. | Hội thoại chỉ có một tin tương ứng với thao tác gửi. |
 | AC-DM-09 | Tài khoản chưa xác minh email thử gửi tin riêng. | Hệ thống từ chối gửi và chỉ dẫn bước xác minh email. |
 | AC-DM-10 | Sửa một tin nhiều lần rồi mở lại hội thoại trên hai thiết bị. | Chỉ nội dung mới nhất và dấu “Đã sửa” được cung cấp; không có API/giao diện đọc phiên bản cũ. |
-| AC-DM-11 | Gửi hoặc sửa tin gồm 2.000 và 2.001 ký tự, tin nhiều dòng, emoji, tin chỉ có khoảng trắng. | Chấp nhận đến 2.000; từ chối vượt giới hạn và tin trống; phép đếm client/server nhất quán theo thiết kế đã chốt. |
+| AC-DM-11 | Gửi/sửa tin gồm 2.000/2.001 đơn vị UTF-16, nhiều dòng, emoji, tin chỉ khoảng trắng. | Nhận đến 2.000; từ chối vượt/trống; client/server đếm đúng DEC-068. |
 | AC-DM-12 | Người thứ ba biết ID hội thoại/tin và gọi API đọc/gửi/sửa/xóa hoặc đăng ký nhận cập nhật. | Không được truy cập; phản hồi không tiết lộ nội dung hay người tham gia. |
 | AC-DM-13 | Hai phía đồng thời mở hội thoại với nhau. | Cùng một hội thoại hai người; không tạo bản trùng hoặc hội thoại mồ côi. |
 | AC-DM-14 | Hai phiên cùng sửa hoặc sửa/xóa một tin từ cùng phiên bản cũ. | Không ghi đè âm thầm; yêu cầu thua tranh chấp nhận xung đột và có thể tải trạng thái hiện hành. |
 | AC-DM-15 | B mất mạng; A sửa/xóa tin cũ; B kết nối lại và xem tin đó. | B thấy nội dung hiện hành hoặc dòng thay thế, không tiếp tục dùng bản cache cũ làm kết quả chính xác. |
+| AC-DM-16 | Tìm với từ khóa ở biên 1/2/64/65, khác hoa/thường/dấu và nhiều trang kết quả. | Giới hạn theo DEC-069; giữ phân biệt dấu; username khớp đúng được ưu tiên; không lộ email hay trả chính người tìm. |
+| AC-DM-17 | Gửi bằng Enter/Shift+Enter trên desktop và bàn phím điện thoại; nhập tiếng Việt bằng IME. | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng; nút Gửi luôn gửi; composition không vô tình gửi tin. |
+| AC-DM-18 | Mở lại lịch sử tin cũ chưa bị người gửi xóa. | Tin không bị mất chỉ vì hết một thời hạn tự động; backup/xóa tài khoản được kiểm chứng riêng. |
 
 AC-DM-12 đến AC-DM-15 cụ thể hóa bảo vệ hội thoại và hành vi đồng thời
-để rà soát; chưa phải kết quả kiểm thử đã đạt.
+để rà soát; chưa phải kết quả kiểm thử đã đạt. AC-DM-16–18 cụ thể hóa DEC-069–071.
 
 <a id="tests"></a>
 
@@ -493,14 +526,20 @@ kiện đạt của xóa/sửa tin.
 | Mã ca | Dữ liệu | Kết quả mong đợi theo DEC-053 |
 |---|---|---|
 | TC-TEXT-01 | Chuỗi rỗng, dấu cách, tab hoặc chỉ xuống dòng | Bị từ chối; không lưu và không phát sự kiện |
-| TC-TEXT-02 | 1, 1.999, 2.000 và 2.001 ký tự | Ba giá trị đầu được nhận, 2.001 bị từ chối |
-| TC-TEXT-03 | Tiếng Việt có dấu, ký tự tổ hợp, emoji đơn và emoji ghép | Hiển thị đúng; đếm nhất quán client/server theo thuật toán được chốt |
+| TC-TEXT-02 | 1, 1.999, 2.000 và 2.001 đơn vị UTF-16 | Ba giá trị đầu được nhận, 2.001 bị từ chối |
+| TC-TEXT-03 | Tiếng Việt có dấu, ký tự tổ hợp, emoji đơn và emoji ghép | Hiển thị đúng; đếm nhất quán client/server theo UTF-16 đã chốt tại DEC-068 |
 | TC-TEXT-04 | CRLF và LF cùng nội dung; khoảng trắng đầu/cuối của tin có chữ | Chuẩn hóa xuống dòng; giữ khoảng trắng có chủ ý; không sinh xung đột chống trùng do chuẩn hóa khác nhau |
 | TC-TEXT-05 | Nội dung trông như HTML/script và ký tự đặc biệt | Hiển thị như văn bản, không chạy mã hoặc diễn giải thành giao diện |
 | TC-TEXT-06 | Lặp các dữ liệu trên khi sửa tin và gửi tin phòng | Cùng quy tắc nội dung, không có đường bỏ qua giới hạn |
 
+Dữ liệu UTF-16 cố định: `a` = 1; `ế` dựng sẵn = 1; `e` + dấu sắc tổ hợp = 2; `😀` = 2; `👩‍💻` = 5; LF = 1. Chuỗi 1.000 `😀` có độ dài 2.000; 1.001 có độ dài 2.002. Chuẩn hóa CRLF thành LF trước khi kiểm tra theo thiết kế đề xuất; không tự chuẩn hóa NFC hoặc cắt khoảng trắng của tin có nội dung. Fixture này dùng cho client/backend/SQL, không yêu cầu hiển thị mỗi emoji là một đơn vị.
+
+Fixture máy đọc được: [text-validation.json](../fixtures/text-validation.json); độ dài đã kiểm tra bằng UTF-16, chưa chạy qua API/client.
+
+Bổ sung TC-DM-18 cho biên tìm kiếm/hoa thường/dấu/cursor theo AC-DM-16, TC-DM-19 cho bàn phím và IME theo AC-DM-17, TC-DM-20 cho tin không tự hết hạn theo AC-DM-18. Các ca này cũng ở trạng thái Chưa chạy.
+
 Các ca TEXT áp dụng AC-DM-11 và AC-COM-24. Thái chuẩn bị fixture cố định
-với số cụm ký tự kỳ vọng; Vg/Sáng khóa quy tắc cụm/ký tự vô hình trước
+với số đơn vị UTF-16 kỳ vọng; Vg/Sáng khóa bộ ký tự trắng/vô hình trước
 khi dùng fixture để kết luận đạt.
 
 ### Ma trận giao diện và cách ghi kết quả
@@ -508,7 +547,7 @@ khi dùng fixture để kết luận đạt.
 Theo DEC-059, chạy hành trình tài khoản/DM trên desktop và trình duyệt
 điện thoại; có kiểm tra đổi chiều màn hình, bàn phím ảo, cuộn lịch sử,
 focus khi lỗi và menu sửa/xóa. Hai kích thước wireframe là dữ liệu thiết
-kế, chưa thay thế danh sách trình duyệt/phiên bản/thiết bị cần chốt ở OQ-007.
+kế, chưa thay thế danh sách OS/thiết bị và phiên bản cụ thể của ma trận DEC-082 tại nghiệm thu.
 
 Mỗi lần chạy ghi: mã ca, build, cấu hình, dữ liệu, trình duyệt/thiết bị,
 bước tái hiện, kỳ vọng, thực tế, bằng chứng, người thực hiện và lỗi liên
@@ -521,12 +560,12 @@ xuất chưa xác nhận thêm ghi chú “Chờ chốt quy tắc”, không tí
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Kết quả tìm kiếm | Chốt độ dài từ khóa, phân trang và cách khớp hoa/thường/dấu; cách phân biệt đã có đề xuất bằng tên tài khoản. | OQ-005 |
-| Lưu giữ | Thời hạn giữ tin, sao lưu và hành vi khi tài khoản không còn sử dụng; không giữ lịch sử nội dung sửa đã chốt. | OQ-005, OQ-011 |
+| Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; còn schema/cursor và kiểm chứng truy vấn. | OQ-005 |
+| Lưu giữ | Không tự hết hạn tin theo DEC-070; backup 30 ngày đã chốt DEC-086; còn hành vi xóa tài khoản và khôi phục sau xóa; không giữ lịch sử sửa đã chốt. | OQ-005, OQ-011 |
 | Thử lại/đồng thời | Rà soát và thử nghiệm hợp đồng chống trùng, khóa theo hội thoại, xung đột sửa/xóa và dọn dữ liệu. | OQ-005, OQ-008 |
-| Giới hạn nội dung | Đã chốt 2.000 ký tự, xuống dòng/emoji và từ chối trống; cần khóa phép đếm cụm ký tự và bộ dữ liệu biên dùng chung. | OQ-005 |
-| Chất lượng | Độ trễ gửi/nhận, tải, thu hồi phiên và ma trận trình duyệt để nghiệm thu. | OQ-007 |
+| Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; còn bộ ký tự trắng/vô hình và fixture dùng chung. | OQ-005 |
+| Chất lượng | Ngưỡng và ma trận đã chốt DEC-082/083; còn cấu hình/build/thiết bị và kết quả đo. | OQ-007 |
 
-Chưa có OpenAPI/mock cho DM, endpoint tìm người hoặc Hub. `clientMessageId` chưa chốt định dạng; ví dụ trong hợp đồng chỉ minh họa cấu trúc. Cách biểu diễn SQL hiện tại dùng chat space/`sequence_no`; thiết kế logic dùng conversation/sequence. Cần rà soát ánh xạ, unique key theo tác giả và commit order trước triển khai, không coi seed/schema hiện tại là đã chứng minh hợp đồng đề xuất.
+Đã bổ sung [OpenAPI dự thảo](../contracts/direct-messaging.openapi.json) ngày 2026-10-04; chưa xác nhận thiết kế hoặc có mock/API/Hub chạy được. Schema dùng `x-scdc-utf16-length` vì minLength/maxLength của JSON Schema không tự biểu diễn phép đếm UTF-16. `clientMessageId` UUIDv4, ID server UUIDv7 theo DEC-081; ví dụ là dữ liệu minh họa, không phải ID của dữ liệu thật. Cách biểu diễn SQL hiện tại dùng chat space/`sequence_no`; thiết kế logic dùng conversation/sequence. Cần rà soát ánh xạ, unique key theo tác giả và commit order trước triển khai, không coi seed/schema hiện tại là đã chứng minh hợp đồng đề xuất.
 
 Các quyết định chưa chốt được giữ ở OQ-005/OQ-007/OQ-008/OQ-011. Chọn framework hoặc mô hình lưu không thay thế việc kiểm chứng lost response, concurrent commit, worker dừng và reconnect.

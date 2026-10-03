@@ -1,8 +1,8 @@
 # SCDC — Cộng đồng, phòng và phân quyền
 
-Cập nhật: 2026-10-03. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–19, AC-COM, COM-S và TC-ACL.
+Cập nhật: 2026-10-04. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–20, AC-COM, COM-S và TC-ACL.
 
-Quy tắc tham gia/quyền cốt lõi đã xác nhận; luồng quản lý cộng đồng, dữ liệu và API còn thiếu. Community/Messaging mới có nền module; wireframe và ca kiểm thử chưa phải kết quả triển khai hoặc nghiệm thu.
+Quy tắc tham gia/quyền cốt lõi đã xác nhận; tạo/sửa, duyệt/từ chối/hủy, chuyển chủ sở hữu, mời và tham gia lại đã chốt DEC-072–077/087; dữ liệu/API còn cần thiết kế. Community/Messaging mới có nền module; wireframe và ca kiểm thử chưa phải kết quả triển khai hoặc nghiệm thu.
 
 ## Mục lục
 
@@ -79,11 +79,19 @@ tả trong tài liệu này.
 | COM-021 | Thành viên thường có thể tự rời cộng đồng. | DEC-045 |
 | COM-022 | Người gửi phải xác minh email trước khi gửi tin trong phòng. | DEC-041, SCDC-FR-ACC-001 |
 | COM-023 | Tin đã sửa chỉ giữ nội dung mới nhất; không cung cấp lịch sử bản cũ. | DEC-052, nguyên tắc tương tự DM tại DEC-034 |
-| COM-024 | Tin văn bản tối đa 2.000 ký tự, cho xuống dòng/emoji; không nhận tin rỗng/chỉ khoảng trắng. | DEC-053 |
+| COM-024 | Tin văn bản tối đa 2.000 đơn vị UTF-16, cho xuống dòng/emoji; không nhận tin rỗng/chỉ khoảng trắng. | DEC-053, DEC-068 |
 | COM-025 | Quyền quản lý và xem phòng cấp qua vai trò; phòng có ngoại lệ cho từng thành viên. | DEC-055 |
 | COM-026 | Chủ sở hữu luôn xem được mọi phòng trong cộng đồng của mình. | DEC-056 |
 | COM-027 | Quyền xem giữa các vai trò có từ chối thì từ chối thắng; ngoại lệ cá nhân áp dụng sau cùng, trừ quyền chủ sở hữu. | DEC-057, DEC-056 |
 | COM-028 | Chỉ chủ sở hữu được tạo/sửa vai trò và gán/thu hồi vai trò thành viên. | DEC-058 |
+| COM-029 | Tài khoản đã xác minh được tạo cộng đồng; tên 2–100, mô tả tối đa 1.000; chọn công khai/riêng tư, mặc định công khai. Chủ sở hữu sửa các trường này. | DEC-072 |
+| COM-030 | Người có quyền duyệt được từ chối; người gửi xem trạng thái/hủy pending, sau từ chối/hủy được gửi mới. | DEC-073 |
+| COM-031 | Chủ sở hữu/người có quyền tạo mời gửi lời mời đích danh vào cộng đồng riêng tư; người nhận chấp nhận mới trở thành thành viên. | DEC-074 |
+| COM-032 | Link mời chọn hạn 1 giờ/1 ngày/7 ngày/không hết hạn, mặc định 7 ngày; maxUses nguyên dương hoặc không giới hạn; người có quyền tạo mời được thu hồi. | DEC-075 |
+| COM-033 | Chủ sở hữu chuyển ngay cho thành viên đã xác minh/active, không cần người nhận chấp nhận; chủ cũ vẫn là thành viên và chỉ được rời sau chuyển. | DEC-076 |
+| COM-034 | Tên phòng 1–100, chủ đề tối đa 1.000; owner/người có quyền quản lý phòng tạo/sửa/xóa; xóa ngừng truy cập tin/media, chưa khôi phục trong MVP. | DEC-077 |
+| COM-035 | Rejoin theo join mode hiện hành và vai trò mặc định, không phục hồi role cũ; có quyền xem lại lịch sử phòng hiện được phép xem. | DEC-087, DEC-038 |
+| COM-036 | Mời đích danh hạn 7 ngày; đúng người nhận từ chối, người có quyền tạo mời hủy pending; sau trạng thái cuối không accept được. | DEC-087 |
 
 Ma trận theo thao tác, thuật toán quyền xem và các trường hợp thu hồi
 được quản lý tại [SCDC-FR-ACL-001](community.md#permissions).
@@ -104,17 +112,18 @@ Các quyết định DEC-* được ghi tại
 | ACL-06 | Thấy cộng đồng trong tìm kiếm | Cộng đồng công khai | Cộng đồng riêng tư không xuất hiện | DEC-024 |
 | ACL-07 | Tham gia qua tìm kiếm | Cộng đồng công khai | Vào ngay hoặc chờ duyệt theo cấu hình; chưa duyệt chưa có tư cách thành viên | DEC-025 |
 | ACL-08 | Tham gia bằng liên kết mời | Liên kết hợp lệ, còn hiệu lực | Bỏ qua chế độ chờ duyệt; liên kết hết hạn/thu hồi bị từ chối | DEC-025, DEC-044 |
-| ACL-09 | Tạo/thu hồi lời mời | Chủ sở hữu hoặc người có vai trò cho quyền tạo lời mời | Các giá trị thời hạn và phạm vi thu hồi cần đặc tả | DEC-028, DEC-031, DEC-044, DEC-055 |
-| ACL-10 | Duyệt yêu cầu tham gia | Chủ sở hữu hoặc người được cấp quyền duyệt | Quyền từ chối/hủy yêu cầu chưa được chốt | DEC-032 |
+| ACL-09 | Tạo/thu hồi lời mời | Chủ sở hữu hoặc người có vai trò cho quyền tạo lời mời | Hạn/lượt theo COM-032; kiểm tra thu hồi và giới hạn trong transaction join | DEC-028, DEC-031, DEC-044, DEC-055 |
+| ACL-10 | Duyệt yêu cầu tham gia | Chủ sở hữu hoặc người được cấp quyền duyệt | Người có quyền duyệt được từ chối; người gửi hủy yêu cầu đang chờ theo DEC-073 | DEC-032 |
 | ACL-11 | Đổi chế độ tham gia | Chủ sở hữu hoặc người được cấp quyền đổi chế độ | Không thay đổi nguyên tắc liên kết mời hợp lệ cho vào ngay | DEC-029 |
-| ACL-12 | Tạo phòng theo chủ đề | Chủ sở hữu hoặc người được cấp quyền tạo phòng | Phòng mới mặc định mọi thành viên xem được | DEC-026, DEC-033 |
+| ACL-12 | Tạo/sửa/xóa phòng | Chủ sở hữu hoặc người có quyền quản lý phòng | Phòng mới mặc định mọi thành viên xem; xóa chặn HTTP/realtime/media, chưa có khôi phục | DEC-026, DEC-033, DEC-077 |
 | ACL-13 | Xem phòng và lịch sử | Là thành viên và có quyền xem phòng; chủ sở hữu luôn xem được | Thành viên mới được xem tin cũ; thứ tự vai trò/ngoại lệ cá nhân ở [thuật toán quyền xem](#view-permissions) | DEC-027, DEC-038, DEC-055–057 |
 | ACL-14 | Gửi tin trong phòng | Có quyền xem phòng, phiên hợp lệ và đã xác minh email | Đợt đầu không có quyền chỉ đọc riêng | DEC-040, DEC-041 |
 | ACL-15 | Sửa/xóa tin trong phòng | Có quyền truy cập phòng và là tác giả tin | Không cấp quyền sửa/xóa tin của người khác trong đặc tả đợt đầu | DEC-034, AC-COM-13 |
 | ACL-16 | Đổi cấu hình quyền xem phòng | Chủ sở hữu hoặc người có vai trò cho quyền quản lý danh sách xem | Áp dụng vai trò và ngoại lệ cá nhân; không đồng nghĩa được quản lý vai trò | DEC-039, DEC-055, DEC-058 |
-| ACL-17 | Tự rời cộng đồng | Thành viên thường | Chủ sở hữu rời/chuyển quyền sở hữu chưa được chốt | DEC-045 |
-| ACL-18 | Thêm trực tiếp vào cộng đồng riêng tư | Có hình thức tham gia này | Chưa xác định ai được thêm và người được thêm có phải chấp nhận không | DEC-043 |
+| ACL-17 | Tự rời cộng đồng | Thành viên thường | Chủ sở hữu phải chuyển ngay cho thành viên active/đã xác minh trước khi rời — DEC-076 | DEC-045 |
+| ACL-18 | Mời đích danh vào cộng đồng riêng tư | Chủ sở hữu/người có quyền tạo mời gửi; đúng người nhận chấp nhận | Chưa chấp nhận thì chưa có tư cách thành viên/quyền phòng | DEC-043, DEC-074 |
 | ACL-19 | Tạo/sửa vai trò, gán/thu hồi vai trò thành viên | Chỉ chủ sở hữu cộng đồng | Không ủy quyền quản lý vai trò trong đợt đầu | DEC-058 |
+| ACL-20 | Tạo/sửa cộng đồng | Tài khoản đã xác minh được tạo; chủ sở hữu mới được sửa tên/mô tả/công khai | Quyền đổi chế độ vào ngay/chờ duyệt vẫn là ACL-11 | DEC-072 |
 
 Tư cách chủ sở hữu không tự cho quyền đọc DM, sửa tin của người khác hoặc
 truy cập nội dung ngoài cộng đồng của mình. Chủ sở hữu luôn xem được
@@ -157,7 +166,7 @@ vai trò là một tập quyền theo thao tác; DEC-057 chỉ quyết định x
 
 | Tình huống | Kết quả phải kiểm chứng | Tiêu chí liên quan |
 |---|---|---|
-| Thu hồi quyền xem phòng đang mở | Lần đọc/gửi tiếp theo bị từ chối; không nhận thêm nội dung phòng qua kết nối cũ theo thời hạn thu hồi cần chốt | AC-COM-11, AC-COM-13; OQ-007 |
+| Thu hồi quyền xem phòng đang mở | Lần đọc/gửi tiếp theo bị từ chối; không nhận thêm nội dung phòng qua kết nối cũ trong ≤5 giây cho chat theo DEC-083; media cần xác nhận ngưỡng riêng | AC-COM-11, AC-COM-13; DEC-083, OQ-007 |
 | Thành viên thường rời cộng đồng | Không còn truy cập nội dung dành cho thành viên; giao diện rời phòng đang mở | AC-COM-21 |
 | Mất quyền quản lý | Các thao tác quản lý tiếp theo bị kiểm tra lại phía máy chủ | ACL-09 đến ACL-12, ACL-16 |
 | Mất kết nối rồi mở lại | Kiểm tra lại phiên, tư cách thành viên và quyền trước khi tải lịch sử hoặc đăng ký nhận tin | AC-ACC-04, AC-COM-13 |
@@ -225,9 +234,9 @@ danh sách theo quyền; không tiếp tục gửi hoặc nhận tin qua kết n
 
 | Màn hình | Người thực hiện | Nội dung và trạng thái cần thiết |
 |---|---|---|
-| COM-S04 Tạo phòng | Chủ sở hữu/người có quyền tạo phòng | Tên/chủ đề là trường đề xuất; mặc định mọi thành viên xem; lưu lỗi giữ dữ liệu, tạo thành công về phòng mới |
-| COM-S05 Lời mời | Chủ sở hữu/người có quyền tạo lời mời | Tạo, chọn thời hạn, sao chép, xem trạng thái và thu hồi; tập giá trị thời hạn và số lượt dùng còn mở |
-| COM-S06 Yêu cầu tham gia | Chủ sở hữu/người có quyền duyệt | Danh sách yêu cầu và nút duyệt; trạng thái đang xử lý/đã duyệt/lỗi; chưa tự thêm chức năng từ chối/hủy chưa chốt |
+| COM-S04 Tạo phòng | Chủ sở hữu/người có quyền tạo phòng | Tên 1–100/chủ đề tối đa 1.000; mặc định mọi thành viên xem; lưu lỗi giữ dữ liệu, tạo thành công về phòng mới |
+| COM-S05 Lời mời | Chủ sở hữu/người có quyền tạo lời mời | Tạo, chọn 1 giờ/1 ngày/7 ngày/không hết hạn, đặt lượt nguyên dương hoặc không giới hạn, sao chép, xem và thu hồi |
+| COM-S06 Yêu cầu tham gia | Chủ sở hữu/người có quyền duyệt | Danh sách và thao tác duyệt/từ chối; người gửi xem trạng thái/hủy pending; sau từ chối/hủy được gửi mới |
 | COM-S07 Chế độ tham gia | Chủ sở hữu/người có quyền đổi chế độ | Vào ngay/chờ duyệt; ghi rõ liên kết mời hợp lệ vẫn cho vào ngay |
 | COM-S08 Vai trò | Chỉ chủ sở hữu | Danh sách vai trò, quyền quản lý theo thao tác, gán/thu hồi thành viên; người khác gọi API cũng bị từ chối |
 | COM-S09 Quyền xem phòng | Chủ sở hữu/người có quyền quản lý danh sách xem | Mặc định phòng, cấu hình vai trò, ngoại lệ cá nhân; kết quả theo DEC-057; lưu có version để không ghi đè cấu hình mới hơn |
@@ -255,12 +264,9 @@ sở hữu sửa định nghĩa hoặc gán vai trò; quyền cấu hình xem ph
 cho phép tự gán vai trò. Cách tránh người quản lý vô tình tự mất quyền
 và phản hồi sau lưu cần kiểm thử trong prototype.
 
-### Trạng thái còn chờ quyết định
+### Trạng thái theo quyết định mới
 
-Tạo/sửa cộng đồng chưa đủ quy tắc trường, công khai/riêng tư và quyền
-đổi. Thêm trực tiếp vào cộng đồng riêng tư chưa rõ người được thêm có
-phải đồng ý; chủ sở hữu rời/chuyển quyền chưa chốt. Không đặt nút có
-hành vi giả định cho các luồng này trong bản bàn giao đã xác nhận.
+COM-S10 Tạo/sửa cộng đồng theo DEC-072: thu tên/mô tả/công khai; chủ sở hữu mới được sửa. COM-S11 Lời mời đích danh theo DEC-074: người nhận xem đúng cộng đồng, chấp nhận hoặc từ chối; người mời được hủy khi còn chờ theo DEC-087; chưa nhận không tải phòng/tin. COM-S12 Chuyển chủ sở hữu: chọn thành viên active/đã xác minh, xác nhận chuyển ngay; chủ cũ vẫn là thành viên và được rời sau đó. Phòng bị xóa đóng vùng nội dung và cuộc gọi theo DEC-077. Bộ đếm trường mới đề xuất dùng UTF-16 để thống nhất API; không suy DEC-068 là đã quyết định phép đếm mọi trường cộng đồng.
 
 Đề xuất màn hình hẹp dùng lần lượt danh sách cộng đồng → danh sách
 phòng → hội thoại; quản lý mở thành trang riêng. DEC-059 mới chốt mục
@@ -271,6 +277,22 @@ Vg rà soát wireframe; Thái dựng prototype và trạng thái; Sáng đối c
 quyền/API. Chưa có prototype, kết quả rà soát hoặc kiểm thử khả dụng
 được ghi nhận trong tài liệu này.
 
+### Luồng yêu cầu tham gia và mời đích danh
+
+Thiết kế trạng thái để thực hiện DEC-073/074/087; giao dịch/schema chưa triển khai:
+
+| Đối tượng/trạng thái | Thao tác | Kết quả và quyền |
+|---|---|---|
+| Chưa có yêu cầu | Gửi vào cộng đồng công khai chờ duyệt | Pending; chưa có membership/quyền phòng |
+| Pending | Người có quyền duyệt chấp nhận | Approved và tạo membership cùng transaction |
+| Pending | Người có quyền duyệt từ chối | Rejected; không tạo membership |
+| Pending | Chính người gửi hủy | Cancelled; không tạo membership |
+| Rejected/Cancelled | Người dùng gửi lại | Tạo yêu cầu mới, không phục hồi pending cũ |
+| Mời đích danh pending | Đúng người nhận chấp nhận, lời mời còn hợp lệ | Accepted và tạo membership cùng transaction; không thêm bước duyệt |
+| Mời đích danh pending | Người nhận từ chối / người có quyền tạo mời hủy / đủ 7 ngày | Rejected / Cancelled / Expired; không tạo membership, không chấp nhận sau trạng thái cuối |
+
+Máy chủ kiểm tra quyền ở thời điểm commit. Thiết kế unique một pending mỗi cặp user/cộng đồng, unique membership và cập nhật có điều kiện để hai thao tác duyệt/hủy không cùng thắng. Gọi lặp join/accept của người đã là thành viên trả tư cách hiện hành, không nhân đôi. Dùng lời mời link hợp lệ khi đang pending join phải kết thúc pending trong cùng giao dịch tạo membership; chi tiết lịch sử và retention thuộc OQ-011. Link có hạn/lượt theo DEC-075; mời đích danh hạn 7 ngày theo DEC-087. Khi link hết lượt, request join mới bị từ chối; người đã là thành viên không tiêu tốn lượt mới.
+
 <a id="contracts"></a>
 
 ## 4. Dữ liệu và API cần thiết kế
@@ -279,13 +301,47 @@ Repo có schema `community`/`messaging` và seed, nhưng chưa có controller, s
 
 | Nhóm | Dữ liệu/hành vi tối thiểu | Phụ thuộc |
 |---|---|---|
-| Cộng đồng | Tạo/sửa, công khai/riêng tư, chủ sở hữu, vòng đời | OQ-003; chưa chốt đủ trường/quyền |
-| Tìm/tham gia | Chỉ tìm công khai, vào ngay/chờ duyệt, trạng thái yêu cầu và tư cách thành viên | COM-001–004; từ chối/hủy còn mở |
-| Lời mời | Tạo, thời hạn, kiểm tra, tiêu thụ và thu hồi; ghi thành viên nhất quán khi gọi lặp | COM-005/010/020; giới hạn dùng còn mở |
-| Phòng | Tạo, danh sách theo quyền, chủ đề và cấu hình xem | COM-007/008/012; schema trường cần rà soát |
+| Cộng đồng | Tạo/sửa, công khai/riêng tư, chủ sở hữu, vòng đời | DEC-072; vòng đời/xóa cộng đồng còn cần chốt |
+| Tìm/tham gia | Chỉ tìm công khai, vào ngay/chờ duyệt, trạng thái yêu cầu và tư cách thành viên | COM-001–004, DEC-073; cần transaction chống request lặp |
+| Lời mời | Tạo, thời hạn, kiểm tra, tiêu thụ và thu hồi; ghi thành viên nhất quán khi gọi lặp | COM-005/010/020/032; cần tiêu thụ lượt nhất quán |
+| Phòng | Tạo, danh sách theo quyền, chủ đề và cấu hình xem | COM-007/008/012; trường/quyền theo DEC-077; kiểm tra xóa và thu hồi đồng thời |
 | Vai trò/quyền | Chủ sở hữu quản lý vai trò; mặc định, kế thừa/cho phép/từ chối, ngoại lệ cá nhân và version cấu hình | DEC-055–058, ACL-O1/O2 |
 | Tin phòng | Lưu/lịch sử/sửa/xóa/thử lại; chỉ người có quyền, tác giả sửa/xóa | COM-013–018/022–024; tham chiếu cơ chế tin DM |
 | Thu hồi | Mất quyền hoặc rời phải chặn lần đọc/gửi tiếp và kết nối cập nhật theo ngưỡng đã chốt | ACL-O5, OQ-007 |
+
+### Hợp đồng HTTP đề xuất
+
+Prefix `/api/v1`; chưa có endpoint nghiệp vụ Community chạy được. Actor lấy từ phiên, ID server UUIDv7 theo DEC-081; time UTC; request thay đổi dùng `expectedVersion` để tránh ghi đè. `ServerSummary` công khai tối thiểu gồm `id,name,description,visibility`; chỉ thành viên được nhận chi tiết phòng/thành viên theo quyền.
+
+| Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
+|---|---|---|
+| `POST /servers` | `{name,description?,visibility}` | 201 server; account active/verified; tạo server và membership owner cùng transaction |
+| `PATCH /servers/{id}` | `{name?,description?,visibility?,expectedVersion}` | 200 server; chỉ owner; private không xuất hiện trong tìm kiếm |
+| `GET /servers/search` | `q,cursor,limit` | 200 trang server công khai; không trả nội dung/phòng riêng tư; giới hạn tìm kiếm còn thiết kế |
+| `POST /servers/{id}/join` | Không có body | 200 membership nếu vào ngay; 202 yêu cầu pending nếu chờ duyệt; không join server private từ tìm kiếm |
+| `GET /servers/{id}/join-requests/me` | Phiên người yêu cầu | 200 trạng thái của mình, chưa có trả rỗng; không trả request người khác |
+| `POST /servers/{id}/join-requests/{requestId}/approve` hoặc `/reject` | `{expectedVersion}` | 200 trạng thái cuối; đúng quyền duyệt; chỉ transition từ pending |
+| `DELETE /servers/{id}/join-requests/{requestId}` | `expectedVersion` | 200 cancelled; chỉ chính người gửi hủy pending |
+| `PATCH /servers/{id}/join-mode` | `{joinMode,expectedVersion}` | 200 server; đúng quyền đổi chế độ, không vô hiệu nguyên tắc link cho vào ngay |
+| `POST /servers/{id}/invites` | `{expiresInSeconds,maxUses?}` | 201 metadata/link; expiresInSeconds là 3600/86400/604800/null, bỏ trường dùng mặc định 604800; quyền tạo mời |
+| `DELETE /servers/{id}/invites/{inviteId}` | ID link của server | 204 thu hồi; đúng quyền, join sau thu hồi bị từ chối |
+| `POST /invites/{token}/join` | Không có body | 200 membership; kiểm tra hạn/thu hồi/lượt dưới khóa, không ghi token vào log |
+| `POST /servers/{id}/member-invitations` | `{recipientUserId}` | 201 mời pending; owner/quyền tạo mời; chưa tạo membership |
+| `POST /member-invitations/{invitationId}/accept` | Không có body | 200 membership; đúng người nhận, mời còn hợp lệ; không thêm bước duyệt |
+| `POST /member-invitations/{invitationId}/reject` | `{expectedVersion}` | 200 rejected; đúng người nhận; chỉ pending còn hạn |
+| `DELETE /servers/{id}/member-invitations/{invitationId}` | `expectedVersion` | 200 cancelled; quyền tạo mời; chỉ pending |
+| `POST /servers/{id}/ownership-transfer` | `{newOwnerUserId,expectedVersion}` | 200 server; owner hiện tại, target là thành viên active/verified; chuyển ngay, không tạo pending |
+| `DELETE /servers/{id}/members/me` | Không có body | 204 tự rời; owner chưa chuyển nhận 409; chặn HTTP/realtime/media theo ngưỡng |
+| `POST /servers/{id}/channels` | `{name,topic?,kind}` | 201 phòng text/voice; đúng quyền quản lý phòng; mặc định mọi thành viên xem |
+| `PATCH /servers/{id}/channels/{channelId}` | `{name?,topic?,expectedVersion}` | 200 phòng; đúng quyền quản lý phòng |
+| `DELETE /servers/{id}/channels/{channelId}` | `expectedVersion` | 204 xóa logic, dừng truy cập/kết nối; không tự xóa vật lý tin/backup |
+| `GET /servers/{id}/channels` | Phiên/thành viên | 200 chỉ phòng được xem; phòng deleted không được trả |
+
+Thiết kế danh mục quyền tối thiểu: quản lý phòng, tạo/thu hồi mời, duyệt/từ chối yêu cầu, đổi join mode và cấu hình quyền xem phòng. Chỉ owner quản lý vai trò/chuyển ownership/sửa metadata server. Vai trò mặc định không tự có quyền quản lý. Tên mã permission, số vai trò và phiên bản cấu hình là thiết kế còn cần rà soát; không thêm quyền xóa tin người khác.
+
+Unique membership `(serverId,userId)`, unique pending request và cập nhật có điều kiện bảo vệ join/approve/accept lặp. Chuyển owner khóa server và hai membership; target phải vẫn là thành viên active/verified tại commit. Mời có giới hạn khóa record, tạo membership và tăng lượt cùng transaction; rollback không tiêu lượt. Xóa phòng kiểm tra lại quyền và version, chuyển trạng thái deleted rồi phát sự kiện thu hồi sau commit; giữ tombstone để API cũ không phục hồi phòng.
+
+Lỗi đề xuất: validation 400; thiếu phiên 401; trái quyền quản lý 403; tài nguyên không được biết 404; request/version/owner conflict 409; vượt limiter 429; phụ thuộc tạm lỗi 503. Tên errorCode và schema chi tiết cần khóa cùng frontend/mock trước triển khai. Role API/configuration và tin phòng sẽ được máy đọc hóa sau khi chốt mô hình quyền; bảng này không phải OpenAPI đã duyệt.
 
 Mỗi endpoint/sự kiện cần schema request/response, actor/quyền, lỗi theo [ProblemDetails](../architecture.md#contracts), giao dịch, version và retry. Community sở hữu metadata/thành viên/quyền; Messaging sở hữu tin. Messaging kiểm tra quyền qua `IChannelAccessChecker`, không đọc/JOIN schema Community.
 
@@ -325,6 +381,15 @@ Cơ chế tin dùng chung được thiết kế tại [DM](direct-messaging.md#c
 | AC-COM-26 | Đặt ngoại lệ cho phép cá nhân ở ca AC-COM-25; sau đó đổi thành từ chối. | Cho phép cá nhân thắng từ chối vai trò; khi cá nhân bị từ chối thì không xem/gửi/nhận được. |
 | AC-COM-27 | Chủ sở hữu mở phòng giới hạn có cấu hình từ chối vai trò/cá nhân. | Vẫn xem được trong cộng đồng của mình nếu tài khoản/phiên hợp lệ. |
 | AC-COM-28 | Thành viên được quyền tạo phòng thử sửa hoặc gán vai trò; chủ sở hữu làm cùng thao tác. | Thành viên bị từ chối; chủ sở hữu thực hiện được. |
+| AC-COM-29 | Tài khoản đã xác minh tạo cộng đồng, chủ sở hữu sửa tên/mô tả/công khai; thành viên gọi cùng API sửa | Tạo/sửa theo giới hạn DEC-072; thành viên không có quyền sửa; riêng tư không còn xuất hiện trong tìm kiếm |
+| AC-COM-30 | Người có quyền duyệt từ chối; người gửi hủy pending hoặc gửi lại sau từ chối/hủy | Trạng thái đúng, chưa duyệt chưa có membership; một pending hoạt động mỗi cặp; thao tác đồng thời không cùng thắng |
+| AC-COM-31 | Mời đích danh A vào cộng đồng riêng tư; B cố chấp nhận thay; A chưa nhận rồi nhận | B bị từ chối; A chưa nhận không có quyền phòng; sau nhận có một membership và không cần duyệt thêm |
+| AC-COM-32 | Link ở biên hạn/lượt; join đồng thời và gọi lặp của thành viên | Không vượt maxUses, không tăng lượt cho thành viên hiện hành; hết hạn/thu hồi không join được |
+| AC-COM-33 | Owner chuyển cho thành viên active/verified trong lúc target/chủ cũ thử rời | Chuyển ngay, không cần nhận chấp nhận; luôn đúng một owner; chủ cũ được rời sau chuyển thành công |
+| AC-COM-34 | Người đúng/sai quyền sửa/xóa phòng đang có tin/cuộc gọi | Deleted không đọc/gửi/nhận/tiếp tục gọi được; chặn race writer; không có khôi phục MVP |
+| AC-COM-35 | Thành viên rời tham gia lại; mời đích danh hết 7 ngày/đã hủy/từ chối được dùng lại | Rejoin theo join mode hiện hành, role mặc định; lịch sử theo quyền; mời cuối trạng thái không accept được |
+
+Các tiêu chí mới dẫn tới DEC-072–077/087; toàn bộ AC-COM chưa có kết quả thực thi được ghi nhận. Ca chat thu hồi đo ≤5 giây theo DEC-083; ngưỡng thu hồi media còn chờ quyết định.
 
 <a id="tests"></a>
 
@@ -341,9 +406,33 @@ Dữ liệu: O là chủ sở hữu; M được cấp một quyền quản lý c
 | TC-ACL-06 | M được quyền tạo phòng nhưng thử tạo/sửa/gán/thu hồi vai trò | Máy chủ từ chối; O thực hiện được | DEC-058 |
 | TC-ACL-07 | N đang mở phòng; O thu hồi quyền hoặc N rời cộng đồng | API từ chối; ngừng nhận nội dung phòng theo ngưỡng thu hồi; DM độc lập vẫn hoạt động | AC-COM-11, AC-COM-21 |
 
+### Ca cộng đồng và tin phòng
+
+Mọi ca dưới đây ở trạng thái Chưa chạy; ca phụ thuộc quy tắc hoặc implementation thiếu ghi điều kiện còn thiếu. Dùng cộng đồng công khai vào ngay/chờ duyệt, cộng đồng riêng tư, người ngoài P và đúng quyền từng thao tác.
+
+| Mã ca | Thao tác và dữ liệu | Kết quả cần quan sát | Dẫn chiếu |
+|---|---|---|---|
+| TC-COM-01 | Tìm công khai/riêng tư; đổi cộng đồng sang riêng tư rồi tìm lại | Chỉ kết quả công khai, không lộ phòng/tin cho người ngoài | AC-COM-01/19/29 |
+| TC-COM-02 | Tạo cộng đồng với biên tên/mô tả; N sửa metadata của O qua API | Giới hạn theo DEC-072; chỉ O sửa được; không để lại membership owner dở dang | AC-COM-29 |
+| TC-COM-03 | P join cộng đồng vào ngay; gọi join lặp/đồng thời | Một membership, có quyền mặc định sau commit | AC-COM-02 |
+| TC-COM-04 | P gửi yêu cầu chờ duyệt, xem trạng thái; N/M thử duyệt/từ chối | Chỉ đúng quyền xử lý; pending chưa đọc phòng được | AC-COM-03/10/30 |
+| TC-COM-05 | P hủy pending đồng thời với M duyệt/từ chối; gửi yêu cầu mới sau trạng thái cuối | Một thao tác thắng; trạng thái/membership nhất quán; cho yêu cầu mới sau hủy/từ chối | AC-COM-30 |
+| TC-COM-06 | Link hợp lệ/hết hạn/thu hồi; dùng link trong cộng đồng chờ duyệt | Link hợp lệ tạo membership ngay; các link khác bị từ chối; pending cũ kết thúc cùng giao dịch | AC-COM-04/05/20 |
+| TC-COM-07 | N/M tạo/thu hồi link và đổi join mode | Chỉ quyền tương ứng; link hợp lệ vẫn bỏ qua chờ duyệt | AC-COM-08/09/20 |
+| TC-COM-08 | M mời đích danh P; N nhận thay; P nhận hai lần/đồng thời | N bị từ chối; trước nhận không là thành viên; nhận tạo một membership | AC-COM-19/31 |
+| TC-COM-09 | Thành viên mới/mất mạng mở lại phòng có tin cũ | Lịch sử đầy đủ nếu còn quyền xem | AC-COM-14/15 |
+| TC-COM-10 | Gửi/sửa/xóa tin phòng; N sửa tin O bằng API; gửi lại khi mất response | Kiểm tra tác giả, tombstone, một tin mỗi thao tác; dữ liệu UTF-16 dùng chung DM | AC-COM-12/13/18/23/24 |
+| TC-COM-11 | N tự rời trong khi đọc/gửi/nhận cập nhật | Chat thu hồi trong ≤5 giây theo DEC-083; DM độc lập còn dùng được | AC-COM-21 |
+| TC-COM-12 | U chưa xác minh giả membership và gọi API đọc/gửi | Chặn truy cập ứng dụng phía server, không suy U được đọc phòng | AC-COM-22, DEC-051 |
+| TC-COM-13 | Dùng link đúng lúc hết hạn/hết lượt; nhiều request tranh lượt cuối; thành viên join lặp | Không vượt lượt, không nhân membership; rollback không tiêu lượt | AC-COM-32 |
+| TC-COM-14 | Chuyển owner đồng thời với target rời/chủ cũ rời; target mất trạng thái active | Luôn một owner; target đủ điều kiện tại chuyển; chủ cũ chỉ rời sau chuyển thành công | AC-COM-33 |
+| TC-COM-15 | Xóa phòng cùng lúc gửi/join media; thử ID phòng cũ sau xóa | Không phục hồi phòng, không đọc/nhận/gọi sau thu hồi; tin đã commit giữ theo retention | AC-COM-34 |
+| TC-COM-16 | Thành viên có role riêng rời rồi vào lại theo từng join mode | Role mặc định, không phục hồi role cũ; lịch sử hiện theo quyền mới | AC-COM-35 |
+| TC-COM-17 | Mời đích danh accept/cancel/reject đồng thời, ở cutoff 7 ngày và gọi sau trạng thái cuối | Một transition thắng; một membership nếu accept thắng; hết hạn không accept được | AC-COM-31/35 |
+
 Các ca này bao phủ quyền đã chốt; cần bổ sung ca cho từng AC-COM khi hoàn thiện backend/API. Chạy trực tiếp API để kiểm tra quyền, không chỉ nhìn nút UI. Ca nội dung tin dùng [TC-TEXT](direct-messaging.md#tests). Ca gửi lại/đồng thời cũng cần chạy cho tin phòng sau khi chọn hợp đồng.
 
-Ca AC-COM-22 kiểm tra điều kiện chưa xác minh phía máy chủ; DEC-051 vẫn chặn truy cập ứng dụng từ trước, không suy rằng người chưa xác minh được đọc phòng. Ngưỡng thu hồi chưa chốt thì ca liên quan ghi “Chờ chốt quy tắc”, không đánh dấu đạt. Kết quả theo [mẫu nghiệm thu](../release-operations.md#testing).
+Ca AC-COM-22 kiểm tra điều kiện chưa xác minh phía máy chủ; DEC-051 vẫn chặn truy cập ứng dụng từ trước, không suy rằng người chưa xác minh được đọc phòng. Chat thu hồi đã chốt DEC-083; ca media phụ thuộc ngưỡng chưa chốt ghi “Chờ chốt quy tắc”, không đánh dấu đạt. Kết quả theo [mẫu nghiệm thu](../release-operations.md#testing).
 
 <a id="gaps"></a>
 
@@ -353,12 +442,12 @@ Ca AC-COM-22 kiểm tra điều kiện chưa xác minh phía máy chủ; DEC-051
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Lời mời | Thời hạn được chọn theo những giá trị nào; giới hạn số lần dùng; cách hiển thị lời mời đã thu hồi. | OQ-003, OQ-004 |
-| Yêu cầu tham gia | Người được quyền duyệt có được từ chối; người gửi có xem trạng thái hoặc hủy yêu cầu được không. | OQ-003, OQ-004 |
-| Cộng đồng riêng tư | Ai có quyền thêm trực tiếp; có cần người được thêm chấp nhận; cách thông báo cho người được thêm. | OQ-003, OQ-004 |
+| Lời mời | Link theo DEC-075, mời đích danh theo DEC-087; còn schema/transaction tiêu thụ lượt và chống race. | OQ-003, OQ-004 |
+| Yêu cầu tham gia | Đã chốt DEC-073; còn đồng thời giữa duyệt/từ chối/hủy và rate limit gửi mới. | OQ-003, OQ-004 |
+| Cộng đồng riêng tư | Đã chốt DEC-074; hạn 7 ngày/từ chối/hủy theo DEC-087; còn schema/thông báo và đồng thời. | OQ-003, OQ-004 |
 | Cấp quyền | Đã chốt vai trò/ngoại lệ, người quản lý vai trò và thứ tự xung đột; còn mô hình dữ liệu, cấu hình, giới hạn và hành vi thu hồi đồng thời tại SCDC-FR-ACL-001. | OQ-004 |
-| Nhắn tin phòng | Đã chốt giới hạn và không giữ lịch sử sửa; cần rà soát phép đếm, cơ chế tránh trùng, lưu giữ và dữ liệu sau khi rời/mất quyền. | OQ-005, OQ-011 |
-| Rời cộng đồng | Quy tắc tham gia lại, quyền xem lịch sử sau khi rời và xử lý nếu chủ sở hữu muốn rời. | OQ-003 |
+| Nhắn tin phòng | Đã chốt UTF-16 và không tự hết hạn tin tại DEC-068/070; còn fixture, tránh trùng, backup và dữ liệu sau khi rời/mất quyền. | OQ-005, OQ-011 |
+| Rời cộng đồng | Chuyển chủ sở hữu đã chốt DEC-076; tham gia lại theo join mode hiện hành/vai trò mặc định đã chốt DEC-087; retention/cache sau khi rời còn OQ-011. | OQ-003 |
 
 ### Chi tiết còn thiếu để hoàn tất thiết kế phân quyền
 
@@ -366,9 +455,9 @@ Ca AC-COM-22 kiểm tra điều kiện chưa xác minh phía máy chủ; DEC-051
 |---|---|---|---|
 | ACL-O1 | Mô hình dữ liệu vai trò mặc định, danh mục quyền quản lý; giới hạn số vai trò | Tạo phòng, mời, duyệt, đổi cấu hình/quyền xem; người quản lý vai trò đã chốt DEC-058 | Vg; Sáng đánh giá thiết kế |
 | ACL-O2 | Màn hình đặt giới hạn, giao dịch cập nhật và version quyền | Danh sách phòng, lịch sử, gửi, thời gian thực; thứ tự đã chốt DEC-057 | Vg, Sáng |
-| ACL-O3 | Chuyển chủ sở hữu và rời cộng đồng của chủ sở hữu | Quản lý vòng đời cộng đồng; quyền xem đã chốt DEC-056 | Vg |
-| ACL-O4 | Ai thêm trực tiếp; có yêu cầu người được thêm đồng ý không | Cộng đồng riêng tư | Vg |
-| ACL-O5 | Thời hạn thu hồi hiệu lực trên kết nối đang mở và khi thao tác đồng thời | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
+| ACL-O3 | Chuyển ngay chủ sở hữu theo DEC-076; cần giao dịch/kiểm thử đồng thời | Quản lý vòng đời cộng đồng; quyền xem đã chốt DEC-056 | Vg |
+| ACL-O4 | Lời mời đích danh đã chốt DEC-074; hạn/transition theo DEC-087; còn schema và đồng thời | Cộng đồng riêng tư | Vg |
+| ACL-O5 | Chat ≤5 giây đã chốt DEC-083; cần cơ chế, đo đồng thời và ngưỡng thu hồi media | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
 
 Các mục trên tiếp tục thuộc OQ-003/OQ-004/OQ-007. DM hai người không phụ
 thuộc mô hình vai trò cộng đồng; có thể rà soát phần ACL-01 đến ACL-05

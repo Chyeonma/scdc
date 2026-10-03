@@ -1,8 +1,8 @@
 # SCDC — Kiến trúc và quy ước tích hợp
 
-Cập nhật: 2026-10-03. MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
+Cập nhật: 2026-10-04. MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
 
-Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. DM, phân quyền phòng và media còn có thiết kế đề xuất; microservices thuộc đợt sau.
+Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền/media còn thiết kế cần kiểm chứng; microservices thuộc đợt sau.
 
 ## Mục lục
 
@@ -57,7 +57,7 @@ Identity có `IdentityDbContext`; không mô tả Community/Messaging như đã 
 
 Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [đặc tả Community](features/community.md#permissions).
 
-Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành.
+Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
 
 <a id="contracts"></a>
 
@@ -124,12 +124,13 @@ Theo DEC-060, MVP không bắt buộc có Gateway hoặc dịch vụ độc lậ
 | Phương án từng được nêu | Tình trạng |
 |---|---|
 | YARP Gateway, gRPC/HTTP và RabbitMQ | Định hướng tách dịch vụ; chưa có triển khai hoặc lịch được xác nhận |
-| SignalR và Redis Backplane | Phương án realtime; chưa có Hub/backplane trong backend hiện tại |
+| SignalR | Đã chọn cho DM/tin phòng theo DEC-081; chưa có Hub trong backend hiện tại |
+| Redis Backplane | Dành cho scale-out khi có quyết định; không cần tự đưa Redis vào MVP một API instance |
 | MinIO / presigned upload | Phương án file ở đợt sau; chưa có lựa chọn triển khai được duyệt |
-| LiveKit SFU | Phương án cần thử nghiệm cho media; media vẫn thuộc MVP, nhà cung cấp chưa được chốt |
+| LiveKit SFU tự host | Đã chọn DEC-084; cần admission/thu hồi token và thử nghiệm; chưa có service/manifest |
 | Kubernetes và k6 | Công cụ từng được đề xuất; chưa có manifest hoặc kịch bản tải trong repo |
 
-Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đồ hiện tại như hạ tầng đã tồn tại. Phòng gọi, giới hạn và chi phí media cần thử nghiệm trước khi chọn giải pháp. Mở rộng ngang và ngưỡng hiệu năng phải có phép đo cụ thể.
+Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đồ hiện tại như hạ tầng đã tồn tại. LiveKit tự host và giới hạn media đã chọn DEC-079/084; admission, chi phí và chất lượng vẫn cần thử nghiệm. Mở rộng ngang và ngưỡng hiệu năng phải có phép đo cụ thể.
 
 <a id="review"></a>
 
@@ -137,4 +138,4 @@ Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đ�
 
 Vg/Sáng rà soát ranh giới module, quyền sở hữu dữ liệu, hợp đồng, giao dịch, thu hồi phiên/quyền và cách quan sát. Thái đối chiếu trạng thái UI với lỗi API và ca kiểm thử. Những lựa chọn chưa chốt tiếp tục thuộc OQ-008.
 
-Một gói được bàn giao khi có hành vi rõ, thiết kế thống nhất, người phụ trách và phương pháp kiểm chứng. Các bằng chứng cần có được quản lý tại [bảng sẵn sàng](project.md#readiness). Thiết kế DM có thể tiến hành độc lập với quyết định media còn mở.
+Một gói được bàn giao khi có hành vi rõ, thiết kế thống nhất, người phụ trách và phương pháp kiểm chứng. Các bằng chứng cần có được quản lý tại [bảng sẵn sàng](project.md#readiness). Thiết kế DM có thể tiến hành độc lập với việc thử nghiệm tích hợp media còn thiếu.

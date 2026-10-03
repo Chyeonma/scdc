@@ -1,6 +1,6 @@
 # SCDC — Hướng dẫn phát triển
 
-Cập nhật: 2026-10-03. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại project.md.
+Cập nhật: 2026-10-04. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại project.md.
 
 Các lệnh dưới đây chạy từ root repo trừ khi có ghi thư mục khác. Cấu hình và dữ liệu mẫu dành cho local Development.
 
@@ -155,7 +155,7 @@ python3 scripts/check_docs.py
 
 Lệnh kiểm tra link local và anchor trong docs hiện hành, README repo và README kỹ thuật; archive được giữ nguyên như bản lịch sử. Bộ ca TC/AC trong đặc tả vẫn cần ghi build, môi trường, dữ liệu, thực tế và bằng chứng mỗi lần chạy. Quy trình nghiệm thu ở [phát hành và vận hành](release-operations.md#testing).
 
-Hiện chưa có kịch bản k6 trong repo. Chốt ngưỡng và cấu hình đo ở OQ-007 trước khi viết/chạy kiểm thử tải. Lần hợp nhất docs không tạo kết quả nghiệm thu phần mềm.
+Hiện chưa có kịch bản k6 trong repo. Ngưỡng chat/media, browser và backup đã chốt DEC-082/083/085/086; baseline workload/phương pháp đo ở [mục tiêu chất lượng](release-operations.md#quality-targets). Khóa build/cấu hình/dataset/thiết bị trước viết và chạy test tải; fixture JSON tại `docs/fixtures` là dữ liệu biên, không phải kết quả product test. Kiểm tra tài liệu không tạo bằng chứng nghiệm thu phần mềm.
 
 <a id="troubleshooting"></a>
 

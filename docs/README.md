@@ -1,6 +1,6 @@
 # Tài liệu SCDC
 
-Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng. Mỗi nội dung có một nguồn chuẩn; các bản đã thay thế nằm trong archive. Cập nhật hợp nhất: 2026-10-03.
+Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng. Mỗi nội dung có một nguồn chuẩn; các bản đã thay thế nằm trong archive. Hợp nhất: 2026-10-03; cập nhật quyết định và đặc tả: 2026-10-04.
 
 ## Bắt đầu từ đâu
 
@@ -20,9 +20,9 @@ Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng
 | [Tài khoản](features/accounts.md) | SCP-002 | Đăng ký/xác minh, đăng nhập, hồ sơ, mật khẩu, phiên và API hiện tại |
 | [Nhắn tin riêng](features/direct-messaging.md) | Phần DM của SCP-005 | Tìm người, hội thoại hai người, tin văn bản, thử lại, đồng thời và reconnect |
 | [Cộng đồng](features/community.md) | SCP-003/004 và phần tin phòng của SCP-005 | Tham gia, phòng, lời mời, vai trò, quyền và thu hồi |
-| [Thoại/video](features/voice-video.md) | SCP-006/007 | Gọi riêng, phòng thoại, video/chia sẻ màn hình và đầu vào còn thiếu |
+| [Thoại/video](features/voice-video.md) | SCP-006/007 | Gọi riêng, phòng thoại, giới hạn, LiveKit tự host, chất lượng và kiểm thử |
 
-Tình trạng sẵn sàng theo scope được quản lý tại [project.md](project.md#coverage); mã quyết định ở [decisions.md](decisions.md#decisions). Không duy trì một bảng tiến độ độc lập tại mục lục.
+Tình trạng sẵn sàng theo scope được quản lý tại [project.md](project.md#coverage); mã quyết định ở [decisions.md](decisions.md#decisions). Bảng [tiến độ hoàn thiện tài liệu](project.md#coverage) ghi phần đã viết và quyết định còn cần; không duy trì bảng tiến độ độc lập tại mục lục.
 
 ## Cách quản lý thông tin
 
@@ -47,6 +47,8 @@ docs/
 │   ├── direct-messaging.md
 │   ├── community.md
 │   └── voice-video.md
+├── contracts/                 # Schema API; có nhãn draft khi chưa khóa thiết kế
+├── fixtures/                  # Dữ liệu biên dùng chung; không phải kết quả test
 └── archive/
 ```
 

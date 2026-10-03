@@ -1,6 +1,6 @@
 # SCDC — Mục tiêu, yêu cầu, phạm vi và kế hoạch
 
-Cập nhật: 2026-10-03. Nguồn chuẩn cho REQ, SCP, SUC, COST, AS, RSK, READY và PREP.
+Cập nhật: 2026-10-04. Nguồn chuẩn cho REQ, SCP, SUC, COST, AS, RSK, READY và PREP.
 
 Phạm vi sản phẩm đã được xác định ở mức tổng thể. Đặc tả và bằng chứng còn thiếu được theo dõi bên dưới; có code trong repo chưa đồng nghĩa đã nghiệm thu hoặc sẵn sàng phát hành.
 
@@ -125,12 +125,12 @@ Các chức năng bổ sung được đánh giá theo quy trình quản lý thay
 | Nội dung | Giá trị |
 |---|---|
 | Kiến trúc | Modular Monolith cho MVP theo DEC-060; microservices ở đợt sau, cần quyết định thời điểm và kế hoạch riêng. |
-| Thời gian mục tiêu | Khoảng 3 tháng từ ngày khởi động. Ngày bắt đầu và các mốc bàn giao cụ thể chưa xác định. |
-| Dự toán ban đầu | 500.000.000 VNĐ; cần ước lượng lại theo phạm vi và cơ cấu nhân sự đã xác định. |
-| Nhân sự hiện có | Vg, Sáng và Thái có thể tham gia toàn thời gian. Vg là trưởng nhóm, phụ trách kiến trúc tổng thể, lựa chọn công nghệ, UX/UI, trực tiếp lập trình và hướng dẫn Thái; Sáng phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg; Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn. |
+| Thời gian mục tiêu | Khoảng 3 tháng từ ngày khởi động. Ngày bắt đầu dự kiến 2026-10-05 theo DEC-088; lịch còn là đề xuất, chưa cam kết phát hành. |
+| Ngân sách minh họa | 250.000.000 VNĐ cho phương án 16 tuần đề xuất; ngân sách tượng trưng theo DEC-088, không là báo giá/trần được duyệt. Mốc 500 triệu giữ trong lịch sử. |
+| Nhân sự hiện có | Vg, Sáng và Thái dự kiến mỗi người 3–4 ngày/tuần, đủ ngày làm việc, từ 2026-10-05 theo DEC-088. Vg là trưởng nhóm, phụ trách kiến trúc tổng thể, lựa chọn công nghệ, UX/UI, trực tiếp lập trình và hướng dẫn Thái; Sáng phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg; Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn. |
 | Quy mô dự trù | 1.000 tài khoản, 100 người trực tuyến đồng thời và 20 người tham gia gọi đồng thời trên toàn hệ thống. |
 
-Quy mô tải là giả định phục vụ dự toán. Cơ cấu nhân sự hiện có khác với giả
+1.000 tài khoản và 100 người online là giả định tải phục vụ dự toán/kiểm thử; 20 người gọi đồng thời là giới hạn sản phẩm đã chốt DEC-079. Cơ cấu nhân sự hiện có khác với giả
 định ba kỹ sư có kinh nghiệm ban đầu; cần tính công sức kiêm nhiệm và hướng
 dẫn khi đánh giá tiến độ, chi phí. Xem [nhân sự và phương án làm rõ nhu cầu](project.md#team)
 và [dự toán và giả định](project.md#budget).
@@ -161,18 +161,17 @@ Nội dung chi tiết và điều kiện chấp nhận của từng kết quả 
 | SUC-005 | MVP vận hành bằng Modular Monolith với ranh giới module rõ theo DEC-060. | Hồ sơ kiến trúc hiện tại, kiểm tra phụ thuộc module và kết quả triển khai/kiểm thử MVP. |
 | SUC-006 | Sản phẩm sẵn sàng cho phát hành công khai. | Kết quả kiểm thử, nghiệm thu và xác nhận khả năng vận hành. |
 
-Chỉ tiêu định lượng, môi trường kiểm thử và mức lỗi chấp nhận được cần được
-xác định trước nghiệm thu.
+Chỉ tiêu định lượng đã chốt tại DEC-082/083/085/086. Môi trường, dữ liệu tải, kết quả chạy và mức lỗi tồn được phép cần hoàn tất trước nghiệm thu.
 
 | Nội dung cần chốt | Đầu ra cần có | Theo dõi |
 |---|---|---|
-| Trình duyệt/thiết bị và khả năng tiếp cận | Danh sách phiên bản, thiết bị, kích thước và hành trình bắt buộc; DEC-059 đã chốt desktop/trình duyệt điện thoại cho tài khoản và DM | OQ-007 |
+| Trình duyệt/thiết bị và khả năng tiếp cận | Danh sách phiên bản, thiết bị, kích thước và hành trình bắt buộc; DEC-059 đã chốt desktop/trình duyệt điện thoại cho tài khoản và DM; DEC-082 bổ sung Community/desktop-media | OQ-007 |
 | Hiệu năng và tải | Độ trễ API/gửi–nhận theo percentile, tỷ lệ lỗi, dataset, thời lượng tải và cấu hình đo | OQ-007 |
 | Chất lượng media | Độ trễ, âm thanh/hình ảnh, số người/luồng, mạng và thời gian reconnect | OQ-006/OQ-007 |
 | Thu hồi quyền/phiên | Thời hạn hiệu lực trên HTTP và kết nối đang mở, cách đo | OQ-007/OQ-008 |
-| Lưu giữ và khôi phục | Thời hạn giữ/xóa dữ liệu, mức mất dữ liệu và thời gian khôi phục chấp nhận được | OQ-011 |
+| Lưu giữ và khôi phục | Thời hạn giữ/xóa dữ liệu, RPO ≤15 phút/RTO ≤4 giờ/backup 30 ngày đã chốt DEC-086; còn công cụ và restore evidence | OQ-011 |
 
-1.000 tài khoản, 100 người trực tuyến và 20 người gọi đồng thời là giả định dự toán, không phải giới hạn sản phẩm hoặc kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.
+1.000 tài khoản và 100 người trực tuyến là giả định dự toán, không phải giới hạn đăng ký/online. Ngày 2026-10-04, 20 người gọi đồng thời trở thành giới hạn media MVP theo DEC-079; chưa có kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.
 
 <a id="team"></a>
 
@@ -182,11 +181,11 @@ xác định trước nghiệm thu.
 
 | Thành viên | Vai trò đã xác định | Khả năng tham gia | Cơ sở phân công |
 |---|---|---|---|
-| Vg | Trưởng nhóm, đại diện sản phẩm; phụ trách kiến trúc tổng thể, lựa chọn công nghệ, thiết kế UX/UI và trực tiếp lập trình; hướng dẫn Thái. | Toàn thời gian. | Thiết kế hệ thống và UX/UI, lựa chọn công nghệ, phát triển phần mềm cùng Sáng; điều phối công việc, xác nhận yêu cầu và phạm vi, hướng dẫn thành viên mới. |
-| Sáng | Phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg. | Toàn thời gian. | Thiết kế chi tiết và phát triển backend theo kiến trúc tổng thể; phối hợp với Vg trong các quyết định kỹ thuật. |
-| Thái | Phụ trách frontend và kiểm thử; thành viên mới được Vg hướng dẫn. | Toàn thời gian. | Phát triển giao diện theo thiết kế UX/UI của Vg và thực hiện kiểm thử; cần đào tạo, chia nhỏ công việc và rà soát kết quả. |
+| Vg | Trưởng nhóm, đại diện sản phẩm; phụ trách kiến trúc tổng thể, lựa chọn công nghệ, thiết kế UX/UI và trực tiếp lập trình; hướng dẫn Thái. | 3–4 ngày/tuần theo DEC-088. | Thiết kế hệ thống và UX/UI, lựa chọn công nghệ, phát triển phần mềm cùng Sáng; điều phối công việc, xác nhận yêu cầu và phạm vi, hướng dẫn thành viên mới. |
+| Sáng | Phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg. | 3–4 ngày/tuần theo DEC-088. | Thiết kế chi tiết và phát triển backend theo kiến trúc tổng thể; phối hợp với Vg trong các quyết định kỹ thuật. |
+| Thái | Phụ trách frontend và kiểm thử; thành viên mới được Vg hướng dẫn. | 3–4 ngày/tuần theo DEC-088. | Phát triển giao diện theo thiết kế UX/UI của Vg và thực hiện kiểm thử; cần đào tạo, chia nhỏ công việc và rà soát kết quả. |
 
-Khả năng tham gia toàn thời gian là cơ sở bố trí lịch. Công sức thực hiện cần
+Cơ sở mới từ 2026-10-04 là 3–4 ngày/tuần mỗi người; 8 giờ/ngày và 3,5 ngày/tuần dùng làm baseline giả định. Công sức thực hiện cần
 tính riêng cho điều phối, phân tích, thiết kế, đào tạo, phát triển và kiểm thử.
 Nhóm hiện tại chưa đáp ứng giả định ba kỹ sư có kinh nghiệm trong dự toán ban đầu.
 
@@ -233,21 +232,20 @@ OQ-012 vẫn mở về người dùng đại diện và cách đánh giá giá t
 
 ## 6. Ngân sách, giả định và rủi ro
 
-### Tình trạng dự toán
+### Mô hình ngân sách minh họa cập nhật 2026-10-04
 
-**Dự toán ban đầu: 500.000.000 VNĐ**, cho thời gian mục tiêu khoảng 3 tháng,
-bao gồm nhân sự, hạ tầng/công cụ và dự phòng.
+Theo DEC-088, ngân sách mang tính tượng trưng và được phép điều chỉnh để trình bày rõ. Mô hình **250.000.000 VNĐ** dưới đây do agent ước lượng cho phương án **16 tuần**; đơn giá chưa được các thành viên cung cấp, không phải mức lương thị trường/báo giá hoặc nghĩa vụ thanh toán. Mốc 500 triệu trước đây giữ làm lịch sử, không tiếp tục làm trần. Lịch 16 tuần cần người dùng xác nhận; không đổi phạm vi MVP hoặc tự loại media.
 
-Giả định ba kỹ sư có kinh nghiệm (AS-001) không còn phù hợp với đội ngũ đã
-xác định: Vg, Sáng và Thái tham gia toàn thời gian, trong đó Thái cần đào tạo
-dưới sự hướng dẫn của Vg. Vg kiêm nhiệm UX/UI; Thái phụ trách frontend và
-kiểm thử. Công sức kiêm nhiệm và phân tích nghiệp vụ cần được làm rõ.
-Xem [SCDC-ORG-001](project.md#team).
+| Hạng mục | Cơ sở minh họa | Số tiền |
+|---|---|---:|
+| Vg | 4 tháng × 20 triệu/tháng; gồm sản phẩm, kiến trúc, UX, code và hướng dẫn | 80.000.000 VNĐ |
+| Sáng | 4 tháng × 20 triệu/tháng; gồm backend, tích hợp, thử nghiệm và review | 80.000.000 VNĐ |
+| Thái | 4 tháng × 10 triệu/tháng; gồm frontend, học, kiểm thử và sửa lỗi | 40.000.000 VNĐ |
+| Hạ tầng/công cụ | Khoản minh họa cho môi trường, LiveKit tự host/TURN, email, backup và giám sát | 20.000.000 VNĐ |
+| Dự phòng | Khoản minh họa cho biến động công sức, tích hợp và vận hành | 30.000.000 VNĐ |
+| **Tổng** | Không cộng thêm BA/UX/QA như nhân sự độc lập vì đang kiêm nhiệm | **250.000.000 VNĐ** |
 
-Cần lập lại ước lượng theo công việc, năng lực, thời gian hướng dẫn và các
-vai trò kiêm nhiệm; đồng thời tính ảnh hưởng của việc loại nhóm chat riêng
-ngoài server. Chưa có dự toán điều chỉnh. Các khoản dưới đây được giữ làm
-mốc đối chiếu với dự toán ban đầu.
+Mức tháng giả định đã ứng với sự tham gia 3–4 ngày/tuần, không nhân thêm tỷ lệ công suất rồi tính trùng. Khi có đơn giá thực tế, thay từng giả định và tính lại thời gian/chi phí. Chi phí hạ tầng thật cần topology, số giờ camera/share, lưu lượng TURN, lưu trữ và báo giá; 20 triệu chưa chứng minh đủ. Chưa bao gồm thuế, marketing hoặc vận hành dài hạn ngoài kỳ minh họa.
 
 ### Cơ cấu dự toán ban đầu
 
@@ -267,7 +265,7 @@ tính công sức kiêm nhiệm cần được xác định khi cập nhật d�
 
 ### Nguồn lực và công sức cần ước lượng lại
 
-- Ba thành viên có thể dành toàn thời gian cho dự án.
+- Ba thành viên dự kiến 3–4 ngày/tuần mỗi người; cần tính quỹ thời gian thực tế theo DEC-088.
 - Vg phụ trách kiến trúc tổng thể, lựa chọn công nghệ, thiết kế UX/UI và trực
   tiếp lập trình, đồng thời điều phối, đại diện sản phẩm và hướng dẫn Thái;
   cần phân bổ thời gian cho từng trách nhiệm trong quỹ thời gian của một người.
@@ -300,6 +298,18 @@ Nhà cung cấp và cấu hình chưa được lựa chọn.
 Khoản 20.000.000 VNĐ là dự trù ban đầu, cần kiểm tra lại bằng cấu hình và mức
 sử dụng cụ thể trước khi lựa chọn dịch vụ.
 
+### Mô hình chi phí vận hành minh họa
+
+Để khớp khoản hạ tầng 20 triệu của kế hoạch, dùng **5 triệu/tháng × 4 tháng** làm khoản phân bổ tượng trưng: Web/API/worker 0,8 triệu; DB 1,2 triệu; SFU/TURN 1,5 triệu; backup 0,5 triệu; email/quan sát 0,4 triệu; dự phòng hạ tầng 0,6 triệu. Đây là số chia ngân sách, không phải giá dịch vụ hoặc bằng chứng cấu hình đủ tải. Không tính lại phần này bên ngoài tổng 250 triệu.
+
+Chi phí thật mỗi tháng = tài nguyên cố định + GB truyền ra × đơn giá vượt hạn + GB-tháng DB/backup × đơn giá + số email × đơn giá + khoản khác được xác nhận. Ghi currency/tỷ giá, lưu lượng bao gồm trong gói, cách tính TURN và thuế khi có báo giá; không cộng cùng một lưu lượng hai lần chỉ vì đã đi qua cả SFU và TURN.
+
+Ví dụ kỹ thuật để nhìn độ nhạy, **chưa phải mức dùng được xác nhận**: 2.000 giờ-người/tháng, trung bình 4 người/phòng, mọi người bật camera, thời lượng share bằng 20% giờ-người; bitrate giả định camera 1,5 Mbps, audio 0,064 Mbps, share 1 Mbps. Giả định mọi người đăng ký nhận mọi nguồn của người khác: giờ-luồng = giờ-người × (4−1); 1 Mbps truyền liên tục một giờ = 0,45 GB theo đơn vị thập phân. Camera khoảng 4.050 GB, audio 172,8 GB, share 540 GB, tổng 4.762,8 GB; cộng giả định 20% overhead khoảng **5.715 GB/tháng**. Simulcast/chọn nguồn/FPS/tỷ lệ bật camera/TURN làm số thực tế khác; cần đo GB thật thay hệ số minh họa.
+
+Ở workload media 10 + 8 + 2 người, số lượt nhận camera từ người khác = 10×9 + 8×7 + 2×1 = 148; với bitrate giả định trên và hai nguồn share trong mỗi phòng/call, lưu lượng ra minh họa khoảng 265 Mbps, khoảng 319 Mbps nếu cộng 20%. Con số này không suy ra chất lượng đã đạt hoặc thay kiểm thử mạng từng máy. Ghi chỉ số SFU/NIC và hóa đơn để điều chỉnh model.
+
+Dữ liệu cần thu thập cho OQ-010: giờ-người, tỷ lệ camera/share, số người/phòng, tỷ lệ qua TURN, bitrate/GB ra, tốc độ tăng DB/WAL, GB backup 30 ngày và email được provider nhận. Trước mở công khai phải chốt nhà cung cấp/cấu hình/hạn mức và cơ chế cảnh báo chi phí. Không tự mua dịch vụ trong quá trình hoàn thiện tài liệu.
+
 ### Giả định lập kế hoạch
 
 AS-001 đã được đối chiếu với cơ cấu nhân sự hiện tại và không còn phù hợp.
@@ -308,12 +318,12 @@ và chi phí, chưa phải cam kết năng lực hoặc hạn mức đăng ký c
 
 | Mã | Giả định | Cách kiểm chứng | Đầu mối dự kiến |
 |---|---|---|---|
-| AS-001 | Giả định ban đầu: có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Không còn phù hợp: đội ngũ gồm 3 thành viên toàn thời gian, có 1 thành viên mới cần hướng dẫn; phải ước lượng lại theo phân công và năng lực. | Vg, Sáng |
+| AS-001 | Giả định ban đầu: có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Không còn phù hợp: đội ngũ 3 thành viên, mỗi người 3–4 ngày/tuần, có 1 thành viên mới cần hướng dẫn; phải ước lượng lại theo phân công và năng lực. | Vg, Sáng |
 | AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Ước lượng theo yêu cầu, màn hình, kế hoạch kiểm thử và năng lực kiêm nhiệm của nhóm; làm rõ công việc phân tích nghiệp vụ. | Vg, Thái; Sáng hỗ trợ đánh giá kỹ thuật |
 | AS-003 | Tích hợp nền tảng media có sẵn cho thoại/video và chia sẻ màn hình. | Đánh giá tính phù hợp, khả năng tích hợp, chi phí và vận hành. | Tech Lead, kỹ sư media |
 | AS-004 | Quy mô dự trù 1.000 tài khoản. | Xác định nhóm người dùng ban đầu và nhu cầu lưu trữ. | Khách hàng, BA |
 | AS-005 | Có khoảng 100 người trực tuyến đồng thời trên toàn hệ thống. | Xác định nhu cầu tải dự kiến; kiểm chứng khả năng đáp ứng bằng kiểm thử tải. | Khách hàng, Tech Lead, QA |
-| AS-006 | Có khoảng 20 người tham gia gọi đồng thời trên toàn hệ thống. | Xác định kiểu phòng, số người/phòng và mức sử dụng; kiểm thử media theo kịch bản tương ứng. | Khách hàng, kỹ sư media, QA |
+| AS-006 | Dự trù ban đầu 20 người gọi đồng thời; ngày 2026-10-04 thành giới hạn MVP theo DEC-079. | Đã chốt quy tắc 10/phòng, 20/toàn hệ thống, 2 share/phòng; khả năng đáp ứng vẫn cần kiểm thử. | Khách hàng, kỹ sư media, QA |
 | AS-007 | Hạ tầng và công cụ cần khoảng 20.000.000 VNĐ trong thời gian dự án. | Lập mô hình chi phí theo cấu hình, mức sử dụng và báo giá. | Phụ trách vận hành |
 | AS-008 | Phạm vi có thể hoàn thành trong khoảng 3 tháng. | Ước lượng công việc, phụ thuộc và lịch nguồn lực sau phân tích, thiết kế. | Quản lý dự án, nhóm kỹ thuật |
 
@@ -332,9 +342,9 @@ kết quả đánh giá kỹ thuật.
 | Mã | Rủi ro | Ảnh hưởng | Biện pháp xử lý | Đầu mối dự kiến |
 |---|---|---|---|---|
 | RSK-001 | Phòng thoại trong server và gọi riêng hai người có video/chia sẻ màn hình; yêu cầu chất lượng chưa đầy đủ. | Tăng công sức tích hợp, kiểm thử và kéo dài tiến độ. | Làm rõ ma trận chức năng, giới hạn và điều kiện nghiệm thu trước khi ước lượng chi tiết. | Tech Lead, QA |
-| RSK-002 | Chưa xác định lượng sử dụng media và quy mô phòng. | Chi phí hạ tầng vượt dự trù. | Tính chi phí theo thời lượng, dữ liệu truyền tải và theo dõi mức sử dụng. | Phụ trách vận hành |
+| RSK-002 | Giới hạn phòng/media đã chốt DEC-079; lượng sử dụng, bitrate thực tế và giá hạ tầng còn thiếu. | Chi phí hạ tầng vượt dự trù. | Tính chi phí theo thời lượng, dữ liệu truyền tải và theo dõi mức sử dụng. | Phụ trách vận hành |
 | RSK-003 | Ranh giới module, tích hợp MVP và việc tách microservices ở đợt sau có thể làm tăng công sức. | Tăng công sức triển khai, kiểm thử tích hợp và vận hành. | Xác định ranh giới module, trách nhiệm dữ liệu và công việc vận hành MVP; ước lượng tách dịch vụ ở kế hoạch riêng. | Tech Lead |
-| RSK-004 | Khối lượng kiêm nhiệm frontend, UX/UI và kiểm thử chưa được ước lượng; trình duyệt hỗ trợ và trách nhiệm quản trị nền tảng công khai chưa được xác định. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Ước lượng công sức theo phân công hiện có; chốt trình duyệt hỗ trợ và trách nhiệm quản trị trước khi xác nhận kế hoạch thực hiện. | Vg, Sáng, Thái |
+| RSK-004 | Khối lượng kiêm nhiệm frontend, UX/UI và kiểm thử chưa được ước lượng; trình duyệt đã chốt DEC-082 nhưng cấu hình nghiệm thu và trách nhiệm quản trị nền tảng công khai còn thiếu. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Ước lượng công sức theo phân công hiện có; khóa cấu hình nghiệm thu và trách nhiệm quản trị trước phát hành. | Vg, Sáng, Thái |
 | RSK-005 | Thời gian đào tạo, hướng dẫn và rà soát của thành viên mới chưa được lượng hóa. | Giảm thời gian dành cho các công việc khác và tăng độ bất định của tiến độ. | Chia công việc nhỏ, bố trí thời gian hướng dẫn và đánh giá công sức theo kết quả thực hiện. | Vg, Sáng |
 
 ### Điều kiện cập nhật dự toán
@@ -350,18 +360,34 @@ ngân sách hoặc thay đổi phạm vi bàn giao.
 
 | Phạm vi | Đầu ra hiện có | Khoảng trống chính | Trạng thái |
 |---|---|---|---|
-| SCP-001 Web | DEC-059; [wireframe tài khoản/DM](features/direct-messaging.md#ux) | Đã chốt desktop và trình duyệt điện thoại cho tài khoản/DM; còn ma trận trình duyệt/phiên bản/thiết bị, tiếp cận và hiệu năng (OQ-007). | Một phần, chưa chốt ngưỡng |
-| SCP-002 Tài khoản | [SCDC-FR-ACC-001](features/accounts.md#requirements) | Đã chốt bộ định danh/hồ sơ, quyền trước xác minh và khôi phục; có ACC-P01–05 để rà soát. Còn chính sách mật khẩu, chuẩn hóa, thời hạn, phiên và chống lạm dụng (OQ-002). | Quy tắc cốt lõi đã chốt; chi tiết còn mở |
-| SCP-003 Cộng đồng | [SCDC-FR-COM-001](features/community.md#requirements), [wireframe](features/community.md#ux) | Còn tạo/sửa cộng đồng, vai trò thêm trực tiếp, từ chối/hủy yêu cầu, tham gia lại và chuyển chủ sở hữu (OQ-003). | Một phần, bản nháp |
+| SCP-001 Web | DEC-059; [wireframe tài khoản/DM](features/direct-messaging.md#ux) | Đã chốt ma trận trình duyệt cho Accounts/DM/Community và media desktop (DEC-082), ngưỡng chat/thu hồi (DEC-083); còn OS/thiết bị/build, tiếp cận và kết quả đo (OQ-007). | Phạm vi/ngưỡng đã chốt; cần kiểm chứng |
+| SCP-002 Tài khoản | [SCDC-FR-ACC-001](features/accounts.md#requirements) | Chốt định danh, mật khẩu/lockout, phiên/thời hạn, gửi lại, hồ sơ và kênh khôi phục tại DEC-063–068; có trạng thái/dữ liệu và ACC-GAP-01–07. Còn thiết kế email/resend/rate limit và kiểm chứng các chênh lệch source (OQ-002/OQ-008). | Nghiệp vụ đã chi tiết hóa; kỹ thuật còn mở |
+| SCP-003 Cộng đồng | [SCDC-FR-COM-001](features/community.md#requirements), [wireframe](features/community.md#ux) | Đã chốt tạo/sửa, xử lý yêu cầu, mời/rời/tham gia lại (DEC-072–077/087); mời đích danh 7 ngày/tham gia lại đã chốt DEC-087; còn schema, cấu hình quyền và kiểm chứng đồng thời (OQ-003/OQ-008). | Nghiệp vụ đã chi tiết hóa; thiết kế kỹ thuật dự thảo |
 | SCP-004 Phân quyền | [SCDC-FR-ACL-001](features/community.md#permissions) | Đã chốt vai trò + ngoại lệ cá nhân, quyền chủ sở hữu, thứ tự xung đột và quản lý vai trò; còn dữ liệu/cấu hình, giới hạn và thu hồi đồng thời (OQ-004/OQ-007). | Quy tắc cốt lõi đã chốt; thiết kế chưa duyệt |
-| SCP-005 Nhắn tin | [DM](features/direct-messaging.md#requirements), [cộng đồng](features/community.md#requirements), [hợp đồng DM](features/direct-messaging.md#contracts) | Đã chốt 2.000 ký tự và chỉ giữ bản sửa mới nhất; có thiết kế chống trùng/đồng bộ. Còn phép đếm, tìm kiếm, lưu giữ và kiểm chứng thiết kế (OQ-005/OQ-008/OQ-011). | Đã chi tiết hóa; còn rà soát và thử nghiệm |
-| SCP-006 Thoại | [Khung media](features/voice-video.md#requirements) | Đã có hành trình/tiêu chí khung; còn luồng gọi riêng/phòng thoại, số người/phòng, quyền tham gia, mất kết nối và chỉ tiêu chất lượng (OQ-006). | Khung, chưa đủ triển khai |
-| SCP-007 Video/chia sẻ màn hình | [Khung media](features/voice-video.md#requirements) | Đã có tiêu chí chức năng khung; còn quy tắc camera/micro/chia sẻ, quyền thiết bị, giới hạn và tình huống lỗi (OQ-006). | Khung, chưa đủ triển khai |
-| SCP-008 Phát hành | Project Brief, [quy trình](project.md#process) | Điều kiện vận hành, quản trị, sao lưu/khôi phục, hỗ trợ, đo chất lượng và quyết định mở công khai (OQ-007, OQ-010, OQ-011). | Chưa đặc tả |
+| SCP-005 Nhắn tin | [DM](features/direct-messaging.md#requirements), [cộng đồng](features/community.md#requirements), [hợp đồng DM](features/direct-messaging.md#contracts) | Đã chốt UTF-16, tìm người, tin không tự hết hạn và bàn phím tại DEC-068–071; chỉ giữ bản sửa mới nhất. REST/SignalR và cursor bảo vệ đã chốt DEC-081, backup 30 ngày DEC-086; còn validation chi tiết, mapping SQL/xóa tài khoản và kiểm chứng thiết kế (OQ-005/OQ-008/OQ-011). | Đã chi tiết hóa; còn rà soát và thử nghiệm |
+| SCP-006 Thoại | [Đặc tả media](features/voice-video.md#requirements) | Đã có hành trình/tiêu chí khung; đã chốt điều kiện gọi, giới hạn 10/20 và reconnect 30 giây (DEC-078–080), có state/contract/TC đề xuất; LiveKit tự host và chất lượng đã chốt DEC-084/085; còn schema, admission/thu hồi, thử nghiệm và tích hợp (OQ-006/007/008). | Đã chi tiết hóa nghiệp vụ; kỹ thuật còn mở |
+| SCP-007 Video/chia sẻ màn hình | [Đặc tả media](features/voice-video.md#requirements) | Đã có tiêu chí chức năng khung; đã chốt một camera/share mỗi người, 2 share/phòng (DEC-079); có UX/state/TC, LiveKit tự host, ma trận/chất lượng đã chốt DEC-082/084/085; còn layout, cấu hình thiết bị, thử nghiệm và tích hợp (OQ-006/007/008). | Nghiệp vụ/giới hạn đã chốt; tích hợp còn dự thảo |
+| SCP-008 Phát hành | Project Brief, [quy trình](project.md#process) | Điều kiện vận hành, quản trị, sao lưu/khôi phục, hỗ trợ, đo chất lượng và quyết định mở công khai (OQ-007, OQ-010, OQ-011). | Có kế hoạch kiểm thử/backup và checklist; phân công/topology còn mở |
 
 Đầu ra chuẩn bị và điều kiện còn thiếu theo gói tài khoản/DM được theo
 dõi tại [SCDC-READY-001](project.md#readiness).
 Repo có bộ test tự động cho Identity/response; lần chỉnh docs này chưa chạy hoặc nghiệm thu sản phẩm. Không đánh dấu yêu cầu đạt chỉ vì có test.
+
+### Tiến độ hoàn thiện tài liệu ngày 2026-10-04
+
+Bảng này đánh giá nội dung đã viết và quyết định còn cần, không đánh giá phần mềm đã hoàn thành. “Có bản thiết kế” chưa có nghĩa đã chạy thử hoặc được nghiệm thu.
+
+| Phần | Nội dung đã hoàn thiện trong đợt này | Còn cần để khóa tài liệu |
+|---|---|---|
+| Mục tiêu/phạm vi | REQ/SCP/SUC, luồng ưu tiên và ranh giới MVP nhất quán | Nhóm sử dụng đầu tiên/ngôn ngữ và cách đánh giá nội bộ đang được hỏi |
+| Tài khoản | Quy tắc định danh/hồ sơ/mật khẩu/phiên, trạng thái, UX, AC/TC, đối chiếu code; thiết kế resend/email worker | Rà soát limiter/email/key store; kiểm chứng ACC-GAP trong gói triển khai |
+| DM | Quy tắc tìm/gửi/sửa/xóa/UTF-16, UX desktop/mobile, REST/SignalR, OpenAPI 7 operation, cursor/transaction/reconnect, fixture và AC/TC | Khóa validation chi tiết, mapping SQL và mock; kiểm chứng concurrency/thu hồi khi triển khai |
+| Cộng đồng/quyền | Tạo/sửa, mời/duyệt/từ chối/hủy, rời/tham gia lại/chuyển chủ sở hữu, phòng và ma trận quyền, state/API draft, AC/TC | Mô hình/configuration vai trò, schema API và migration; quyết định vòng đời cộng đồng nếu bổ sung xóa |
+| Media | Giới hạn 10/20/2, ring/reconnect 30 giây, UX/state/control API, self-host admission, AC/TC và mục tiêu chất lượng | Ngưỡng thu hồi media, schema/provider integration và thử admission trên self-host |
+| Kế hoạch/dự toán | Ngày đầu 05/10/2026, công suất 3–4 ngày/tuần; phương án 16 tuần/148 ngày công, dự phòng 20 ngày; ngân sách tượng trưng 250 triệu | Chọn lịch; nhóm rà soát ngày công/lịch nghỉ và số liệu sử dụng thực tế |
+| Nghiệm thu/vận hành | Ma trận trình duyệt, ngưỡng/phương pháp đo, workload; topology, trình tự release/rollback, backup/restore, cảnh báo và model chi phí | Phạm vi quản trị/phân công, provider/domain/key store và mức lỗi tồn được phép; kết quả diễn tập thuộc việc triển khai |
+
+Các câu hỏi sản phẩm đang gửi: lịch 16 tuần, đối tượng/ngôn ngữ và phạm vi quản trị tách khỏi tên người phụ trách. Không tự ghi “đã xác nhận” nếu người dùng chưa trả lời. Các gói technical evidence/PREP vẫn cần thực thi trong kế hoạch phát triển, không phải ca đã chạy trong lần hoàn thiện tài liệu.
 
 <a id="delivery"></a>
 
@@ -369,15 +395,13 @@ Repo có bộ test tự động cho Identity/response; lần chỉnh docs này c
 
 ### Cơ sở và nguyên tắc lập lịch
 
-Ba người Vg, Sáng và Thái có thể tham gia toàn thời gian. Vg kiêm điều
+Ba người Vg, Sáng và Thái dự kiến mỗi người 3–4 ngày/tuần, đủ ngày làm việc, từ 2026-10-05 theo DEC-088. Vg kiêm điều
 phối, đại diện sản phẩm, kiến trúc, UX/UI, lập trình và hướng dẫn Thái;
 Sáng phụ trách backend và tích hợp; Thái phụ trách frontend và kiểm thử.
 Thời gian kiêm nhiệm phải lấy từ quỹ thời gian của chính từng người,
 không tính như một vị trí bổ sung.
 
-Mục tiêu khoảng ba tháng từ ngày khởi động và mốc 500 triệu đồng là cơ sở
-đối chiếu, chưa phải lịch/chi phí cam kết. Ngày khởi động, tốc độ làm
-việc, giới hạn media và đơn giá thực tế chưa xác định. Các đợt dưới đây
+Ngày bắt đầu dự kiến 2026-10-05; công suất 3–4 ngày/tuần theo DEC-088. Mục tiêu ba tháng cũ cần đánh giá lại; đề xuất 16 tuần và mô hình 250 triệu chỉ để lập kế hoạch, chưa phải cam kết/chi phí thật. Giới hạn media đã chốt DEC-079; năng suất và đơn giá thực tế còn thiếu. Các đợt dưới đây
 có thứ tự phụ thuộc, có thể chồng lấp ở phần việc đã đủ đầu vào.
 
 ### Đợt bàn giao và điều kiện chuyển tiếp
@@ -401,11 +425,29 @@ Tình trạng từng đầu ra Đợt 0, gói việc chuẩn bị và bằng ch�
 bản, hợp đồng DM và ca kiểm thử; chưa có kết quả thử nghiệm hoặc xác
 nhận hoàn tất Đợt 0.
 
+### Phương án 16 tuần để xem xét
+
+Ngày đầu 05/10/2026; kết thúc mục tiêu 24/01/2027 nếu đủ công suất và các điều kiện chuyển đợt. Baseline 3,5 ngày/tuần × 16 tuần = 56 ngày/người, tổng 168 ngày; dải 3–4 ngày là 144–192 ngày. Các ngày dưới đây là ước lượng agent dựa trên scope/source hiện tại, gồm hướng dẫn/review/kiểm thử, chưa có dữ liệu năng suất để cam kết.
+
+| Đợt | Khoảng lịch đề xuất | Vg (ngày) | Sáng (ngày) | Thái (ngày) |
+|---|---|---:|---:|---:|
+| 0. Chốt nền | Tuần 1–2, 05/10/2026–18/10/2026 | 6 | 6 | 5 |
+| 1. DM | Tuần 3–6, 19/10/2026–15/11/2026 | 11 | 13 | 12 |
+| 2. Cộng đồng/phòng | Tuần 7–10, 16/11/2026–13/12/2026 | 11 | 12 | 11 |
+| 3. Media | Tuần 9–13, 30/11/2026–03/01/2027 | 12 | 12 | 11 |
+| 4. Ổn định/nghiệm thu | Tuần 14–16, 04/01/2027–24/01/2027 | 8 | 8 | 10 |
+| **Tổng công việc baseline** | Gồm kiêm nhiệm và đào tạo | **48** | **51** | **49** |
+| **Quỹ còn lại ở 3,5 ngày/tuần** | Dự phòng trong công suất 56 ngày/người | **8** | **5** | **7** |
+
+Cộng đồng/media chồng tuần 9–10 nhưng không cộng quá quỹ thời gian: tuần 7–8 ưu tiên cộng đồng (7 ngày/người); tuần 9–10 phân bổ phần cộng đồng còn lại Vg 4/Sáng 5/Thái 4 ngày và media Vg 3/Sáng 2/Thái 3 ngày. Tuần 11–13 media còn Vg 9/Sáng 10/Thái 8 ngày, trong 10,5 ngày/người baseline. Không giả định Thái tự làm phần media backend.
+
+Ở mức 3 ngày/tuần, Sáng cần 51 ngày trong khi chỉ có 48 ngày, Thái 49; phải kéo lịch hoặc điều chỉnh phân công/công sức. Lịch chưa trừ ngày nghỉ/lễ; nếu giữ mốc ba tháng cần giảm công sức bằng bằng chứng, tăng công suất hoặc được duyệt thay đổi. Đánh giá lại sau đợt 0 và thử nghiệm self-host media; không tự giảm scope. Phương án này cần người dùng chọn trước khi ghi thành lịch đã xác nhận.
+
 ### Bảng công việc để ước lượng
 
 Ước lượng mỗi dòng bằng ngày công còn lại, tách thiết kế, thực hiện, rà
 soát, kiểm thử và sửa lỗi. Ghi người làm, người rà soát và phụ thuộc; cập
-nhật sau mỗi đợt. Chưa điền ngày công vì đặc tả và năng lực chưa đủ rõ.
+nhật sau mỗi đợt. Baseline minh họa ở phương án trên; bảng gói cần được nhóm rà soát thành ước lượng thực tế.
 
 | Nhóm việc | Đầu ra cần ước lượng | Người dự kiến | Dữ liệu còn thiếu |
 |---|---|---|---|
@@ -454,14 +496,14 @@ Trạng thái của bảng này là mức sẵn sàng đặc tả và bằng ch�
 
 | Mã | Điều kiện/đầu ra | Tình trạng và bằng chứng | Việc còn lại/đầu mối dự kiến |
 |---|---|---|---|
-| READY-01 | Tài khoản tối thiểu | Đã chốt định danh, email không công khai, quyền trước xác minh; có luồng và AC-ACC-01–10 tại [đặc tả](features/accounts.md#requirements) | Rà soát ACC-P01–05, chính sách mật khẩu, phiên và chống lạm dụng; Vg/Sáng |
-| READY-02 | DM và ngoại lệ | Đã chốt giới hạn 2.000 ký tự và không giữ lịch sử sửa; có AC-DM-01–15 và bảng ngoại lệ tại [đặc tả](features/direct-messaging.md#requirements) | Khóa phép đếm/tìm kiếm/lưu giữ; rà soát trường hợp đồng thời; Vg/Sáng, Thái đối chiếu |
+| READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 ở phần chính sách (DEC-063–068), luồng trạng thái và AC-ACC-01–19; có bảng coverage test/source tại [đặc tả](features/accounts.md#implementation-review) | Thiết kế email/resend/rate limit, giải quyết ACC-GAP và ghi bằng chứng; Vg/Sáng |
+| READY-02 | DM và ngoại lệ | Đã chốt 2.000 UTF-16, tìm người, không tự hết hạn và cách gửi (DEC-068–071); có AC-DM và ngoại lệ tại [đặc tả](features/direct-messaging.md#requirements) | Khóa ký tự trắng/vô hình, schema/cursor; kiểm chứng đồng thời và chính sách backup/xóa tài khoản; Vg/Sáng, Thái đối chiếu |
 | READY-03 | Ma trận quyền cốt lõi | Đã chốt vai trò, ngoại lệ cá nhân, chủ sở hữu và thứ tự quyền tại [ma trận](features/community.md#permissions) | Thiết kế dữ liệu/cấu hình/thu hồi; các luồng cộng đồng còn mở không chặn thiết kế DM độc lập |
-| READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg rà soát, Thái dựng prototype; chốt ma trận trình duyệt/thiết bị và trạng thái còn mở |
-| READY-05 | API/dữ liệu DM | Có [hợp đồng đề xuất](features/direct-messaging.md#contracts) với schema logic, lỗi, chống trùng, lịch sử và cập nhật | Vg/Sáng khóa transport/ID/phiên, rà soát hợp đồng cùng Thái; Identity có OpenAPI từ code; DM chưa có OpenAPI/mock được xác nhận |
+| READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg rà soát, Thái dựng prototype; ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
+| READY-05 | API/dữ liệu DM | Có [hợp đồng đề xuất](features/direct-messaging.md#contracts) với schema logic, lỗi, chống trùng, lịch sử và cập nhật | REST/SignalR, ID/cursor đã chọn DEC-081; Vg/Sáng rà soát schema/lỗi cùng Thái; Identity có OpenAPI từ code; DM có [OpenAPI dự thảo](contracts/direct-messaging.openapi.json), chưa khóa thiết kế hoặc có mock chạy được |
 | READY-06 | Thử nghiệm kỹ thuật | Có kịch bản cần chứng minh tại [bằng chứng thử nghiệm](#technical-evidence); chưa chạy | Chốt thiết kế DM trên nền Modular Monolith và môi trường, chạy và ghi bằng chứng; Vg/Sáng |
-| READY-07 | Kiểm thử | Có [ca kiểm thử](features/direct-messaging.md#tests) và dữ liệu dự kiến; tất cả chưa chạy | Thái chuẩn bị fixture, Vg/Sáng rà soát; chốt ngưỡng chất lượng và ghi kết quả |
-| READY-08 | Công việc/nguồn lực | Có các gói cụ thể tại [gói chuẩn bị](#preparation); chưa có ngày công/lịch được xác nhận | Vg/Sáng/Thái ước lượng trong quỹ thời gian thật, gồm hướng dẫn và kiểm thử |
+| READY-07 | Kiểm thử | Có [ca kiểm thử](features/direct-messaging.md#tests) và dữ liệu dự kiến; tất cả chưa chạy | Thái chuẩn bị fixture, Vg/Sáng rà soát; ngưỡng chat đã chốt DEC-083; khóa fixture/môi trường, đo cả ngưỡng media đã chốt DEC-085 và ghi kết quả |
+| READY-08 | Công việc/nguồn lực | Có các gói cụ thể tại [gói chuẩn bị](#preparation); có baseline ngày công/lịch 16 tuần đề xuất; chưa xác nhận | Vg/Sáng/Thái ước lượng trong quỹ thời gian thật, gồm hướng dẫn và kiểm thử |
 
 Không tính phần trăm từ số dòng hoàn tất. Mỗi gói chỉ sẵn sàng khi có
 yêu cầu, thiết kế, kiểm chứng và người phụ trách tương ứng. Quyết định
@@ -474,7 +516,7 @@ liên quan; không tự loại chúng khỏi phiên bản đầu để đánh d�
 
 | Gói | Đầu ra | Phụ thuộc | Thực hiện / rà soát dự kiến | Điều kiện hoàn tất |
 |---|---|---|---|---|
-| PREP-01 | Chốt đặc tả tài khoản còn lại và dữ liệu biên | ACC-P*, OQ-002 | Vg, Sáng / Thái đối chiếu kiểm thử | Quy tắc không còn chỗ diễn giải khác nhau ở luồng bàn giao; AC cập nhật |
+| PREP-01 | Hoàn thiện thiết kế tài khoản và fixture sau chính sách đã chốt | ACC-GAP-01–07, OQ-002 | Vg, Sáng / Thái đối chiếu kiểm thử | Quy tắc không còn chỗ diễn giải khác nhau ở luồng bàn giao; AC cập nhật |
 | PREP-02 | Prototype tài khoản/DM và cộng đồng theo mã màn hình | Wireframe, quyết định liên quan | Vg thiết kế, Thái dựng / Sáng rà soát phản hồi API | Có trạng thái rỗng/lỗi/mất mạng/mất quyền; ghi kết quả rà soát |
 | PREP-03 | Hợp đồng API có schema máy đọc được và mock | SCDC-API-DM-001, PREP-01 | Sáng, Vg / Thái dùng mock | Request/response/lỗi thống nhất; không trả dữ liệu ngoài quyền |
 | PREP-04 | Thử nghiệm DM lưu bền/chống trùng/phân trang | PREP-03, lựa chọn công nghệ | Sáng / Vg, Thái quan sát | Các [kịch bản thử nghiệm](#technical-evidence) có bằng chứng, rủi ro được ghi nhận |
@@ -483,8 +525,7 @@ liên quan; không tự loại chúng khỏi phiên bản đầu để đánh d�
 | PREP-07 | Ước lượng và lịch đợt tài khoản/DM | PREP-01–06 đủ rõ | Vg, Sáng, Thái | Ngày công, người làm/rà soát, thời gian hướng dẫn và phụ thuộc không trùng quỹ thời gian |
 
 Đây là phân công dự kiến theo vai trò hiện có, chưa phải xác nhận các
-thành viên đã nhận việc. Chưa điền ngày công hay ngày phát hành khi chưa
-có đầu vào. Gói cộng đồng chi tiết và media tiếp tục theo kế hoạch đợt 2/3.
+thành viên đã nhận việc. Ngày công/lịch baseline ở phương án 16 tuần; từng gói vẫn cần nhóm rà soát và xác nhận trước cam kết. Gói cộng đồng chi tiết và media tiếp tục theo kế hoạch đợt 2/3.
 
 <a id="technical-evidence"></a>
 
@@ -498,17 +539,14 @@ có đầu vào. Gói cộng đồng chi tiết và media tiếp tục theo kế
    bù nhiều trang và cập nhật sửa/xóa tin cũ, không dùng cache hết hiệu lực.
 4. Worker dừng rồi hoạt động lại; sự kiện lặp/đảo thứ tự không nhân đôi
    hoặc đưa giao diện về phiên bản tin cũ.
-5. Thu hồi phiên chặn HTTP và kết nối đang mở theo ngưỡng cần thống
-   nhất; chốt cách đo, không tuyên bố thu hồi tức thời khi chưa chứng minh.
+5. Thu hồi phiên chặn HTTP và kết nối chat đang mở trong ≤5 giây theo DEC-083; ghi cách đo, không tuyên bố thu hồi tức thời khi chưa chứng minh.
 
 Mỗi bằng chứng ghi môi trường, bản thử, dữ liệu, thao tác, kết quả, hạn
 chế và người rà soát. Viết kế hoạch hoặc sơ đồ không thay thế chạy thử.
 
 ### Thứ tự xử lý tiếp theo
 
-Ưu tiên rà soát các phương án tài khoản và phép đếm/tìm kiếm của DM,
-đồng thời dựng prototype từ wireframe. Sau đó chốt giải pháp/transport còn thiếu
-và khóa hợp đồng, chuẩn bị fixture và thử nghiệm. Chỉ xác nhận gói
+Ngày 2026-10-04 đã chốt chính sách tài khoản, DM và các luồng cộng đồng tại DEC-063 trở đi. Tiếp theo hoàn thiện thiết kế email/resend, bộ ký tự trắng/vô hình và prototype từ wireframe. Sau đó cụ thể hóa tích hợp REST/SignalR và LiveKit đã chọn, rồi khóa hợp đồng, chuẩn bị fixture và thử nghiệm. Chỉ xác nhận gói
 phát triển khi các phụ thuộc trực tiếp được giải quyết; không cần chờ
 đặc tả toàn bộ media để rà soát thiết kế DM.
 
