@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCDC chat application messages — design draft",
+  "description": "Catalogue name/kind/payload cho tài liệu/mock. SignalR SDK truyền invoke argument hoặc event payload; đây không là SignalR wire frame. Mutation chỉ REST. Resolve các $ref tương đối từ vị trí file này.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "SubscribeConversation"
+        },
+        "kind": {
+          "const": "invoke"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "conversationId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "conversationId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "UnsubscribeConversation"
+        },
+        "kind": {
+          "const": "invoke"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "conversationId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "conversationId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "SubscriptionAcknowledgement"
+        },
+        "kind": {
+          "const": "result"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "conversationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "subscribed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "conversationId",
+            "subscribed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "MessageChanged"
+        },
+        "kind": {
+          "const": "event"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "conversationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "message": {
+              "$ref": "./direct-messaging.openapi.json#/components/schemas/Message"
+            }
+          },
+          "required": [
+            "eventId",
+            "conversationId",
+            "message"
+          ],
+          "additionalProperties": false,
+          "description": "conversationId phải khớp message.conversationId; version hiện hành, event có thể lặp/đảo thứ tự."
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "AccessRevoked"
+        },
+        "kind": {
+          "const": "event"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "scope": {
+              "enum": [
+                "session",
+                "user",
+                "conversation"
+              ]
+            },
+            "conversationId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "reason": {
+              "enum": [
+                "session_expired",
+                "session_revoked",
+                "access_removed",
+                "account_unavailable"
+              ]
+            }
+          },
+          "required": [
+            "scope",
+            "conversationId",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "scope": {
+                    "const": "conversation"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "conversationId": {
+                    "type": "string"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "conversationId": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "HubProblem"
+        },
+        "kind": {
+          "const": "error"
+        },
+        "payload": {
+          "$ref": "./direct-messaging.openapi.json#/components/schemas/ProblemDetails"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "x-scdc-status": "design-draft",
+  "x-scdc-implementation": "not-implemented",
+  "x-scdc-decisions": [
+    "DEC-081",
+    "DEC-083"
+  ]
+}

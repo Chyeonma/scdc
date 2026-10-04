@@ -1,0 +1,4376 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SCDC Community, permissions and channel text — target design",
+    "version": "0.1.0-draft",
+    "description": "Community/Messaging Foundation only; all operations not implemented. Product decisions DEC-092–098 confirmed; algorithms/schema/errors are draft review artefacts. No server deletion endpoint in MVP."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/servers": {
+      "get": {
+        "operationId": "listMyServers",
+        "summary": "Danh sách cộng đồng đang tham gia",
+        "description": "Danh sách cộng đồng đang tham gia",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyServerPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "valid account/session",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createServer",
+        "summary": "Tạo cộng đồng",
+        "description": "Tạo cộng đồng",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "active verified account",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/search": {
+      "get": {
+        "operationId": "searchPublicServers",
+        "summary": "Tìm cộng đồng công khai theo tên",
+        "description": "DEC-093. Recheck current public/active status on every page, exact-name rank then normalized name/UUID; case-insensitive/accent-sensitive.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "valid account/session",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}": {
+      "get": {
+        "operationId": "getServer",
+        "summary": "Summary công khai hoặc detail của thành viên",
+        "description": "Summary công khai hoặc detail của thành viên",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerView"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "public summary or active membership; hidden private -> 404",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "updateServer",
+        "summary": "Sửa metadata/visibility cộng đồng",
+        "description": "DEC-096: public -> private cancels all pending join requests in the same transaction, reason server_private; preserve members/invites.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateServerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/membership/me": {
+      "get": {
+        "operationId": "getMyMembership",
+        "summary": "Trạng thái lần tham gia của chính mình",
+        "description": "Trạng thái lần tham gia của chính mình",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "own existing membership row, including left",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/join": {
+      "post": {
+        "operationId": "joinPublicServer",
+        "summary": "Vào ngay hoặc gửi yêu cầu chờ duyệt",
+        "description": "Vào ngay hoặc gửi yêu cầu chờ duyệt",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Pending join request, no membership or channel access.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequest"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "current public server",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/join-requests/me": {
+      "get": {
+        "operationId": "getMyJoinRequest",
+        "summary": "Yêu cầu mới nhất của chính mình",
+        "description": "Yêu cầu mới nhất của chính mình",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyJoinRequest"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "sender; allowed to read own terminal reason after server becomes private",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/join-requests": {
+      "get": {
+        "operationId": "listJoinRequests",
+        "summary": "Danh sách yêu cầu tham gia",
+        "description": "Danh sách yêu cầu tham gia",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequestPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "review_join_requests",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/RequestStatus"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/join-requests/{requestId}/approve": {
+      "post": {
+        "operationId": "approveJoinRequest",
+        "summary": "approve yêu cầu đang chờ",
+        "description": "Single pending transition; approve creates/reactivates membership atomically. Old request cancelled by private switch cannot be approved.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequest"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "review_join_requests",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/requestId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpectedVersionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/join-requests/{requestId}/reject": {
+      "post": {
+        "operationId": "rejectJoinRequest",
+        "summary": "reject yêu cầu đang chờ",
+        "description": "Single pending transition; approve creates/reactivates membership atomically. Old request cancelled by private switch cannot be approved.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequest"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "review_join_requests",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/requestId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpectedVersionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/join-requests/{requestId}": {
+      "delete": {
+        "operationId": "cancelJoinRequest",
+        "summary": "Hủy yêu cầu đang chờ",
+        "description": "Hủy yêu cầu đang chờ",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequest"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "request sender",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/requestId"
+          },
+          {
+            "$ref": "#/components/parameters/ExpectedVersion"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/join-mode": {
+      "patch": {
+        "operationId": "updateJoinMode",
+        "summary": "Đổi chế độ tham gia",
+        "description": "Does not revoke issued invites. Response only member detail; owner-only fields remain server metadata.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_join_mode",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateJoinModeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/invites": {
+      "get": {
+        "operationId": "listInvites",
+        "summary": "Danh sách metadata link mời",
+        "description": "Danh sách metadata link mời",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitePage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createInvite",
+        "summary": "Tạo link mời",
+        "description": "Tạo link mời",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCreationResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCreationResult"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInviteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/invites/{inviteId}/link": {
+      "get": {
+        "operationId": "getInviteLink",
+        "summary": "Sao chép lại link còn hiệu lực",
+        "description": "Decrypt protected token only for current authorized actor and usable invite; no-store. Missing key -> 503, no silent token replacement.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteLink"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/inviteId"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/invites/{inviteId}": {
+      "delete": {
+        "operationId": "revokeInvite",
+        "summary": "Thu hồi link mời",
+        "description": "Thu hồi link mời",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "204": {
+            "description": "Committed result; target design, endpoint not implemented."
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/inviteId"
+          },
+          {
+            "$ref": "#/components/parameters/ExpectedVersion"
+          }
+        ]
+      }
+    },
+    "/invites/preview": {
+      "post": {
+        "operationId": "previewInvite",
+        "summary": "Xem summary bằng link hợp lệ",
+        "description": "Read-only despite POST; does not consume a use. Token in body, never path/query/log.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitePreview"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "valid account/session",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invites/join": {
+      "post": {
+        "operationId": "joinByInvite",
+        "summary": "Tham gia qua link mời",
+        "description": "Under server/invite lock, expire/revoke/uses validation plus membership and use_count atomically; existing active member does not consume another use. DEC-097 issuer permission not an expiry condition.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "valid account/session",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/member-invitations": {
+      "get": {
+        "operationId": "listServerMemberInvitations",
+        "summary": "Danh sách mời đích danh của server",
+        "description": "Danh sách mời đích danh của server",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberInvitationPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/InvitationStatus"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createMemberInvitation",
+        "summary": "Mời đích danh vào cộng đồng riêng tư",
+        "description": "Private server only; pending existing invite returns same resource without extending its expiry; active recipient -> 409 ALREADY_MEMBER. Creator later leaving does not revoke an issued invite under DEC-097.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberInvitation"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberInvitation"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites; server private; recipient active/verified",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemberInvitationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/member-invitations": {
+      "get": {
+        "operationId": "listMyMemberInvitations",
+        "summary": "Lời mời đích danh gửi tới mình",
+        "description": "Lời mời đích danh gửi tới mình",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberInvitationPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "recipient",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/InvitationStatus"
+          }
+        ]
+      }
+    },
+    "/member-invitations/{invitationId}/accept": {
+      "post": {
+        "operationId": "acceptMemberInvitation",
+        "summary": "Chấp nhận mời còn hạn",
+        "description": "Accepted retry only returns the membershipId originally created if still active; cannot rejoin a later epoch with an old accepted invitation.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "recipient",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/invitationId"
+          }
+        ]
+      }
+    },
+    "/member-invitations/{invitationId}/reject": {
+      "post": {
+        "operationId": "rejectMemberInvitation",
+        "summary": "Từ chối mời đang chờ",
+        "description": "Từ chối mời đang chờ",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberInvitation"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "recipient",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/invitationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpectedVersionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/member-invitations/{invitationId}": {
+      "delete": {
+        "operationId": "cancelMemberInvitation",
+        "summary": "Hủy mời đang chờ",
+        "description": "Hủy mời đang chờ",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberInvitation"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_invites",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/invitationId"
+          },
+          {
+            "$ref": "#/components/parameters/ExpectedVersion"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/ownership-transfer": {
+      "post": {
+        "operationId": "transferOwnership",
+        "summary": "Chuyển ngay chủ sở hữu",
+        "description": "One owner field; no acceptance phase; target leave and transfer serialize under server lock.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner; target current active verified member",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipTransferRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/members/me": {
+      "delete": {
+        "operationId": "leaveServer",
+        "summary": "Tự rời đúng lần tham gia",
+        "description": "Current membershipId required; stale epoch -> 409 MEMBERSHIP_CHANGED, already left same epoch -> 204. Clear assignments/overrides and revoke after commit.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "204": {
+            "description": "Committed result; target design, endpoint not implemented."
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "self, non-owner",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/channels": {
+      "get": {
+        "operationId": "listVisibleChannels",
+        "summary": "Danh sách phòng được xem",
+        "description": "Danh sách phòng được xem",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "member; filter channel view on every page",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createChannel",
+        "summary": "Tạo phòng text/voice",
+        "description": "Tạo phòng text/voice",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Channel"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Channel"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_channels",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChannelRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/channels/{channelId}": {
+      "get": {
+        "operationId": "getVisibleChannel",
+        "summary": "Metadata phòng được xem",
+        "description": "Metadata phòng được xem",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Channel"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "channel view",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "updateChannel",
+        "summary": "Sửa tên/chủ đề phòng",
+        "description": "DEC-098; kind immutable in MVP.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Channel"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_channels AND channel view",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChannelRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteChannel",
+        "summary": "Xóa logic phòng",
+        "description": "Community deletion + Messaging space deletion + revocation outbox same transaction. No restore/purge in MVP.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "204": {
+            "description": "Committed result; target design, endpoint not implemented."
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_channels AND channel view",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          },
+          {
+            "$ref": "#/components/parameters/ExpectedVersion"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/channels/{channelId}/access": {
+      "get": {
+        "operationId": "getChannelAccess",
+        "summary": "Đọc cấu hình xem phòng",
+        "description": "Đọc cấu hình xem phòng",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelAccess"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_channel_access AND channel view",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          }
+        ]
+      },
+      "put": {
+        "operationId": "replaceChannelAccess",
+        "summary": "Thay nguyên tử cấu hình xem phòng",
+        "description": "DEC-098 evaluated before mutation under locks; self-removing view can commit but later requests/subscriptions denied.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelAccess"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "manage_channel_access AND channel view",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceChannelAccessRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/roles": {
+      "get": {
+        "operationId": "listRoles",
+        "summary": "Danh mục vai trò cho quản lý/ACL",
+        "description": "Danh mục vai trò cho quản lý/ACL",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolePage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner OR manage_channel_access",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createRole",
+        "summary": "Tạo vai trò tự tạo",
+        "description": "Tạo vai trò tự tạo",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/roles/{roleId}": {
+      "patch": {
+        "operationId": "updateRole",
+        "summary": "Sửa vai trò tự tạo",
+        "description": "Sửa vai trò tự tạo",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner; custom role only",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/roleId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRole",
+        "summary": "Xóa vai trò tự tạo",
+        "description": "Xóa vai trò tự tạo",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "204": {
+            "description": "Committed result; target design, endpoint not implemented."
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner; custom role only",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/roleId"
+          },
+          {
+            "$ref": "#/components/parameters/ExpectedVersion"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/members": {
+      "get": {
+        "operationId": "listMembersForConfiguration",
+        "summary": "Chọn thành viên cho role/ngoại lệ",
+        "description": "Chọn thành viên cho role/ngoại lệ",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberPage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner OR manage_channel_access",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/members/{userId}/roles": {
+      "get": {
+        "operationId": "getMemberRoles",
+        "summary": "Tập vai trò của đúng lần tham gia",
+        "description": "Tập vai trò của đúng lần tham gia",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberRoles"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner; active target membership",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ]
+      },
+      "put": {
+        "operationId": "replaceMemberRoles",
+        "summary": "Thay tập vai trò thành viên",
+        "description": "Thay tập vai trò thành viên",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberRoles"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "owner; active target/current membershipId",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceMemberRolesRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/channels/{channelId}/messages": {
+      "get": {
+        "operationId": "getChannelMessages",
+        "summary": "Lịch sử/bù tin text",
+        "description": "Lịch sử/bù tin text",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelMessagePage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "channel view; text channel",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Con trỏ lịch sử; không kết hợp after/through."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "resumeCursor/nextCursor được bảo vệ, hoặc sentinel 0; không là sequence tùy ý."
+            },
+            "description": "Con trỏ bù tin; through chốt ở lần đầu, giữ cho các trang sau."
+          },
+          {
+            "name": "through",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "Nếu có phải bằng H của protected after cursor; không dùng độc lập/before; đầu request bù mới để server chốt H."
+            },
+            "description": "Chỉ dùng với after; mốc sequence đã commit."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "operationId": "sendChannelMessage",
+        "summary": "Gửi/thử lại tin phòng",
+        "description": "DEC-037/090; DM HMAC/idempotency/per-space commit sequence and rollback rules; only explicit user retry.",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelMessage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "active verified session + channel view; text channel",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/channels/{channelId}/messages/{messageId}": {
+      "patch": {
+        "operationId": "editChannelMessage",
+        "summary": "Sửa tin của mình",
+        "description": "Sửa tin của mình",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelMessage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "channel view + message author; text channel",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          },
+          {
+            "$ref": "#/components/parameters/messageId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMessageRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteChannelMessage",
+        "summary": "Xóa tin của mình",
+        "description": "Xóa tin của mình",
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "Committed result; target design, endpoint not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelMessage"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "channel view + message author; text channel",
+        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/channelId"
+          },
+          {
+            "$ref": "#/components/parameters/messageId"
+          },
+          {
+            "$ref": "#/components/parameters/ExpectedVersion"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "parameters": {
+      "serverId": {
+        "name": "serverId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "channelId": {
+        "name": "channelId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "roleId": {
+        "name": "roleId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "userId": {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "requestId": {
+        "name": "requestId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "inviteId": {
+        "name": "inviteId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "invitationId": {
+        "name": "invitationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "messageId": {
+        "name": "messageId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 20
+        }
+      },
+      "ExpectedVersion": {
+        "name": "expectedVersion",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Version"
+        }
+      },
+      "MembershipId": {
+        "name": "membershipId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "x-scdc-utf16-length": {
+            "min": 2,
+            "max": 100
+          }
+        }
+      },
+      "RequestStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected",
+            "cancelled"
+          ],
+          "default": "pending"
+        }
+      },
+      "InvitationStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "rejected",
+            "cancelled",
+            "expired"
+          ],
+          "default": "pending"
+        }
+      }
+    },
+    "responses": {
+      "400": {
+        "description": "Validation or invalid invite.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "401": {
+        "description": "No valid session.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "403": {
+        "description": "Missing management permission or authorship.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "404": {
+        "description": "Missing or hidden resource; no private metadata.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Version, state, membership epoch, name, role limit or operation conflict.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      },
+      "429": {
+        "description": "Configurable limiter proposal; no product threshold approved here.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            "description": "Seconds; configurable limiter only."
+          }
+        }
+      },
+      "503": {
+        "description": "Dependency/key/access guard unavailable; fail closed.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "$ref": "./direct-messaging.openapi.json#/components/schemas/ProblemDetails"
+      },
+      "UserSummary": {
+        "$ref": "./direct-messaging.openapi.json#/components/schemas/UserSummary"
+      },
+      "ClientOperationId": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      },
+      "Version": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*$",
+        "x-scdc-integer-max": "9223372036854775807"
+      },
+      "ManagementPermission": {
+        "type": "string",
+        "enum": [
+          "manage_channels",
+          "manage_invites",
+          "review_join_requests",
+          "manage_join_mode",
+          "manage_channel_access"
+        ]
+      },
+      "ExpectedVersionRequest": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "TokenRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "additionalProperties": false
+      },
+      "ServerSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 2,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
+          },
+          "joinMode": {
+            "type": "string",
+            "enum": [
+              "immediate",
+              "approval"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "visibility",
+          "joinMode",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "Membership": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "left"
+            ]
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "leftAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "serverId",
+          "userId",
+          "membershipId",
+          "status",
+          "joinedAt",
+          "leftAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "ServerDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 2,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
+          },
+          "joinMode": {
+            "type": "string",
+            "enum": [
+              "immediate",
+              "approval"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accessVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "myMembership": {
+            "$ref": "#/components/schemas/Membership"
+          },
+          "effectivePermissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagementPermission"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "visibility",
+          "joinMode",
+          "version",
+          "ownerUserId",
+          "accessVersion",
+          "myMembership",
+          "effectivePermissions"
+        ],
+        "additionalProperties": false
+      },
+      "ServerView": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ServerSummary"
+          },
+          {
+            "$ref": "#/components/schemas/ServerDetail"
+          }
+        ]
+      },
+      "CreateServerRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "$ref": "#/components/schemas/ClientOperationId"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 2,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "public"
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateServerRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 2,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false,
+        "minProperties": 2
+      },
+      "UpdateJoinModeRequest": {
+        "type": "object",
+        "properties": {
+          "joinMode": {
+            "type": "string",
+            "enum": [
+              "immediate",
+              "approval"
+            ]
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "joinMode",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "JoinRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "reviewer_approved",
+              "reviewer_rejected",
+              "sender_cancelled",
+              "server_private",
+              "joined_elsewhere"
+            ]
+          },
+          "membershipId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "id",
+          "serverId",
+          "userId",
+          "status",
+          "reason",
+          "membershipId",
+          "createdAt",
+          "resolvedAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "MyJoinRequest": {
+        "type": "object",
+        "properties": {
+          "request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JoinRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "additionalProperties": false
+      },
+      "OwnershipTransferRequest": {
+        "type": "object",
+        "properties": {
+          "newOwnerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "newOwnerUserId",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "Invite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "maxUses": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "useCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "id",
+          "serverId",
+          "createdByUserId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "maxUses",
+          "useCount",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "CreateInviteRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "$ref": "#/components/schemas/ClientOperationId"
+          },
+          "expiresInSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "enum": [
+              3600,
+              86400,
+              604800,
+              null
+            ],
+            "default": 604800
+          },
+          "maxUses": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "clientOperationId"
+        ],
+        "additionalProperties": false
+      },
+      "InviteCreationResult": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "$ref": "#/components/schemas/Invite"
+          },
+          "inviteUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Secret fragment URL only on authorized creation/retry; null if the invite is no longer usable."
+          }
+        },
+        "required": [
+          "invite",
+          "inviteUrl"
+        ],
+        "additionalProperties": false
+      },
+      "InviteLink": {
+        "type": "object",
+        "properties": {
+          "inviteUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Secret URL; no-store. Never present in metadata list/outbox/audit."
+          }
+        },
+        "required": [
+          "inviteUrl"
+        ],
+        "additionalProperties": false
+      },
+      "InvitePreview": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "$ref": "#/components/schemas/ServerSummary"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "remainingUses": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        },
+        "required": [
+          "server",
+          "expiresAt",
+          "remainingUses"
+        ],
+        "additionalProperties": false
+      },
+      "MemberInvitation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "server": {
+            "$ref": "#/components/schemas/ServerSummary"
+          },
+          "recipientUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "recipient_accepted",
+              "recipient_rejected",
+              "manager_cancelled",
+              "joined_elsewhere",
+              "expired"
+            ]
+          },
+          "membershipId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "id",
+          "server",
+          "recipientUserId",
+          "createdByUserId",
+          "createdAt",
+          "expiresAt",
+          "status",
+          "reason",
+          "membershipId",
+          "resolvedAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "CreateMemberInvitationRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "$ref": "#/components/schemas/ClientOperationId"
+          },
+          "recipientUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "recipientUserId"
+        ],
+        "additionalProperties": false
+      },
+      "Channel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "voice"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "accessVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "id",
+          "serverId",
+          "name",
+          "topic",
+          "kind",
+          "createdAt",
+          "version",
+          "accessVersion"
+        ],
+        "additionalProperties": false
+      },
+      "CreateChannelRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "$ref": "#/components/schemas/ClientOperationId"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "voice"
+            ],
+            "default": "text"
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateChannelRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 100
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "x-scdc-utf16-length": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false,
+        "minProperties": 2
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 64
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagementPermission"
+            },
+            "uniqueItems": true,
+            "maxItems": 5
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "id",
+          "serverId",
+          "name",
+          "isSystem",
+          "permissions",
+          "version"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "isSystem": {
+                  "const": true
+                }
+              },
+              "required": [
+                "isSystem"
+              ]
+            },
+            "then": {
+              "properties": {
+                "name": {
+                  "const": "@everyone"
+                },
+                "permissions": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "$ref": "#/components/schemas/ClientOperationId"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 64
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagementPermission"
+            },
+            "uniqueItems": true,
+            "maxItems": 5
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unicode name after trim; valid UTF-16, not only White_Space/Default_Ignorable/control. Single-line technical design. DEC-093/095.",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 64
+            },
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagementPermission"
+            },
+            "uniqueItems": true,
+            "maxItems": 5
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false,
+        "minProperties": 2
+      },
+      "Member": {
+        "type": "object",
+        "properties": {
+          "membership": {
+            "$ref": "#/components/schemas/Membership"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "membership",
+          "user"
+        ],
+        "additionalProperties": false
+      },
+      "MemberRoles": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "uniqueItems": true,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "serverId",
+          "userId",
+          "membershipId",
+          "version",
+          "roleIds"
+        ],
+        "additionalProperties": false,
+        "description": "@everyone is implicit and absent from roleIds."
+      },
+      "ReplaceMemberRolesRequest": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "uniqueItems": true,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "membershipId",
+          "expectedVersion",
+          "roleIds"
+        ],
+        "additionalProperties": false
+      },
+      "RoleOverride": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "deny"
+            ]
+          }
+        },
+        "required": [
+          "roleId",
+          "effect"
+        ],
+        "additionalProperties": false
+      },
+      "MemberOverride": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "deny"
+            ]
+          }
+        },
+        "required": [
+          "userId",
+          "membershipId",
+          "effect"
+        ],
+        "additionalProperties": false
+      },
+      "ChannelAccess": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accessVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "defaultView": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "deny"
+            ]
+          },
+          "roleOverrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleOverride"
+            },
+            "maxItems": 21
+          },
+          "memberOverrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberOverride"
+            }
+          }
+        },
+        "required": [
+          "serverId",
+          "channelId",
+          "accessVersion",
+          "defaultView",
+          "roleOverrides",
+          "memberOverrides"
+        ],
+        "additionalProperties": false
+      },
+      "ReplaceChannelAccessRequest": {
+        "type": "object",
+        "properties": {
+          "expectedAccessVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "defaultView": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "deny"
+            ]
+          },
+          "roleOverrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleOverride"
+            },
+            "maxItems": 21
+          },
+          "memberOverrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberOverride"
+            }
+          }
+        },
+        "required": [
+          "expectedAccessVersion",
+          "defaultView",
+          "roleOverrides",
+          "memberOverrides"
+        ],
+        "additionalProperties": false,
+        "description": "Complete replacement; duplicate or cross-server role/member entries invalid; membershipId must be the current active epoch."
+      },
+      "ChannelMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "clientMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+            "description": "UUIDv4, tạo một lần khi người dùng gửi; giữ nguyên khi thử lại (DEC-081)."
+          },
+          "sequence": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-scdc-utf16-length": {
+              "max": 2000
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "channelId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
+          },
+          "contentState": {
+            "type": "string",
+            "enum": [
+              "available",
+              "deleted",
+              "unavailable_after_restore"
+            ],
+            "description": "Optional for ordinary/legacy messages; mandatory when restored latest edit body is missing (DEC-108). No old content is returned."
+          }
+        },
+        "required": [
+          "id",
+          "channelId",
+          "author",
+          "clientMessageId",
+          "sequence",
+          "version",
+          "content",
+          "createdAt",
+          "editedAt",
+          "deletedAt"
+        ],
+        "additionalProperties": false,
+        "description": "Current message. Deleted: content=null and deletedAt set. Restore unavailable: content=null, deletedAt=null and contentState=unavailable_after_restore. Never return old edited body; actor-author may explicitly edit unavailable message with new body. DEC-104/108.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "deletedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "deletedAt"
+              ]
+            },
+            "then": {
+              "properties": {
+                "content": {
+                  "type": "null"
+                },
+                "contentState": {
+                  "const": "deleted"
+                }
+              }
+            },
+            "else": {
+              "if": {
+                "properties": {
+                  "contentState": {
+                    "const": "unavailable_after_restore"
+                  }
+                },
+                "required": [
+                  "contentState"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "content": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "contentState": {
+                    "const": "available"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ChannelMessagePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChannelMessage"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "throughSequence": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+          },
+          "resumeCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor bảo vệ frontier H; non-null ở latest page hoặc trang cuối catch-up. Chỉ lưu sau merge thành công."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "throughSequence",
+          "resumeCursor"
+        ],
+        "additionalProperties": false
+      },
+      "SendMessageRequest": {
+        "$ref": "./direct-messaging.openapi.json#/components/schemas/SendMessageRequest"
+      },
+      "EditMessageRequest": {
+        "$ref": "./direct-messaging.openapi.json#/components/schemas/EditMessageRequest"
+      },
+      "ServerPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "MyServerPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerDetail"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "ChannelPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Channel"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "RolePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "MemberPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "JoinRequestPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JoinRequest"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "InvitePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Invite"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "MemberInvitationPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberInvitation"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque encrypted/authenticated cursor bound to actor/resource/filter/limit; expiry 24 hours is a technical proposal."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "x-scdc-status": "design-draft",
+  "x-scdc-decisions": [
+    "DEC-055",
+    "DEC-056",
+    "DEC-057",
+    "DEC-058",
+    "DEC-072",
+    "DEC-073",
+    "DEC-074",
+    "DEC-075",
+    "DEC-076",
+    "DEC-077",
+    "DEC-081",
+    "DEC-083",
+    "DEC-087",
+    "DEC-090",
+    "DEC-92",
+    "DEC-93",
+    "DEC-94",
+    "DEC-95",
+    "DEC-96",
+    "DEC-97",
+    "DEC-98"
+  ],
+  "x-scdc-length-rule": "x-scdc-utf16-length must be enforced by application; JSON Schema length alone does not count UTF-16.",
+  "x-scdc-review-required": [
+    "cross-module shared transaction guards",
+    "Unicode search/unique key migration",
+    "membership epoch/version constraints",
+    "invite secret/key restoration and expiry",
+    "operation fingerprint canonicalization",
+    "role/access/outbox concurrency proof",
+    "chat revoke <=5 seconds; media separately"
+  ],
+  "x-scdc-permission-fixtures": "../fixtures/community-permissions.json",
+  "x-scdc-operation-fixtures": "../fixtures/community-operations.json",
+  "x-scdc-text-policy": "../fixtures/text-policy.json"
+}

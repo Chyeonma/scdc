@@ -1,0 +1,423 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SCDC account verification and recovery — target design",
+    "version": "0.1.0-draft",
+    "description": "4 thao tác mục tiêu theo Accounts detailed-design. Resend chưa triển khai; verify/forgot/reset có code nhưng phải sửa ACC-GAP. Swagger từ source là runtime contract. Ngưỡng limiter được hoãn theo DEC-089."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "paths": {
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "verifyEmail",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Số giây chờ theo limiter nguồn, không phản ánh cooldown của email tồn tại.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "exists-required-changes",
+        "x-scdc-side-effects": "Only after valid checks and transaction commit. No automatic retry of token consume."
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "operationId": "resendEmailVerification",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Yêu cầu được tiếp nhận; không xác nhận email tồn tại/được giao.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailRequestAccepted"
+                },
+                "example": {
+                  "accepted": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Số giây chờ theo limiter nguồn, không phản ánh cooldown của email tồn tại.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-side-effects": "Only after valid checks and transaction commit. No automatic retry of token consume."
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "requestPasswordReset",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Yêu cầu được tiếp nhận; không xác nhận email tồn tại/được giao.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailRequestAccepted"
+                },
+                "example": {
+                  "accepted": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Số giây chờ theo limiter nguồn, không phản ánh cooldown của email tồn tại.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "exists-required-changes",
+        "x-scdc-side-effects": "Only after valid checks and transaction commit. No automatic retry of token consume."
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Số giây chờ theo limiter nguồn, không phản ánh cooldown của email tồn tại.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ProblemDetails; mã lỗi/limiter ngoài source là thiết kế đề xuất.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-scdc-implementation": "exists-required-changes",
+        "x-scdc-side-effects": "Only after valid checks and transaction commit. No automatic retry of token consume."
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EmailRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 254
+            },
+            "description": "Trim rồi chuyển chữ thường theo DEC-063; không bỏ dấu chấm/+tag."
+          }
+        },
+        "additionalProperties": false
+      },
+      "VerifyEmailRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "writeOnly": true,
+            "minLength": 20,
+            "maxLength": 512,
+            "description": "Token opaque ASCII; không ghi log/cache hoặc gửi qua query API."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": [
+          "token",
+          "newPassword"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "writeOnly": true,
+            "minLength": 20,
+            "maxLength": 512,
+            "description": "Token opaque ASCII; không ghi log/cache hoặc gửi qua query API."
+          },
+          "newPassword": {
+            "type": "string",
+            "writeOnly": true,
+            "x-scdc-utf16-length": {
+              "min": 8,
+              "max": 128
+            },
+            "x-scdc-password-rule": "At least one char.IsLetter and one char.IsDigit; do not trim."
+          }
+        },
+        "additionalProperties": false
+      },
+      "EmailRequestAccepted": {
+        "type": "object",
+        "required": [
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "const": true
+          },
+          "developmentResetToken": {
+            "type": "null",
+            "description": "Chỉ null hoặc bỏ trường trong production; token Development nằm ở runtime contract riêng."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "errorCode",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instance": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "x-scdc-status": "design-draft",
+  "x-scdc-decisions": [
+    "DEC-051",
+    "DEC-063",
+    "DEC-064",
+    "DEC-065",
+    "DEC-067",
+    "DEC-089"
+  ]
+}

@@ -1,0 +1,864 @@
+{
+  "version": "0.1.0-draft",
+  "description": "Design vectors only, not DB/worker/restore results. Exact UTC elapsed durations; kinds identify payload/fields/backup sets, not unconditional whole-row cascade. Access actorActive/peerActive assume verified eligible accounts and a valid actor session; they do not model JWT verification. Restore keep_current assumes recovered nondeleted body really matches its version; missing marker means unknown, not aborted. Record example hash/signature are placeholders, never authentication proof.",
+  "decisions": [
+    "DEC-103",
+    "DEC-104",
+    "DEC-105",
+    "DEC-106",
+    "DEC-107",
+    "DEC-108",
+    "DEC-109"
+  ],
+  "policy": {
+    "daySeconds": 86400,
+    "technicalLogDays": 14,
+    "securityAuditDays": 90,
+    "rawAuditClientDays": 7,
+    "terminalDetailsDays": 7,
+    "backupArtifactMaxAgeDays": 30,
+    "backupMeans": "maximum_artifact_age",
+    "liveMessageExpiryDays": null,
+    "deletedChannelContentExpiryDays": null,
+    "selfAccountDeleteInMvp": false,
+    "retainDedupRevocationMarkers": true
+  },
+  "retentionCases": [
+    {
+      "id": "R01",
+      "input": {
+        "kind": "log",
+        "ageSeconds": 1209599
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R02",
+      "input": {
+        "kind": "log",
+        "ageSeconds": 1209600
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R03",
+      "input": {
+        "kind": "audit",
+        "ageSeconds": 7775999
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R04",
+      "input": {
+        "kind": "audit",
+        "ageSeconds": 7776000
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R05",
+      "input": {
+        "kind": "audit_raw_client",
+        "ageSeconds": 604799
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R06",
+      "input": {
+        "kind": "audit_raw_client",
+        "ageSeconds": 604800
+      },
+      "expected": "redact_fields"
+    },
+    {
+      "id": "R07",
+      "input": {
+        "kind": "session_details",
+        "ageSeconds": 604800,
+        "terminal": false
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R08",
+      "input": {
+        "kind": "session_details",
+        "ageSeconds": 604799,
+        "terminal": true
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R09",
+      "input": {
+        "kind": "session_details",
+        "ageSeconds": 604800,
+        "terminal": true
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R10",
+      "input": {
+        "kind": "refresh_family",
+        "ageSeconds": 3888000,
+        "terminal": false
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R11",
+      "input": {
+        "kind": "refresh_family",
+        "ageSeconds": 604800,
+        "terminal": true
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R12",
+      "input": {
+        "kind": "media_details",
+        "ageSeconds": 691200,
+        "terminal": true,
+        "quiesced": false
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R13",
+      "input": {
+        "kind": "media_details",
+        "ageSeconds": 604800,
+        "terminal": true,
+        "quiesced": true
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R14",
+      "input": {
+        "kind": "outbox_payload",
+        "ageSeconds": 691200,
+        "terminal": true,
+        "acked": false
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R15",
+      "input": {
+        "kind": "outbox_payload",
+        "ageSeconds": 604800,
+        "terminal": true,
+        "acked": true
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R16",
+      "input": {
+        "kind": "message_live",
+        "ageSeconds": 34560000
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R17",
+      "input": {
+        "kind": "channel_deleted_content",
+        "ageSeconds": 34560000
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R18",
+      "input": {
+        "kind": "dedup_marker",
+        "ageSeconds": 34560000
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R19",
+      "input": {
+        "kind": "email_envelope",
+        "ageSeconds": 0,
+        "tokenValid": false
+      },
+      "expected": "purge_payload"
+    },
+    {
+      "id": "R20",
+      "input": {
+        "kind": "email_envelope",
+        "ageSeconds": 10,
+        "tokenValid": true
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R21",
+      "input": {
+        "kind": "backup_artifact",
+        "ageSeconds": 2591999
+      },
+      "expected": "keep"
+    },
+    {
+      "id": "R22",
+      "input": {
+        "kind": "backup_artifact",
+        "ageSeconds": 2592000
+      },
+      "expected": "expire_backup_set"
+    }
+  ],
+  "accessCases": [
+    {
+      "id": "A01",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "history",
+        "isAuthor": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "A02",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "send",
+        "isAuthor": true
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A03",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "call",
+        "isAuthor": true
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A04",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "edit",
+        "isAuthor": true
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "A05",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "delete",
+        "isAuthor": true
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "A06",
+      "input": {
+        "actorActive": false,
+        "peerActive": true,
+        "scopeAllowed": true,
+        "action": "history",
+        "isAuthor": true
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A07",
+      "input": {
+        "actorActive": false,
+        "peerActive": true,
+        "scopeAllowed": true,
+        "action": "edit",
+        "isAuthor": true
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A08",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "edit",
+        "isAuthor": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A09",
+      "input": {
+        "actorActive": true,
+        "peerActive": true,
+        "scopeAllowed": false,
+        "action": "history",
+        "isAuthor": true
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A10",
+      "input": {
+        "actorActive": true,
+        "peerActive": true,
+        "scopeAllowed": false,
+        "action": "edit",
+        "isAuthor": true
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A11",
+      "input": {
+        "actorActive": true,
+        "peerActive": true,
+        "scopeAllowed": true,
+        "action": "send",
+        "isAuthor": true
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "A12",
+      "input": {
+        "actorActive": true,
+        "peerActive": false,
+        "scopeAllowed": true,
+        "action": "channel_send",
+        "isAuthor": true
+      },
+      "expected": "allow"
+    }
+  ],
+  "restoreCases": [
+    {
+      "id": "S01",
+      "input": {
+        "phase": "committed",
+        "action": "message_edit",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "unavailable_after_restore",
+        "version": "5",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S02",
+      "input": {
+        "phase": "committed",
+        "action": "message_edit",
+        "recoveredVersion": "5",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "keep_current",
+        "version": "5",
+        "contentVisible": true
+      }
+    },
+    {
+      "id": "S03",
+      "input": {
+        "phase": "committed",
+        "action": "message_edit",
+        "recoveredVersion": "6",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "keep_current",
+        "version": "6",
+        "contentVisible": true
+      }
+    },
+    {
+      "id": "S04",
+      "input": {
+        "phase": "committed",
+        "action": "message_delete",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "deleted",
+        "version": "5",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S05",
+      "input": {
+        "phase": "prepared",
+        "action": "message_delete",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "quarantine",
+        "version": "3",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S06",
+      "input": {
+        "phase": "aborted",
+        "action": "message_delete",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "keep_current",
+        "version": "3",
+        "contentVisible": true
+      }
+    },
+    {
+      "id": "S07",
+      "input": {
+        "phase": "prepared",
+        "action": "message_edit",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "quarantine",
+        "version": "3",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S08",
+      "input": {
+        "phase": "committed",
+        "action": "channel_delete",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "deny_scope",
+        "version": "5",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S09",
+      "input": {
+        "phase": "committed",
+        "action": "channel_view_revoke",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "deny_scope",
+        "version": "5",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S10",
+      "input": {
+        "phase": "committed",
+        "action": "session_revoke",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "deny_scope",
+        "version": "5",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S11",
+      "input": {
+        "phase": "prepared",
+        "action": "message_edit",
+        "recoveredVersion": "5",
+        "versionFloor": "5",
+        "recoveredCommitMarker": true
+      },
+      "expected": {
+        "effect": "keep_current",
+        "version": "5",
+        "contentVisible": true
+      }
+    },
+    {
+      "id": "S12",
+      "input": {
+        "phase": "committed",
+        "action": "message_edit",
+        "recoveredVersion": "9007199254740992",
+        "versionFloor": "9007199254740993",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "unavailable_after_restore",
+        "version": "9007199254740993",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S13",
+      "input": {
+        "phase": "committed",
+        "action": "message_delete",
+        "recoveredVersion": "5",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "deleted",
+        "version": "5",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S14",
+      "input": {
+        "phase": "prepared",
+        "action": "channel_delete",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "quarantine",
+        "version": "3",
+        "contentVisible": false
+      }
+    },
+    {
+      "id": "S15",
+      "input": {
+        "phase": "committed",
+        "action": "community_access_change",
+        "recoveredVersion": "3",
+        "versionFloor": "5",
+        "recoveredCommitMarker": false
+      },
+      "expected": {
+        "effect": "quarantine",
+        "version": "3",
+        "contentVisible": false
+      }
+    }
+  ],
+  "messageSchemaCases": [
+    {
+      "id": "M01",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": "Nội dung hiện hành",
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": null
+      },
+      "expectedValid": true
+    },
+    {
+      "id": "M02",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": "Nội dung hiện hành",
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": null,
+        "contentState": "available"
+      },
+      "expectedValid": true
+    },
+    {
+      "id": "M03",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": null,
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": "2026-10-04T01:00:00Z",
+        "contentState": "deleted"
+      },
+      "expectedValid": true
+    },
+    {
+      "id": "M04",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": null,
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": null,
+        "contentState": "unavailable_after_restore"
+      },
+      "expectedValid": true
+    },
+    {
+      "id": "M05",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": null,
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": null
+      },
+      "expectedValid": false
+    },
+    {
+      "id": "M06",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": "Nội dung hiện hành",
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": null,
+        "contentState": "unavailable_after_restore"
+      },
+      "expectedValid": false
+    },
+    {
+      "id": "M07",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": "Nội dung hiện hành",
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": "2026-10-04T01:00:00Z"
+      },
+      "expectedValid": false
+    },
+    {
+      "id": "M08",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": null,
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": "2026-10-04T01:00:00Z",
+        "contentState": "unavailable_after_restore"
+      },
+      "expectedValid": false
+    },
+    {
+      "id": "M09",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": null,
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": "2026-10-04T01:00:00Z"
+      },
+      "expectedValid": true
+    },
+    {
+      "id": "M10",
+      "value": {
+        "id": "0199ab12-3456-7000-8000-000000000011",
+        "conversationId": "0199ab12-3456-7000-8000-000000000012",
+        "author": {
+          "id": "0199ab12-3456-7000-8000-000000000013",
+          "username": "user_a",
+          "displayName": "Người A",
+          "availability": "unavailable"
+        },
+        "clientMessageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "sequence": "1",
+        "version": "5",
+        "content": "Nội dung hiện hành",
+        "createdAt": "2026-10-04T00:00:00Z",
+        "editedAt": null,
+        "deletedAt": null
+      },
+      "expectedValid": true
+    }
+  ],
+  "protectionRecordExample": {
+    "recordId": "0199ab12-3456-7000-8000-000000000021",
+    "operationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "action": "message_edit",
+    "resourceKind": "message",
+    "resourceId": "0199ab12-3456-7000-8000-000000000011",
+    "scopeId": "0199ab12-3456-7000-8000-000000000012",
+    "authorityGeneration": "0199ab12-3456-7000-8000-000000000022",
+    "versionFloor": "5",
+    "phase": "committed",
+    "dbMarkerId": "0199ab12-3456-7000-8000-000000000023",
+    "occurredAt": "2026-10-04T01:00:00Z",
+    "sequence": "1",
+    "previousRecordHash": null,
+    "recordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signature": "EXAMPLE_ONLY_NOT_A_REAL_SIGNATURE"
+  },
+  "transitionScenarios": [
+    {
+      "id": "T01",
+      "steps": [
+        "prepared persisted",
+        "DB rollback proven",
+        "aborted persisted",
+        "restore"
+      ],
+      "expected": "keep unchanged scope; do not apply intent"
+    },
+    {
+      "id": "T02",
+      "steps": [
+        "prepared persisted",
+        "DB commit",
+        "independent receipt lost",
+        "restore missing DB marker"
+      ],
+      "expected": "quarantine affected scope until outcome proved; do not auto-delete"
+    },
+    {
+      "id": "T03",
+      "steps": [
+        "message delete committed and receipt durable",
+        "restore older body",
+        "replay twice"
+      ],
+      "expected": "content null, one tombstone, same floor, no duplicate message"
+    },
+    {
+      "id": "T04",
+      "steps": [
+        "message edit floor 5",
+        "restore version 3",
+        "redact at version 5",
+        "author writes fresh version 6",
+        "replay floor 5"
+      ],
+      "expected": "fresh version 6 visible, no rollback to old body"
+    },
+    {
+      "id": "T05",
+      "steps": [
+        "expired base at day 30",
+        "newer verified base available",
+        "catalogue dependency cleanup"
+      ],
+      "expected": "expire old backup set; keep WAL needed by newer valid base"
+    },
+    {
+      "id": "T06",
+      "steps": [
+        "terminal outbox payload cleanup day 7",
+        "repeat event ID"
+      ],
+      "expected": "dedup receipt denies second effect; payload cleanup is not receipt cleanup"
+    }
+  ]
+}

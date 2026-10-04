@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCDC Community application message catalogue — draft",
+  "description": "Additional application messages on /hubs/chat alongside chat-realtime.schema.json; not SignalR wire frames. User notifications route by authorized user/session; no all-member broadcast for requests/invitations/roster. Relative refs resolve from this file.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "invoke"
+        },
+        "name": {
+          "const": "SubscribeChannel"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "channelId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "serverId",
+            "channelId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "invoke"
+        },
+        "name": {
+          "const": "UnsubscribeChannel"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "channelId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "serverId",
+            "channelId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "result"
+        },
+        "name": {
+          "const": "ChannelSubscriptionAcknowledgement"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "channelId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "subscribed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "serverId",
+            "channelId",
+            "subscribed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "ChannelMessageChanged"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "channelId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "message": {
+              "$ref": "./community.openapi.json#/components/schemas/ChannelMessage"
+            }
+          },
+          "required": [
+            "eventId",
+            "serverId",
+            "channelId",
+            "message"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "CommunityChanged"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "accessVersion": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$",
+              "x-scdc-integer-max": "9223372036854775807"
+            }
+          },
+          "required": [
+            "eventId",
+            "serverId",
+            "accessVersion"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "MembershipChanged"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "membershipId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "left"
+              ]
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$",
+              "x-scdc-integer-max": "9223372036854775807"
+            }
+          },
+          "required": [
+            "eventId",
+            "serverId",
+            "membershipId",
+            "status",
+            "version"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "JoinRequestChanged"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "request": {
+              "$ref": "./community.openapi.json#/components/schemas/JoinRequest"
+            }
+          },
+          "required": [
+            "eventId",
+            "request"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "MemberInvitationChanged"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "invitation": {
+              "$ref": "./community.openapi.json#/components/schemas/MemberInvitation"
+            }
+          },
+          "required": [
+            "eventId",
+            "invitation"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "ChannelAccessRevoked"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "serverId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "channelId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "membershipId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "permission_changed",
+                "membership_left",
+                "channel_deleted",
+                "session_revoked",
+                "account_unavailable"
+              ]
+            }
+          },
+          "required": [
+            "eventId",
+            "serverId",
+            "channelId",
+            "membershipId",
+            "reason"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

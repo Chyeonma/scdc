@@ -155,6 +155,8 @@ python3 scripts/check_docs.py
 
 Lệnh kiểm tra link local và anchor trong docs hiện hành, README repo và README kỹ thuật; archive được giữ nguyên như bản lịch sử. Bộ ca TC/AC trong đặc tả vẫn cần ghi build, môi trường, dữ liệu, thực tế và bằng chứng mỗi lần chạy. Quy trình nghiệm thu ở [phát hành và vận hành](release-operations.md#testing).
 
+Ghi kết quả bằng [mẫu hồ sơ](templates/release-record.md); quyết định phát hành/lỗi tồn theo DEC-110/111 và [các gate](release-operations.md#release-gates). [Runbook](operations-runbook.md) đối chiếu compose/health/config hiện có với đầu vào production cần bổ sung; các lệnh local trong file này không thay manifest production đã diễn tập.
+
 Hiện chưa có kịch bản k6 trong repo. Ngưỡng chat/media, browser và backup đã chốt DEC-082/083/085/086; baseline workload/phương pháp đo ở [mục tiêu chất lượng](release-operations.md#quality-targets). Khóa build/cấu hình/dataset/thiết bị trước viết và chạy test tải; fixture JSON tại `docs/fixtures` là dữ liệu biên, không phải kết quả product test. Kiểm tra tài liệu không tạo bằng chứng nghiệm thu phần mềm.
 
 <a id="troubleshooting"></a>

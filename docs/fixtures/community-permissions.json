@@ -1,0 +1,548 @@
+{
+  "status": "design-fixtures-not-product-results",
+  "decisions": [
+    "DEC-056",
+    "DEC-057",
+    "DEC-058",
+    "DEC-092",
+    "DEC-098"
+  ],
+  "managementCodes": [
+    "manage_channels",
+    "manage_invites",
+    "review_join_requests",
+    "manage_join_mode",
+    "manage_channel_access"
+  ],
+  "foundationRule": "Session/account/verified/server/active-membership guard before owner/view. Deleted channel blocks view/send/manage, not independent server-level management permission.",
+  "cases": [
+    {
+      "id": "new-open-channel",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": true,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "restricted-without-allow",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "deny",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "role-allow-opens",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "deny",
+        "roles": [
+          {
+            "view": "allow",
+            "permissions": []
+          }
+        ],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": true,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "role-deny-wins",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [
+          {
+            "view": "allow",
+            "permissions": []
+          },
+          {
+            "view": "deny",
+            "permissions": []
+          }
+        ],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "personal-allow-after-role-deny",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [
+          {
+            "view": "deny",
+            "permissions": []
+          }
+        ],
+        "userView": "allow"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": true,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "personal-deny-after-role-allow",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [
+          {
+            "view": "allow",
+            "permissions": []
+          }
+        ],
+        "userView": "deny"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "everyone-deny-and-custom-allow",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [
+          {
+            "isSystem": true,
+            "view": "deny",
+            "permissions": []
+          },
+          {
+            "view": "allow",
+            "permissions": []
+          }
+        ],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "owner-view-bypass",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "deny",
+        "roles": [
+          {
+            "view": "deny",
+            "permissions": []
+          }
+        ],
+        "userView": "deny"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": true,
+        "managementPermissions": [
+          "manage_channel_access",
+          "manage_channels",
+          "manage_invites",
+          "manage_join_mode",
+          "review_join_requests"
+        ],
+        "canManageExistingChannel": true
+      }
+    },
+    {
+      "id": "owner-fails-sessionValid",
+      "input": {
+        "sessionValid": false,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "owner-fails-accountActive",
+      "input": {
+        "sessionValid": true,
+        "accountActive": false,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "owner-fails-emailVerified",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": false,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "owner-fails-serverActive",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": false,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "owner-fails-channelActive",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": false,
+        "membershipActive": true,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [
+          "manage_channel_access",
+          "manage_channels",
+          "manage_invites",
+          "manage_join_mode",
+          "review_join_requests"
+        ],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "owner-fails-membershipActive",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": false,
+        "isOwner": true,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "union-management",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [
+          {
+            "view": "inherit",
+            "permissions": [
+              "manage_channels"
+            ]
+          },
+          {
+            "view": "inherit",
+            "permissions": [
+              "manage_invites",
+              "review_join_requests"
+            ]
+          }
+        ],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": true,
+        "managementPermissions": [
+          "manage_channels",
+          "manage_invites",
+          "review_join_requests"
+        ],
+        "canManageExistingChannel": true
+      }
+    },
+    {
+      "id": "manager-cannot-see-hidden",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "deny",
+        "roles": [
+          {
+            "view": "inherit",
+            "permissions": [
+              "manage_channels",
+              "manage_channel_access"
+            ]
+          }
+        ],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": false,
+        "canSendText": false,
+        "managementPermissions": [
+          "manage_channel_access",
+          "manage_channels"
+        ],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "voice-not-text-composer",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "voice",
+        "defaultView": "allow",
+        "roles": [],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": false,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    },
+    {
+      "id": "everyone-no-management",
+      "input": {
+        "sessionValid": true,
+        "accountActive": true,
+        "emailVerified": true,
+        "serverActive": true,
+        "channelActive": true,
+        "membershipActive": true,
+        "isOwner": false,
+        "kind": "text",
+        "defaultView": "allow",
+        "roles": [
+          {
+            "isSystem": true,
+            "view": "inherit",
+            "permissions": []
+          }
+        ],
+        "userView": "inherit"
+      },
+      "expected": {
+        "canView": true,
+        "canSendText": true,
+        "managementPermissions": [],
+        "canManageExistingChannel": false
+      }
+    }
+  ],
+  "transitionCases": [
+    {
+      "id": "role-cap-last-slot",
+      "initialCustomRoleCount": 19,
+      "simultaneousCreates": 2,
+      "expectedCommittedCreates": 1,
+      "expectedFinalCustomRoleCount": 20,
+      "loserError": "ROLE_LIMIT_REACHED"
+    },
+    {
+      "id": "invite-last-use",
+      "maxUses": 1,
+      "useCount": 0,
+      "simultaneousNewMembers": 2,
+      "expectedCreatedMemberships": 1,
+      "expectedUseCount": 1
+    },
+    {
+      "id": "invite-retry-active-member",
+      "useCountBefore": 1,
+      "alreadyActive": true,
+      "expectedUseCountAfter": 1
+    },
+    {
+      "id": "public-to-private",
+      "pendingBefore": 3,
+      "expectedPendingAfter": 0,
+      "expectedCancelledReason": "server_private",
+      "keepExistingMembers": true,
+      "keepValidInvites": true
+    },
+    {
+      "id": "creator-leaves",
+      "inviteStillBeforeExpiry": true,
+      "inviteRevoked": false,
+      "expectedStillUsable": true
+    },
+    {
+      "id": "leave-rejoin-stale-epoch",
+      "oldMembershipId": "019a13b8-1000-7000-8000-000000000001",
+      "newMembershipId": "019a13b8-1000-7000-8000-000000000002",
+      "oldAssignmentApplied": false,
+      "oldUserOverrideApplied": false,
+      "oldLeaveError": "MEMBERSHIP_CHANGED"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "status": "synthetic-interoperability-fixtures-not-product-results",
+  "algorithm": "HMAC-SHA256",
+  "fingerprintVersion": 1,
+  "syntheticKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "spaceId": "019a13b8-1000-7000-8000-000000000001",
+  "authorId": "00000001-0000-4000-8000-000000000000",
+  "clientMessageId": "7c8e7c59-b35a-4d12-b22f-965b96ff4e44",
+  "uuidOrderingPair": [
+    "00000001-0000-4000-8000-000000000000",
+    "00000100-0000-4000-8000-000000000000"
+  ],
+  "cases": [
+    {
+      "id": "ascii",
+      "inputContent": "Chao ban",
+      "normalizedContent": "Chao ban",
+      "expectedFingerprintHex": "f61329ad1dfb51bffe72aa2d119ae58d652be6f7e46d0c2a976ec6ce747fb959"
+    },
+    {
+      "id": "crlf",
+      "inputContent": "a\r\nb",
+      "normalizedContent": "a\nb",
+      "expectedFingerprintHex": "ea0f2e258881f4f093fc69cba5c7c655716118791ddcb86c1b903d8bbca6d9c4"
+    },
+    {
+      "id": "lf",
+      "inputContent": "a\nb",
+      "normalizedContent": "a\nb",
+      "expectedFingerprintHex": "ea0f2e258881f4f093fc69cba5c7c655716118791ddcb86c1b903d8bbca6d9c4"
+    },
+    {
+      "id": "combining",
+      "inputContent": "é",
+      "normalizedContent": "é",
+      "expectedFingerprintHex": "94c996c023b9136300e7833e91cf98e8ce4ab2def9f91cae259ed3bf99a0a70a"
+    },
+    {
+      "id": "precomposed",
+      "inputContent": "é",
+      "normalizedContent": "é",
+      "expectedFingerprintHex": "1e95e1762b3857eafa21a80d2b0b6f73d52f2d5802aa70ee266b694ab2242b55"
+    },
+    {
+      "id": "emoji",
+      "inputContent": "👩‍💻",
+      "normalizedContent": "👩‍💻",
+      "expectedFingerprintHex": "da1b38809c45f23474361b537d071579f0803bc3297f195854f1d7e3f058d175"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ Nghiệp vụ cốt lõi và chính sách tài khoản đã xác nhận theo DEC
 - [API hiện tại](#api-current)
 - [Trạng thái, dữ liệu và đối chiếu implementation](#implementation-review)
 - [Quyết định và thiết kế còn lại](#gaps)
+- [Thiết kế chi tiết tài khoản](#detailed-design)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 
@@ -51,7 +52,10 @@ email; sau đó vẫn phải hoàn tất xác minh trước khi đăng nhập �
 | ACC-012 | Liên kết xác minh/reset dùng một lần, hạn 30 phút. Yêu cầu gửi lại cùng mục đích cách nhau ít nhất 60 giây; cấp liên kết mới vô hiệu liên kết cũ cùng mục đích. Không tự xác minh email khi reset mật khẩu. | DEC-065, DEC-051 |
 | ACC-013 | Hồ sơ cho sửa `displayName`, `bio`, `locale`, `timezone`; bio tối đa 500 theo phép đếm hiện tại, locale 1–16 và timezone 1–64. MVP chưa thêm tải ảnh đại diện. | DEC-066; các giới hạn giữ theo API hiện tại |
 | ACC-014 | Khôi phục chỉ qua email đã đăng ký, gồm tài khoản chưa xác minh theo DEC-051. Mất quyền truy cập email chưa có kênh khôi phục khác hoặc quy trình thủ công trong MVP. | DEC-067; không thay đổi điều kiện xác minh trước khi vào ứng dụng |
+| ACC-015 | MVP chưa có tự xóa account; khóa chặn ứng dụng/thu hồi phiên nhưng giữ lịch sử, mở khóa cần phiên đăng nhập mới. Khóa không thay lockout 15 phút. | DEC-103/104; công cụ/thẩm quyền khóa còn OQ-011 |
 
+
+[Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal và restore DEC-106–109; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Self-delete chưa thuộc MVP; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
 
 Đợt tài khoản bao gồm đăng ký/xác minh, đăng nhập, khôi phục mật khẩu và hồ sơ. Code hiện còn có đổi mật khẩu và quản lý phiên/thiết bị. MFA, recovery code và external identity để Identity v2; chưa có API cho các phần này. Gửi lại xác minh và giao email thật là phần chưa hoàn thiện.
 
@@ -182,7 +186,7 @@ Nguồn: [controllers](../../services/SCDC.Api/Controllers/Identity/AuthControll
 
 ### Trạng thái tài khoản và phiên
 
-Bảng tài khoản mô tả yêu cầu đã chốt. `Suspended`, `Disabled`, `Deleted` có trong enum/SQL; luồng chuyển các trạng thái này chưa được đặc tả thành tính năng quản trị MVP.
+Bảng tài khoản mô tả yêu cầu đã chốt. `Suspended`, `Disabled`, `Deleted` có trong enum/SQL; DEC-104/112 đã chốt hành vi khóa/mở khóa qua quy trình kỹ thuật có phân quyền/audit và chưa có UI quản trị riêng. [RB-ACCOUNT](../operations-runbook.md#account-support) là thiết kế mục tiêu; chưa có công cụ chuyển trạng thái được triển khai. Không tự suy Deleted thành tính năng xóa tài khoản MVP DEC-103.
 
 | Trạng thái đầu | Thao tác/điều kiện | Kết quả cần có |
 |---|---|---|
@@ -246,9 +250,9 @@ Giữ các mã ACC-P để truy vết; phần đã xác nhận dẫn tới DEC, 
 | Mã phương án cũ | Kết luận | Trạng thái |
 |---|---|---|
 | ACC-P01 | Định danh theo ACC-008/009; tên hiển thị đếm UTF-16 | Đã chốt DEC-063/068; còn kiểm chứng chuẩn hóa |
-| ACC-P02 | Verify/reset một lần, 30 phút; cấp lại vô hiệu link cũ cùng mục đích | Đã chốt DEC-065; còn thiết kế consume/resend |
-| ACC-P03 | Cooldown 60 giây; reset/resend không tiết lộ email tồn tại; rate limit bổ sung theo nguồn/tài khoản | Cooldown chốt DEC-065; ngưỡng bổ sung cần thiết kế |
-| ACC-P04 | Phiên tối đa 30 ngày; đổi/reset thu hồi mọi phiên | Đã chốt DEC-065; transport hiện tại Bearer/refresh JSON, thu hồi realtime cần thiết kế |
+| ACC-P02 | Verify/reset một lần, 30 phút; cấp lại vô hiệu link cũ cùng mục đích | Đã chốt DEC-065; đã có thiết kế consume/resend, còn triển khai và kiểm chứng |
+| ACC-P03 | Cooldown 60 giây; reset/resend không tiết lộ email tồn tại; rate limit bổ sung theo nguồn/tài khoản | Cooldown chốt DEC-065; ngưỡng bổ sung được hoãn DEC-089 |
+| ACC-P04 | Phiên tối đa 30 ngày; đổi/reset thu hồi mọi phiên | Đã chốt DEC-065; transport hiện tại Bearer/refresh JSON, thiết kế thu hồi realtime tại DM còn cần triển khai |
 | ACC-P05 | Hồ sơ theo ACC-013; không đổi username/email; công khai chỉ ID/username/displayName; khôi phục chỉ qua email | Đã chốt DEC-063/066/067 |
 
 ### Hợp đồng gửi lại cần triển khai
@@ -271,11 +275,70 @@ Token mới có thể được cấp trong lúc provider đang giao email cũ; k
 
 ### Chuẩn hóa và giới hạn truy cập đề xuất
 
-Định danh phải đi qua cùng pipeline trước validation HTTP/service/DB: email bỏ khoảng trắng đầu/cuối rồi chuyển chữ thường theo DEC-063; username trim rồi kiểm tra ASCII/quy tắc duy nhất; tên hiển thị trim, từ chối toàn khoảng trắng, đếm UTF-16. Không trim/chuẩn hóa mật khẩu hoặc nội dung tin ngoài bước CRLF→LF đã đặc tả ở DM. Locale/timezone cần kiểm tra cả định dạng hỗ trợ để không nhận giá trị chỉ đúng độ dài.
+Định danh phải đi qua cùng pipeline trước validation HTTP/service/DB: email bỏ khoảng trắng đầu/cuối rồi chuyển chữ thường theo DEC-063; username trim rồi kiểm tra ASCII/quy tắc duy nhất; tên hiển thị trim, từ chối toàn khoảng trắng, đếm UTF-16. Không trim/chuẩn hóa mật khẩu hoặc nội dung tin ngoài bước CRLF→LF đã đặc tả ở DM. Locale/timezone giữ validation độ dài hiện tại; việc giới hạn danh sách locale/zone hỗ trợ cần lựa chọn riêng, không tự đổi policy trong bước thiết kế.
 
-Limiter bổ sung là cấu hình kỹ thuật dự kiến, chưa được xác nhận thành chính sách sản phẩm: đăng ký 5 lần/giờ/IP; login 30 lần/5 phút/IP bên cạnh lockout 5 lần/tài khoản; forgot/resend 10 lần/giờ/IP và tối đa 5 email/giờ/tài khoản, vẫn tuân cooldown 60 giây. Key tài khoản limiter dùng hash/HMAC của định danh chuẩn hóa; phản hồi accepted/cooldown không phân biệt tài khoản tồn tại. Limiter theo IP trả 429 ProblemDetails có `Retry-After`; kiểm thử mạng dùng chung và IPv6 trước khóa ngưỡng. Không coi limiter là biện pháp thay thế transaction consume token hoặc kiểm tra phiên.
+Theo DEC-089, người dùng chọn giữ limiter bổ sung là đề xuất để quyết định sau: đăng ký 5 lần/giờ/IP; login 30 lần/5 phút/IP bên cạnh lockout 5 lần/tài khoản; forgot/resend gộp 10 lần/giờ/IP và tối đa 5 email/giờ/tài khoản cho mỗi mục đích, vẫn tuân cooldown 60 giây. Key tài khoản limiter dùng hash/HMAC của định danh chuẩn hóa; phản hồi accepted/cooldown không phân biệt tài khoản tồn tại. Limiter theo IP trả 429 ProblemDetails có `Retry-After`; kiểm thử mạng dùng chung và IPv6 trước khóa ngưỡng. Không coi limiter là biện pháp thay thế transaction consume token hoặc kiểm tra phiên.
 
 Thiết kế còn mở: ACC-GAP-01–07; ngưỡng limiter/email pipeline cần rà soát và kiểm chứng; thu hồi realtime và cấu hình thiết bị ở OQ-007/008. OQ-002 giữ mở cho các đầu ra này. Các chính sách đã chốt không phải bằng chứng implementation hoặc nghiệm thu đã đạt.
+
+<a id="detailed-design"></a>
+
+### Thiết kế chi tiết tài khoản
+
+Phương án ngày 2026-10-04 để triển khai DEC-063–067; thuật toán/schema dưới đây được soạn trong phạm vi tài liệu, chưa thay source. [OpenAPI luồng xác minh/khôi phục](../contracts/account-recovery.openapi.json) có 4 thao tác, ghi rõ resend chưa có endpoint và các endpoint hiện có còn chênh lệch. Swagger sinh từ source vẫn là nguồn cho API hiện đang chạy.
+
+#### HTTP xác minh, gửi lại và khôi phục
+
+| Thao tác | Request | Response mục tiêu | Ngoại lệ/hiệu lực |
+|---|---|---|---|
+| `POST /auth/resend-verification` | `{email}` | 202 `{accepted:true}` | Cùng body cho unknown/verified/unavailable/cooldown; không trả `userId`, thời điểm cooldown riêng hoặc token |
+| `POST /auth/forgot-password` | `{email}` | 202 `{accepted:true}` | Cho cả pending verification; token reset không xác minh email; Development có trường token riêng như source |
+| `POST /auth/verify-email` | `{token}` | 204 | 400 `Identity.InvalidOrExpiredToken` nếu sai purpose/hết hạn/đã dùng/bị thay thế; không tự login |
+| `POST /auth/reset-password` | `{token,newPassword}` | 204 | Kiểm tra mật khẩu trước consume; reset thành công đổi stamp, reset lockout và thu hồi mọi phiên |
+
+Validation 400 theo ProblemDetails chung; lỗi limiter theo nguồn 429 `Common.RateLimitExceeded` và `Retry-After` là mã đề xuất. Ngưỡng limiter bổ sung còn DEC-089. HTTP 202 chỉ xác nhận yêu cầu được tiếp nhận, không chứng minh tài khoản tồn tại hoặc email đã giao. Dùng `Cache-Control: no-store` cho response có thông tin tài khoản/token; không ghi request body của các route auth vào telemetry.
+
+#### Cấp và dùng token đồng thời
+
+Token hiện tại sinh từ 48 byte ngẫu nhiên, chuyển base64url và DB giữ SHA-256 hash; giữ cơ chế này. Đề xuất thêm `identity.account_token_policies` khóa `(user_id,purpose)` với `last_issued_at,active_token_id`; lần đăng ký đầu cũng ghi policy để resend không bỏ cooldown 60 giây. Clock server UTC và điều kiện `expires_at > now`; tại đúng mốc hết hạn từ chối.
+
+1. Cấp lại: chuẩn hóa email, tra user qua Identity, mở transaction và `LockUserAsync` trước đọc trạng thái/token/policy. Kiểm tra purpose, điều kiện tài khoản, cooldown và limiter gửi email nếu sau này được chọn; nếu không cấp thì trả accepted giống nhau. Đọc DB dưới khóa, không dựa vào kiểm tra trước transaction.
+2. Khi đủ điều kiện, đánh dấu token cũ cùng purpose không còn hợp lệ, tạo token mới + policy + EmailDelivery + outbox + audit trong cùng transaction. Việc cấp lại verify không thu hồi reset và ngược lại; audit chỉ ghi ID/purpose/lý do, không plaintext/hash token.
+3. Consume: tìm user từ hash/purpose chỉ để định tuyến khóa; sau đó mở transaction, khóa user, đọc lại token/trạng thái/target email và thời hạn. Token phải vẫn là active của policy. Verify cập nhật email/account; reset cập nhật hash/stamp và thu hồi phiên. Đánh dấu token đã dùng và kết thúc các token cũ cùng purpose; commit toàn bộ hoặc không thay đổi gì.
+4. Hai consume chỉ một thành công; consume và resend tranh cùng khóa, thứ tự commit quyết định link có hiệu lực. Resend sau verify không tạo token verify mới. Reset không vô hiệu verify còn hạn. Reset sai policy không làm mất token hợp lệ.
+5. Change-password, login, refresh và revoke giữ thứ tự khóa user trước các bản ghi credential/session/token như thiết kế Identity hiện tại. Khi transaction lỗi, không có mail từ outbox chưa commit; response mất sau consume không cho dùng lại token. UI có thể thử login với trạng thái hiện hành, không hứa consume lặp trả thành công.
+
+`ConsumedAt` hiện được dùng cả cho consume và vô hiệu token cũ; lý do phân biệt trong audit, không suy mọi `ConsumedAt` là người dùng đã bấm link. Migration policy cần xác lập active token theo dữ liệu đang có dưới khóa, vô hiệu các bản dư và lấy `last_issued_at` từ token gần nhất; không tự coi policy mới rỗng là được gửi ngay.
+
+#### Mô hình EmailDelivery và worker
+
+| Trường đề xuất | Quy tắc |
+|---|---|
+| `id,user_id,account_token_id,purpose,recipient,template_version` | Identity sở hữu; duy nhất delivery theo token/template; không dùng email làm aggregate ID public |
+| `protected_envelope,envelope_expires_at` | Link/token được mã hóa và xác thực; hạn không vượt hạn token 30 phút; nullable sau purge |
+| `status,attempt_count,next_attempt_at` | Pending/Sending/RetryPending/ProviderAccepted/Failed/Suppressed; số lần gửi thực tế, không tăng chỉ vì poll |
+| `lease_owner,lease_until,provider_message_id,last_error_code` | Lease kỹ thuật đề xuất 30 giây, provider timeout 10 giây; lỗi chỉ mã an toàn, không lưu response chứa bí mật |
+| `created_at,accepted_at,delivered_at,bounced_at` | ProviderAccepted/delivered khác nhau; callback lặp cập nhật có điều kiện |
+
+Worker claim bằng transaction ngắn, ghi lease rồi commit trước gọi provider; hết lease có thể xử lý lại, nên không cam kết email giao đúng một lần. Payload outbox chỉ delivery ID/user ID/purpose, không có envelope/token; recipient chỉ có trong bản ghi Identity cần thiết và request provider. Việc tiếp nhận sau timeout dùng delivery ID đối soát nếu provider hỗ trợ.
+
+Thiết kế envelope chọn ASP.NET Core Data Protection với purpose `Identity.EmailDelivery.v1` và hạn token; cursor dùng purpose khác. Key ring riêng theo môi trường, được bảo vệ khi lưu, lưu bền qua restart và có bản phục hồi cùng cấu hình. Xóa key làm dữ liệu đã bảo vệ bằng key không giải mã được theo [tài liệu Microsoft](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-management?view=aspnetcore-10.0); phải đối chiếu tuổi envelope/cursor và backup 30 ngày trước dọn key. Cách lưu key/certificate/secret store cụ thể cần topology, không lưu khóa trong SQL payload hoặc repo.
+
+Worker kiểm tra token trước gửi; cleanup và giới hạn retry theo phương án ở trên. Bảo vệ envelope không thay việc server từ chối link bị thay thế/hết hạn; khi restore không gửi lại delivery quá hạn hoặc đã bị thu hồi sau recovery point.
+
+#### Liên kết email và trạng thái trình duyệt
+
+Thiết kế route SPA `/auth/verify#token=…` và `/auth/reset#token=…` từ public origin cấu hình. Fragment không đi trong HTTP request URI theo [tài liệu URI fragment](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment); app lấy một lần vào bộ nhớ rồi `history.replaceState` bỏ khỏi URL. Trang này không có analytics/script bên thứ ba, dùng `Referrer-Policy: no-referrer`, không ghi toàn bộ URL vào lỗi; fragment không thay bảo vệ khỏi script trên trang.
+
+Trang verify hiển thị nút xác minh để chỉ POST khi người dùng thực hiện thao tác; GET mở link không consume. Reset chỉ POST khi người dùng điền mật khẩu mới hợp lệ. Link sai/hết hạn/đã dùng đều báo “Liên kết không còn sử dụng được” và đường yêu cầu mới, không hiện token. Thành công verify/reset dẫn đến login; reset của pending account vẫn cần verify. Đây là chi tiết UX kỹ thuật cần rà soát cùng prototype.
+
+Đổi/reset mật khẩu, logout hoặc đổi tài khoản xóa state UI, nội dung DM đang cache và đóng Hub của phiên đó. Source [api.js](../../clients/WebClient/src/api.js) hiện chia sẻ token phiên qua localStorage khi có Web Locks; DEC-091 chỉ nói nội dung DM/bản nháp, không tuyên bố đã đổi cơ chế lưu token. Refresh token đã rotation mà response mất không tự retry token cũ vì có thể kích hoạt reuse; client về login theo lỗi hiện tại.
+
+#### Hồ sơ và chuẩn hóa khi bàn giao
+
+Chốt pipeline normalize → validate → transaction → constraint; validation HTTP không chạy bộ quy tắc khác service. Username/email unique ở DB xử lý cả đăng ký đồng thời. DisplayName trim/UTF-16 như ACC-008; bio hiện trim và rỗng thành null; locale/timezone giữ validation độ dài hiện tại, chưa tự thêm allowlist locale/zone chỉ vì có giá trị trông hợp lệ. Source đang dùng version hồ sơ ở response; cập nhật optimistic concurrency là hướng thiết kế, chưa thêm `expectedVersion` vào API hiện có khi chưa thay contract.
+
+Đầu ra triển khai tài khoản: thêm resend/policy/delivery migration + worker; sửa reset pending/verify consume; cập nhật shared validator và auth UI; mở rộng hợp đồng thu hồi session cho chat. Kết quả của các gói này phải ghi vào ACC-GAP và TC, không đánh dấu đã hoàn thành chỉ vì có schema trong docs.
 
 <a id="acceptance"></a>
 
@@ -302,6 +365,8 @@ Thiết kế còn mở: ACC-GAP-01–07; ngưỡng limiter/email pipeline cần 
 | AC-ACC-17 | Sửa các trường hồ sơ đã chốt; thử sửa username/email hoặc tải avatar. | Tên hiển thị/bio/locale/timezone cập nhật hợp lệ; MVP không cung cấp thao tác đổi định danh hoặc tải avatar; không tuyên bố tính năng chỉ từ cột SQL. |
 | AC-ACC-18 | Tài khoản mất quyền truy cập email tìm cách khôi phục. | Chỉ có luồng qua email đã đăng ký; thông tin trợ giúp không hứa có khôi phục thủ công hoặc qua kênh khác trong MVP. |
 | AC-ACC-19 | Đăng ký/quên mật khẩu ngoài Development và nhận email thật. | Response không có token sử dụng được; nhận link đúng domain/mục đích/hạn, hoàn tất luồng; tiếp nhận outbox không được ghi thành email đã giao. |
+| AC-ACC-20 | Mở link qua GET, gửi lại/consume/reset đồng thời và reset mật khẩu sai policy | GET không consume; một token dùng một lần; token verify/reset độc lập; reset sai không mất token |
+| AC-ACC-21 | Email unknown/verified/unavailable/cooldown gọi resend/forgot | Production cùng 202/body accepted; không trả trạng thái tài khoản/token hoặc retry time riêng |
 
 AC-ACC-06 áp dụng cho tài khoản đã xác minh; AC-ACC-10 bao phủ tài khoản
 chưa xác minh. Toàn bộ tiêu chí vẫn cần có kết quả chạy và xác nhận
@@ -322,8 +387,8 @@ Dữ liệu: A là tài khoản đã xác minh; U chưa xác minh; A1/A2 là hai
 | TC-ACC-04 | Hai request đăng ký cùng tên tài khoản đồng thời | Một tài khoản; request còn lại lỗi trùng; không có dữ liệu dở dang | AC-ACC-09 |
 | TC-ACC-05 | A đổi tên hiển thị; B tìm tên đó; thử đổi tên tài khoản | Tên hiển thị mới xuất hiện; tên tài khoản giữ nguyên; dữ liệu công khai không có email | AC-ACC-03, AC-ACC-08 |
 | TC-ACC-06 | Dùng liên kết xác minh/reset sai, hết hạn hoặc đã dùng | Không hoàn tất thao tác trái phép; không lộ token trong UI/log | AC-ACC-06; thời hạn 30 phút theo DEC-065 |
-| TC-ACC-07 | Gửi yêu cầu khôi phục/gửi lại với email tồn tại và không tồn tại | Phản hồi công khai có cùng ý nghĩa; không tiết lộ tài khoản | ACC-P03; cooldown đã chốt, rate limit bổ sung chờ thiết kế |
-| TC-ACC-08 | Phiên hết hạn/đăng xuất, rồi dùng lại bằng chứng phiên hoặc kết nối cũ | Không đọc/gửi/nhận dữ liệu tiếp theo sau thời hạn thu hồi đã chốt | AC-ACC-04; cơ chế và ngưỡng chờ thiết kế phiên |
+| TC-ACC-07 | Gửi yêu cầu khôi phục/gửi lại với email tồn tại và không tồn tại | Phản hồi công khai có cùng ý nghĩa; không tiết lộ tài khoản | ACC-P03; cooldown đã chốt, limiter bổ sung hoãn DEC-089 |
+| TC-ACC-08 | Phiên hết hạn/đăng xuất, rồi dùng lại bằng chứng phiên hoặc kết nối cũ | Request mới bị từ chối; kết nối chat ngừng nhận dữ liệu trong ≤5 giây sau commit thu hồi | AC-ACC-04/16, DEC-083; cơ chế realtime còn cần triển khai |
 | TC-ACC-09 | Biên username 2/3/32/33; tên hiển thị 0/1/64/65 UTF-16; hai email/username chỉ khác hoa thường; khoảng trắng đầu/cuối | Chuẩn hóa/validation nhất quán; một định danh duy nhất; không lưu tài khoản dở dang | AC-ACC-11 |
 | TC-ACC-10 | Mật khẩu 7/8/128/129, chỉ chữ/chỉ số; 5 lần sai rồi mật khẩu đúng trước/sau hết khóa | Policy và lockout theo DEC-064; thử đúng sau hết khóa có thể đăng nhập | AC-ACC-12 |
 | TC-ACC-11 | Đồng hồ thử tại biên hạn access/phiên và refresh trước hạn phiên | Không gia hạn phiên bằng refresh; ghi clock skew 30 giây khi đo JWT | AC-ACC-13 |
@@ -332,6 +397,8 @@ Dữ liệu: A là tài khoản đã xác minh; U chưa xác minh; A1/A2 là hai
 | TC-ACC-14 | A1 thu hồi A2 rồi gọi API trên hai phiên; lặp với phiên hiện tại/logout-all/đổi/reset mật khẩu | Đúng phạm vi phiên bị thu hồi; không suy test HTTP thành test realtime | AC-ACC-16 |
 | TC-ACC-15 | Sửa từng trường hồ sơ và dữ liệu vượt giới hạn; xem thông tin trợ giúp khi mất email | Trường hợp lệ lưu được; định danh không đổi; không hứa khôi phục khác email | AC-ACC-17/18 |
 | TC-ACC-16 | Ngoài Development, nhận email verify/reset từ worker; dừng worker rồi retry; cấp link mới trước khi email cũ được giao | Không lộ token ở response/log; email dùng link đúng; link bị thay thế không còn hợp lệ | AC-ACC-19; cần worker/provider |
+| TC-ACC-17 | Consume và resend tranh khóa; reset sai mật khẩu rồi dùng lại token đúng | Kết quả theo thứ tự commit; rollback không cấp mail; reset sai không consume | AC-ACC-14/15/20 |
+| TC-ACC-18 | GET link, fragment/URL sau đọc, unknown/verified/unavailable/cooldown; worker lease hết khi provider đã nhận | GET không đổi DB; URL bỏ token; response không lộ trạng thái; email lặp vẫn một consume | AC-ACC-19/20/21 |
 
 ### Đối chiếu bộ test tự động hiện có
 

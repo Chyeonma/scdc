@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCDC Media application messages — draft",
+  "description": "Eight application catalogue variants on /hubs/chat, not SignalR or LiveKit wire frames. No provider JWT/grant/source publish permit in events. Current permission and owner-binding routing mandatory.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "invoke"
+        },
+        "name": {
+          "const": "RegisterMediaClient"
+        },
+        "payload": {
+          "$ref": "media.openapi.json#/components/schemas/ClientRegistration"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "invoke"
+        },
+        "name": {
+          "const": "UnregisterMediaClient"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "clientInstanceId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          "required": [
+            "clientInstanceId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "result"
+        },
+        "name": {
+          "const": "MediaClientAcknowledgement"
+        },
+        "payload": {
+          "$ref": "media.openapi.json#/components/schemas/ClientAcknowledgement"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "IncomingCall"
+        },
+        "payload": {
+          "$ref": "media.openapi.json#/components/schemas/CallSnapshot"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "CallChanged"
+        },
+        "payload": {
+          "$ref": "media.openapi.json#/components/schemas/CallSnapshot"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "ParticipationChanged"
+        },
+        "payload": {
+          "$ref": "media.openapi.json#/components/schemas/ParticipationSnapshot"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "RoomMediaChanged"
+        },
+        "payload": {
+          "$ref": "media.openapi.json#/components/schemas/RoomSnapshot"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "event"
+        },
+        "name": {
+          "const": "MediaAccessRevoked"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "participationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "session_revoked",
+                "access_revoked",
+                "channel_deleted",
+                "authority_unavailable"
+              ]
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$",
+              "description": "Positive bigint as decimal string; application rejects overflow."
+            }
+          },
+          "required": [
+            "participationId",
+            "reason",
+            "version"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "payload"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

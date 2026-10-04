@@ -1,0 +1,672 @@
+{
+  "version": "0.1.0-draft",
+  "description": "Expected design vectors, not runtime DB/SFU test results. Occupied counts include reserved, reconnect and draining; ringing excluded. Admission vectors represent current auth checks, not JWT signature tests.",
+  "decisions": [
+    "DEC-079",
+    "DEC-080",
+    "DEC-099",
+    "DEC-100",
+    "DEC-101",
+    "DEC-102"
+  ],
+  "defaults": {
+    "microphone": false,
+    "camera": false,
+    "screen": false,
+    "screenAudio": false
+  },
+  "quotaCases": [
+    {
+      "id": "Q01",
+      "input": {
+        "kind": "voice_join",
+        "globalOccupied": 0,
+        "roomOccupied": 0,
+        "userBusy": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "Q02",
+      "input": {
+        "kind": "voice_join",
+        "globalOccupied": 19,
+        "roomOccupied": 9,
+        "userBusy": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "Q03",
+      "input": {
+        "kind": "voice_join",
+        "globalOccupied": 19,
+        "roomOccupied": 10,
+        "userBusy": false
+      },
+      "expected": "room_full"
+    },
+    {
+      "id": "Q04",
+      "input": {
+        "kind": "voice_join",
+        "globalOccupied": 20,
+        "roomOccupied": 9,
+        "userBusy": false
+      },
+      "expected": "system_full"
+    },
+    {
+      "id": "Q05",
+      "input": {
+        "kind": "voice_join",
+        "globalOccupied": 5,
+        "roomOccupied": 2,
+        "userBusy": true
+      },
+      "expected": "busy"
+    },
+    {
+      "id": "Q06",
+      "input": {
+        "kind": "direct_accept",
+        "globalOccupied": 18,
+        "roomOccupied": 0,
+        "userBusy": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "Q07",
+      "input": {
+        "kind": "direct_accept",
+        "globalOccupied": 19,
+        "roomOccupied": 0,
+        "userBusy": false
+      },
+      "expected": "system_full"
+    },
+    {
+      "id": "Q08",
+      "input": {
+        "kind": "direct_accept",
+        "globalOccupied": 20,
+        "roomOccupied": 0,
+        "userBusy": false
+      },
+      "expected": "system_full"
+    },
+    {
+      "id": "Q09",
+      "input": {
+        "kind": "resume",
+        "globalOccupied": 20,
+        "roomOccupied": 10,
+        "userBusy": true,
+        "withinDeadline": true,
+        "sameBinding": true
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "Q10",
+      "input": {
+        "kind": "resume",
+        "globalOccupied": 20,
+        "roomOccupied": 10,
+        "userBusy": true,
+        "withinDeadline": false,
+        "sameBinding": true
+      },
+      "expected": "expired"
+    },
+    {
+      "id": "Q11",
+      "input": {
+        "kind": "resume",
+        "globalOccupied": 20,
+        "roomOccupied": 10,
+        "userBusy": true,
+        "withinDeadline": true,
+        "sameBinding": false
+      },
+      "expected": "binding_conflict"
+    },
+    {
+      "id": "Q12",
+      "input": {
+        "kind": "screen_start",
+        "globalOccupied": 20,
+        "roomOccupied": 10,
+        "userBusy": false,
+        "screenOccupied": 1,
+        "sameSourceExists": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "Q13",
+      "input": {
+        "kind": "screen_start",
+        "globalOccupied": 20,
+        "roomOccupied": 10,
+        "userBusy": false,
+        "screenOccupied": 2,
+        "sameSourceExists": false
+      },
+      "expected": "screen_full"
+    },
+    {
+      "id": "Q14",
+      "input": {
+        "kind": "screen_start",
+        "globalOccupied": 10,
+        "roomOccupied": 4,
+        "userBusy": false,
+        "screenOccupied": 1,
+        "sameSourceExists": true
+      },
+      "expected": "source_full"
+    },
+    {
+      "id": "Q15",
+      "input": {
+        "kind": "camera_start",
+        "globalOccupied": 20,
+        "roomOccupied": 10,
+        "userBusy": false,
+        "sameSourceExists": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "Q16",
+      "input": {
+        "kind": "camera_start",
+        "globalOccupied": 5,
+        "roomOccupied": 2,
+        "userBusy": false,
+        "sameSourceExists": true
+      },
+      "expected": "source_full"
+    }
+  ],
+  "admissionCases": [
+    {
+      "id": "A01",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "allow"
+    },
+    {
+      "id": "A02",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 30000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "expired"
+    },
+    {
+      "id": "A03",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 30001,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "expired"
+    },
+    {
+      "id": "A04",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": false,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A05",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": false,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A06",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": false,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A07",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": false,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "fail_closed"
+    },
+    {
+      "id": "A08",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "ended",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A09",
+      "input": {
+        "tokenValid": false,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A10",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": false,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A11",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": false,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A12",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": false,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A13",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": false,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": false
+      },
+      "expected": "deny"
+    },
+    {
+      "id": "A14",
+      "input": {
+        "tokenValid": true,
+        "sessionValid": true,
+        "accountEligible": true,
+        "authorityAvailable": true,
+        "participationState": "reconnecting",
+        "sameBinding": true,
+        "roomGenerationMatches": true,
+        "connectionEpochMatches": true,
+        "membershipEpochMatches": true,
+        "channelView": true,
+        "nowMs": 29000,
+        "deadlineMs": 30000,
+        "otherActiveConnection": true
+      },
+      "expected": "connection_in_use"
+    }
+  ],
+  "transitionScenarios": [
+    {
+      "id": "L01",
+      "name": "Two joins compete for final global slot",
+      "given": {
+        "globalOccupied": 19
+      },
+      "actions": [
+        "join A",
+        "join B"
+      ],
+      "expected": {
+        "successfulAllocations": 1,
+        "globalOccupied": 20
+      }
+    },
+    {
+      "id": "L02",
+      "name": "Direct accept with only one global slot",
+      "given": {
+        "globalOccupied": 19,
+        "callState": "ringing"
+      },
+      "actions": [
+        "accept"
+      ],
+      "expected": {
+        "newParticipations": 0,
+        "globalOccupied": 19,
+        "callState": "ringing"
+      }
+    },
+    {
+      "id": "L03",
+      "name": "First accept wins across two devices",
+      "given": {
+        "callState": "ringing",
+        "version": "1"
+      },
+      "actions": [
+        "accept device A version 1",
+        "accept device B version 1"
+      ],
+      "expected": {
+        "newParticipations": 2,
+        "winningBindings": 1,
+        "loser": "version_conflict"
+      }
+    },
+    {
+      "id": "L04",
+      "name": "Source stop without provider ack",
+      "given": {
+        "screenOccupied": 2
+      },
+      "actions": [
+        "stop screen 1",
+        "try screen 3"
+      ],
+      "expected": {
+        "screenOccupied": 2,
+        "newSource": "screen_full",
+        "oldSource": "stopping"
+      }
+    },
+    {
+      "id": "L05",
+      "name": "Reconnect deadline cannot be prolonged by heartbeat",
+      "given": {
+        "deadlineMs": 30000
+      },
+      "actions": [
+        "heartbeat at 29000",
+        "resume at 30000"
+      ],
+      "expected": {
+        "deadlineMs": 30000,
+        "participationState": "ended",
+        "resume": "expired"
+      }
+    },
+    {
+      "id": "L06",
+      "name": "Delayed provider event from old connection",
+      "given": {
+        "connectionEpoch": "2",
+        "state": "connected"
+      },
+      "actions": [
+        "disconnected event epoch 1"
+      ],
+      "expected": {
+        "connectionEpoch": "2",
+        "state": "connected",
+        "observation": "ignored"
+      }
+    },
+    {
+      "id": "L07",
+      "name": "Leave drains before capacity reuse",
+      "given": {
+        "globalOccupied": 20
+      },
+      "actions": [
+        "leave without quiescence ack",
+        "join new user",
+        "provider quiescence ack",
+        "join new user"
+      ],
+      "expected": {
+        "firstJoin": "draining_or_full",
+        "secondJoin": "allow",
+        "globalOccupied": 20
+      }
+    },
+    {
+      "id": "L08",
+      "name": "Old room after restore/restart",
+      "given": {
+        "roomGeneration": "2"
+      },
+      "actions": [
+        "admit token generation 1"
+      ],
+      "expected": {
+        "admission": "deny",
+        "newParticipations": 0
+      }
+    }
+  ],
+  "fingerprintPolicy": {
+    "canonicalization": "RFC 8785 (all fixture keys/strings ASCII, no numeric JSON values)",
+    "testKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "productionKey": "Separate protected key ring; never use this public fixture key."
+  },
+  "fingerprintCases": [
+    {
+      "id": "F01",
+      "input": {
+        "method": "POST",
+        "path": "/api/v1/media/calls",
+        "actorId": "0199ab12-3456-7000-8000-000000000001",
+        "sessionId": "0199ab12-3456-7000-8000-000000000002",
+        "body": {
+          "peerUserId": "0199ab12-3456-7000-8000-000000000003",
+          "clientInstanceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        }
+      },
+      "canonicalUtf8": "{\"actorId\":\"0199ab12-3456-7000-8000-000000000001\",\"body\":{\"clientInstanceId\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"peerUserId\":\"0199ab12-3456-7000-8000-000000000003\"},\"method\":\"POST\",\"path\":\"/api/v1/media/calls\",\"sessionId\":\"0199ab12-3456-7000-8000-000000000002\"}",
+      "canonicalHex": "7b226163746f724964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303031222c22626f6479223a7b22636c69656e74496e7374616e63654964223a2261616161616161612d616161612d346161612d386161612d616161616161616161616161222c2270656572557365724964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303033227d2c226d6574686f64223a22504f5354222c2270617468223a222f6170692f76312f6d656469612f63616c6c73222c2273657373696f6e4964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303032227d",
+      "hmacSha256Hex": "56bd1fedc783734537203f246cdc34b88c7eb15e3e4531949288be6f60848056"
+    },
+    {
+      "id": "F02",
+      "input": {
+        "method": "POST",
+        "path": "/api/v1/media/calls/0199ab12-3456-7000-8000-000000000004/accept",
+        "actorId": "0199ab12-3456-7000-8000-000000000001",
+        "sessionId": "0199ab12-3456-7000-8000-000000000002",
+        "body": {
+          "clientInstanceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "expectedVersion": "9007199254740993"
+        }
+      },
+      "canonicalUtf8": "{\"actorId\":\"0199ab12-3456-7000-8000-000000000001\",\"body\":{\"clientInstanceId\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"expectedVersion\":\"9007199254740993\"},\"method\":\"POST\",\"path\":\"/api/v1/media/calls/0199ab12-3456-7000-8000-000000000004/accept\",\"sessionId\":\"0199ab12-3456-7000-8000-000000000002\"}",
+      "canonicalHex": "7b226163746f724964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303031222c22626f6479223a7b22636c69656e74496e7374616e63654964223a2261616161616161612d616161612d346161612d386161612d616161616161616161616161222c22657870656374656456657273696f6e223a2239303037313939323534373430393933227d2c226d6574686f64223a22504f5354222c2270617468223a222f6170692f76312f6d656469612f63616c6c732f30313939616231322d333435362d373030302d383030302d3030303030303030303030342f616363657074222c2273657373696f6e4964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303032227d",
+      "hmacSha256Hex": "40bdeb1dcd09a79eb173854a665649a4c94ab062b2cda6d0d1043d125f391cc6"
+    },
+    {
+      "id": "F03",
+      "input": {
+        "method": "POST",
+        "path": "/api/v1/media/participations/0199ab12-3456-7000-8000-000000000005/sources",
+        "actorId": "0199ab12-3456-7000-8000-000000000001",
+        "sessionId": "0199ab12-3456-7000-8000-000000000002",
+        "body": {
+          "clientInstanceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "expectedVersion": "2",
+          "kind": "screen"
+        }
+      },
+      "canonicalUtf8": "{\"actorId\":\"0199ab12-3456-7000-8000-000000000001\",\"body\":{\"clientInstanceId\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"expectedVersion\":\"2\",\"kind\":\"screen\"},\"method\":\"POST\",\"path\":\"/api/v1/media/participations/0199ab12-3456-7000-8000-000000000005/sources\",\"sessionId\":\"0199ab12-3456-7000-8000-000000000002\"}",
+      "canonicalHex": "7b226163746f724964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303031222c22626f6479223a7b22636c69656e74496e7374616e63654964223a2261616161616161612d616161612d346161612d386161612d616161616161616161616161222c22657870656374656456657273696f6e223a2232222c226b696e64223a2273637265656e227d2c226d6574686f64223a22504f5354222c2270617468223a222f6170692f76312f6d656469612f70617274696369706174696f6e732f30313939616231322d333435362d373030302d383030302d3030303030303030303030352f736f7572636573222c2273657373696f6e4964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303032227d",
+      "hmacSha256Hex": "73ddf68aeb48bcdf75b6470ceffe6ccb7af62c6f090924e0fc6a7bacb9207616"
+    },
+    {
+      "id": "F04",
+      "input": {
+        "method": "POST",
+        "path": "/api/v1/media/participations/0199ab12-3456-7000-8000-000000000005/sources/0199ab12-3456-7000-8000-000000000006/mute",
+        "actorId": "0199ab12-3456-7000-8000-000000000001",
+        "sessionId": "0199ab12-3456-7000-8000-000000000002",
+        "body": {
+          "clientInstanceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "expectedVersion": "3",
+          "muted": false
+        }
+      },
+      "canonicalUtf8": "{\"actorId\":\"0199ab12-3456-7000-8000-000000000001\",\"body\":{\"clientInstanceId\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"expectedVersion\":\"3\",\"muted\":false},\"method\":\"POST\",\"path\":\"/api/v1/media/participations/0199ab12-3456-7000-8000-000000000005/sources/0199ab12-3456-7000-8000-000000000006/mute\",\"sessionId\":\"0199ab12-3456-7000-8000-000000000002\"}",
+      "canonicalHex": "7b226163746f724964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303031222c22626f6479223a7b22636c69656e74496e7374616e63654964223a2261616161616161612d616161612d346161612d386161612d616161616161616161616161222c22657870656374656456657273696f6e223a2233222c226d75746564223a66616c73657d2c226d6574686f64223a22504f5354222c2270617468223a222f6170692f76312f6d656469612f70617274696369706174696f6e732f30313939616231322d333435362d373030302d383030302d3030303030303030303030352f736f75726365732f30313939616231322d333435362d373030302d383030302d3030303030303030303030362f6d757465222c2273657373696f6e4964223a2230313939616231322d333435362d373030302d383030302d303030303030303030303032227d",
+      "hmacSha256Hex": "b27d2e5cd6cc92866c5d8e2e03ade2c087f6554a33b4c40d1c65c80275e32fbc"
+    }
+  ],
+  "revocationBudget": {
+    "leaseTtlMs": 3000,
+    "watchdogMaxMs": 1000,
+    "clockSkewMaxMs": 250,
+    "targetMaxMs": 5000,
+    "description": "Proposed budget only; lease expiry anchored before guard check, late replies rejected. Requires real monotonic/clock-skew and SFU forwarding proof."
+  }
+}

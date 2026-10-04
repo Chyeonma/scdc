@@ -1,0 +1,120 @@
+{
+  "status": "synthetic-interoperability-fixtures-not-product-results",
+  "fingerprintVersion": 1,
+  "algorithm": "HMAC-SHA256",
+  "syntheticKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "actorId": "019a13b8-1000-7000-8000-000000000001",
+  "clientOperationId": "7c8e7c59-b35a-4d12-b22f-965b96ff4e44",
+  "permissionBitOrder": [
+    "manage_channels",
+    "manage_invites",
+    "review_join_requests",
+    "manage_join_mode",
+    "manage_channel_access"
+  ],
+  "cases": [
+    {
+      "id": "server-unicode",
+      "operationKind": "create_server",
+      "scopeId": "00000000-0000-0000-0000-000000000000",
+      "normalizedBody": {
+        "name": "Nhóm Việt 👩‍💻",
+        "description": "Hai chủ đề\nMột cộng đồng",
+        "visibility": "public"
+      },
+      "expectedBodyHex": "000000184e68c3b36d205669e1bb877420f09f91a9e2808df09f92bb0100000024486169206368e1bba720c491e1bb810a4de1bb99742063e1bb996e6720c491e1bb936e6701",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f73657276657200019a13b8100070008000000000000001000000000000000000000000000000007c8e7c59b35a4d12b22f965b96ff4e4400000046000000184e68c3b36d205669e1bb877420f09f91a9e2808df09f92bb0100000024486169206368e1bba720c491e1bb810a4de1bb99742063e1bb996e6720c491e1bb936e6701",
+      "expectedFingerprintHex": "fda6ae75a5e9387dce68e4b236e9c4821be419558c2aef06049e6a9ca4f13b28"
+    },
+    {
+      "id": "channel-single-emoji",
+      "operationKind": "create_channel",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "name": "😀",
+        "topic": null,
+        "kind": "text"
+      },
+      "expectedBodyHex": "00000004f09f98800001",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f6368616e6e656c00019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e440000000a00000004f09f98800001",
+      "expectedFingerprintHex": "475bdc00de9fbcbe673117606021bc4e08c078d04ddfb7bad1d193227ccdde58"
+    },
+    {
+      "id": "role-permission-order-a",
+      "operationKind": "create_role",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "name": "Điều phối",
+        "permissions": [
+          "manage_invites",
+          "manage_channels"
+        ]
+      },
+      "expectedBodyHex": "0000000ec49069e1bb8175207068e1bb916903",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f726f6c6500019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e44000000130000000ec49069e1bb8175207068e1bb916903",
+      "expectedFingerprintHex": "3fa8ce886edc05c4dc80db3c0c4fb318b694b491023a496a758844400eef4aea"
+    },
+    {
+      "id": "role-permission-order-b",
+      "operationKind": "create_role",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "name": "Điều phối",
+        "permissions": [
+          "manage_channels",
+          "manage_invites"
+        ]
+      },
+      "expectedBodyHex": "0000000ec49069e1bb8175207068e1bb916903",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f726f6c6500019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e44000000130000000ec49069e1bb8175207068e1bb916903",
+      "expectedFingerprintHex": "3fa8ce886edc05c4dc80db3c0c4fb318b694b491023a496a758844400eef4aea"
+    },
+    {
+      "id": "invite-default-seven-days",
+      "operationKind": "create_invite",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "expiresInSeconds": 604800,
+        "maxUses": null
+      },
+      "expectedBodyHex": "0100093a8000",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f696e7669746500019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e44000000060100093a8000",
+      "expectedFingerprintHex": "767c3788ecf1cb251bc7fcaddc25129f6bca139630e110397e662267dd22d7c4"
+    },
+    {
+      "id": "invite-explicit-seven-days",
+      "operationKind": "create_invite",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "expiresInSeconds": 604800,
+        "maxUses": null
+      },
+      "expectedBodyHex": "0100093a8000",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f696e7669746500019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e44000000060100093a8000",
+      "expectedFingerprintHex": "767c3788ecf1cb251bc7fcaddc25129f6bca139630e110397e662267dd22d7c4"
+    },
+    {
+      "id": "invite-unlimited-expiry-one-use",
+      "operationKind": "create_invite",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "expiresInSeconds": null,
+        "maxUses": 1
+      },
+      "expectedBodyHex": "000100000001",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f696e7669746500019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e4400000006000100000001",
+      "expectedFingerprintHex": "9b3e65f98044b4761394a3d968b90f006f8f0670c9da0c0c2049af5ce97793ec"
+    },
+    {
+      "id": "targeted-recipient",
+      "operationKind": "create_member_invitation",
+      "scopeId": "019a13b8-1000-7000-8000-000000000002",
+      "normalizedBody": {
+        "recipientUserId": "019a13b8-1000-7000-8000-000000000003"
+      },
+      "expectedBodyHex": "019a13b8100070008000000000000003",
+      "expectedInputHex": "534344432e436f6d6d756e6974792e57726974652e7631006372656174655f6d656d6265725f696e7669746174696f6e00019a13b8100070008000000000000001019a13b81000700080000000000000027c8e7c59b35a4d12b22f965b96ff4e4400000010019a13b8100070008000000000000003",
+      "expectedFingerprintHex": "3adbe671e8b66e15413dbf6c025e1020b0494f3aeda0e64f246a58d154038435"
+    }
+  ]
+}

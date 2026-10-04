@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCDC data-protection journal record — draft",
+  "description": "Append-only signed phase records in a proposed independent store; not audit, API, body backup or implemented service. Phase transitions/action-resource mapping/checkpoint completeness need trusted verification. Committed requires main DB marker evidence. No message content/token/email/reason payload.",
+  "$ref": "#/$defs/ProtectionRecord",
+  "$defs": {
+    "ProtectionRecord": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "operationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "message_edit",
+            "message_delete",
+            "account_lock",
+            "session_revoke",
+            "sessions_revoke_all",
+            "membership_leave",
+            "channel_view_revoke",
+            "channel_delete",
+            "invite_revoke",
+            "media_end",
+            "community_access_change"
+          ]
+        },
+        "resourceKind": {
+          "type": "string",
+          "enum": [
+            "message",
+            "user",
+            "session",
+            "membership",
+            "channel",
+            "invite",
+            "participation",
+            "server"
+          ]
+        },
+        "resourceId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "scopeId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authorityGeneration": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "versionFloor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "prepared",
+            "committed",
+            "aborted"
+          ]
+        },
+        "dbMarkerId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sequence": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "previousRecordHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recordHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 16
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "recordId",
+        "operationId",
+        "action",
+        "resourceKind",
+        "resourceId",
+        "scopeId",
+        "authorityGeneration",
+        "versionFloor",
+        "phase",
+        "dbMarkerId",
+        "occurredAt",
+        "sequence",
+        "previousRecordHash",
+        "recordHash",
+        "signature"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "committed"
+              }
+            },
+            "required": [
+              "phase"
+            ]
+          },
+          "then": {
+            "properties": {
+              "dbMarkerId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "dbMarkerId": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

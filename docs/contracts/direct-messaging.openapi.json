@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
-    "version": "0.1.0-draft",
-    "description": "Hợp đồng DM đề xuất, endpoint chưa triển khai. Chính sách DEC-068–071 và công nghệ DEC-081 đã chốt; schema/lỗi/mapping SQL cần rà soát cùng mock và thử nghiệm. Nguồn nghiệp vụ: docs/features/direct-messaging.md."
+    "version": "0.2.0-draft",
+    "description": "Hợp đồng DM đề xuất, endpoint chưa triển khai. Chính sách DEC-068–071 và công nghệ DEC-081 đã chốt; schema/lỗi/mapping SQL cần rà soát cùng mock và thử nghiệm. Nguồn nghiệp vụ: docs/features/direct-messaging.md. Thiết kế chi tiết 2026-10-04: DEC-090/091, resumeCursor, fingerprint và mapping SQL; chưa có implementation."
   },
   "servers": [
     {
@@ -323,8 +323,19 @@
               "type": "string"
             },
             "description": "Con trỏ opaque; thuật toán/định dạng cần rà soát."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
           }
-        ]
+        ],
+        "description": "Danh sách đang đổi vị trí theo lastActivityAt; client dedup ID và refresh trang đầu khi có tin mới. Không cam kết snapshot cố định xuyên trang."
       }
     },
     "/direct-conversations/{id}/messages": {
@@ -433,7 +444,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "resumeCursor/nextCursor được bảo vệ, hoặc sentinel 0; không là sequence tùy ý."
             },
             "description": "Con trỏ bù tin; through chốt ở lần đầu, giữ cho các trang sau."
           },
@@ -444,7 +456,7 @@
             "schema": {
               "type": "string",
               "pattern": "^[0-9]+$",
-              "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+              "description": "Nếu có phải bằng H của protected after cursor; không dùng độc lập/before; đầu request bù mới để server chốt H."
             },
             "description": "Chỉ dùng với after; mốc sequence đã commit."
           },
@@ -460,7 +472,8 @@
             },
             "description": ""
           }
-        ]
+        ],
+        "description": "before/after là cursor protected; after=0 là sentinel bootstrap. Không trộn before+after. through chỉ kiểm tra H đã ký trong after cursor, không nhận frontier tùy ý. Response resumeCursor theo phần detailed-design."
       },
       "post": {
         "operationId": "sendDirectMessage",
@@ -845,10 +858,23 @@
             "description": "ID ổn định; server tạo mới dùng UUIDv7 theo DEC-081. ID đã có trong seed/Identity vẫn được nhận nếu là UUID hợp lệ."
           },
           "username": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.]{3,32}$"
           },
           "displayName": {
-            "type": "string"
+            "type": "string",
+            "x-scdc-utf16-length": {
+              "min": 1,
+              "max": 64
+            }
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "description": "Optional historical projection; unavailable gives no suspension reason/email. Search only active eligible users. DEC-104."
           }
         },
         "required": [
@@ -880,13 +906,24 @@
           },
           "lastSequence": {
             "type": "string",
-            "pattern": "^[0-9]+$",
+            "pattern": "^(0|[1-9][0-9]*)$",
             "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+          },
+          "lastActivityAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "null khi chưa có tin; danh sách sort DESC NULLS LAST rồi ID ASC."
           }
         },
         "required": [
           "id",
-          "participants"
+          "participants",
+          "createdAt",
+          "lastSequence",
+          "lastActivityAt"
         ],
         "additionalProperties": false
       },
@@ -946,6 +983,15 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "contentState": {
+            "type": "string",
+            "enum": [
+              "available",
+              "deleted",
+              "unavailable_after_restore"
+            ],
+            "description": "Optional for ordinary/legacy messages; mandatory when restored latest edit body is missing (DEC-108). No old content is returned."
           }
         },
         "required": [
@@ -961,7 +1007,60 @@
           "deletedAt"
         ],
         "additionalProperties": false,
-        "description": "Tin hiện hành; khi deletedAt khác null thì content phải null. Không trả nội dung phiên bản cũ."
+        "description": "Current message. Deleted: content=null and deletedAt set. Restore unavailable: content=null, deletedAt=null and contentState=unavailable_after_restore. Never return old edited body; actor-author may explicitly edit unavailable message with new body. DEC-104/108.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "deletedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "deletedAt"
+              ]
+            },
+            "then": {
+              "properties": {
+                "content": {
+                  "type": "null"
+                },
+                "contentState": {
+                  "const": "deleted"
+                }
+              }
+            },
+            "else": {
+              "if": {
+                "properties": {
+                  "contentState": {
+                    "const": "unavailable_after_restore"
+                  }
+                },
+                "required": [
+                  "contentState"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "content": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "contentState": {
+                    "const": "available"
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       "OpenConversationRequest": {
         "type": "object",
@@ -988,11 +1087,12 @@
           },
           "content": {
             "type": "string",
-            "description": "Văn bản thuần, tối đa 2.000 đơn vị UTF-16 theo DEC-068; không chỉ khoảng trắng. Chuẩn hóa LF là thiết kế đề xuất.",
+            "description": "Văn bản theo DEC-068/090: CRLF/CR → LF; 1–2.000 UTF-16; từ chối Unicode lỗi/NUL và toàn trắng/vô hình; không trim/NFC. Bảng cố định docs/fixtures/text-policy.json.",
             "x-scdc-utf16-length": {
               "min": 1,
               "max": 2000
-            }
+            },
+            "x-scdc-text-policy": "../fixtures/text-policy.json"
           }
         },
         "required": [
@@ -1006,11 +1106,12 @@
         "properties": {
           "content": {
             "type": "string",
-            "description": "Văn bản thuần, tối đa 2.000 đơn vị UTF-16 theo DEC-068; không chỉ khoảng trắng. Chuẩn hóa LF là thiết kế đề xuất.",
+            "description": "Văn bản theo DEC-068/090: CRLF/CR → LF; 1–2.000 UTF-16; từ chối Unicode lỗi/NUL và toàn trắng/vô hình; không trim/NFC. Bảng cố định docs/fixtures/text-policy.json.",
             "x-scdc-utf16-length": {
               "min": 1,
               "max": 2000
-            }
+            },
+            "x-scdc-text-policy": "../fixtures/text-policy.json"
           },
           "expectedVersion": {
             "type": "string",
@@ -1087,15 +1188,23 @@
           },
           "throughSequence": {
             "type": "string",
-            "pattern": "^[0-9]+$",
+            "pattern": "^(0|[1-9][0-9]*)$",
             "description": "Số nguyên không âm dạng chuỗi; client dùng BigInt hoặc tương đương."
+          },
+          "resumeCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor bảo vệ frontier H; non-null ở latest page hoặc trang cuối catch-up. Chỉ lưu sau merge thành công."
           }
         },
         "required": [
           "items",
           "nextCursor",
           "hasMore",
-          "throughSequence"
+          "throughSequence",
+          "resumeCursor"
         ],
         "additionalProperties": false
       },
@@ -1157,7 +1266,9 @@
     "schema and error code integration",
     "SQL constraints and commit order",
     "cursor protection implementation",
-    "revocation proof within 5 seconds"
+    "revocation proof within 5 seconds",
+    "shared Identity transaction guard",
+    "migration legacy fingerprints and sequences"
   ],
   "x-scdc-length-rule": "UTF-16 limits use x-scdc-utf16-length; JSON Schema minLength/maxLength count code points and cannot alone enforce DEC-068.",
   "x-scdc-decisions": [
@@ -1166,6 +1277,8 @@
     "DEC-070",
     "DEC-071",
     "DEC-081",
-    "DEC-083"
+    "DEC-083",
+    "DEC-090",
+    "DEC-091"
   ]
 }

@@ -1,0 +1,3313 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SCDC Media control — target design",
+    "version": "0.1.0-draft",
+    "description": "All operations unimplemented. DEC-078–085/099–102 are product inputs; coordinator/admission/SFU enforcement are proposed. 16 public + 3 internal operations. No recording, screen audio or device handoff in MVP."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/media/state": {
+      "get": {
+        "operationId": "getOwnMediaState",
+        "summary": "Trạng thái media của tài khoản",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Valid verified account/session",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnMediaState"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "clientInstanceId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          }
+        ]
+      }
+    },
+    "/media/calls": {
+      "post": {
+        "operationId": "createDirectCall",
+        "summary": "Tạo lời gọi riêng",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Both verified eligible users; available desktop presence; two user claims free",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCallRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/calls/{callId}": {
+      "get": {
+        "operationId": "getDirectCall",
+        "summary": "Đọc trạng thái cuộc gọi",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Caller or callee; valid session",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "callId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/media/calls/{callId}/accept": {
+      "post": {
+        "operationId": "acceptDirectCall",
+        "summary": "accept cuộc gọi",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Callee while ringing; first accept wins; reserve both slots atomically",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "callId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/calls/{callId}/reject": {
+      "post": {
+        "operationId": "rejectDirectCall",
+        "summary": "reject cuộc gọi",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Callee while ringing",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "callId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/calls/{callId}/cancel": {
+      "post": {
+        "operationId": "cancelDirectCall",
+        "summary": "cancel cuộc gọi",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Bound caller while ringing",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "callId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/calls/{callId}/end": {
+      "post": {
+        "operationId": "endDirectCall",
+        "summary": "end cuộc gọi",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Bound caller/callee after accept; end both participations",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "callId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{serverId}/channels/{channelId}/media": {
+      "get": {
+        "operationId": "getChannelMedia",
+        "summary": "Đọc trạng thái phòng thoại",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Current member/view; voice channel not deleted",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/servers/{serverId}/channels/{channelId}/media/join": {
+      "post": {
+        "operationId": "joinVoiceChannel",
+        "summary": "Vào phòng thoại",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Identity + Community guards; room/global/user capacity",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/participations/{participationId}": {
+      "get": {
+        "operationId": "getOwnParticipation",
+        "summary": "Đọc phiên tham gia",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Exact owner user/session/client instance",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "clientInstanceId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          }
+        ]
+      }
+    },
+    "/media/participations/{participationId}/leave": {
+      "post": {
+        "operationId": "leaveParticipation",
+        "summary": "Rời phiên tham gia",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Exact owner binding; drain before capacity reuse",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/participations/{participationId}/connection-grants": {
+      "post": {
+        "operationId": "issueConnectionGrant",
+        "summary": "Cấp grant kết nối/reconnect",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Owner binding; current guard and fixed deadline; no new slot",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionGrant"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/participations/{participationId}/heartbeats": {
+      "post": {
+        "operationId": "heartbeatParticipation",
+        "summary": "Heartbeat tab đang tham gia",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Owner binding; liveness hint only; never extends outage/authorization",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeartbeatRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/participations/{participationId}/sources": {
+      "post": {
+        "operationId": "reserveSource",
+        "summary": "Giữ chỗ nguồn phát",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Owner binding; current authorization, per-source and room quota",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartSourceResult"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSourceRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/participations/{participationId}/sources/{sourceId}/stop": {
+      "post": {
+        "operationId": "stopOwnSource",
+        "summary": "Dừng nguồn của mình",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Exact owner/source binding; release only after provider quiescence",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/participations/{participationId}/sources/{sourceId}/mute": {
+      "post": {
+        "operationId": "muteOwnSource",
+        "summary": "Bật/tắt mute mic/camera",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Own microphone/camera only; screen uses stop",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "participationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteSourceRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/media/admissions": {
+      "post": {
+        "operationId": "authorizeProviderAdmission",
+        "summary": "Kiểm tra join/resume và lease quyền",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Trusted admission/SFU controller; current guard; fail closed",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Target committed state; endpoint not implemented. Provider state may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdmissionLease"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdmissionRequest"
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [
+          {
+            "serviceAuth": [],
+            "serviceTLS": []
+          }
+        ]
+      }
+    },
+    "/internal/media/provider-observations": {
+      "post": {
+        "operationId": "observeProviderState",
+        "summary": "Nhận trạng thái provider có epoch",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Trusted SFU controller; anti-replay/generation/epoch validation",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Verified observation accepted or duplicate ignored; no automatic resurrection."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderObservation"
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [
+          {
+            "serviceAuth": [],
+            "serviceTLS": []
+          }
+        ]
+      }
+    },
+    "/internal/media/livekit-webhook": {
+      "post": {
+        "operationId": "receiveLiveKitWebhook",
+        "summary": "Nhận webhook LiveKit",
+        "x-scdc-implementation": "not-implemented",
+        "x-scdc-access": "Verify provider signature over raw body; dedup; reconciliation hint only",
+        "x-scdc-retry": "GET may refresh/retry. Mutations use retry:false; explicit repeat keeps operation ID. Heartbeat/reconnect are bounded technical flows.",
+        "responses": {
+          "400": {
+            "description": "Validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials/session",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ineligible",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hidden or absent resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/version/capacity/operation conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; numeric limits pending",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Authority/provider unavailable or draining",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Verified observation accepted or duplicate ignored; no automatic resurrection."
+          }
+        },
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [
+          {
+            "providerSignature": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/webhook+json": {
+              "schema": {
+                "type": "object",
+                "description": "Provider payload pinned with server/SDK build; verify original bytes before parse. Not SCDC ProviderObservation."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MutationRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "expectedVersion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "clientInstanceId",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "CreateCallRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "peerUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "clientInstanceId",
+          "peerUserId"
+        ],
+        "additionalProperties": false
+      },
+      "JoinRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "clientInstanceId"
+        ],
+        "additionalProperties": false
+      },
+      "GrantRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "expectedVersion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "resume"
+            ]
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "clientInstanceId",
+          "expectedVersion",
+          "mode"
+        ],
+        "additionalProperties": false
+      },
+      "HeartbeatRequest": {
+        "type": "object",
+        "properties": {
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "connectionEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          }
+        },
+        "required": [
+          "clientInstanceId",
+          "connectionEpoch"
+        ],
+        "additionalProperties": false
+      },
+      "StartSourceRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "expectedVersion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "microphone",
+              "camera",
+              "screen"
+            ]
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "clientInstanceId",
+          "expectedVersion",
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "MuteSourceRequest": {
+        "type": "object",
+        "properties": {
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "expectedVersion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "muted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clientOperationId",
+          "clientInstanceId",
+          "expectedVersion",
+          "muted"
+        ],
+        "additionalProperties": false
+      },
+      "SourceSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "microphone",
+              "camera",
+              "screen"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "live",
+              "stopping",
+              "ended"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "sourceEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "desiredMuted": {
+            "type": "boolean"
+          },
+          "confirmedMuted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publishDeadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "participationId",
+          "kind",
+          "state",
+          "version",
+          "sourceEpoch",
+          "desiredMuted",
+          "confirmedMuted",
+          "publishDeadline"
+        ],
+        "additionalProperties": false,
+        "description": "Snapshot of current source; ended historical sources are not included in the current participation source array."
+      },
+      "StartSourceResult": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceSnapshot"
+          },
+          "publishPermit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "description": "Opaque owner-only publish capability; never put in events/logs."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "publishPermit",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipantSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "connecting",
+              "connected",
+              "reconnecting",
+              "ended"
+            ]
+          },
+          "microphone": {
+            "type": "string",
+            "enum": [
+              "off",
+              "muted",
+              "live"
+            ]
+          },
+          "camera": {
+            "type": "string",
+            "enum": [
+              "off",
+              "live"
+            ]
+          },
+          "screen": {
+            "type": "string",
+            "enum": [
+              "off",
+              "live"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "state",
+          "microphone",
+          "camera",
+          "screen"
+        ],
+        "additionalProperties": false
+      },
+      "RoomSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "channel"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "connecting",
+              "open",
+              "closing",
+              "closed"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "channelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "callId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantSummary"
+            },
+            "maxItems": 10
+          },
+          "screens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "sourceId",
+                "participationId"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "version",
+          "channelId",
+          "callId",
+          "participants",
+          "screens"
+        ],
+        "additionalProperties": false
+      },
+      "CallSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "callerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "calleeUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ringing",
+              "connecting",
+              "active",
+              "ended"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "rejected",
+                  "cancelled",
+                  "no_answer",
+                  "left",
+                  "peer_left",
+                  "session_revoked",
+                  "access_revoked",
+                  "channel_deleted",
+                  "connect_timeout",
+                  "reconnect_timeout",
+                  "authority_unavailable",
+                  "provider_failure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "ringExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "roomId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "callerUserId",
+          "calleeUserId",
+          "state",
+          "reason",
+          "version",
+          "ringExpiresAt",
+          "roomId"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipationSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roomId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owningClientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "connecting",
+              "connected",
+              "reconnecting",
+              "ended"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "rejected",
+                  "cancelled",
+                  "no_answer",
+                  "left",
+                  "peer_left",
+                  "session_revoked",
+                  "access_revoked",
+                  "channel_deleted",
+                  "connect_timeout",
+                  "reconnect_timeout",
+                  "authority_unavailable",
+                  "provider_failure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "connectionEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "connectDeadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reconnectDeadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceSnapshot"
+            },
+            "maxItems": 3
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "roomId",
+          "owningClientInstanceId",
+          "state",
+          "reason",
+          "version",
+          "connectionEpoch",
+          "connectDeadline",
+          "reconnectDeadline",
+          "sources"
+        ],
+        "additionalProperties": false
+      },
+      "OwnMediaState": {
+        "type": "object",
+        "properties": {
+          "incomingCall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CallSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outgoingCall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CallSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "participation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParticipationSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isOwningInstance": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "incomingCall",
+          "outgoingCall",
+          "participation",
+          "isOwningInstance"
+        ],
+        "additionalProperties": false
+      },
+      "ConnectionGrant": {
+        "type": "object",
+        "properties": {
+          "grantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "connectionEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "signalingUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Admission URL only, never direct SFU URL."
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Secret provider JWT. RAM only, no logs/events/browser persistent storage."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "connectOrReconnectDeadline": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "grantId",
+          "participationId",
+          "connectionEpoch",
+          "signalingUrl",
+          "token",
+          "expiresAt",
+          "connectOrReconnectDeadline"
+        ],
+        "additionalProperties": false
+      },
+      "ClientRegistration": {
+        "type": "object",
+        "properties": {
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "desktopMediaCapable": {
+            "const": true
+          }
+        },
+        "required": [
+          "clientInstanceId",
+          "desktopMediaCapable"
+        ],
+        "additionalProperties": false
+      },
+      "ClientAcknowledgement": {
+        "type": "object",
+        "properties": {
+          "clientInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "registered": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "clientInstanceId",
+          "registered",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "AdmissionRequest": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "resume",
+              "renew"
+            ]
+          },
+          "roomId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roomGeneration": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "connectionEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "providerParticipantSid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "grantNonce": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerNodeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerNodeGeneration": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          }
+        },
+        "required": [
+          "mode",
+          "roomId",
+          "roomGeneration",
+          "participationId",
+          "connectionEpoch",
+          "providerParticipantSid",
+          "grantNonce",
+          "providerNodeId",
+          "providerNodeGeneration"
+        ],
+        "additionalProperties": false
+      },
+      "AdmissionLease": {
+        "type": "object",
+        "properties": {
+          "leaseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "connectionEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "connectOrReconnectDeadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allowedSourceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "leaseId",
+          "participationId",
+          "connectionEpoch",
+          "checkedAt",
+          "expiresAt",
+          "connectOrReconnectDeadline",
+          "allowedSourceIds"
+        ],
+        "additionalProperties": false
+      },
+      "ProviderObservation": {
+        "type": "object",
+        "properties": {
+          "observationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "observationSequence": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "providerNodeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerNodeGeneration": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "roomId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roomGeneration": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "connectionEpoch": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Positive bigint as decimal string; application rejects overflow."
+          },
+          "providerParticipantSid": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "disconnected",
+              "quiesced",
+              "source_live",
+              "source_stopped"
+            ]
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceEpoch": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$",
+                "description": "Positive bigint as decimal string; application rejects overflow."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "providerTrackSid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "observationId",
+          "observationSequence",
+          "providerNodeId",
+          "providerNodeGeneration",
+          "roomId",
+          "roomGeneration",
+          "participationId",
+          "connectionEpoch",
+          "providerParticipantSid",
+          "kind",
+          "sourceId",
+          "sourceEpoch",
+          "providerTrackSid",
+          "observedAt"
+        ],
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "$ref": "direct-messaging.openapi.json#/components/schemas/ProblemDetails"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "serviceAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Separate service credential, not app access token; anti-replay required."
+      },
+      "serviceTLS": {
+        "type": "mutualTLS"
+      },
+      "providerSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Verify LiveKit webhook signature and raw-body digest; not ordinary app Bearer."
+      }
+    }
+  }
+}

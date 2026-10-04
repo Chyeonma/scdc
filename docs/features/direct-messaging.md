@@ -10,6 +10,7 @@ Quy tắc cốt lõi đã xác nhận. UX và hợp đồng dưới đây còn �
 - [Quyền](#permissions)
 - [Giao diện](#ux)
 - [Hợp đồng đề xuất](#contracts)
+- [Thiết kế chi tiết DM](#detailed-design)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Vấn đề còn mở](#gaps)
@@ -66,8 +67,10 @@ phạm vi phiên bản đầu trong Project Brief.
 | DM-011 | Chỉ giữ nội dung mới nhất sau khi sửa, không cung cấp lịch sử phiên bản cũ; vẫn hiện dấu “Đã sửa”. | DEC-052 |
 | DM-012 | Mỗi tin tối đa 2.000 đơn vị UTF-16; cho xuống dòng/emoji; từ chối tin rỗng/chỉ có khoảng trắng. | DEC-053, DEC-068 |
 | DM-013 | Từ khóa tìm người 2–64 UTF-16, một phần username/displayName; không phân biệt hoa/thường, giữ dấu; ưu tiên username khớp đúng; trang mặc định 20, tối đa 50. | DEC-069 |
-| DM-014 | Tin không tự hết hạn trong MVP; sửa/xóa vẫn theo quy tắc đã chốt, sao lưu/xóa tài khoản có chính sách riêng. | DEC-070 |
+| DM-014 | Tin không tự hết hạn trong MVP; sửa/xóa theo quy tắc đã chốt. Account chưa có self-delete, khóa không xóa lịch sử; backup/restore theo chính sách vòng đời. | DEC-070/103/104/108/109 |
 | DM-015 | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng, nút Gửi gửi tin. | DEC-071 |
+| DM-016 | Chuẩn hóa CRLF/CR thành LF trước đếm; từ chối UTF-16 lỗi và tin chỉ khoảng trắng/vô hình; giữ Unicode/ZWJ trong tin có nội dung. | DEC-090 |
+| DM-017 | Bản nháp chưa Gửi chỉ ở bộ nhớ tab, giữ khi chuyển hội thoại; reload/đóng tab/logout mất bản nháp; không lưu nội dung xuống localStorage/IndexedDB. | DEC-091 |
 
 Các quyết định DEC-* được ghi tại
 [sổ quyết định](../decisions.md#decisions).
@@ -82,7 +85,7 @@ Các quyết định DEC-* được ghi tại
 | Trùng tên hiển thị | Hiển thị thêm tên tài khoản duy nhất; chọn bằng ID; không đưa email vào kết quả |
 | Chọn chính mình | Không tạo DM một người; trả lỗi dữ liệu; tính năng ghi chú cá nhân không thuộc yêu cầu hiện tại |
 | Mở DM đã có | Trả cùng hội thoại của cặp hai người, kể cả khi hai bên mở đồng thời |
-| Người nhận không còn đủ điều kiện sử dụng | Chặn gửi mới theo trạng thái tài khoản; việc đọc lịch sử/xóa tài khoản cần chính sách lưu giữ ở OQ-011 |
+| Người nhận bị khóa | Chặn gửi/gọi mới; actor active vẫn đọc lịch sử và sửa/xóa tin của mình theo quyền. Không self-delete MVP; DEC-103/104 và [vòng đời dữ liệu](../data-lifecycle.md#account-state) |
 | Mất phản hồi gửi | Giữ tin tạm; người gửi bấm thử lại cùng mã thao tác; chỉ một tin được lưu |
 | Chủ ý gửi cùng nội dung lần nữa | Là thao tác mới với mã mới; được tạo tin mới, không chống trùng bằng nội dung đơn thuần |
 | Thử lại tin đã sửa/xóa sau lần gửi đầu | Trả cùng ID với trạng thái hiện hành, không tạo lại nội dung gửi ban đầu |
@@ -94,7 +97,7 @@ Các cơ chế ID thao tác, lưu giữ khóa chống trùng, phiên bản sửa
 phân trang được mô tả tại [hợp đồng DM](direct-messaging.md#contracts).
 Đây là thiết kế đề xuất để kiểm chứng hành vi đã chốt, không chọn ngầm
 công nghệ triển khai. Không lưu nội dung cũ trong lịch sử sửa, sự kiện
-hoặc log; dữ liệu sao lưu tiếp tục theo chính sách OQ-011 cần xác định.
+hoặc log; backup/restore theo [vòng đời dữ liệu](../data-lifecycle.md#restore), còn proof DATA-GAP.
 
 <a id="permissions"></a>
 
@@ -159,8 +162,7 @@ bắt đầu. Hội thoại mới có lời nhắc gửi tin đầu tiên và kh
 
 Màn hình hẹp chỉ hiện một vùng chính mỗi lần: danh sách/tìm người → hội
 thoại. Có nút quay lại danh sách; quay lại không tự gửi hoặc tự xóa bản
-nháp đang nhập. Chính sách giữ bản nháp khi tải lại/đăng xuất chưa chốt;
-đề xuất chỉ giữ trong bộ nhớ của phiên giao diện.
+nháp đang nhập. Bản nháp theo DEC-091: giữ theo tài khoản/hội thoại trong bộ nhớ tab; tải lại/đóng tab/logout mất bản nháp, không lưu nội dung vào localStorage/IndexedDB.
 
 ```text
 DM-S03 · Sửa tin                     DM-S04 · Xóa tin
@@ -191,6 +193,8 @@ Tin đã xóa không có thao tác sửa. Các quy tắc này được chi tiế
 | UX-DM-07 | Phiên hết hạn | Yêu cầu đăng nhập lại; chỉ tải lại hội thoại khi đã kiểm tra quyền; không gửi lại tin tự động | AC-ACC-04 |
 | UX-DM-08 | Sửa/xóa thất bại | Giữ nội dung xác nhận gần nhất; lỗi không làm tin biến mất; cho tải bản hiện tại nếu xung đột | AC-DM-04, AC-DM-05 |
 | UX-DM-09 | Chưa xác minh email | Không gửi tin; có hướng dẫn xác minh theo luồng tài khoản | AC-DM-09 |
+| UX-DM-10 | Peer không khả dụng do account bị khóa | Đọc lịch sử vẫn được, composer/call mới bị chặn; không hiển thị lý do khóa/email | DEC-104 |
+| UX-DM-11 | Tin unavailable sau restore | Hiển thị “Nội dung chưa khôi phục được”, giữ vị trí/tác giả; author có quyền được viết lại body mới hoặc xóa, không tải bản cũ | DEC-108 |
 
 Nút “Gửi” gửi tin trên mọi thiết bị. Desktop dùng Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng theo DEC-071. Không gửi trong khi IME đang composition; hành vi bàn phím ảo phải kiểm thử trên ma trận thiết bị. Không đưa đọc/đã nhận, file, chặn tài khoản hoặc
 cuộc gọi vào wireframe của đợt DM văn bản.
@@ -225,7 +229,7 @@ Prefix đề xuất `/api/v1`. API hiện tại của Accounts ở [đặc tả 
 | Đối tượng | Trường chính đề xuất | Ràng buộc |
 |---|---|---|
 | UserSummary | `id, username, displayName` | Không trả email, phiên hoặc trạng thái bảo mật |
-| DirectConversation | `id, participantLowId, participantHighId, createdAt, lastSequence` | Đúng hai người khác nhau; cặp đã chuẩn hóa duy nhất; tạo đồng thời trả cùng hội thoại |
+| DirectConversation | `id, participantLowId, participantHighId, createdAt, lastSequence, lastActivityAt` | Đúng hai người khác nhau; cặp đã chuẩn hóa duy nhất; tạo đồng thời trả cùng hội thoại; DTO trả hai UserSummary trong `participants` |
 | Message | `id, conversationId, authorId, clientMessageId, createSequence, version, content, createdAt, editedAt, deletedAt` | Tác giả thuộc hội thoại; sequence tạo tin tăng theo thứ tự commit trong hội thoại |
 | SendOperation | `conversationId, authorId, clientMessageId, requestFingerprint, messageId` | Duy nhất theo ba trường đầu; cùng transaction với tin; còn tồn tại sau khi tin bị xóa |
 | NotificationOutbox | `eventId, type, conversationId, messageId, version, occurredAt` | Cùng transaction với thay đổi tin; chỉ tham chiếu, không lưu bản nội dung cũ |
@@ -237,11 +241,9 @@ nhóm bằng endpoint DM. Chủ ý gửi hai tin cùng nội dung dùng hai
 
 Sửa tin thay nội dung hiện hành và tăng `version`; không tạo bảng lịch
 sử nội dung cũ (DEC-052). Xóa tin đặt `content=null`, giữ tombstone, ID,
-tác giả, thời điểm và khóa thao tác; tăng `version`. Không lưu nội dung
+tác giả, thời điểm và khóa thao tác; tăng `version` khi xóa lần đầu. Không lưu nội dung
 tin trong log, audit hoặc payload sự kiện để vô tình tạo lịch sử sửa.
-Chính sách dữ liệu trong sao lưu, thời hạn giữ tin và xóa tài khoản vẫn
-thuộc OQ-011; quyết định “chỉ giữ bản mới nhất” không phải cam kết xóa
-ngay mọi bản sao lưu hoặc dữ liệu người nhận đã tự sao chép.
+Tin không tự hết hạn DEC-070; chưa self-delete account DEC-103, khóa không xóa lịch sử DEC-104. Backup/WAL tối đa tuổi 30 ngày DEC-086/109; restore mất bản sửa mới nhất trả placeholder DEC-108. [Vòng đời dữ liệu](../data-lifecycle.md#restore) là nguồn chuẩn; chỉ bản mới nhất không phải cam kết xóa ngay mọi backup hoặc dữ liệu người nhận tự sao chép.
 
 <a id="contract-5"></a>
 
@@ -282,7 +284,7 @@ không trả chính người tìm. Các giới hạn/cách khớp đã xác nh�
 
 ### Hợp đồng 6 — Chuẩn hóa và kiểm tra nội dung
 
-Theo DEC-053/068, tin tối đa 2.000 đơn vị UTF-16, nhận xuống dòng và emoji, từ chối tin chỉ có khoảng trắng. Phép đếm đã chốt; chuẩn hóa và bộ ký tự trắng/vô hình bên dưới là thiết kế cần kiểm chứng:
+Theo DEC-053/068, tin tối đa 2.000 đơn vị UTF-16, nhận xuống dòng và emoji, từ chối tin chỉ có khoảng trắng. Phép đếm đã chốt; chuẩn hóa/UTF-16/vô hình đã chốt DEC-090; bảng Unicode và fixture cụ thể hóa thiết kế:
 
 1. Chuẩn hóa CRLF/CR thành LF; không cắt khoảng trắng đầu/cuối của một
    tin có nội dung và không diễn giải HTML/Markdown.
@@ -291,15 +293,14 @@ Theo DEC-053/068, tin tối đa 2.000 đơn vị UTF-16, nhận xuống dòng v�
    tính hai, emoji ghép/ký tự tổ hợp có thể tính nhiều đơn vị. Server
    quyết định hợp lệ; client không được cắt giữa một cặp surrogate.
 3. Tin trống hoặc chỉ gồm ký tự khoảng trắng/xuống dòng bị từ chối.
-   Bộ ký tự trắng/vô hình và cách xử lý surrogate không hợp lệ phải được khóa
-   cùng dữ liệu kiểm thử trước khi hoàn tất thiết kế chi tiết.
+   Bộ ký tự theo [text-policy.json](../fixtures/text-policy.json); surrogate không ghép đôi bị từ chối, không tự thay bằng ký tự khác.
 4. Sửa tin áp dụng cùng giới hạn. Vượt giới hạn trả `400 CONTENT_TOO_LONG`;
    trống trả `400 CONTENT_EMPTY`; không lưu tin hoặc phát sự kiện.
 
 Trường `requestFingerprint` tính từ nội dung đã chuẩn hóa và ngữ cảnh
 thao tác, dùng dấu vân tay có khóa để đối chiếu, không giữ bản văn bản
 cũ trong bảng chống trùng. Phải quản lý phiên bản/khóa đủ lâu để các
-yêu cầu thử lại còn đối chiếu được; chọn thuật toán ở thiết kế chi tiết.
+yêu cầu thử lại còn đối chiếu được; HMAC-SHA256 và định dạng byte ở [thiết kế chi tiết](#detailed-design).
 
 <a id="contract-7"></a>
 
@@ -313,13 +314,14 @@ sequenceDiagram
     participant DB as Kho dữ liệu Nhắn tin
     participant W as Bộ phát cập nhật
     UI->>DM: Gửi content + clientMessageId
-    DM->>ACC: Kiểm tra phiên và điều kiện tài khoản
+    DM->>ACC: Kiểm tra phiên và tài khoản actor
     ACC-->>DM: Cho phép hoặc từ chối
     DM->>DM: Kiểm tra đúng người tham gia
     DM->>DB: Transaction + tra khóa thao tác
     alt Khóa đã tồn tại, cùng nội dung gửi ban đầu
         DB-->>DM: Tin hiện hành hoặc tombstone
     else Khóa mới
+        DM->>ACC: Kiểm tra peer đủ điều kiện, giữ guard tới commit
         DM->>DB: Cấp sequence; ghi tin + khóa + outbox
         DM->>DB: Commit
     end
@@ -335,9 +337,12 @@ sequenceDiagram
   thứ tự sequence cũng là thứ tự commit của tin mới.
 - Response mất sau commit: lần thử lại trả cùng `messageId`. Tin đã
   bị sửa/xóa: trả trạng thái hiện hành, không hồi sinh nội dung cũ.
+- Peer bị khóa sau commit: retry cùng khóa/nội dung chỉ đọc lại tin đã lưu
+  nếu actor còn quyền. Khóa chưa tồn tại phải kiểm tra peer hiện hành;
+  không tạo tin mới hoặc outbox mới khi peer bị khóa.
 - Giữ khóa chống trùng suốt vòng đời dữ liệu hội thoại, kể cả tombstone.
   Không tự hết hạn khóa sau vài giờ trong khi UI còn cho thử lại. Việc
-  thanh lọc toàn hội thoại cần chốt với chính sách lưu giữ ở OQ-011.
+  thanh lọc toàn hội thoại chưa được chọn; [vòng đời dữ liệu](../data-lifecycle.md#cleanup) giữ marker khi payload được dọn, không purge hội thoại/tin live.
 - Trước khi sửa/xóa, kiểm tra lại tác giả và quyền truy cập. Sai version
   trả xung đột; giao diện tải bản hiện hành, không ghi đè âm thầm. Sửa
   tin đã xóa trả `409 MESSAGE_DELETED`; xóa lặp vẫn phải kiểm tra tác giả.
@@ -356,7 +361,7 @@ con trỏ, sau đó sắp tăng theo `sequence` để hiển thị; không đư�
 `before` và `after` trong cùng request. Response:
 
 ```text
-{ items, nextCursor, hasMore, throughSequence }
+{ items, nextCursor, hasMore, throughSequence, resumeCursor }
 ```
 
 Lần bắt đầu bù tin, server chốt `throughSequence` là sequence tin mới
@@ -386,7 +391,7 @@ Quy trình mở/reconnect:
 Cursor tin mới không phát hiện được việc sửa/xóa một tin cũ. Vì vậy không
 được bỏ bước 4 hoặc coi cache lịch sử offline là nguồn chính xác. Dữ liệu
 đã cache phải tách theo tài khoản và được xóa khỏi phiên giao diện khi
-đăng xuất/đổi tài khoản; chính sách lưu trên thiết bị chờ rà soát tài khoản.
+đăng xuất/đổi tài khoản; nội dung/bản nháp chỉ ở bộ nhớ tab theo DEC-091.
 
 <a id="contract-9"></a>
 
@@ -409,7 +414,7 @@ sự kiện trùng/đảo thứ tự, reconnect và tài khoản thứ ba truy c
 - Sequence được cấp dưới khóa row/counter hội thoại trong cùng transaction với tin, SendOperation và outbox; writer thứ hai chỉ cấp sau writer trước commit/rollback. Sequence/version truyền chuỗi số nguyên, client so sánh BigInt. Counter đề xuất ánh xạ `spaces.last_message_sequence`; không dùng identity toàn cục hiện tại làm mốc commit.
 - Cursor dùng cơ chế bảo vệ có mã hóa và xác thực (đề xuất ASP.NET Core Data Protection), gồm actor/resource/hướng/filter/mốc through và vị trí sort. Hạn kỹ thuật đề xuất 24 giờ; key ring phải bền qua restart/deploy. Token không dùng được giữa hai user/resource; cursor lỗi/hết hạn trả validation, client tải lại lịch sử, không tự gửi mutation.
 - Tìm người trim/NFC/chuyển chữ thường để tạo search key là thiết kế đề xuất; giữ dấu, khớp substring sau chuẩn hóa, username khớp đúng xếp trước rồi username/ID. Key hiển thị/tên tài khoản trả vẫn theo hồ sơ; không chuẩn hóa NFC nội dung tin. Cần fixture Unicode để SQL/service cho cùng kết quả.
-- Nội dung chuẩn hóa CRLF/CR thành LF rồi đếm UTF-16. Bộ khoảng trắng đề xuất dùng Unicode White_Space (`0009–000D`, `0020`, `0085`, `00A0`, `1680`, `2000–200A`, `2028–2029`, `202F`, `205F`, `3000`); từ chối chuỗi chỉ gồm tập này. Ký tự vô hình khác và surrogate không hợp lệ cần khóa fixture trước bàn giao; không âm thầm bỏ nội dung để vượt validation.
+- Nội dung theo DEC-090; bộ White_Space/Default_Ignorable và control ở [text-policy.json](../fixtures/text-policy.json), Unicode 17.0.0. Không trim/NFC hoặc bỏ ZWJ trong tin có nội dung; validation client/server dùng cùng bảng cố định.
 - Hub kiểm tra phiên/quyền hiện hành khi subscribe. Dispatcher không phát nội dung cho connection/space bị thu hồi; revoker định tuyến theo session ID/space ID, bỏ subscription và đóng connection phù hợp. Dùng outbox sau commit cộng đối soát tối đa 1 giây là thiết kế đề xuất để đạt deadline thu hồi 5 giây; lỗi kiểm tra quyền phải dừng phát, không tiếp tục dùng cache không còn xác nhận.
 
 SignalR giữ principal của lúc kết nối và không tự phản ánh việc thu hồi phiên/quyền trong thời gian kết nối; vì vậy cần kiểm tra dữ liệu hiện hành và đóng/bỏ định tuyến connection. Bật `CloseOnAuthenticationExpiration` chỉ giải quyết hết hạn token, không thay thế thu hồi nghiệp vụ. Xem [tài liệu xác thực SignalR của Microsoft](https://learn.microsoft.com/en-us/aspnet/core/signalr/authn-and-authz?view=aspnetcore-10.0). JavaScript dùng `accessTokenFactory`; query token của WebSocket chỉ được nhận đúng route Hub và bị loại khỏi log proxy/API. Map user routing theo `sub` ổn định, không displayName.
@@ -435,13 +440,101 @@ Nguồn: [schema.sql](../../database/postgres/schema.sql). Các trường/schema
 
 ### Hợp đồng 10 — Điều kiện chốt hợp đồng
 
-Vg/Sáng rà soát mô hình ID, phiên, phép đếm ký tự, truy vấn tìm người,
-thứ tự commit, dấu vân tay chống trùng và thu hồi kết nối. Thái đối
+Vg/Sáng rà soát các thuật toán ID/fingerprint/cursor/transaction guard và schema chi tiết bên dưới; chính sách UTF-16/bản nháp đã chốt DEC-068/090/091. Thái đối
 chiếu mỗi lỗi/trạng thái với [wireframe](direct-messaging.md#ux)
 và [bộ ca kiểm thử](direct-messaging.md#tests).
 Thay đổi đường dẫn/trường sau khi chốt phải cập nhật đồng thời mock,
 frontend, backend và dữ liệu thử; không coi tài liệu này là bằng chứng
 đã có API hoặc đã chạy thử nghiệm.
+
+<a id="detailed-design"></a>
+
+### Thiết kế chi tiết DM
+
+Phương án kỹ thuật ngày 2026-10-04, chưa có implementation. Chính sách nội dung/bản nháp đã chốt DEC-090/091; các thuật toán/mapping dưới đây để Vg/Sáng rà soát và bàn giao, không tự ghi thêm quyết định sản phẩm.
+
+#### Nội dung và state UI
+
+Pipeline: kiểm tra chuỗi Unicode hợp lệ → CRLF/CR thành LF → đếm 1–2.000 UTF-16 → kiểm tra không chỉ trắng/vô hình → lưu nguyên nội dung đã chuẩn hóa. [text-policy.json](../fixtures/text-policy.json) khóa bảng Unicode 17.0.0: White_Space từ [PropList](https://www.unicode.org/Public/17.0.0/ucd/PropList.txt), Default_Ignorable_Code_Point từ [DerivedCoreProperties](https://www.unicode.org/Public/17.0.0/ucd/DerivedCoreProperties.txt), cộng control `0000–001F/007F–009F` khi xét toàn chuỗi rỗng hiển thị. Không suy font không vẽ được một chữ là tin rỗng. ZWJ/variation selector vẫn giữ và tính độ dài khi cùng nội dung khác, ví dụ `👩‍💻` được nhận.
+
+Từ chối unpaired surrogate với 400 `CONTENT_INVALID`, không sửa thành U+FFFD; `U+0000` cũng bị từ chối vì [PostgreSQL text không lưu NUL](https://www.postgresql.org/docs/18/datatype-character.html). Chỉ trắng/vô hình trả `CONTENT_EMPTY`, vượt độ dài trả `CONTENT_TOO_LONG`. Trình phân tích JSON từ chối trước validation thì trả ProblemDetails validation chung; không dùng lỗi parser chứa request body làm log. Fixture có raw input và giá trị sau chuẩn hóa, gồm trường hợp surrogate lỗi.
+
+State UI: `draft → sending → sent` hoặc `sendFailed`. Bấm Gửi tạo UUIDv4, copy nội dung vào tin tạm; từ thời điểm đó không đổi nội dung gắn với khóa gửi. Bấm Thử lại dùng đúng khóa/nội dung; muốn gửi bản đã đổi là thao tác mới với khóa mới. Tin tạm/sự kiện/response merge theo actor + clientMessageId và message ID; giữ version lớn nhất. Event đến trước HTTP response vẫn chỉ một dòng.
+
+Bản nháp Map `(userId,conversationId)` chỉ ở bộ nhớ tab theo DEC-091; khi logout/đổi account/hết phiên không khôi phục được thì xóa Map và cache tin. Reload bỏ cả tin tạm/lỗi phía tab; tin đã commit được tìm lại trong lịch sử, tin chưa commit không được coi là đã lưu. Không coi hai tab cùng tài khoản là tự đồng bộ bản nháp.
+
+Wrapper [api.js](../../clients/WebClient/src/api.js) hiện mặc định retry request sau 401. Tích hợp gửi/sửa/xóa DM phải dùng `retry:false`; không để refresh/reconnect/service worker/HTTP library tự replay mutation. Client có thể refresh trước lần gửi đầu bằng `getAccessToken`; khi request gửi đã xảy ra mà thất bại, giữ trạng thái lỗi để người dùng chủ động xử lý. GET lịch sử có thể retry sau refresh; không retry token consume hoặc refresh đã có kết quả không rõ.
+
+#### UUID, fingerprint và khóa giao dịch
+
+Chuẩn hóa cặp user theo so sánh unsigned từng byte UUID ở thứ tự RFC/network. Trong .NET dùng `Guid.ToByteArray(bigEndian:true)` để lấy 16 byte theo [API Microsoft](https://learn.microsoft.com/en-us/dotnet/api/system.guid.tobytearray?view=net-10.0); phù hợp comparator byte trong [PostgreSQL 18 uuid.c](https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/utils/adt/uuid.c). Không so `ToByteArray()` mặc định. Fixture dùng cặp `00000001-0000-4000-8000-000000000000` và `00000100-0000-4000-8000-000000000000` để bắt lỗi endian.
+
+Fingerprint v1 dùng HMAC-SHA256, key ngẫu nhiên riêng tối thiểu 32 byte; lưu `fingerprint_version,key_id,fingerprint` trong SendOperation. Input binary gồm ASCII domain `SCDC.Send.v1` + byte 0, UUID space/author/client theo network order, độ dài UTF-8 content dạng UInt32 big-endian, rồi UTF-8 content đã chuẩn hóa. Không serialize JSON tùy thứ tự field, không đưa thời gian hoặc access token vào fingerprint. So sánh hash constant-time; không dùng SHA-256 không khóa để lưu dấu vết nội dung ngắn dễ đoán.
+
+Retry tra SendOperation trước, lấy đúng key/version từng dùng để tính lại fingerprint; không so với nội dung message hiện hành sau sửa/xóa. Rotation chỉ đổi key cho thao tác mới; giữ key cũ cho mọi SendOperation còn tồn tại và backup 30 ngày liên quan. Key thiếu/không đọc được trả 503 `FINGERPRINT_KEY_UNAVAILABLE`, không tạo tin mới hoặc giả 409 payload conflict. HMAC key tách khỏi key ring cursor/email; không lưu secret trong DB/docs.
+
+Thứ tự khóa thống nhất: Identity user rows theo UUID → chat space → message/operation → outbox. DM gọi hợp đồng `IAccountAccessGuard` đề xuất để Identity kiểm tra actor session/stamp/expiry và giữ trạng thái recipient để đánh giá nhánh gửi mới; Messaging không JOIN bảng Identity. Guard giữ share lock trên user tới commit bằng transaction dùng chung của monolith, tương thích cạnh tranh với `LockUserAsync` dùng NO KEY UPDATE. Read/retry đã commit và author edit/delete không đòi peer active; nhánh tạo tin mới kiểm tra điều kiện recipient dưới cùng guard. Cần cơ chế unit-of-work dùng chung connection/transaction trong BuildingBlocks và callback qua Contracts; đây chưa là interface có trong source. Nếu không giữ được guard tới commit thì thiết kế chưa chứng minh race thu hồi/gửi.
+
+Gửi: dưới guard actor/space lock, tra operation; retry đúng trả tin hiện hành/tombstone/placeholder sau restore, kể cả peer đã bị khóa, nếu actor còn quyền đọc. Khóa mới: kiểm tra peer đủ điều kiện dưới guard đã giữ, tăng counter của space, insert message/operation/outbox và cập nhật projection trong cùng transaction. Khi rollback mọi thay đổi biến mất; writer sau chỉ cấp counter khi writer trước commit/rollback. Read-committed đủ cho writer đã có khóa; snapshot phân trang là mốc sequence, không phải lịch sử nội dung cũ.
+
+Sửa/xóa dùng compare-and-update version trong transaction. Kiểm tra membership/tác giả trước cả delete lặp; message không thuộc space trả 404, tác giả khác 403. Deleted rồi PATCH trả 409 `MESSAGE_DELETED`; DELETE lặp trả tombstone hiện hành sau auth, không tăng version lần nữa. PATCH cùng nội dung chuẩn hóa hiện hành là no-op nếu expectedVersion đúng; không tạo dấu “Đã sửa” hoặc outbox mới chỉ vì click lại. Sai expectedVersion trả 409 `VERSION_CONFLICT`, UI tải lại trang đang hiển thị; không thêm HTTP thứ tám chỉ để đọc một message.
+
+#### Vòng đời và placeholder bổ sung
+
+`UserSummary.availability` tùy chọn phục vụ projection lịch sử; search vẫn chỉ user active đủ điều kiện. `Message.contentState` có available/deleted/unavailable_after_restore: nhánh unavailable bắt buộc contentState, content=null/deletedAt=null, version không dưới protection floor; không biến thành tác giả đã xóa. History/realtime dùng cùng schema, actor-author còn quyền được PATCH body mới bằng expectedVersion hiện hành. Migration restore_redacted_at/constraint/key ring/sổ bảo vệ theo [thiết kế chung](../data-lifecycle.md#restore) chưa triển khai. Guard và outbox dispatcher phải dùng purpose read/author-mutation/send; không lấy peer active làm điều kiện chung cho mọi thao tác.
+
+#### Mapping dữ liệu và migration
+
+| Mục tiêu logic | Mapping SQL đề xuất | Ràng buộc/đầu việc |
+|---|---|---|
+| Conversation ID | `direct_conversations.space_id = spaces.id` | Unique low/high pair hiện có; tạo space/cặp cùng transaction, xử lý unique conflict bằng đọc lại |
+| Sequence tạo tin | Thêm `messages.conversation_sequence bigint`; giữ `sequence_no` legacy/global nếu cần | Unique `(space_id,conversation_sequence)`, >0; history index `(space_id,conversation_sequence DESC)`; wire `sequence` lấy trường mới |
+| Counter | `spaces.last_message_sequence` | Default 0, dưới row lock cấp next cùng transaction; không dùng global identity hoặc `MAX+1` ngoài khóa |
+| Tin/version | `messages.id,author_user_id,content,version,created_at,edited_at,deleted_at` | DTO `createSequence` logic → wire `sequence`; version tăng đúng một lần, tối thiểu 1; không ghi message_edits |
+| SendOperation | Thêm `messaging.send_operations` | PK `(space_id,author_user_id,client_message_id)`, FK cùng space/message, fingerprint/key version; giữ khi tombstone |
+| Deleted text | Sửa constraint text hiện tại | Text live content khác null; deleted content null; UTF-16 ở validator, constraint DB không thay bằng char_length 2.000 |
+| Outbox | `integration.outbox_events` | Payload chỉ ID/space/version; thêm lease fields hoặc bảng dispatch lease, không có nội dung tin |
+
+Backfill `conversation_sequence` theo `(sequence_no,id)` trong từng space, cập nhật counter từ max đã backfill rồi bật index/NOT NULL; seed chưa có dữ liệu thật không chứng minh migration live an toàn. Không thể khôi phục đúng nội dung gửi ban đầu cho fingerprint từ message đã sửa; không bịa fingerprint từ bản hiện hành. Legacy không có fingerprint trả 409 `OPERATION_UNVERIFIABLE` khi retry cùng client ID đã có, không tạo bản trùng; dữ liệu vẫn đọc được theo quyền. Backend DM chưa tồn tại nên hiện chưa có thao tác gửi thật qua contract mới; nếu import/cutover dữ liệu thực thì phải rà soát tác động legacy retry trước phát hành. Không sửa `schema.sql` hay xóa dữ liệu trong lần viết docs này. Dữ liệu mới qua writer mới có fingerprint ngay từ lần gửi đầu.
+
+#### Phân trang, resume và danh sách hội thoại
+
+`before/after` là cursor có mã hóa/xác thực, actor/resource/direction/filter/position/frontier/limit/expiry; hạn kỹ thuật 24 giờ. ApplicationName cố định theo môi trường qua deploy; purpose Data Protection tách `Messaging.History.v1`, `Messaging.UserSearch.v1`, `Messaging.Conversations.v1`. Cursor không thay auth: mỗi trang kiểm tra phiên/quyền hiện hành. Giữ key ring qua deploy; dùng cursor của user/resource/query khác nhận 400 `CURSOR_INVALID`.
+
+- Mở đầu không before/after: lấy latest ≤H với H là counter đã commit; items tăng sequence, nextCursor để đọc cũ hơn, resumeCursor bảo vệ mốc H.
+- Đọc cũ bằng before: giữ H của cursor, query sequence <position và ≤H, lấy limit+1 rồi trả limit tin gần nhất tăng sequence; sửa/xóa được đọc ở trạng thái hiện hành.
+- Bù mới: dùng resumeCursor có mode `resume` trước đó làm `after`; request đầu chốt H mới. nextCursor có mode `after` tiếp tục cùng frontier H, không chốt lại mỗi trang. `after=0` là sentinel bootstrap được phép, không cho client tự đưa sequence bất kỳ. Các nextCursor giữ cùng H/position; query position <sequence ≤H. `through` nếu có chỉ dùng kiểm tra bằng H trong protected cursor, không nhận frontier do client tự chọn; không đi với before/không cursor.
+- Response có `resumeCursor`: chỉ khác null ở trang latest đầu hoặc trang cuối bù mới. Client chỉ lưu sau merge thành công; khi hasMore thì dùng nextCursor, không nhảy thẳng lên H. Cursor hết hạn tải lại lịch sử và các trang đang xem, không gửi lại tin.
+
+Danh sách hội thoại mặc định 20/tối đa 50; sort last_activity_at DESC NULLS LAST rồi ID ASC, có cursor theo actor/position. Đây là danh sách đang thay đổi: khi có tin mới làm hội thoại đổi vị trí, client dedup ID và tải lại trang đầu, không hứa snapshot cố định qua các trang. Nguồn lịch sử tin vẫn là query theo conversation_sequence, không dùng lastActivity để bù tin.
+
+Tìm người do Identity query theo DEC-069: key NFC/ToLowerInvariant, username exact rank trước rồi username ASCII/ID; DB collation cố định và escaped LIKE `%`, `_`, `\` để query là substring literal. Cursor gắn query đã chuẩn hóa; đổi q/limit mà giữ cursor trả validation. Profile đổi giữa các trang có thể đổi membership kết quả, nên search refresh từ đầu; không trả email/status security. Không coi collation bỏ dấu là phù hợp DEC-069.
+
+#### SignalR và ranh giới module
+
+Schema máy đọc cho Hub nằm trong [chat-realtime.schema.json](../contracts/chat-realtime.schema.json), là JSON Schema thông điệp ứng dụng, không giả OpenAPI mô tả protocol transport SignalR. Hub `/hubs/chat` chỉ có `SubscribeConversation({conversationId})` và `UnsubscribeConversation({conversationId})`; subscribe trả ack sau khi đăng ký connection với actor/session/space. Handler/buffer client bật trước invoke; subscribe lặp không nhân connection hoặc nhận nhiều bản vì một lệnh lặp.
+
+Sự kiện `MessageChanged` có `{eventId,conversationId,message}`; eventId không dùng làm cursor lịch sử. `AccessRevoked` có `{scope,conversationId?,reason}` chỉ phục vụ UI, không mang nội dung tin và không thay việc server ngừng phát. Sai subscribe trả HubException với JSON ProblemDetails theo schema, không stack trace; auth subscription thất bại không tải lịch sử tài nguyên đó. Client dùng errorCode khi được nhận, không đoán ý nghĩa từ message tiếng Anh.
+
+Dispatcher claim outbox bằng lease, lấy message hiện hành qua Messaging, user summary qua Identity và chỉ phát tới registry connections đã đủ quyền. Registry gắn `connectionId,userId,sessionId,spaceId`; guard kiểm tra trước phát nội dung, đối soát ≤1 giây và sự kiện thu hồi commit bỏ định tuyến/đóng kết nối. Backend lỗi kiểm tra quyền phải dừng phát; HTTP history vẫn kiểm tra quyền và outbox còn để retry. SignalR disconnect/reconnect đăng ký lại, bù REST và reload các trang cũ để thấy edit/delete.
+
+Contracts cần bổ sung: `IAccountAccessGuard` giữ kiểm tra/khóa actor và điều kiện recipient trong transaction; `IUserSearchDirectory` thực hiện search/profile projections; `IAuthenticatedSessionReader` kiểm tra session/stamp/expiry; mở rộng `IRealtimeAccessRevoker` theo session/user/space. Identity triển khai dữ liệu bảo mật; Messaging triển khai registry/Hub. Existing `IUserDirectory` chỉ active user summaries, chưa chứng minh verified/valid session; không thay guard bằng summary khác null. Interface mới, transaction scope, outbox worker và Redis scale-out chưa có trong source.
+
+#### Checklist bàn giao thiết kế
+
+Review Accounts + DM + OpenAPI/schema/fixture cùng một phiên bản; đối chiếu từng errorCode với UI và TC. Prototype/mock và proof cho concurrent commit, revoke race, key rotation, partial-page reconnect, lost response và email worker thuộc gói triển khai. DEC-103/104 chốt không self-delete/giữ lịch sử khi peer bị khóa; guard read/author edit/delete không yêu cầu peer active, send/call mới vẫn kiểm tra peer. Cần IHistoricalUserSummaryReader và UI availability; không cấp quyền đọc DM cho quản trị. Restore/cleanup theo [vòng đời dữ liệu](../data-lifecycle.md#restore), còn DATA-GAP proof.
+
+Các mã lỗi dưới đây là thiết kế mục tiêu, không phải mã đã có trong backend DM:
+
+| HTTP / errorCode | Cách xử lý giao diện |
+|---|---|
+| 400 `CONTENT_INVALID` / `CONTENT_EMPTY` / `CONTENT_TOO_LONG` | Giữ nội dung để sửa; không tự gửi lại hoặc cắt tin |
+| 400 `CURSOR_INVALID` | Bỏ cursor, tải lại lịch sử hoặc tìm kiếm đúng scope; không gửi lại mutation |
+| 409 `OPERATION_CONFLICT` | Báo thao tác gửi có nội dung không khớp; không tự đổi khóa rồi gửi |
+| 409 `OPERATION_UNVERIFIABLE` | Báo không thể xác nhận lần gửi cũ; đối chiếu lịch sử, không tự tạo tin mới |
+| 409 `VERSION_CONFLICT` / `MESSAGE_DELETED` | Tải lại bản hiện hành của trang đang xem; không ghi đè hoặc khôi phục tin đã xóa |
+| 503 `FINGERPRINT_KEY_UNAVAILABLE` | Giữ tin lỗi, báo dịch vụ tạm không xử lý được; chỉ retry khi người dùng chọn |
+| 401 / 403 | Xử lý phiên hoặc quyền hiện hành; ngừng subscription trái quyền, không tự replay thao tác |
 
 <a id="acceptance"></a>
 
@@ -470,6 +563,9 @@ Các tiêu chí dưới đây mô tả hành vi quan sát được, cần rà so
 | AC-DM-16 | Tìm với từ khóa ở biên 1/2/64/65, khác hoa/thường/dấu và nhiều trang kết quả. | Giới hạn theo DEC-069; giữ phân biệt dấu; username khớp đúng được ưu tiên; không lộ email hay trả chính người tìm. |
 | AC-DM-17 | Gửi bằng Enter/Shift+Enter trên desktop và bàn phím điện thoại; nhập tiếng Việt bằng IME. | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng; nút Gửi luôn gửi; composition không vô tình gửi tin. |
 | AC-DM-18 | Mở lại lịch sử tin cũ chưa bị người gửi xóa. | Tin không bị mất chỉ vì hết một thời hạn tự động; backup/xóa tài khoản được kiểm chứng riêng. |
+| AC-DM-19 | Gửi chỉ zero-width/variation selector, surrogate lỗi, CRLF và emoji có ZWJ | Quy tắc DEC-090/text-policy thống nhất; giữ emoji/chữ và xuống dòng hợp lệ; không thay/cắt nội dung lỗi |
+| AC-DM-20 | Gõ chưa Gửi rồi đổi hội thoại, reload/đóng tab/logout | Giữ bản nháp trong cùng tab/hội thoại; reload/đóng/logout mất; không lưu nội dung DM trên storage trình duyệt |
+| AC-DM-21 | Refresh khi POST đã thất bại, response/event đảo thứ tự; reconnect bù nhiều trang | Không tự replay mutation; một dòng/tin; resumeCursor chỉ tiến sau merge đủ trang |
 
 AC-DM-12 đến AC-DM-15 cụ thể hóa bảo vệ hội thoại và hành vi đồng thời
 để rà soát; chưa phải kết quả kiểm thử đã đạt. AC-DM-16–18 cụ thể hóa DEC-069–071.
@@ -517,8 +613,8 @@ bằng chứng kiểm tra giao dịch.
 | TC-DM-17 | B offline; A gửi hơn một trang tin mới và sửa/xóa tin cũ đang nằm trong cửa sổ B từng xem | B bù hết trang mới, tải lại tin cũ và bỏ cache hết hiệu lực; không sót tin hoặc giữ nội dung đã xóa | AC-DM-15 |
 
 Ca kiểm tra nội dung cũ chỉ xét dữ liệu nghiệp vụ đang phục vụ, sự kiện
-và log trong thiết kế; vòng đời bản sao lưu phải kiểm chứng riêng sau
-khi chốt OQ-011. Không coi thu hồi bản người nhận tự sao chép là điều
+và log trong thiết kế; vòng đời bản sao lưu kiểm chứng riêng theo
+[DEC-103–109 và TC-DATA](../data-lifecycle.md#acceptance). Không coi thu hồi bản người nhận tự sao chép là điều
 kiện đạt của xóa/sửa tin.
 
 ### Dữ liệu biên nội dung
@@ -532,14 +628,26 @@ kiện đạt của xóa/sửa tin.
 | TC-TEXT-05 | Nội dung trông như HTML/script và ký tự đặc biệt | Hiển thị như văn bản, không chạy mã hoặc diễn giải thành giao diện |
 | TC-TEXT-06 | Lặp các dữ liệu trên khi sửa tin và gửi tin phòng | Cùng quy tắc nội dung, không có đường bỏ qua giới hạn |
 
-Dữ liệu UTF-16 cố định: `a` = 1; `ế` dựng sẵn = 1; `e` + dấu sắc tổ hợp = 2; `😀` = 2; `👩‍💻` = 5; LF = 1. Chuỗi 1.000 `😀` có độ dài 2.000; 1.001 có độ dài 2.002. Chuẩn hóa CRLF thành LF trước khi kiểm tra theo thiết kế đề xuất; không tự chuẩn hóa NFC hoặc cắt khoảng trắng của tin có nội dung. Fixture này dùng cho client/backend/SQL, không yêu cầu hiển thị mỗi emoji là một đơn vị.
+Dữ liệu UTF-16 cố định: `a` = 1; `ế` dựng sẵn = 1; `e` + dấu sắc tổ hợp = 2; `😀` = 2; `👩‍💻` = 5; LF = 1. Chuỗi 1.000 `😀` có độ dài 2.000; 1.001 có độ dài 2.002. Chuẩn hóa CRLF thành LF trước khi kiểm tra theo DEC-090; không tự chuẩn hóa NFC hoặc cắt khoảng trắng của tin có nội dung. Fixture này dùng cho client/backend/SQL, không yêu cầu hiển thị mỗi emoji là một đơn vị.
 
-Fixture máy đọc được: [text-validation.json](../fixtures/text-validation.json); độ dài đã kiểm tra bằng UTF-16, chưa chạy qua API/client.
+Fixture máy đọc được: [text-validation.json](../fixtures/text-validation.json) và [text-policy.json](../fixtures/text-policy.json); raw/normalized length và Unicode/error case để đối chiếu client/backend, chưa chạy qua API/client. [dm-fingerprint.json](../fixtures/dm-fingerprint.json) chứa key giả và hash kỳ vọng cho CRLF/UUID/HMAC, không chứa secret thật.
 
-Bổ sung TC-DM-18 cho biên tìm kiếm/hoa thường/dấu/cursor theo AC-DM-16, TC-DM-19 cho bàn phím và IME theo AC-DM-17, TC-DM-20 cho tin không tự hết hạn theo AC-DM-18. Các ca này cũng ở trạng thái Chưa chạy.
+Các ca thiết kế bổ sung, trạng thái Chưa chạy:
+
+| Mã ca | Tình huống | Kết quả | Dẫn chiếu |
+|---|---|---|---|
+| TC-DM-18 | Search biên/case/dấu/NFC, q chứa %/_/backslash, đổi q/limit với cursor cũ | Substring literal; đúng DEC-069, không lộ email; cursor gắn query | AC-DM-16 |
+| TC-DM-19 | Enter/Shift+Enter, mobile và IME | Theo thiết bị; composition không gửi sớm | AC-DM-17 |
+| TC-DM-20 | Lịch sử tin cũ sau thời gian dài | Không tự hết hạn tin theo DEC-070 | AC-DM-18 |
+| TC-DM-21 | Fixture invisible/invalid surrogate/NUL/CRLF khi send/edit và tin phòng | Đúng text-policy; không ghi/phát tin không hợp lệ | AC-DM-19 |
+| TC-DM-22 | Đổi hội thoại, reload, logout, đổi account và hai tab | Bản nháp/cache chỉ trong tab, đúng account; sent lưu ở DB | AC-DM-20 |
+| TC-DM-23 | Send 401/timeout; event trước response; refresh concurrent/lost response | Không tự gửi lại; UUIDv4/nội dung giữ đúng khi bấm retry; một dòng | AC-DM-08/21 |
+| TC-DM-24 | HMAC key rotation/thiếu key; UUID byte-order đối chiếu DB | Retry dùng key cũ; thiếu key không tạo tin; cặp UUID nhất quán | AC-DM-13, hợp đồng fingerprint |
+| TC-DM-25 | 101 tin mới với limit 50, mất kết nối sau từng trang, cursor hết hạn/bị sửa/dùng chéo user | Merge 3 trang trước tiến resume; không bỏ tin; cursor trái scope bị từ chối | AC-DM-15/21 |
+| TC-DM-26 | Session revoke commit tranh send/subscribe/dispatch | Thứ tự guard/commit xác định; không có thao tác mới sau revoke, chat ngừng dữ liệu ≤5 giây | DEC-083, AC-DM-12/21 |
 
 Các ca TEXT áp dụng AC-DM-11 và AC-COM-24. Thái chuẩn bị fixture cố định
-với số đơn vị UTF-16 kỳ vọng; Vg/Sáng khóa bộ ký tự trắng/vô hình trước
+với số đơn vị UTF-16 kỳ vọng; Vg/Sáng đối chiếu implementation với text-policy trước
 khi dùng fixture để kết luận đạt.
 
 ### Ma trận giao diện và cách ghi kết quả
@@ -560,10 +668,10 @@ xuất chưa xác nhận thêm ghi chú “Chờ chốt quy tắc”, không tí
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; còn schema/cursor và kiểm chứng truy vấn. | OQ-005 |
-| Lưu giữ | Không tự hết hạn tin theo DEC-070; backup 30 ngày đã chốt DEC-086; còn hành vi xóa tài khoản và khôi phục sau xóa; không giữ lịch sử sửa đã chốt. | OQ-005, OQ-011 |
+| Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; schema/cursor đã chi tiết hóa; còn kiểm chứng truy vấn và frontend/mock. | OQ-005 |
+| Lưu giữ | DEC-103–109 chốt account lock/no self-delete, TTL và restore placeholder; có [chính sách chung](../data-lifecycle.md), còn review/migration/sổ độc lập/worker/restore proof. | OQ-005/011, DATA-GAP |
 | Thử lại/đồng thời | Rà soát và thử nghiệm hợp đồng chống trùng, khóa theo hội thoại, xung đột sửa/xóa và dọn dữ liệu. | OQ-005, OQ-008 |
-| Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; còn bộ ký tự trắng/vô hình và fixture dùng chung. | OQ-005 |
+| Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; đã có bảng text-policy và fixture theo DEC-090; còn kiểm chứng client/server. | OQ-005 |
 | Chất lượng | Ngưỡng và ma trận đã chốt DEC-082/083; còn cấu hình/build/thiết bị và kết quả đo. | OQ-007 |
 
 Đã bổ sung [OpenAPI dự thảo](../contracts/direct-messaging.openapi.json) ngày 2026-10-04; chưa xác nhận thiết kế hoặc có mock/API/Hub chạy được. Schema dùng `x-scdc-utf16-length` vì minLength/maxLength của JSON Schema không tự biểu diễn phép đếm UTF-16. `clientMessageId` UUIDv4, ID server UUIDv7 theo DEC-081; ví dụ là dữ liệu minh họa, không phải ID của dữ liệu thật. Cách biểu diễn SQL hiện tại dùng chat space/`sequence_no`; thiết kế logic dùng conversation/sequence. Cần rà soát ánh xạ, unique key theo tác giả và commit order trước triển khai, không coi seed/schema hiện tại là đã chứng minh hợp đồng đề xuất.

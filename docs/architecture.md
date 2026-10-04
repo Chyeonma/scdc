@@ -59,6 +59,30 @@ Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [s
 
 Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
 
+### Thiết kế tích hợp tài khoản/DM bổ sung
+
+[Accounts](features/accounts.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [DM](features/direct-messaging.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế tương lai của cùng Modular Monolith, không là các module/service đang chạy.
+
+Hợp đồng đề xuất cần thêm `IAccountAccessGuard`, `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi theo session. Để chặn race revoke/send, Identity giữ kiểm tra/row lock của user qua transaction scope dùng chung tới commit Messaging; BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module. Mỗi module vẫn chỉ đọc dữ liệu mình sở hữu. Proof guard/lock order và session revocation còn phải chạy; không suy IUserDirectory summary khác null thành đủ quyền gửi.
+
+DM wire `sequence` ánh xạ field per-space mới `conversation_sequence`, giữ identity global legacy riêng; schema/migration hiện chưa thay. OpenAPI HTTP và JSON Schema realtime có nhãn design-draft; API Swagger vẫn được sinh từ source.
+
+### Thiết kế tích hợp Community và tin phòng bổ sung
+
+[Community](features/community.md#detailed-design) đã có role/ACL snapshot, membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration. `IChannelAccessGuard` đề xuất giữ Community server/channel share lock tới commit Messaging; `IChatSpaceLifecycle` tạo/xóa space cùng transaction với channel, mỗi module vẫn chỉ sở hữu schema của mình. Mutation Community khóa server theo thứ tự sau Identity, trước Messaging để tuần tự hóa thay đổi quyền và join/leave/transfer.
+
+Server accessVersion, channel accessVersion và membershipId được dùng cho registry/cache; thu hồi chat phải đo ≤5 giây từ commit, media kiểm chứng riêng. @everyone/20 custom role, quản lý cần view, private switch và issuer lifetime đã chốt DEC-092–098. Interface/source/SQL chưa thay; shared transaction, Unicode migration, token key ring, outbox và proof thuộc triển khai. Không cấp management permission để tự đọc phòng bị ẩn hoặc sửa/xóa tin người khác.
+
+### Thiết kế tích hợp Media bổ sung
+
+[Media](features/voice-video.md#detailed-design) có OpenAPI 16 thao tác công khai/3 nội bộ, catalogue realtime 8 loại và mô hình room/call/participation/capacity/source/epoch. Đề xuất schema `media` và `IMediaRoomLifecycle` tạo room DB rỗng cùng transaction voice channel; module Media, interface, migration và provider chưa có trong repo. Guard Identity/Community giữ tới commit Media; thao tác SFU chạy sau commit, chỗ draining chỉ tái cấp sau bằng chứng ngừng media.
+
+DEC-099–102 chốt cutoff/fail-close ≤5 giây, first accept/no handoff, thiết bị mặc định tắt và screen chỉ hình. Admission kiểm tra mỗi join/resume; authorization lease và quota gate cần kiểm soát ngay đường chuyển tiếp SFU. Phương án có thể cần extension/fork LiveKit, chưa chọn/triển khai; phải proof token refresh/direct routes, quota trước publish, cutoff khi authority lỗi và pin server/SDK. Đóng websocket hoặc TTL JWT không tự chứng minh WebRTC ngừng. Chi tiết/bằng chứng cần thiết thuộc MEDIA-GAP-01–07; không thay DEC-084 bằng provider khác khi gặp hạn chế.
+
+### Thiết kế vòng đời dữ liệu bổ sung
+
+[Vòng đời dữ liệu](data-lifecycle.md) là nguồn chuẩn DEC-103–109: account lock/no self-delete, room deleted giữ chưa hạn purge, TTL payload/log/audit và restore placeholder. Đề xuất IHistoricalUserSummaryReader cho author/peer inactive, guard phân biệt read/author-mutation/send, Messaging restore_redacted_at/contentState và sổ bảo vệ độc lập có phase/checkpoint. Kho sổ/worker/interface/SQL chưa có; protocol hai kho cần proof, không coi outbox sau commit đủ chống phục hồi quyền/nội dung cũ. Cleanup giữ refresh family active, dedup/tombstone/revoke marker; chưa chọn scope quyền worker hoặc đầu mối vận hành.
+
 <a id="contracts"></a>
 
 ## 3. Hợp đồng và lỗi chung
@@ -127,7 +151,7 @@ Theo DEC-060, MVP không bắt buộc có Gateway hoặc dịch vụ độc lậ
 | SignalR | Đã chọn cho DM/tin phòng theo DEC-081; chưa có Hub trong backend hiện tại |
 | Redis Backplane | Dành cho scale-out khi có quyết định; không cần tự đưa Redis vào MVP một API instance |
 | MinIO / presigned upload | Phương án file ở đợt sau; chưa có lựa chọn triển khai được duyệt |
-| LiveKit SFU tự host | Đã chọn DEC-084; cần admission/thu hồi token và thử nghiệm; chưa có service/manifest |
+| LiveKit SFU tự host | Đã chọn DEC-084; có Media contract/lease/quota-gate design, còn extension/proof/build pin; chưa có service/manifest |
 | Kubernetes và k6 | Công cụ từng được đề xuất; chưa có manifest hoặc kịch bản tải trong repo |
 
 Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đồ hiện tại như hạ tầng đã tồn tại. LiveKit tự host và giới hạn media đã chọn DEC-079/084; admission, chi phí và chất lượng vẫn cần thử nghiệm. Mở rộng ngang và ngưỡng hiệu năng phải có phép đo cụ thể.
