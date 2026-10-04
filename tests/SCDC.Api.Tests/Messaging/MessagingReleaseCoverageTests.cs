@@ -33,6 +33,7 @@ public sealed class MessagingReleaseCoverageTests
             await using (var receiver = CreateHub(factory, client, reader.AccessToken))
             {
                 var received = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var receivedSecond = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
                 receiver.On<JsonElement>("RealtimeEvent", envelope =>
                 {
                     if (envelope.GetProperty("eventType").GetString() == "MessageCreated"
@@ -42,6 +43,16 @@ public sealed class MessagingReleaseCoverageTests
                 await receiver.StartAsync();
                 Assert.True((await receiver.InvokeAsync<JsonElement>("SubscribeSpace", spaceId))
                     .GetProperty("ok").GetBoolean());
+                await using var secondReceiver = CreateHub(factory, client, reader.AccessToken);
+                secondReceiver.On<JsonElement>("RealtimeEvent", envelope =>
+                {
+                    if (envelope.GetProperty("eventType").GetString() == "MessageCreated"
+                        && envelope.GetProperty("spaceId").GetGuid() == spaceId)
+                        receivedSecond.TrySetResult(envelope);
+                });
+                await secondReceiver.StartAsync();
+                Assert.True((await secondReceiver.InvokeAsync<JsonElement>("SubscribeSpace", spaceId))
+                    .GetProperty("ok").GetBoolean());
                 var first = await SendTextAsync(client, sender, spaceId, "release journey first");
                 using (var scope = factory.Services.CreateScope())
                     Assert.True(await scope.ServiceProvider.GetRequiredService<IMessagingOutboxDispatcher>()
@@ -49,6 +60,9 @@ public sealed class MessagingReleaseCoverageTests
                 var envelope = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.Equal(first.GetProperty("id").GetGuid(),
                     envelope.GetProperty("payload").GetProperty("messageId").GetGuid());
+                var secondEnvelope = await receivedSecond.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Equal(envelope.GetProperty("eventId").GetGuid(),
+                    secondEnvelope.GetProperty("eventId").GetGuid());
 
                 var refresh = await client.PostAsJsonAsync("/api/v1/auth/refresh",
                     new { refreshToken = reader.RefreshToken });

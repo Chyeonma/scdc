@@ -38,7 +38,8 @@ internal sealed class MessagingOutboxWorker(
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Messaging outbox worker iteration failed.");
+                MessagingTelemetry.RecordWorkerFailure("dispatch");
+                logger.LogError("Messaging outbox worker iteration failed with {ErrorKind}.", exception.GetType().Name);
                 await Task.Delay(_options.PollInterval, stoppingToken);
             }
         }

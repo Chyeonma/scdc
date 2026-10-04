@@ -41,7 +41,9 @@ internal sealed class AttachmentDownloadService(MessagingDbContext db,
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            logger.LogWarning(exception, "Could not read attachment {AttachmentId}", attachmentId);
+            MessagingTelemetry.RecordStorageFailure("download");
+            logger.LogWarning("Could not read attachment {AttachmentId}: {ErrorKind}",
+                attachmentId, exception.GetType().Name);
             return Result.Failure<AttachmentDownloadDto>(MessagingErrors.AttachmentStorageUnavailable);
         }
     }

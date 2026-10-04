@@ -134,7 +134,9 @@ internal sealed class AttachmentUploadService(
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(exception, "Attachment scan unavailable for upload {UploadId}", upload.Id);
+            MessagingTelemetry.RecordStorageFailure("scan");
+            logger.LogWarning("Attachment scan unavailable for upload {UploadId}: {ErrorKind}",
+                upload.Id, exception.GetType().Name);
             upload.ScanStatus = 3;
             await dbContext.SaveChangesAsync(cancellationToken);
             return Result.Failure<AttachmentUploadDto>(MessagingErrors.AttachmentScanUnavailable);
@@ -147,7 +149,9 @@ internal sealed class AttachmentUploadService(
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(exception, "Attachment storage unavailable for upload {UploadId}", upload.Id);
+            MessagingTelemetry.RecordStorageFailure("upload");
+            logger.LogWarning("Attachment storage unavailable for upload {UploadId}: {ErrorKind}",
+                upload.Id, exception.GetType().Name);
             upload.ScanStatus = 3;
             await dbContext.SaveChangesAsync(cancellationToken);
             return Result.Failure<AttachmentUploadDto>(MessagingErrors.AttachmentStorageUnavailable);

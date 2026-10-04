@@ -21,10 +21,15 @@ internal sealed class MessagingRealtimePublisher(
             notification.DeletedAt is null
                 ? new { notification.MessageId, notification.SequenceNo }
                 : (object)new { notification.MessageId, notification.SequenceNo, notification.DeletedAt });
-        foreach (var connection in connections.GetSubscribers(notification.SpaceId))
+        foreach (var userConnections in connections.GetSubscribers(notification.SpaceId).GroupBy(item => item.UserId))
         {
-            if (await spaceAccess.GetReadAccessAsync(connection.UserId, notification.SpaceId, cancellationToken) is not null)
+            if (await spaceAccess.GetReadAccessAsync(userConnections.Key, notification.SpaceId, cancellationToken) is null)
+                continue;
+            foreach (var connection in userConnections)
+            {
+                if (!connections.IsSubscribed(connection.ConnectionId, notification.SpaceId)) continue;
                 await hubContext.Clients.Client(connection.ConnectionId).SendAsync("RealtimeEvent", envelope, cancellationToken);
+            }
         }
         await PublishSpaceUpdatedAsync(notification.EventId, notification.SpaceId, cancellationToken);
     }
@@ -47,16 +52,17 @@ internal sealed class MessagingRealtimePublisher(
             notification.AggregateVersion,
             new MessageCreatedPayload(notification.MessageId, notification.SequenceNo));
 
-        foreach (var connection in connections.GetSubscribers(notification.SpaceId))
+        foreach (var userConnections in connections.GetSubscribers(notification.SpaceId).GroupBy(item => item.UserId))
         {
             // Dispatch rechecks current authorization: joining a group never grants durable delivery rights.
-            if (await spaceAccess.GetReadAccessAsync(connection.UserId, notification.SpaceId, cancellationToken) is null)
-            {
+            if (await spaceAccess.GetReadAccessAsync(userConnections.Key, notification.SpaceId, cancellationToken) is null)
                 continue;
+            foreach (var connection in userConnections)
+            {
+                if (!connections.IsSubscribed(connection.ConnectionId, notification.SpaceId)) continue;
+                await hubContext.Clients.Client(connection.ConnectionId)
+                    .SendAsync("RealtimeEvent", messageEvent, cancellationToken);
             }
-
-            await hubContext.Clients.Client(connection.ConnectionId)
-                .SendAsync("RealtimeEvent", messageEvent, cancellationToken);
         }
 
         await PublishSpaceUpdatedAsync(notification.EventId, notification.SpaceId, cancellationToken);
@@ -75,10 +81,11 @@ internal sealed class MessagingRealtimePublisher(
         var recipientConnections = new HashSet<string>(StringComparer.Ordinal);
         foreach (var memberUserId in await spaceAccess.GetActiveMemberIdsAsync(spaceId, cancellationToken))
         {
+            if (await spaceAccess.GetReadAccessAsync(memberUserId, spaceId, cancellationToken) is null)
+                continue;
             foreach (var connection in connections.GetUserConnections(memberUserId))
             {
-                if (recipientConnections.Add(connection.ConnectionId)
-                    && await spaceAccess.GetReadAccessAsync(memberUserId, spaceId, cancellationToken) is not null)
+                if (recipientConnections.Add(connection.ConnectionId))
                 {
                     await hubContext.Clients.Client(connection.ConnectionId)
                         .SendAsync("RealtimeEvent", inboxEvent, cancellationToken);

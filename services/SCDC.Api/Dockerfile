@@ -8,6 +8,7 @@ COPY ["services/SCDC.Contracts/SCDC.Contracts.csproj", "services/SCDC.Contracts/
 COPY ["services/Modules/Identity/SCDC.Identity.csproj", "services/Modules/Identity/"]
 COPY ["services/Modules/Community/SCDC.Community.csproj", "services/Modules/Community/"]
 COPY ["services/Modules/Messaging/SCDC.Messaging.csproj", "services/Modules/Messaging/"]
+COPY ["services/Modules/Moderation/SCDC.Moderation.csproj", "services/Modules/Moderation/"]
 COPY ["services/SCDC.Api/SCDC.Api.csproj", "services/SCDC.Api/"]
 RUN dotnet restore "services/SCDC.Api/SCDC.Api.csproj"
 

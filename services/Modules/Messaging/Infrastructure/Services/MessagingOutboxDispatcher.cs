@@ -1,10 +1,12 @@
 using System.Text.Json;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Domain;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
+using Npgsql;
 
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
@@ -114,6 +116,10 @@ internal sealed class MessagingOutboxDispatcher(
             return false;
         }
 
+        var started = Stopwatch.GetTimestamp();
+        using var activity = MessagingTelemetry.ActivitySource.StartActivity("messaging.outbox.dispatch", ActivityKind.Consumer);
+        activity?.SetTag("messaging.event_id", item.Id.ToString("D"));
+        activity?.SetTag("messaging.message_id", item.AggregateId.ToString("D"));
         try
         {
             await DispatchAsync(item, cancellationToken);
@@ -123,6 +129,8 @@ internal sealed class MessagingOutboxDispatcher(
             item.PublishedAt = timeProvider.GetUtcNow();
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            MessagingTelemetry.RecordDispatch(Stopwatch.GetElapsedTime(started).TotalSeconds, succeeded: true);
+            MessagingTelemetry.RecordDeliveryLag((item.PublishedAt.Value - item.OccurredAt).TotalSeconds);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -135,13 +143,18 @@ internal sealed class MessagingOutboxDispatcher(
             item.AvailableAt = now.Add(CalculateRetryDelay(item.AttemptCount));
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            MessagingTelemetry.RecordDispatch(Stopwatch.GetElapsedTime(started).TotalSeconds, succeeded: false);
+            if (item.AttemptCount >= _options.MaxAttempts) MessagingTelemetry.RecordQuarantine();
 
             logger.LogWarning(
-                exception,
-                "Messaging outbox event {EventId} failed on attempt {AttemptCount}; retry scheduled for {AvailableAt}",
+                "Messaging outbox event {EventId} for message {MessageId} in space {SpaceId} failed on attempt {AttemptCount} with {ErrorKind}; retry scheduled for {AvailableAt}; trace {TraceId}",
                 item.Id,
+                item.AggregateId,
+                item.SpaceId,
                 item.AttemptCount,
-                item.AvailableAt);
+                item.LastError,
+                item.AvailableAt,
+                activity?.TraceId.ToString());
         }
 
         return true;
@@ -206,8 +219,10 @@ internal sealed class MessagingOutboxDispatcher(
 
     private static string ToSafeError(Exception exception)
     {
-        var message = exception.GetBaseException().Message;
-        return message.Length <= 1000 ? message : message[..1000];
+        var cause = exception.GetBaseException();
+        return cause is PostgresException postgres
+            ? $"PostgresException:{postgres.SqlState}"
+            : cause.GetType().Name;
     }
 
     private sealed record MessageCreatedOutboxPayload(Guid MessageId, string SequenceNo);

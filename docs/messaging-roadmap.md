@@ -367,13 +367,15 @@ Theo dõi P9-T01: [ma trận coverage và cách chạy](messaging/release-covera
 
 ### P9-T02 — Hiệu năng và quan sát [BE, DB, OPS]
 
-- [ ] **P9-T02.1** Chốt tải mục tiêu: số kết nối đồng thời, tin/giây, kích thước history và ngưỡng p95; ghi rõ môi trường đo trước khi nghiệm thu.
-- [ ] **P9-T02.2** Đo send/history/search/unread và outbox lag; kiểm tra query plan, N+1 và index theo dữ liệu đại diện.
-- [ ] **P9-T02.3** Metrics/log cho số kết nối, lỗi gửi, duplicate retry, độ trễ dispatch và event quá số lần retry; liên kết bằng trace/event/message ID.
-- [ ] **P9-T02.4** Dashboard/cảnh báo và runbook khi outbox dồn, PostgreSQL/storage lỗi hoặc reconnect tăng đột biến.
-- [ ] **P9-T02.5** Bắt đầu với một API instance; trước khi scale nhiều instance, thiết kế fan-out SignalR, connection revocation và trạng thái typing xuyên instance.
+- [x] **P9-T02.1** Chốt tải mục tiêu: số kết nối đồng thời, tin/giây, kích thước history và ngưỡng p95; ghi rõ môi trường đo trước khi nghiệm thu.
+- [x] **P9-T02.2** Đo send/history/search/unread và outbox lag; kiểm tra query plan, N+1 và index theo dữ liệu đại diện.
+- [x] **P9-T02.3** Metrics/log cho số kết nối, lỗi gửi, duplicate retry, độ trễ dispatch và event quá số lần retry; liên kết bằng trace/event/message ID.
+- [x] **P9-T02.4** Dashboard/cảnh báo và runbook khi outbox dồn, PostgreSQL/storage lỗi hoặc reconnect tăng đột biến.
+- [x] **P9-T02.5** Bắt đầu với một API instance; trước khi scale nhiều instance, thiết kế fan-out SignalR, connection revocation và trạng thái typing xuyên instance.
 
 **Nghiệm thu:** có báo cáo so với ngưỡng tải đã chốt, xác định được nút thắt và xử lý được event lỗi mà không sửa DB thủ công tùy tiện.
+
+Kết quả và lệnh chạy: [báo cáo hiệu năng, dashboard và runbook](messaging/performance-observability.md). Benchmark local/TestServer đạt ngưỡng đã chốt, phát hiện và sửa N+1 theo số kết nối trong realtime fan-out; cần đo lại với tải liên tục và network thật trước khi chốt SLO production.
 
 ### P9-T03 — Đóng gói và bàn giao [OPS, BE, FE]
 

@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using SCDC.Api.Controllers.Identity;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Modules.Messaging.Application;
+using SCDC.Modules.Messaging.Infrastructure;
 
 namespace SCDC.Api.Controllers.Messaging;
 
 [Authorize]
 [Route("api/v1/spaces/{spaceId:guid}/messages")]
-public sealed class MessagesController(IMessageService messageService) : ApiControllerBase
+public sealed class MessagesController(IMessageService messageService, ILogger<MessagesController> logger) : ApiControllerBase
 {
     [HttpGet("search")]
     [ProducesResponseType<MessageSearchPageDto>(StatusCodes.Status200OK)]
@@ -70,6 +72,8 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
             cancellationToken);
         if (result.IsFailure)
         {
+            logger.LogWarning("Messaging send rejected for space {SpaceId} with code {ErrorCode} and trace {TraceId}",
+                spaceId, result.Error.Code, Activity.Current?.TraceId.ToString() ?? HttpContext.TraceIdentifier);
             if (result.Error == MessagingErrors.RateLimited)
             {
                 Response.Headers.RetryAfter = "60";
@@ -79,6 +83,13 @@ public sealed class MessagesController(IMessageService messageService) : ApiCont
         }
 
         var sent = result.Value;
+        if (!sent.Created)
+        {
+            MessagingTelemetry.RecordDuplicateRetry();
+            logger.LogInformation(
+                "Messaging duplicate retry resolved to message {MessageId} in space {SpaceId}; trace {TraceId}",
+                sent.Message.Id, spaceId, Activity.Current?.TraceId.ToString() ?? HttpContext.TraceIdentifier);
+        }
         return sent.Created
             ? Created($"/api/v1/spaces/{spaceId}/messages/{sent.Message.Id}", sent.Message)
             : Ok(sent.Message);

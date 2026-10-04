@@ -83,6 +83,8 @@ public static class MessagingModule
         services.AddScoped<IRealtimeMessagePublisher, MessagingRealtimePublisher>();
         services.AddScoped<IMessagingOutboxDispatcher, MessagingOutboxDispatcher>();
         services.AddHostedService<MessagingOutboxWorker>();
+        if (!string.IsNullOrWhiteSpace(configuration["Observability:OtlpEndpoint"]))
+            services.AddHostedService<MessagingOutboxMetricsWorker>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }
