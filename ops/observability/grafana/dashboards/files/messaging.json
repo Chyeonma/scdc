@@ -1,0 +1,16 @@
+{
+  "uid": "scdc-messaging",
+  "title": "SCDC Messaging",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "API p95 (seconds)", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "histogram_quantile(0.95, sum by (le, operation) (rate(scdc_messaging_request_duration_seconds_bucket[5m])))", "legendFormat": "{{operation}}"}]},
+    {"id": 2, "type": "timeseries", "title": "Send failures and duplicate retries / minute", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum by (outcome) (increase(scdc_messaging_send_failures_total[1m]))", "legendFormat": "failure {{outcome}}"}, {"expr": "sum(increase(scdc_messaging_send_duplicate_retries_total[1m]))", "legendFormat": "duplicate retry"}]},
+    {"id": 3, "type": "timeseries", "title": "Outbox pending and quarantined", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "scdc_messaging_outbox_pending", "legendFormat": "pending"}, {"expr": "scdc_messaging_outbox_quarantined", "legendFormat": "quarantined"}]},
+    {"id": 4, "type": "timeseries", "title": "Outbox age, dispatch and delivery p95 (seconds)", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "scdc_messaging_outbox_oldest_age_seconds", "legendFormat": "oldest pending"}, {"expr": "histogram_quantile(0.95, sum by (le) (rate(scdc_messaging_outbox_dispatch_duration_seconds_bucket[5m])))", "legendFormat": "dispatch p95"}, {"expr": "histogram_quantile(0.95, sum by (le) (rate(scdc_messaging_outbox_delivery_lag_seconds_bucket[5m])))", "legendFormat": "delivery lag p95"}]},
+    {"id": 5, "type": "timeseries", "title": "Active connections and reconnects", "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "scdc_messaging_connections_active", "legendFormat": "active"}, {"expr": "sum(increase(scdc_messaging_connections_reconnected_total[5m]))", "legendFormat": "reconnected / 5m"}]},
+    {"id": 6, "type": "timeseries", "title": "Storage and outbox failures / 5m", "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum by (operation) (increase(scdc_messaging_storage_failures_total[5m]))", "legendFormat": "storage {{operation}}"}, {"expr": "sum(increase(scdc_messaging_outbox_dispatch_failures_total[5m]))", "legendFormat": "dispatch failures"}, {"expr": "sum by (operation) (increase(scdc_messaging_outbox_worker_failures_total[5m]))", "legendFormat": "worker {{operation}}"}]}
+  ]
+}

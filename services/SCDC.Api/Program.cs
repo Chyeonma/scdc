@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using SCDC.Api.Errors;
+using SCDC.Api.Observability;
 using SCDC.Api.OpenApi;
 using SCDC.Modules.Community;
 using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
 using SCDC.Modules.Messaging.Hubs;
+using SCDC.Modules.Messaging.Infrastructure;
 using SCDC.Modules.Moderation;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +23,22 @@ builder.Services.AddModerationModule(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddApiProblemDetails();
+
+var otlpEndpoint = builder.Configuration["Observability:OtlpEndpoint"];
+if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+{
+    if (!Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var endpoint)
+        || endpoint.Scheme is not ("http" or "https"))
+        throw new InvalidOperationException("Observability:OtlpEndpoint must be an absolute HTTP(S) URL.");
+
+    builder.Services.AddOpenTelemetry()
+        .WithMetrics(metrics => metrics
+            .AddMeter(MessagingTelemetry.MeterName, "Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Http.Connections")
+            .AddOtlpExporter(options => options.Endpoint = endpoint))
+        .WithTracing(traces => traces
+            .AddSource(MessagingTelemetry.ActivitySourceName)
+            .AddOtlpExporter(options => options.Endpoint = endpoint));
+}
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
@@ -61,6 +81,8 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseRouting();
+app.UseMiddleware<MessagingMetricsMiddleware>();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

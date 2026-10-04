@@ -1,0 +1,51 @@
+groups:
+  - name: scdc-messaging
+    rules:
+      - alert: MessagingOutboxStalled
+        expr: scdc_messaging_outbox_oldest_age_seconds > 30 and scdc_messaging_outbox_pending > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Messaging outbox oldest pending event exceeds 30 seconds
+      - alert: MessagingOutboxQuarantined
+        expr: scdc_messaging_outbox_quarantined > 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: Messaging outbox has events past the retry limit
+      - alert: MessagingSendErrors
+        expr: sum(rate(scdc_messaging_send_failures_total{outcome="error"}[5m])) > 0.05
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Messaging send server errors exceed 0.05 per second
+      - alert: MessagingApiErrors
+        expr: sum(rate(scdc_messaging_request_duration_seconds_count{outcome="error"}[5m])) > 0.05
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Messaging API server errors exceed 0.05 per second
+      - alert: MessagingOutboxWorkerErrors
+        expr: sum(increase(scdc_messaging_outbox_worker_failures_total[5m])) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: Messaging outbox worker or backlog sampler failed
+      - alert: MessagingStorageFailures
+        expr: sum(increase(scdc_messaging_storage_failures_total[5m])) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: Messaging scanner or object storage operation failed
+      - alert: MessagingReconnectSpike
+        expr: sum(increase(scdc_messaging_connections_reconnected_total[5m])) > 20
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: More than 20 reconnects in five minutes on one API instance
+      - alert: MessagingTelemetryUnavailable
+        expr: up{job="scdc-messaging"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: Messaging metric collector is unavailable

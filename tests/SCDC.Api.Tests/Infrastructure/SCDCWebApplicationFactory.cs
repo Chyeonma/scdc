@@ -11,6 +11,7 @@ public class SCDCWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly bool _useRealtimePublisher;
     private readonly ILoggerProvider? _additionalLogger;
+    private string? _contentRootOverride;
 
     public SCDCWebApplicationFactory() : this(false) { }
 
@@ -20,11 +21,15 @@ public class SCDCWebApplicationFactory : WebApplicationFactory<Program>
         _additionalLogger = additionalLogger;
     }
 
+    public static SCDCWebApplicationFactory ForPerformance(string contentRoot) =>
+        new(useRealtimePublisher: true) { _contentRootOverride = contentRoot };
+
     public TestOutboxPublisher OutboxPublisher { get; } = new();
     public TestAttachmentObjectStore AttachmentStore { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        if (_contentRootOverride is not null) builder.UseContentRoot(_contentRootOverride);
         builder.UseEnvironment("Testing");
         builder.ConfigureLogging(logging =>
         {

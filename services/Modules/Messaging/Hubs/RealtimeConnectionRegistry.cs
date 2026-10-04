@@ -1,17 +1,30 @@
 using System.Collections.Concurrent;
+using SCDC.Modules.Messaging.Infrastructure;
 
 namespace SCDC.Modules.Messaging.Hubs;
 
 public sealed class RealtimeConnectionRegistry
 {
     private readonly ConcurrentDictionary<string, ConnectionEntry> _connections = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<(Guid UserId, Guid SessionId), DateTimeOffset> _recentDisconnects = new();
 
     public void Register(Guid userId, Guid sessionId, string connectionId, Action abort)
     {
-        _connections[connectionId] = new ConnectionEntry(userId, sessionId, connectionId, abort);
+        if (_connections.TryAdd(connectionId, new ConnectionEntry(userId, sessionId, connectionId, abort)))
+        {
+            var reconnected = _recentDisconnects.TryRemove((userId, sessionId), out var disconnectedAt)
+                && DateTimeOffset.UtcNow - disconnectedAt <= TimeSpan.FromMinutes(2);
+            MessagingTelemetry.ConnectionOpened(reconnected);
+        }
     }
 
-    public void Remove(string connectionId) => _connections.TryRemove(connectionId, out _);
+    public void Remove(string connectionId)
+    {
+        if (!_connections.TryRemove(connectionId, out var connection)) return;
+        MessagingTelemetry.ConnectionClosed();
+        _recentDisconnects[(connection.UserId, connection.SessionId)] = DateTimeOffset.UtcNow;
+        if (_recentDisconnects.Count > 10_000) _recentDisconnects.Clear();
+    }
 
     public bool Subscribe(string connectionId, Guid spaceId) =>
         _connections.TryGetValue(connectionId, out var connection)
