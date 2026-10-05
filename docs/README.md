@@ -1,6 +1,6 @@
 # Tài liệu SCDC
 
-Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng. Mỗi nội dung có một nguồn chuẩn; các bản đã thay thế nằm trong archive. Hợp nhất: 2026-10-03; cập nhật quyết định và đặc tả: 2026-10-04.
+Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng. Mỗi nội dung có một nguồn chuẩn; các bản đã thay thế nằm trong archive. Hợp nhất: 2026-10-03; cập nhật quyết định và đặc tả: 2026-10-05.
 
 ## Bắt đầu từ đâu
 
@@ -20,7 +20,7 @@ Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng
 
 | Tài liệu | Scope | Nội dung |
 |---|---|---|
-| [Tài khoản](features/accounts.md) | SCP-002 | Đăng ký/xác minh, đăng nhập, hồ sơ, mật khẩu, phiên và API hiện tại |
+| [Tài khoản](features/accounts.md) | SCP-002 | Đăng ký/xác minh, đăng nhập, hồ sơ, mật khẩu, phiên; [12 use case và đối chiếu source/test](features/accounts.md#use-cases), API hiện tại |
 | [Nhắn tin riêng](features/direct-messaging.md) | Phần DM của SCP-005 | Tìm người, hội thoại hai người, tin văn bản, thử lại, đồng thời và reconnect |
 | [Cộng đồng](features/community.md) | SCP-003/004 và phần tin phòng của SCP-005 | Tham gia, phòng, lời mời, vai trò, quyền và thu hồi |
 | [Thoại/video](features/voice-video.md) | SCP-006/007 | Gọi riêng, phòng thoại, giới hạn, LiveKit tự host, chất lượng và kiểm thử |
@@ -73,4 +73,3 @@ Các artefact hiện có:
 - [Fixture nội dung](fixtures/text-validation.json), [bảng Unicode](fixtures/text-policy.json) và [fixture fingerprint](fixtures/dm-fingerprint.json): dữ liệu đối chiếu, không phải kết quả nghiệm thu.
 
 [Bản đồ chuyển đổi và lịch sử](archive/README.md) cho biết nội dung file cũ đã chuyển về đâu. Các bản lưu dùng để tra cứu lịch sử, không dùng làm nguồn yêu cầu hiện hành.
-

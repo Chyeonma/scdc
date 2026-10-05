@@ -1,13 +1,16 @@
 # SCDC — Tài khoản
 
-Cập nhật: 2026-10-04. Phạm vi: REQ-010, SCP-002. Quy tắc ACC, tiêu chí AC-ACC, màn hình ACC-S, ca TC-ACC và ACL-01.
+Cập nhật: 2026-10-05. Phạm vi: REQ-010, SCP-002. Quy tắc ACC, use case UC-ACC, tiêu chí AC-ACC, màn hình ACC-S, ca TC-ACC và ACL-01/02.
 
 Nghiệp vụ cốt lõi và chính sách tài khoản đã xác nhận theo DEC-063–067; phép đếm UTF-16 theo DEC-068. Identity có implementation và test tự động; gửi lại xác minh, giao email và một số hành vi còn thiếu hoặc khác yêu cầu. Đối chiếu source ngày 2026-10-04 ở mục implementation-review. Các ca TC chưa có kết quả thực thi được ghi nhận trong hồ sơ này.
+
+Ngày 2026-10-05 bổ sung use case và ma trận đối chiếu API, giao diện, AC/TC và assertion trong test hiện có. Đây là kết quả đọc source; chưa chạy kiểm thử sản phẩm hoặc xác nhận nghiệm thu. Các lựa chọn chưa chốt được ghi riêng tại [điểm cần xác nhận](#use-case-review).
 
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
 - [Quyền](#permissions)
+- [Use case Identity](#use-cases)
 - [Giao diện](#ux)
 - [API hiện tại](#api-current)
 - [Trạng thái, dữ liệu và đối chiếu implementation](#implementation-review)
@@ -53,6 +56,7 @@ email; sau đó vẫn phải hoàn tất xác minh trước khi đăng nhập �
 | ACC-013 | Hồ sơ cho sửa `displayName`, `bio`, `locale`, `timezone`; bio tối đa 500 theo phép đếm hiện tại, locale 1–16 và timezone 1–64. MVP chưa thêm tải ảnh đại diện. | DEC-066; các giới hạn giữ theo API hiện tại |
 | ACC-014 | Khôi phục chỉ qua email đã đăng ký, gồm tài khoản chưa xác minh theo DEC-051. Mất quyền truy cập email chưa có kênh khôi phục khác hoặc quy trình thủ công trong MVP. | DEC-067; không thay đổi điều kiện xác minh trước khi vào ứng dụng |
 | ACC-015 | MVP chưa có tự xóa account; khóa chặn ứng dụng/thu hồi phiên nhưng giữ lịch sử, mở khóa cần phiên đăng nhập mới. Khóa không thay lockout 15 phút. | DEC-103/104; công cụ/thẩm quyền khóa còn OQ-011 |
+| ACC-016 | Đổi mật khẩu khi đã đăng nhập từ chối mật khẩu mới trùng mật khẩu hiện tại; đặt lại qua liên kết cho phép trùng nếu vẫn đúng policy. Reset thành công vẫn dùng token một lần, đổi security stamp và thu hồi mọi phiên dù mật khẩu trùng. | DEC-113; giữ hành vi hiện tại, không yêu cầu kiểm tra lịch sử mật khẩu |
 
 
 [Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal và restore DEC-106–109; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Self-delete chưa thuộc MVP; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
@@ -68,12 +72,317 @@ DEC-062 đồng bộ trường `displayName` bắt buộc theo form và API hi�
 | Mã | Thao tác | Điều kiện được phép | Trường hợp bị từ chối | Căn cứ |
 |---|---|---|---|---|
 | ACL-01 | Đọc/sửa hồ sơ riêng, quản lý phiên của mình | Đã xác thực; đối tượng thuộc chính tài khoản | Dùng định danh của tài khoản khác | ACC-003, DEC-065/066 |
+| ACL-02 | Khóa/mở khóa tài khoản qua quy trình kỹ thuật | Có quyết định và người thực hiện được phân quyền đúng tài khoản/phạm vi, có audit theo RB-ACCOUNT | Chưa được cấp quyền, sai phạm vi hoặc thiếu quyết định; quyền vận hành không cho đọc DM/sửa/xóa tin thay tác giả | ACC-015, DEC-104/112; người/vai trò/công cụ cụ thể còn OQ-011 |
 
 Tài khoản chưa xác minh chỉ dùng xác minh/khôi phục, không có phiên truy cập ứng dụng (DEC-051). Đặt lại mật khẩu không tự xác minh email. Quyền tìm người/DM ở [đặc tả DM](direct-messaging.md#permissions); quyền phòng ở [Community](community.md#permissions).
 
+<a id="use-cases"></a>
+
+## 3. Use case Identity
+
+Các UC mô tả hành vi mục tiêu của tài khoản trong MVP, áp dụng quy tắc ACC ở [phạm vi](#requirements). UC-ACC-01–11 phục vụ người dùng; trình duyệt thực hiện refresh thay người dùng và hệ thống email hỗ trợ giao liên kết. UC-ACC-12 phục vụ quy trình kỹ thuật khóa/mở khóa đã chốt, không có trang quản trị riêng. Chỉ người sở hữu phiên được xem/sửa hồ sơ riêng và quản lý phiên của tài khoản đó; quyền thao tác kỹ thuật được xét riêng theo ACL-02.
+
+Luồng thành công dưới đây giả định dữ liệu hợp lệ và dịch vụ sẵn sàng. Ngoại lệ lỗi dịch vụ phải báo rõ, giữ dữ liệu không nhạy cảm đang nhập và không báo thành công khi chưa biết kết quả. Luồng verify/reset không tự thử lại thao tác dùng token khi mất response. Việc có endpoint hoặc assertion được ghi ở [ma trận đối chiếu](#use-case-coverage), tách khỏi kết quả chạy test.
+
+| Use case | Mục tiêu | Màn hình/thành phần |
+|---|---|---|
+| [UC-ACC-01](#uc-acc-01) | Đăng ký tài khoản | ACC-S01, ACC-S03 |
+| [UC-ACC-02](#uc-acc-02) | Xác minh email | ACC-S03 |
+| [UC-ACC-03](#uc-acc-03) | Yêu cầu gửi lại xác minh | ACC-S03 |
+| [UC-ACC-04](#uc-acc-04) | Đăng nhập | ACC-S02 |
+| [UC-ACC-05](#uc-acc-05) | Yêu cầu khôi phục mật khẩu | ACC-S04 |
+| [UC-ACC-06](#uc-acc-06) | Đặt lại mật khẩu qua liên kết | ACC-S05 |
+| [UC-ACC-07](#uc-acc-07) | Xem và sửa hồ sơ riêng | ACC-S06 |
+| [UC-ACC-08](#uc-acc-08) | Đổi mật khẩu khi đã đăng nhập | ACC-S07 |
+| [UC-ACC-09](#uc-acc-09) | Làm mới phiên truy cập | Wrapper API của trình duyệt |
+| [UC-ACC-10](#uc-acc-10) | Xem và thu hồi một phiên | ACC-S08 |
+| [UC-ACC-11](#uc-acc-11) | Đăng xuất phiên hiện tại hoặc mọi thiết bị | ACC-S08, thao tác đăng xuất |
+| [UC-ACC-12](#uc-acc-12) | Khóa/mở khóa tài khoản qua quy trình kỹ thuật | RB-ACCOUNT; chưa có API/CLI hoặc trang quản trị |
+
+<a id="use-case-rules"></a>
+
+### Truy vết quy tắc tài khoản
+
+Bảng này xác định UC thực hiện từng quy tắc và ranh giới cần kiểm chứng cùng module khác. Giới hạn cụ thể giữ ở bảng ACC; UC không đặt lại một bộ policy khác.
+
+| Quy tắc | Use case thực hiện | Ranh giới / điều kiện cần giữ |
+|---|---|---|
+| ACC-001 | UC-ACC-01 | Đủ bốn trường đăng ký; chưa cấp phiên trước xác minh |
+| ACC-002 | UC-ACC-04 | Email hoặc username nhận diện cùng tài khoản |
+| ACC-003 | UC-ACC-07 | Sửa hồ sơ của mình; username/email chỉ đọc; email riêng tư |
+| ACC-004 | UC-ACC-01/07/10/12 | ID ổn định cho tài khoản/phiên; chọn người nhận theo ID/username thuộc tích hợp DM |
+| ACC-005 | UC-ACC-02/04 | Xác minh trước truy cập ứng dụng; kiểm tra quyền gửi tin thuộc DM/Community |
+| ACC-006 | UC-ACC-05/06 | Yêu cầu và thực hiện reset qua email |
+| ACC-007 | UC-ACC-01/02/04/05/06 | Pending chỉ xác minh/khôi phục; reset không tự xác minh |
+| ACC-008 | UC-ACC-01/07 | Username unique không phân biệt hoa thường; displayName trim/UTF-16 được trùng |
+| ACC-009 | UC-ACC-01/04/05 | Email trim/chữ thường nhất quán; không đổi email, không bỏ dấu chấm hoặc `+tag` |
+| ACC-010 | UC-ACC-01/04/06/08 | Policy mật khẩu không trim; lockout áp dụng đăng nhập, tách khóa quản trị |
+| ACC-011 | UC-ACC-04/06/08/09/10/11 | Hạn token/phiên, rotation và đúng phạm vi thu hồi; realtime có kiểm chứng riêng |
+| ACC-012 | UC-ACC-01/02/03/05/06 | Token đúng purpose, một lần, 30 phút; cấp lại/cooldown 60 giây và độc lập verify/reset |
+| ACC-013 | UC-ACC-07 | Chỉ sửa displayName/bio/locale/timezone theo giới hạn; không tải avatar MVP |
+| ACC-014 | UC-ACC-05/06 | Khôi phục cả pending qua email; không hứa kênh thủ công khi mất email |
+| ACC-015 | UC-ACC-12 | Khóa chặn ứng dụng/thu hồi phiên, giữ lịch sử; mở khóa cần login mới; self-delete ngoài MVP |
+| ACC-016 | UC-ACC-06/08 | Đổi từ chối trùng, reset cho phép trùng; reset vẫn thu hồi phiên theo DEC-113 |
+
+<a id="uc-acc-01"></a>
+
+### UC-ACC-01 — Đăng ký tài khoản
+
+**Tác nhân:** Người chưa có tài khoản; hệ thống email hỗ trợ gửi liên kết.
+
+**Điều kiện trước:** Người dùng mở ACC-S01; không cần đăng nhập. Tính hợp lệ và duy nhất của dữ liệu được kiểm tra trong luồng đăng ký.
+
+**Luồng chính:**
+
+1. Người dùng nhập email, username, tên hiển thị và mật khẩu, rồi gửi đăng ký.
+2. Hệ thống chuẩn hóa và kiểm tra dữ liệu theo ACC-008–010, tạo tài khoản chờ xác minh cùng hồ sơ, mật khẩu băm và yêu cầu gửi liên kết xác minh.
+3. Hệ thống trả kết quả tạo tài khoản; giao diện hướng dẫn kiểm tra email và cung cấp đường gửi lại xác minh/khôi phục mật khẩu.
+
+**Ngoại lệ:** Dữ liệu sai trả lỗi trường; username/email trùng trả xung đột. Hai đăng ký cùng định danh chỉ tạo một tài khoản; yêu cầu thất bại không để lại tài khoản dở dang. Tiếp nhận yêu cầu email chưa chứng minh email đã giao; thất bại giao email được xử lý qua UC-ACC-03.
+
+**Kết quả sau cùng:** Tài khoản ở `PendingVerification`, chưa có phiên ứng dụng. Liên kết xác minh dùng một lần, hạn 30 phút; lần cấp đầu tính vào cooldown gửi lại. Không tự xác minh tài khoản bằng token Development trên giao diện sản phẩm.
+
+<a id="uc-acc-02"></a>
+
+### UC-ACC-02 — Xác minh email
+
+**Tác nhân:** Người kiểm soát hộp thư của tài khoản đăng ký.
+
+**Điều kiện trước:** Người dùng có liên kết xác minh; thao tác không đòi hỏi đăng nhập ứng dụng.
+
+**Luồng chính:**
+
+1. Người dùng mở liên kết. Trang hướng dẫn xác minh; chỉ mở trang bằng GET chưa làm thay đổi tài khoản.
+2. Người dùng bấm xác minh; hệ thống kiểm tra đúng mục đích, email đích, thời hạn, trạng thái token và tài khoản, rồi dùng token một lần.
+3. Hệ thống xác minh email, chuyển tài khoản đang chờ xác minh sang active và hướng dẫn đăng nhập.
+
+**Ngoại lệ:** Token sai mục đích, hết hạn, đã dùng hoặc bị thay thế trả lỗi liên kết không dùng được và đường yêu cầu lại. Hai request dùng cùng token chỉ một request thành công; consume và resend tuân thứ tự commit. Khi response mất sau commit, dùng lại token bị từ chối; người dùng có thể thử đăng nhập hoặc yêu cầu lại. Xác minh không tự mở khóa tài khoản bị khóa theo DEC-104.
+
+**Kết quả sau cùng:** Email đã xác minh, token không dùng lại được; chưa cấp phiên đăng nhập. Token reset còn hiệu lực được giữ độc lập. Không hiện token kỹ thuật trên màn hình; cách đọc và xóa fragment trong URL thuộc [thiết kế liên kết](#detailed-design).
+
+<a id="uc-acc-03"></a>
+
+### UC-ACC-03 — Yêu cầu gửi lại xác minh
+
+**Tác nhân:** Người chưa hoàn tất xác minh email; hệ thống email hỗ trợ gửi liên kết.
+
+**Điều kiện trước:** Người dùng biết email đăng ký. Yêu cầu công khai không cần phiên ứng dụng và phải có email hợp lệ.
+
+**Luồng chính:**
+
+1. Người dùng nhập email và yêu cầu gửi lại từ ACC-S03.
+2. Nếu tài khoản đủ điều kiện và đã cách lần cấp token verify trước ít nhất 60 giây, hệ thống vô hiệu token verify cũ, cấp token mới hạn 30 phút và tiếp nhận yêu cầu email trong cùng transaction.
+3. Hệ thống trả `202 {accepted:true}`; giao diện hướng dẫn kiểm tra email, không xác nhận email đã giao hoặc tài khoản tồn tại.
+
+**Ngoại lệ:** Email không tồn tại, đã xác minh, tài khoản không đủ điều kiện hoặc đang cooldown đều có cùng phản hồi công khai. Trong cooldown không cấp token, không vô hiệu liên kết đang dùng. Hai yêu cầu đồng thời chỉ cấp tối đa một token mới; không tiết lộ thời gian chờ riêng của email. Email cũ đến trễ vẫn chứa link đã bị vô hiệu. Dữ liệu email sai trả lỗi validation; limiter bổ sung vẫn hoãn theo DEC-089.
+
+**Kết quả sau cùng:** Khi thực sự cấp mới, chỉ link verify mới có hiệu lực và token reset không bị thay đổi. Khi không đủ điều kiện cấp, dữ liệu token được giữ nguyên. Người dùng vẫn chưa có phiên ứng dụng.
+
+<a id="uc-acc-04"></a>
+
+### UC-ACC-04 — Đăng nhập
+
+**Tác nhân:** Người có tài khoản, đang cần truy cập ứng dụng.
+
+**Điều kiện trước:** Người dùng mở ACC-S02; để thành công, tài khoản active, email đã xác minh và không trong lockout.
+
+**Luồng chính:**
+
+1. Người dùng nhập email hoặc username cùng mật khẩu và gửi đăng nhập.
+2. Hệ thống chuẩn hóa định danh, kiểm tra mật khẩu, lockout, trạng thái tài khoản và xác minh email.
+3. Hệ thống tạo phiên tối đa 30 ngày, cấp access token 15 phút và refresh token; giao diện vào ứng dụng và kiểm tra quyền của đích truy cập.
+
+**Ngoại lệ:** Định danh không tồn tại hoặc mật khẩu sai trả lỗi thông tin đăng nhập; lần sai thứ 5 khóa đăng nhập 15 phút, kể cả khi nhập đúng trong thời gian khóa. Đúng mật khẩu nhưng chưa xác minh trả `Identity.EmailNotVerified` và dẫn tới xác minh/khôi phục. Tài khoản bị khóa/không khả dụng không được cấp phiên ứng dụng. Login chạy cùng đổi/reset mật khẩu phải kiểm tra lại dưới khóa; phiên tạo trước commit đổi mật khẩu không còn hiệu lực sau commit đó.
+
+**Kết quả sau cùng:** Email và username đăng nhập vào cùng một tài khoản. Login thành công xóa bộ đếm sai/lockout; login thất bại không cấp phiên. Khóa đăng nhập tạm thời không đổi account thành trạng thái bị khóa quản trị.
+
+<a id="uc-acc-05"></a>
+
+### UC-ACC-05 — Yêu cầu khôi phục mật khẩu
+
+**Tác nhân:** Người quên mật khẩu; hệ thống email hỗ trợ gửi liên kết.
+
+**Điều kiện trước:** Người dùng có email hợp lệ để gửi yêu cầu; để nhận và dùng liên kết, cần kiểm soát hộp thư đã đăng ký. Tài khoản chờ xác minh cũng được khôi phục theo DEC-051/067.
+
+**Luồng chính:**
+
+1. Người dùng nhập email tại ACC-S04 và gửi yêu cầu.
+2. Với tài khoản đủ điều kiện và ngoài cooldown 60 giây, hệ thống vô hiệu token reset cũ cùng mục đích, cấp token reset mới hạn 30 phút và tiếp nhận yêu cầu email.
+3. Hệ thống trả phản hồi accepted; giao diện hướng dẫn kiểm tra email, không tiết lộ trạng thái tài khoản hoặc hứa email đã giao.
+
+**Ngoại lệ:** Unknown/unavailable/cooldown có cùng phản hồi công khai; trong cooldown không cấp thêm token hoặc làm mất link hiện tại. Hai request đồng thời chỉ cấp tối đa một token mới. Dữ liệu sai trả lỗi validation. Mất quyền truy cập email chưa có khôi phục thủ công hoặc kênh khác trong MVP.
+
+**Kết quả sau cùng:** Khi cấp mới, token reset cũ không dùng được; token verify độc lập. Mật khẩu, trạng thái xác minh và phiên hiện tại chưa thay đổi chỉ vì gửi yêu cầu. Limiter bổ sung vẫn hoãn DEC-089.
+
+<a id="uc-acc-06"></a>
+
+### UC-ACC-06 — Đặt lại mật khẩu qua liên kết
+
+**Tác nhân:** Người kiểm soát hộp thư khôi phục của tài khoản.
+
+**Điều kiện trước:** Người dùng có liên kết reset; không cần đăng nhập ứng dụng. Token phải đúng mục đích, còn hạn, chưa dùng/bị thay thế và tài khoản đủ điều kiện.
+
+**Luồng chính:**
+
+1. Người dùng mở liên kết; GET không dùng token. Người dùng nhập và gửi mật khẩu mới.
+2. Hệ thống kiểm tra policy mật khẩu trước khi consume; dưới khóa kiểm tra lại token, rồi cập nhật mật khẩu, security stamp, reset lockout và thu hồi mọi phiên.
+3. Hệ thống đánh dấu token đã dùng và hoàn tất toàn bộ thay đổi; giao diện xóa phiên/cache liên quan và hướng dẫn đăng nhập lại.
+
+**Ngoại lệ:** Mật khẩu trái policy trả lỗi và giữ token hợp lệ để sửa lại. Token sai/hết hạn/đã dùng/bị thay thế trả lỗi chung và đường yêu cầu mới. Hai consume chỉ một thành công. Đổi mật khẩu bằng UC-ACC-08 trước đó làm token reset cũ không còn dùng được. Mật khẩu mới trùng mật khẩu hiện tại được chấp nhận nếu hợp lệ theo ACC-016/DEC-113; token vẫn bị consume và mọi phiên vẫn bị thu hồi.
+
+**Kết quả sau cùng:** Mật khẩu được lưu theo policy đã chốt, mọi phiên cũ bị thu hồi, không tự đăng nhập. Trạng thái xác minh email giữ nguyên; tài khoản pending vẫn phải thực hiện UC-ACC-02. Token verify còn hạn độc lập với reset.
+
+<a id="uc-acc-07"></a>
+
+### UC-ACC-07 — Xem và sửa hồ sơ riêng
+
+**Tác nhân:** Người đã đăng nhập.
+
+**Điều kiện trước:** Phiên của chính tài khoản còn hạn/chưa thu hồi; tài khoản active và đã xác minh.
+
+**Luồng chính:**
+
+1. Người dùng mở ACC-S06; hệ thống tải hồ sơ riêng, gồm username/email chỉ đọc.
+2. Người dùng sửa `displayName`, `bio`, `locale`, `timezone` và gửi lưu.
+3. Hệ thống kiểm tra dữ liệu theo ACC-008/013, cập nhật hồ sơ của chính người gọi và trả hồ sơ đã lưu; giao diện cập nhật nội dung hiển thị.
+
+**Ngoại lệ:** Dữ liệu sai trả lỗi trường; lưu lỗi giữ bản đang sửa. Phiên không hợp lệ yêu cầu đăng nhập; không lấy user ID do người gọi cung cấp để sửa hồ sơ người khác. Các tên hiển thị trùng nhau được phép; việc chọn người trong DM dùng ID/username ổn định. Quy tắc chuẩn hóa và UTF-16 phải nhất quán HTTP–service–DB.
+
+**Kết quả sau cùng:** Các trường hợp lệ được lưu; username/email giữ nguyên. Hồ sơ công khai chỉ có ID/username/tên hiển thị, không có email. MVP chưa có thao tác tải avatar; chưa áp dụng allowlist locale/timezone hoặc kiểm soát version mới khi chưa chốt contract.
+
+<a id="uc-acc-08"></a>
+
+### UC-ACC-08 — Đổi mật khẩu khi đã đăng nhập
+
+**Tác nhân:** Người đã đăng nhập và biết mật khẩu hiện tại.
+
+**Điều kiện trước:** Phiên của chính tài khoản hợp lệ; tài khoản active và đã xác minh.
+
+**Luồng chính:**
+
+1. Người dùng mở ACC-S07, nhập mật khẩu hiện tại và mật khẩu mới hợp lệ khác mật khẩu hiện tại.
+2. Hệ thống kiểm tra mật khẩu hiện tại, cập nhật mật khẩu/security stamp, reset lockout, vô hiệu token reset đang có và thu hồi mọi phiên trong cùng transaction.
+3. Giao diện xóa phiên/cache liên quan và về đăng nhập; người dùng đăng nhập lại bằng mật khẩu mới.
+
+**Ngoại lệ:** Sai mật khẩu hiện tại hoặc mật khẩu mới trái policy trả lỗi; không đổi mật khẩu, vô hiệu token reset hay thu hồi phiên. Mật khẩu mới trùng hiện tại bị từ chối bằng `Identity.PasswordUnchanged` theo ACC-016/DEC-113 và không gây thay đổi dữ liệu. Login/refresh chạy đồng thời không được giữ phiên dùng mật khẩu/stamp cũ sau commit.
+
+**Kết quả sau cùng:** Mật khẩu mới có hiệu lực; mọi thiết bị, gồm thiết bị thực hiện, phải đăng nhập lại. Token reset cấp trước đổi mật khẩu không còn dùng được; thao tác không đổi trạng thái xác minh email.
+
+<a id="uc-acc-09"></a>
+
+### UC-ACC-09 — Làm mới phiên truy cập
+
+**Tác nhân:** Trình duyệt thay người đã đăng nhập.
+
+**Điều kiện trước:** Trình duyệt có refresh token; để thành công, token chưa dùng/thu hồi/hết hạn, phiên còn hiệu lực và tài khoản active.
+
+**Luồng chính:**
+
+1. Khi access token cần làm mới, trình duyệt gửi refresh token hiện hành.
+2. Hệ thống kiểm tra token/phiên dưới khóa, đánh dấu token cũ đã dùng và cấp access/refresh token mới cùng phiên.
+3. Trình duyệt thay token phiên; các request đồng thời trong tab và các tab chia sẻ phiên phối hợp để chỉ thực hiện một rotation cần thiết.
+
+**Ngoại lệ:** Refresh token sai hoặc phiên hết hạn/thu hồi không được cấp lại; client xóa phiên tương ứng và về đăng nhập. Dùng lại token đã rotation thu hồi chính phiên đó với lỗi reuse. Nếu response rotation mất, không tự gửi lại token cũ. Refresh đang chờ không được khôi phục phiên đã logout hoặc ghi đè login mới. Khi thiếu Web Locks, mỗi tab giữ phiên riêng theo implementation hiện tại.
+
+**Kết quả sau cùng:** Hạn phiên giữ nguyên mốc tối đa 30 ngày từ login; refresh không gia hạn phiên. Access token mới có thời hạn theo ACC-011; khi đo biên hết hạn JWT phải ghi clock skew hiện tại 30 giây.
+
+<a id="uc-acc-10"></a>
+
+### UC-ACC-10 — Xem và thu hồi một phiên
+
+**Tác nhân:** Người đã đăng nhập.
+
+**Điều kiện trước:** Người gọi có phiên hợp lệ của chính tài khoản.
+
+**Luồng chính:**
+
+1. Người dùng mở ACC-S08; hệ thống trả các phiên của mình còn hạn/chưa thu hồi và đánh dấu phiên hiện tại.
+2. Người dùng chọn một phiên cần thu hồi; hệ thống kiểm tra quyền sở hữu, thu hồi phiên đó và refresh token liên quan.
+3. Giao diện cập nhật danh sách. Thu hồi phiên khác giữ phiên người gọi; thu hồi phiên hiện tại xóa phiên giao diện và dẫn về đăng nhập.
+
+**Ngoại lệ:** ID phiên không tồn tại hoặc thuộc tài khoản khác trả `Identity.SessionNotFound`, không làm lộ phiên người khác. Thu hồi lặp phiên của mình đã bị thu hồi không tạo lại phiên. Tải danh sách lỗi phải hiển thị lỗi/thử lại; danh sách rỗng phải được phản ánh đúng, không thay bằng thiết bị mẫu. Phiên người gọi đã hết hạn/thu hồi phải đăng nhập lại.
+
+**Kết quả sau cùng:** Chỉ phiên được chọn bị thu hồi; request HTTP tiếp theo của phiên đó bị từ chối. Kết nối chat đang mở phải ngừng nhận dữ liệu theo DEC-083; thực hiện và kiểm chứng realtime thuộc tích hợp DM, chưa có bằng chứng chỉ từ test Identity HTTP.
+
+<a id="uc-acc-11"></a>
+
+### UC-ACC-11 — Đăng xuất phiên hiện tại hoặc mọi thiết bị
+
+**Tác nhân:** Người dùng muốn kết thúc phiên truy cập.
+
+**Điều kiện trước:** Logout phiên hiện tại dùng refresh token đang giữ và không yêu cầu Bearer; logout-all cần một phiên xác thực hợp lệ của chính tài khoản.
+
+**Luồng chính:**
+
+1. Người dùng chọn đăng xuất phiên hiện tại hoặc tất cả thiết bị.
+2. Hệ thống thu hồi phiên tương ứng: logout thu hồi phiên gắn với refresh token; logout-all thu hồi mọi phiên của tài khoản, gồm phiên gọi.
+3. Giao diện xóa phiên và dữ liệu riêng/cache của phiên đó, đóng kết nối liên quan và về đăng nhập; các tab chia sẻ phiên nhận thay đổi.
+
+**Ngoại lệ:** Logout với token không nhận diện được hoặc phiên đã thu hồi vẫn hoàn tất theo hành vi 204 hiện tại. Logout-all bằng phiên không hợp lệ bị từ chối. Nếu request logout lỗi/mất kết nối, client vẫn xóa phiên local nhưng không được tuyên bố đã thu hồi thành công trên server hoặc mọi thiết bị; cần phân biệt với kết quả thành công. Refresh đang chờ không được khôi phục phiên đã xóa.
+
+**Kết quả sau cùng:** Khi server xác nhận thành công, đúng phạm vi phiên bị thu hồi; logout một phiên không ảnh hưởng phiên độc lập khác. Logout-all yêu cầu mọi thiết bị đăng nhập lại. Hành vi trên HTTP và việc dừng kết nối chat phải có bằng chứng riêng.
+
+<a id="uc-acc-12"></a>
+
+### UC-ACC-12 — Khóa/mở khóa tài khoản qua quy trình kỹ thuật
+
+**Tác nhân:** Người quyết định và người thực hiện được phân quyền theo [RB-ACCOUNT](../operations-runbook.md#account-support). Người/vai trò cụ thể còn OQ-011; tài liệu này không chỉ định hoặc cấp quyền cho bất kỳ ai.
+
+**Điều kiện trước:** Có yêu cầu/hồ sơ xử lý, user ID ổn định, môi trường/phạm vi đích và quyết định khóa hoặc mở khóa. Người thực hiện có quyền tương ứng; công cụ kỹ thuật phải được triển khai và kiểm chứng trước sử dụng.
+
+**Luồng chính:**
+
+1. Người thực hiện mở hồ sơ, đối chiếu quyết định, user ID, trạng thái/version hiện hành và phạm vi được cấp quyền; không thu thập mật khẩu, token hoặc nội dung DM vào hồ sơ.
+2. Khi khóa, công cụ ghi trạng thái khóa và audit/receipt cần thiết, đổi security stamp và thu hồi toàn bộ phiên/token ứng dụng cùng transaction. Kiểm tra HTTP và cutoff chat/media theo [quy tắc khóa tài khoản](../data-lifecycle.md#account-state).
+3. Khi mở khóa theo quyết định, công cụ ghi trạng thái phù hợp và audit. Người dùng phải đăng nhập mới, hoàn tất xác minh nếu còn thiếu và được kiểm tra quyền hiện hành; phiên cũ không được khôi phục.
+4. Người thực hiện ghi kết quả đối soát vào hồ sơ: đúng tài khoản/phạm vi, hiệu lực thu hồi, dữ liệu lịch sử được giữ và quyền của các actor khác không bị cấp thêm.
+
+**Ngoại lệ:** Thiếu quyền/quyết định, sai user ID hoặc trạng thái/version không còn phù hợp thì từ chối thao tác và đối chiếu lại; không thay đổi tài khoản. Lỗi transaction không để lại thay đổi từng phần. Mất response sau commit phải đối soát trạng thái/audit trước thử lại; chưa kiểm chứng cutoff thì chưa ghi đạt. Không dùng reset/verify để mở khóa; mất email không tạo kênh khôi phục thủ công.
+
+**Kết quả sau cùng:** Tài khoản bị khóa không truy cập ứng dụng hoặc gửi/gọi; các phiên cũ bị từ chối và kết nối chat/media dừng trong ≤5 giây từ commit theo DEC-083/099. Người khác còn quyền vẫn đọc lịch sử và sửa/xóa tin của chính mình; không gửi DM/gọi mới tới peer bị khóa. Hồ sơ, tin, membership và ownership không bị xóa/chuyển vì thao tác khóa. Mở khóa không làm sống lại phiên hoặc tự xác minh email. Quyền kỹ thuật không cho đọc DM, sửa/xóa thay tác giả; MVP không có self-delete hoặc trang quản trị riêng.
+
+<a id="use-case-coverage"></a>
+
+### Đối chiếu use case với code và test
+
+Rà soát ngày 2026-10-05. Prefix API là `/api/v1`. `Lifecycle` là test `Identity_v1_supports_the_complete_password_account_lifecycle` trong [IdentityV1FlowTests](../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs); các test có tên riêng khác nằm trong [IdentityConcurrencyTests](../../tests/SCDC.Api.Tests/Identity/IdentityConcurrencyTests.cs). `Client` là [api.test.js](../../clients/WebClient/tests/api.test.js), gồm assertion rotation giữa tab, storage event bị bỏ lỡ, 401 đến trễ, logout khi refresh đang chờ, login mới và trường hợp thiếu Web Locks. Các test này dùng browser/fetch mô phỏng, chưa chứng minh UI hoặc trình duyệt thật.
+
+Source nghiệp vụ: [RegistrationService](../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [UserDirectory](../../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs). Giao diện/wrapper: [AuthScreen](../../clients/WebClient/src/components/AuthScreen.jsx), [UserSettingsModal](../../clients/WebClient/src/components/UserSettingsModal.jsx), [api.js](../../clients/WebClient/src/api.js).
+
+| UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
+|---|---|---|---|---|
+| UC-ACC-01 | AC-01/09/11/12/19; TC-01/04/09/10/16 | `RegisterAsync`; `POST /auth/register`; form đăng ký | Lifecycle: status 201, token Development, từ chối login trước verify | ACC-GAP-04/05/07; đăng ký trùng đồng thời/Unicode/policy mật khẩu chưa có test; UI đang tự verify bằng token Development |
+| UC-ACC-02 | AC-05/07/15/19/20; TC-01/02/06/13/17/18 | `VerifyEmailAsync`; `POST /auth/verify-email`; wrapper verify | Lifecycle: verify 204, login sau verify, `emailVerified=true` | ACC-GAP-03/05; chưa có test verify đồng thời/hết hạn/dùng lại; chưa có trang mở liên kết và xác minh chủ động |
+| UC-ACC-03 | AC-14/19/20/21; TC-07/12/16/17/18 | Resend chỉ có thiết kế/OpenAPI mục tiêu | Chưa có test cho resend | ACC-GAP-02/05; thiếu endpoint, cooldown, email và UI |
+| UC-ACC-04 | AC-02/04/07/12; TC-01/02/08/10 | `LoginAsync`; `POST /auth/login`; form login | Lifecycle: login username trước/sau verify; `Parallel_wrong_passwords_are_counted_and_trigger_lockout`; hai test login/đổi mật khẩu tranh khóa | Login bằng email, biên hết lockout và UI dẫn tới xác minh chưa có test; form hiện chỉ báo lỗi chung |
+| UC-ACC-05 | AC-10/14/18/19/21; TC-03/07/12/15/16/18 | `ForgotPasswordAsync`; `POST /auth/forgot-password`; form quên mật khẩu | Lifecycle: accepted và token reset cho account đã verify | ACC-GAP-01/02/05; chưa cấp token cho pending; chưa có cooldown/email thật hoặc test phản hồi các trạng thái |
+| UC-ACC-06 | AC-06/10/12/15/16/20/22; TC-03/06/10/13/14/17/18/19 | `ResetPasswordAsync`; `POST /auth/reset-password`; wrapper reset | Lifecycle: reset 204 với mật khẩu khác, access cũ bị từ chối, mật khẩu cũ không đăng nhập được; `Concurrent_reset_requests_can_consume_a_token_only_once` | Chưa có trang reset; thiếu test pending, biên hạn token, reset sai policy giữ token, verify/reset độc lập và reset mật khẩu trùng |
+| UC-ACC-07 | AC-03/08/11/17; TC-05/09/15 | `GetAsync`, `UpdateProfileAsync`; `GET/PATCH /users/me`; `UserDirectory`; form hồ sơ | Lifecycle: đọc username/emailVerified và PATCH trả 200 | Chưa assertion giá trị hồ sơ sau lưu/quyền riêng tư/biên UTF-16; UI chưa cho sửa locale hoặc xem email chỉ đọc; tìm người DM thuộc scope tích hợp |
+| UC-ACC-08 | AC-12/16/17/22; TC-10/14/17/19 | `ChangePasswordAsync`; `POST /auth/change-password`; form đổi mật khẩu | Lifecycle: đổi 204, access cũ bị từ chối; `Changing_password_invalidates_previously_issued_reset_tokens`; hai test login/đổi mật khẩu tranh khóa | UI chưa xóa phiên ngay sau thành công; thiếu test sai mật khẩu hiện tại/policy/trùng |
+| UC-ACC-09 | AC-13/16; TC-08/11/14 | `RefreshAsync`; `POST /auth/refresh`; wrapper refresh | Lifecycle: rotation/reuse và access bị từ chối; Client: phối hợp refresh/không khôi phục logout hoặc ghi đè login mới | Chưa có test biên hạn phiên/access, response rotation bị mất hoặc trình duyệt thật; thu hồi realtime chưa triển khai |
+| UC-ACC-10 | AC-04/16; TC-08/14 | `GetSessionsAsync`, `RevokeSessionAsync`; `GET /auth/sessions`, `DELETE /auth/sessions/{id}`; tab phiên | Lifecycle: đánh dấu current, revoke phiên khác và access phiên đó bị từ chối | Chưa assertion phiên người gọi vẫn sống ngay sau revoke, revoke phiên hiện tại/quyền sở hữu; UI dùng phiên mẫu khi lỗi/rỗng và chưa có thao tác revoke phiên hiện tại |
+| UC-ACC-11 | AC-04/16; TC-08/14 | `LogoutAsync`, `LogoutAllAsync`; `POST /auth/logout`, `POST /auth/logout-all`; wrapper xóa phiên local | Lifecycle: logout/logout-all và từ chối access; Client: logout giữa tab không bị refresh khôi phục | UI ghi “tất cả thiết bị khác” trong khi logout-all gồm phiên gọi; thiếu test logout token không nhận diện, lỗi mạng/phạm vi phiên và cleanup dữ liệu riêng/realtime |
+| UC-ACC-12 | ACC-015, ACL-02; [AC-DATA-02/03, TC-DATA-01](../data-lifecycle.md#acceptance) | RB-ACCOUNT và enum/status trong Identity; chưa có API/CLI khóa/mở khóa | Chưa có test quy trình khóa/mở khóa; kiểm tra Bearer hiện có chỉ là một phần guard | Công cụ, phân quyền, audit/receipt và status policy cụ thể còn OQ-011; cần chứng minh thu hồi/cutoff, giữ lịch sử và unlock không khôi phục phiên |
+
+Trong ma trận, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`; dùng dạng ngắn để dễ đọc. Assertion status 200/204 không đủ chứng minh mọi hậu điều kiện. Toàn bộ UC/AC/TC vẫn chưa có kết quả chạy trong bước tài liệu này; các điểm thiếu là đầu vào cho gói triển khai và kiểm thử sau khi người dùng xác nhận.
+
+<a id="use-case-review"></a>
+
+### Điểm cần xác nhận và phụ thuộc triển khai
+
+| Nội dung | Căn cứ hiện có | Trạng thái / việc cần làm |
+|---|---|---|
+| Mật khẩu mới trùng mật khẩu hiện tại — UC-ACC-06/08 | Người dùng chọn giữ hành vi hiện tại ngày 2026-10-05: đổi từ chối trùng, reset cho phép trùng. | Đã chốt [DEC-113](../decisions.md#dec-113); ACC-016, AC-ACC-22 và TC-ACC-19 ghi rõ kết quả/thu hồi phiên. Chưa có assertion tự động cho trường hợp trùng. |
+| Email dùng được — UC-ACC-01/03/05 | ACC-GAP-05 và thiết kế delivery/envelope đã có; chưa có worker/provider. | OQ-002/OQ-008: cần chọn provider, public origin/domain và nơi lưu key trước triển khai giao email thật; tiếp nhận outbox chưa chứng minh email đã giao. |
+| Limiter bổ sung | Cooldown 60 giây và lockout 5 lần/15 phút đã chốt; ngưỡng theo nguồn/tài khoản chỉ là đề xuất DEC-089. | Giữ trạng thái hoãn; không tự thêm ngưỡng thành điều kiện nghiệm thu của UC. |
+| Thu hồi trên kết nối đang mở — UC-ACC-08–11 | HTTP đã kiểm tra session/stamp; DEC-083 yêu cầu kết nối chat ngừng nhận dữ liệu trong ≤5 giây sau commit thu hồi. | Tích hợp và kiểm chứng cùng DM; test Identity HTTP và Client mô phỏng chưa đủ chứng minh. |
+| Khóa/mở khóa quản trị | DEC-104/112 và RB-ACCOUNT đã chốt hành vi/phạm vi; chưa có công cụ thật. | Theo dõi ở OQ-011/runbook; không thêm UI quản trị hoặc tự coi verify/reset là thao tác mở khóa. |
+
+Rà soát độ phủ use case ngày 2026-10-05: 12 UC có đủ tác nhân, điều kiện trước, luồng chính, ngoại lệ và kết quả sau cùng; 16 quy tắc ACC được truy vết ở [bảng quy tắc](#use-case-rules), 22 AC và 19 TC tài khoản được dẫn chiếu trong [ma trận](#use-case-coverage). Các lựa chọn còn mở ở bảng trên thuộc thiết kế/triển khai; hồ sơ ghi rõ phạm vi hành vi đã chốt và không coi chúng là chức năng đã chạy hoặc bằng chứng nghiệm thu sản phẩm.
+
 <a id="ux"></a>
 
-## 3. Giao diện và trạng thái
+## 4. Giao diện và trạng thái
 
 ```text
 ACC-S01 · Đăng ký
@@ -119,7 +428,7 @@ Hồ sơ hiện tại cho sửa `displayName`, `bio`, `locale`, `timezone`; user
 
 <a id="api-current"></a>
 
-## 4. API hiện tại và dữ liệu
+## 5. API hiện tại và dữ liệu
 
 Prefix `/api/v1`. Bảng này mô tả code có trong repo; schema đầy đủ được sinh ở `/swagger/v1/swagger.json` khi chạy Development. Lỗi theo [ProblemDetails chung](../architecture.md#contracts).
 
@@ -179,6 +488,7 @@ Thời hạn/mật khẩu đã được chọn tại DEC-064/065. Bảng vẫn m
 | `Identity.InvalidRefreshToken`, `Identity.RefreshTokenReuseDetected` | 401 | Xóa phiên phía client, đăng nhập lại |
 | `Identity.UserNotFound`, `Identity.SessionNotFound` | 404 | Báo không còn tài nguyên |
 | `Identity.RegistrationInvalid`, `Identity.PasswordInvalid`, `Identity.ProfileInvalid` và lỗi trường | 400 | Hiển thị `errors` tại trường; validation MVC có thể trả `Common.ValidationFailed` trước service |
+| `Identity.CurrentPasswordInvalid`, `Identity.PasswordUnchanged` | 400 | Báo tại trường mật khẩu hiện tại/mới; không xóa phiên khi đổi mật khẩu bị từ chối; trường hợp mật khẩu trùng theo DEC-113 |
 
 Nguồn: [controllers](../../services/SCDC.Api/Controllers/Identity/AuthController.cs), [request schema](../../services/SCDC.Api/Controllers/Identity/IdentityRequests.cs), [response schema](../../services/Modules/Identity/Application/IdentityModels.cs), [validation](../../services/Modules/Identity/Application/IdentityValidation.cs), [options](../../services/Modules/Identity/Infrastructure/IdentityOptions.cs).
 
@@ -239,9 +549,11 @@ Kết quả đọc source ngày 2026-10-04, không phải kết quả chạy tes
 | ACC-GAP-06 | Chống lạm dụng đăng ký/login/reset/resend | Có lockout; chưa có rate limiter theo nguồn yêu cầu/gửi email | Chọn ngưỡng/cửa sổ cấu hình được; đo lỗi 429 và phản hồi không tiết lộ email |
 | ACC-GAP-07 | Tên hiển thị UTF-16 — ACC-008, DEC-068 | Service dùng `.Length`; MVC và DB có giới hạn riêng | Fixture tiếng Việt tổ hợp/emoji và biên 64; kiểm chứng HTTP–DB |
 
+Rà soát ngày 2026-10-05 bổ sung chênh lệch giao diện tại [ma trận use case](#use-case-coverage): tự verify bằng token Development, thiếu trang verify/reset, chưa cho sửa locale, chưa xóa phiên ngay sau đổi mật khẩu, danh sách phiên dùng dữ liệu mẫu khi lỗi/rỗng và nhãn logout-all sai phạm vi. Các chênh lệch này cần triển khai/kiểm chứng cùng UC tương ứng; chưa sửa mã trong bước tài liệu.
+
 <a id="gaps"></a>
 
-## 5. Quyết định đã chốt và thiết kế còn lại
+## 6. Quyết định đã chốt và thiết kế còn lại
 
 Đăng ký → tiếp nhận yêu cầu email → xác minh liên kết → đăng nhập → ứng dụng. Quên mật khẩu → tiếp nhận yêu cầu → mở liên kết → đặt mật khẩu mới → đăng nhập; chưa xác minh thì vẫn quay về xác minh. Liên kết hết hạn/đã dùng có đường yêu cầu lại, tuân cooldown.
 
@@ -342,7 +654,7 @@ Chốt pipeline normalize → validate → transaction → constraint; validatio
 
 <a id="acceptance"></a>
 
-## 6. Tiêu chí chấp nhận
+## 7. Tiêu chí chấp nhận
 
 | Mã | Tình huống kiểm tra | Kết quả mong đợi |
 |---|---|---|
@@ -367,6 +679,7 @@ Chốt pipeline normalize → validate → transaction → constraint; validatio
 | AC-ACC-19 | Đăng ký/quên mật khẩu ngoài Development và nhận email thật. | Response không có token sử dụng được; nhận link đúng domain/mục đích/hạn, hoàn tất luồng; tiếp nhận outbox không được ghi thành email đã giao. |
 | AC-ACC-20 | Mở link qua GET, gửi lại/consume/reset đồng thời và reset mật khẩu sai policy | GET không consume; một token dùng một lần; token verify/reset độc lập; reset sai không mất token |
 | AC-ACC-21 | Email unknown/verified/unavailable/cooldown gọi resend/forgot | Production cùng 202/body accepted; không trả trạng thái tài khoản/token hoặc retry time riêng |
+| AC-ACC-22 | Đổi và đặt lại mật khẩu với mật khẩu mới trùng mật khẩu hiện tại. | Đổi bị từ chối bằng `Identity.PasswordUnchanged`, không đổi dữ liệu hoặc thu hồi phiên/token reset; reset hợp lệ thành công, consume token, đổi stamp và thu hồi mọi phiên. Cả hai tuân policy mật khẩu; trạng thái xác minh không đổi (DEC-113). |
 
 AC-ACC-06 áp dụng cho tài khoản đã xác minh; AC-ACC-10 bao phủ tài khoản
 chưa xác minh. Toàn bộ tiêu chí vẫn cần có kết quả chạy và xác nhận
@@ -376,7 +689,7 @@ nghiệm thu, không được đánh dấu đạt chỉ vì quy tắc đã chố
 
 <a id="tests"></a>
 
-## 7. Ca kiểm thử
+## 8. Ca kiểm thử
 
 Dữ liệu: A là tài khoản đã xác minh; U chưa xác minh; A1/A2 là hai phiên của A. Chuẩn bị email thử/hoặc token Development, DB thử riêng, phiên trình duyệt độc lập và khả năng gửi request đồng thời.
 | Mã ca | Tiền điều kiện và thao tác | Kết quả cần quan sát | Dẫn chiếu |
@@ -399,6 +712,7 @@ Dữ liệu: A là tài khoản đã xác minh; U chưa xác minh; A1/A2 là hai
 | TC-ACC-16 | Ngoài Development, nhận email verify/reset từ worker; dừng worker rồi retry; cấp link mới trước khi email cũ được giao | Không lộ token ở response/log; email dùng link đúng; link bị thay thế không còn hợp lệ | AC-ACC-19; cần worker/provider |
 | TC-ACC-17 | Consume và resend tranh khóa; reset sai mật khẩu rồi dùng lại token đúng | Kết quả theo thứ tự commit; rollback không cấp mail; reset sai không consume | AC-ACC-14/15/20 |
 | TC-ACC-18 | GET link, fragment/URL sau đọc, unknown/verified/unavailable/cooldown; worker lease hết khi provider đã nhận | GET không đổi DB; URL bỏ token; response không lộ trạng thái; email lặp vẫn một consume | AC-ACC-19/20/21 |
+| TC-ACC-19 | A có A1/A2 và token reset còn hạn: A1 đổi sang mật khẩu hiện tại rồi dùng token reset để đặt lại chính mật khẩu đó; lặp reset cho U sau khi triển khai ACC-GAP-01 | Change trả 400 `Identity.PasswordUnchanged`; mật khẩu/stamp/phiên/token reset giữ nguyên. Reset trả 204, đổi stamp, A1/A2 và refresh token cũ bị từ chối, token reset dùng lại bị từ chối; vẫn đăng nhập được bằng mật khẩu đó. U vẫn chưa xác minh và chưa được login. Ca chưa chạy; chưa có assertion tự động. | AC-ACC-22, UC-ACC-06/08, DEC-113 |
 
 ### Đối chiếu bộ test tự động hiện có
 

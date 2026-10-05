@@ -1,6 +1,6 @@
 # SCDC — Quyết định và vấn đề còn mở
 
-Cập nhật: 2026-10-04. Nguồn chuẩn cho các mã DEC/OQ; hành vi chi tiết nằm trong đặc tả tính năng.
+Cập nhật: 2026-10-05. Nguồn chuẩn cho các mã DEC/OQ; hành vi chi tiết nằm trong đặc tả tính năng.
 
 Các quyết định giữ nguyên mã. Quyết định bị thay thế vẫn có dòng truy vết; vấn đề mở chỉ đóng khi có kết luận và bằng chứng tương ứng.
 
@@ -137,6 +137,7 @@ Các quyết định giữ nguyên mã. Quyết định bị thay thế vẫn c�
 | <a id="dec-110"></a>DEC-110 | Không phát hành khi còn lỗi bảo mật, sai quyền, mất/trùng dữ liệu, lỗi hành trình chính hoặc chỉ tiêu bắt buộc chưa đạt/chưa kiểm chứng. Lỗi giao diện nhỏ có thể để lại khi ghi ảnh hưởng, người phụ trách và hạn sửa. | Người dùng chốt ngày 2026-10-04. Phân loại/gate/hồ sơ ở [nghiệm thu](release-operations.md#release-gates); không dùng cách tiếp tục tạm thời hoặc fixture để thay tiêu chí bắt buộc. | Đã xác nhận điều kiện phát hành |
 | <a id="dec-111"></a>DEC-111 | Chưa chọn người xác nhận nghiệm thu và quyết định mở phát hành. | Người dùng trả lời “Chưa chốt người duyệt” ngày 2026-10-04. Tiếp tục soạn hồ sơ/runbook; giữ trống người duyệt, không giao mặc định cho người dùng hoặc Vg. Phải chọn trước khi ký nghiệm thu/phát hành thật; không ảnh hưởng phân công chuẩn bị kiểm thử hiện có. | Đã ghi nhận chưa chọn; còn OQ-011 |
 | <a id="dec-112"></a>DEC-112 | MVP chưa làm trang quản trị riêng; khóa/mở khóa tài khoản qua quy trình kỹ thuật có phân quyền và audit. Không cấp quyền đọc DM hoặc sửa/xóa tin thay tác giả. | Người dùng chốt phạm vi ngày 2026-10-04. Công cụ/guard/audit/receipt và kiểm chứng DEC-104 còn phải triển khai; tên người quyết định/thực hiện và lịch trực chưa được chọn. [RB-ACCOUNT](operations-runbook.md#account-support) là thiết kế quy trình, không ủy quyền SQL tay hoặc cấp quyền production. | Đã xác nhận phạm vi; phân công còn mở |
+| <a id="dec-113"></a>DEC-113 | Giữ hành vi mật khẩu trùng hiện tại: đổi mật khẩu khi đã đăng nhập từ chối mật khẩu mới trùng hiện tại; đặt lại qua liên kết cho phép trùng nếu đúng policy. Reset thành công vẫn consume token, đổi security stamp và thu hồi mọi phiên, không tự xác minh email. | Người dùng chọn ngày 2026-10-05 khi rà soát use case Identity. Không thêm kiểm tra lịch sử mật khẩu; không đổi policy DEC-064 hoặc phạm vi thu hồi DEC-065. [ACC-016 và use case](features/accounts.md#use-cases), AC-ACC-22/TC-ACC-19 cần kiểm chứng. | Đã xác nhận hành vi; chưa chạy kiểm thử |
 
 Tài liệu liên quan: [yêu cầu ban đầu](project.md#requirements),
 [Project Brief](project.md#scope), [dự toán và giả định](project.md#budget).
@@ -175,6 +176,7 @@ kết luận, ngày xử lý và tài liệu chứa kết quả.
 | 2026-09-30 | Không khảo sát bên ngoài trong đợt này | DEC-030; đầu vào từ đại diện sản phẩm chưa phải bằng chứng người dùng |
 | 2026-10-03 | Hợp nhất tài liệu; xác nhận DEC-060/061 và đồng bộ DEC-062 theo source | Cập nhật mục tiêu kiến trúc, API lỗi, form đăng ký; không đổi code hoặc đánh dấu nghiệm thu |
 | 2026-10-04 | Chi tiết hóa chính sách MVP, công nghệ, chất lượng, backup và đầu vào kế hoạch theo trả lời của người dùng | DEC-063–098; cập nhật Accounts, DM, Community, Media, vận hành, nguồn lực và readiness; ghi riêng chênh lệch implementation và bằng chứng còn thiếu |
+| 2026-10-05 | Bổ sung 12 use case Identity, truy vết 16 quy tắc tài khoản, đối chiếu source/test và chốt hành vi mật khẩu trùng | DEC-113; bổ sung ACC-016/AC-ACC-22/TC-ACC-19. UC-ACC-12 dẫn chiếu khóa/mở khóa kỹ thuật DEC-104/112/RB-ACCOUNT. Chưa sửa mã hoặc chạy kiểm thử sản phẩm; các chênh lệch API/UI và bằng chứng còn thiếu được ghi tại Accounts. |
 
 DEC-011 không nằm trong danh sách quyết định hiện hành của hồ sơ gốc; mã này không được cấp lại. OQ-013 đã xử lý theo DEC-030; các OQ khác giữ trạng thái từng dòng, không tính toàn bộ là đã đóng.
 

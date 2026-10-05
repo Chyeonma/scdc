@@ -1,6 +1,6 @@
 # SCDC — Mục tiêu, yêu cầu, phạm vi và kế hoạch
 
-Cập nhật: 2026-10-04. Nguồn chuẩn cho REQ, SCP, SUC, COST, AS, RSK, READY và PREP.
+Cập nhật: 2026-10-05. Nguồn chuẩn cho REQ, SCP, SUC, COST, AS, RSK, READY và PREP.
 
 Phạm vi sản phẩm đã được xác định ở mức tổng thể. Đặc tả và bằng chứng còn thiếu được theo dõi bên dưới; có code trong repo chưa đồng nghĩa đã nghiệm thu hoặc sẵn sàng phát hành.
 
@@ -380,7 +380,7 @@ Bảng này đánh giá nội dung đã viết và quyết định còn cần, k
 | Phần | Nội dung đã hoàn thiện trong đợt này | Còn cần để khóa tài liệu |
 |---|---|---|
 | Mục tiêu/phạm vi | REQ/SCP/SUC, luồng ưu tiên và ranh giới MVP nhất quán | Nhóm sử dụng đầu tiên/ngôn ngữ và cách đánh giá nội bộ đang được hỏi |
-| Tài khoản | Quy tắc, UX, AC/TC và đối chiếu code; thiết kế chi tiết token/consume/EmailDelivery, recovery OpenAPI 4 thao tác | Limiter bổ sung hoãn DEC-089; provider/key store và kiểm chứng ACC-GAP thuộc triển khai |
+| Tài khoản | Quy tắc, UX, [12 use case và đối chiếu source/test](features/accounts.md#use-cases), AC/TC; hành vi mật khẩu trùng DEC-113; thiết kế chi tiết token/consume/EmailDelivery, recovery OpenAPI 4 thao tác | Limiter bổ sung hoãn DEC-089; provider/key store và kiểm chứng ACC-GAP/API/UI thuộc triển khai |
 | DM | Quy tắc/UX, OpenAPI 7 thao tác, schema SignalR, HMAC/mapping SQL/guard/cursor-resume; validation/draft và fixture; account lock/restore placeholder DEC-104/108 | Review/mock, migration/projection/sổ bảo vệ và proof concurrency/thu hồi/restore khi triển khai |
 | Cộng đồng/quyền | Quy tắc DEC-092–098; role/ACL/epoch, OpenAPI 45 thao tác, realtime 9 loại, fingerprint/fixture, AC/TC; room retention/restore DEC-105/108 | Review/mock, migration/guards và proof concurrency/thu hồi/restore; metadata nghiệp vụ khác chưa đặt TTL riêng |
 | Vòng đời dữ liệu | Policy/matrix DEC-103–109, schema sổ bảo vệ, placeholder/availability, 49 vector +10 schema cases +6 kịch bản, AC/TC và DATA-GAP-01–06 | Review/migration/worker, kho sổ/key/checkpoint và proof hai kho/restore; scope quyền/thẩm quyền vận hành còn mở |
@@ -519,7 +519,7 @@ Trạng thái của bảng này là mức sẵn sàng đặc tả và bằng ch�
 
 | Mã | Điều kiện/đầu ra | Tình trạng và bằng chứng | Việc còn lại/đầu mối dự kiến |
 |---|---|---|---|
-| READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 (DEC-063–068), có thiết kế token/email/consume và OpenAPI recovery 4 thao tác, AC-ACC-01–21; có bảng coverage test/source tại [đặc tả](features/accounts.md#implementation-review) | Rà soát provider/key store; limiter bổ sung được hoãn DEC-089; giải quyết ACC-GAP và ghi bằng chứng khi triển khai; Vg/Sáng |
+| READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 (DEC-063–068) và mật khẩu trùng DEC-113; có thiết kế token/email/consume, OpenAPI recovery 4 thao tác, AC-ACC-01–22 và [12 use case/coverage source-test](features/accounts.md#use-case-coverage); chưa chạy kiểm thử trong bước tài liệu | Rà soát provider/key store; limiter bổ sung được hoãn DEC-089; giải quyết ACC-GAP/API/UI và ghi bằng chứng khi triển khai; Vg/Sáng |
 | READY-02 | DM và ngoại lệ | Đã chốt 2.000 UTF-16, tìm người, không tự hết hạn, cách gửi, validation và bản nháp (DEC-068–071/090/091); có AC-DM và ngoại lệ tại [đặc tả](features/direct-messaging.md#requirements) | Validation/bản nháp đã chốt DEC-090/091; có Unicode fixture, HMAC/mapping SQL/Hub/resume; còn review/mock, kiểm chứng đồng thời và no self-delete/account lock/restore đã chốt DEC-103/104/108, còn DATA-GAP proof; Vg/Sáng, Thái đối chiếu |
 | READY-03 | Ma trận quyền và thiết kế Community | Quy tắc DEC-092–098 và [thiết kế chi tiết](features/community.md#detailed-design) có role/ACL/epoch/45 REST/9 realtime/fixture, AC-COM-01–42 | Review/mock và migration/guard/thu hồi cần proof; media deadline DEC-099 và retention chính DEC-105–109 đã chốt, còn worker/restore proof; DM vẫn độc lập role cộng đồng |
 | READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg rà soát, Thái dựng prototype; ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
@@ -569,7 +569,7 @@ chế và người rà soát. Viết kế hoạch hoặc sơ đồ không thay t
 
 ### Thứ tự xử lý tiếp theo
 
-Ngày 2026-10-04 đã bổ sung thiết kế chi tiết Accounts/DM, Community/quyền/tin phòng, Media/LiveKit tự host, [vòng đời dữ liệu](data-lifecycle.md) và [nghiệm thu/vận hành](release-operations.md) với gate/smoke/runbook/mẫu hồ sơ. Quyết định cập nhật tới DEC-112; limiter tài khoản hoãn DEC-089, người duyệt chưa chọn DEC-111. Các bản thiết kế còn cần rà soát; provider/key store/kho sổ, phân công và bằng chứng triển khai ở [phần còn cần hoàn thiện](#documentation-remaining). UX/UI là phần có thể soạn tiếp. Chỉ xác nhận gói phát triển khi các phụ thuộc trực tiếp được giải quyết; không cần chờ toàn bộ media để rà soát Accounts/DM/Community.
+Ngày 2026-10-04 đã bổ sung thiết kế chi tiết Accounts/DM, Community/quyền/tin phòng, Media/LiveKit tự host, [vòng đời dữ liệu](data-lifecycle.md) và [nghiệm thu/vận hành](release-operations.md) với gate/smoke/runbook/mẫu hồ sơ. Ngày 2026-10-05 bổ sung use case Identity và DEC-113 về mật khẩu trùng; chưa sửa mã hoặc chạy kiểm thử sản phẩm. Quyết định cập nhật tới DEC-113; limiter tài khoản hoãn DEC-089, người duyệt chưa chọn DEC-111. Các bản thiết kế còn cần rà soát; provider/key store/kho sổ, phân công và bằng chứng triển khai ở [phần còn cần hoàn thiện](#documentation-remaining). UX/UI là phần có thể soạn tiếp. Chỉ xác nhận gói phát triển khi các phụ thuộc trực tiếp được giải quyết; không cần chờ toàn bộ media để rà soát Accounts/DM/Community.
 
 Các nội dung còn mở được tập trung tại OQ-002–OQ-011; bảng này dẫn chiếu
 và theo dõi đầu ra, không tạo một nguồn quyết định sản phẩm khác.
