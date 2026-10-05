@@ -73,3 +73,4 @@ Các artefact hiện có:
 - [Fixture nội dung](fixtures/text-validation.json), [bảng Unicode](fixtures/text-policy.json) và [fixture fingerprint](fixtures/dm-fingerprint.json): dữ liệu đối chiếu, không phải kết quả nghiệm thu.
 
 [Bản đồ chuyển đổi và lịch sử](archive/README.md) cho biết nội dung file cũ đã chuyển về đâu. Các bản lưu dùng để tra cứu lịch sử, không dùng làm nguồn yêu cầu hiện hành.
+
