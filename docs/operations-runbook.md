@@ -1,6 +1,6 @@
 # SCDC — Hướng dẫn thao tác vận hành
 
-Cập nhật: 2026-10-04. Phạm vi SCP-008; DEC-110/111/112. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [release-operations.md](release-operations.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](data-lifecycle.md#policy).
+Cập nhật: 2026-10-05. Phạm vi SCP-008; DEC-110/111/112. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [release-operations.md](release-operations.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](data-lifecycle.md#policy).
 
 ## Mục lục
 
@@ -41,8 +41,8 @@ Mỗi lần thao tác cần có người thực hiện đã được cấp quy�
 | [HealthController](../services/SCDC.Api/Controllers/HealthController.cs) trả healthy/module stage | Không truy vấn DB hoặc kiểm tra worker; HTTP 200 không chứng minh ứng dụng dùng được |
 | [Nginx](../clients/WebClient/nginx.conf) có `/healthz`, proxy API/hub | `/healthz` chỉ trả chuỗi tĩnh; access log mặc định cần kiểm tra query nhạy cảm trước dùng production |
 | [Program.cs](../services/SCDC.Api/Program.cs) và [IdentityModule](../services/Modules/Identity/IdentityModule.cs) | Swagger bật trong Development; cần cấu hình proxy/HTTPS/CORS và thử đường truy cập thực tế |
-| [appsettings.json](../services/SCDC.Api/appsettings.json) | Connection string/signing key trống; `ExposeDevelopmentTokens` mặc định false, chưa có kiểm tra cấm bật ngoài Development |
-| Identity có nghiệp vụ; Community/Messaging ở Foundation | Chưa có triển khai chat/realtime/media, worker retention hoặc sổ bảo vệ độc lập; không dùng UI mẫu để ký nghiệm thu các phần này |
+| [appsettings.json](../services/SCDC.Api/appsettings.json) | Connection string/signing key trống; `ExposeDevelopmentTokens` mặc định false; service chỉ expose khi Development và cờ bật |
+| Identity có nghiệp vụ; Community/Messaging ở Foundation | Identity có worker email/maintenance; chưa có chat/realtime/media, retention module khác hoặc sổ bảo vệ độc lập; không dùng UI mẫu để ký nghiệm thu các phần này |
 
 Chi tiết cấu hình có trong [hướng dẫn phát triển](development.md#configuration). Production phải kiểm tra giá trị cấu hình thực sự được nạp: environment phù hợp, signing key riêng, token Development tắt, origin hợp lệ, domain liên kết email đúng và DB không mở trực tiếp cho browser. Kiểm tra từ response/log đã lọc; không dump toàn environment hoặc connection string vào hồ sơ.
 
@@ -103,8 +103,10 @@ Kết quả hai endpoint chỉ là tín hiệu tiến trình/proxy. Kiểm tra D
 
 ## 5. RB-EMAIL — Email xác minh/khôi phục lỗi hoặc bị chậm
 
+Identity hiện dùng Gmail SMTP/App Password. [Hướng dẫn email](identity-email.md) có cấu hình, migration, trạng thái delivery và truy vấn metadata; worker chạy trong API. Chưa có callback inbox/bounce, nên Message-ID/SMTP acceptance chỉ là bằng chứng provider nhận thư.
+
 1. Kiểm tra trạng thái worker/delivery, provider receipt, retry/lease, độ tuổi và thời hạn token. Phân biệt API nhận yêu cầu, provider nhận thư và hộp thư thử nhận được; một response accepted không chứng minh giao thư.
-2. Kiểm tra domain liên kết, cấu hình provider và quyền key mà không ghi envelope/token hoặc email người thật vào hồ sơ. Dùng tài khoản thử, ghi delivery ID và mã lỗi đã lọc.
+2. Kiểm tra `PublicOrigin`, `SenderAddress`/`AppPassword`, `Enabled`, key ring/certificate và quyền key mà không ghi envelope/token hoặc email người thật vào hồ sơ. Dùng tài khoản thử, ghi delivery ID và mã lỗi đã lọc.
 3. Thư/token đã hết hạn hoặc bị thay thế phải kết thúc delivery và dọn envelope theo Accounts. Không gửi thư cũ trở lại sau restore hoặc tạo link mới bỏ qua cooldown.
 4. Thư có kết quả giao không rõ: đối chiếu receipt và retry theo thiết kế worker; không báo chưa gửi nếu chưa biết, không làm token dùng được nhiều lần vì giao lặp.
 5. Sau sửa dependency, thử register→verify và forgot→reset thật ngoài Development; thử link cũ, dùng lại và các phiên bị thu hồi. Không chuyển sang trả token Development để vượt sự cố email.

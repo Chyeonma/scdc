@@ -361,7 +361,7 @@ ngân sách hoặc thay đổi phạm vi bàn giao.
 | Phạm vi | Đầu ra hiện có | Khoảng trống chính | Trạng thái |
 |---|---|---|---|
 | SCP-001 Web | DEC-059; [wireframe tài khoản/DM](features/direct-messaging.md#ux) | Đã chốt ma trận trình duyệt cho Accounts/DM/Community và media desktop (DEC-082), ngưỡng chat/thu hồi (DEC-083); còn OS/thiết bị/build, tiếp cận và kết quả đo (OQ-007). | Phạm vi/ngưỡng đã chốt; cần kiểm chứng |
-| SCP-002 Tài khoản | [SCDC-FR-ACC-001](features/accounts.md#requirements) | Chốt định danh, mật khẩu/lockout, phiên/thời hạn, gửi lại, hồ sơ và kênh khôi phục tại DEC-063–068; có trạng thái/dữ liệu và ACC-GAP-01–07. Email/resend/limiter đã có phương án; còn khóa schema/ngưỡng/provider/key store và kiểm chứng các chênh lệch source (OQ-002/OQ-008). | Nghiệp vụ đã chi tiết hóa; kỹ thuật còn mở |
+| SCP-002 Tài khoản | [SCDC-FR-ACC-001](features/accounts.md#requirements) | Identity core API/UI và Gmail SMTP worker/policy/delivery/migration đã có; 44 backend/11 frontend tests cùng Chrome smoke local qua ngày 2026-10-05. Limiter bổ sung hoãn DEC-089; còn Gmail thật, production keys/domain và xuyên module/admin/restore. | Core đã triển khai; còn tích hợp và nghiệm thu |
 | SCP-003 Cộng đồng | [đặc tả](features/community.md#requirements), [thiết kế](features/community.md#detailed-design) | Luồng DEC-072–077/087 và search/tên/phạm vi/private switch/issuer DEC-093–097 đã chốt; có OpenAPI/realtime/transaction/migration, còn review/mock/proof (OQ-003/OQ-008). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
 | SCP-004 Phân quyền | [ma trận](features/community.md#permissions), [thiết kế](features/community.md#detailed-design) | @everyone/20 custom role/union DEC-092 và quản lý cần view DEC-098 đã chốt; có role/ACL API, epoch/accessVersion/guard/fixture; còn review/migration/đo thu hồi (OQ-004/OQ-007). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
 | SCP-005 Nhắn tin | [DM](features/direct-messaging.md#requirements), [cộng đồng](features/community.md#requirements), [hợp đồng DM](features/direct-messaging.md#contracts), [vòng đời](data-lifecycle.md) | DEC-068–071/081/090/091 chốt nội dung/tìm/transport/draft; DEC-103–109 chốt phạm vi account/retention/restore. Có HMAC/SQL/Hub/cursor-resume/placeholder/fixture; còn review/migration/shared guard, kho sổ/worker và proof (OQ-005/008/011). | Đã chi tiết hóa; còn rà soát và thử nghiệm |
@@ -371,7 +371,7 @@ ngân sách hoặc thay đổi phạm vi bàn giao.
 
 Đầu ra chuẩn bị và điều kiện còn thiếu theo gói tài khoản/DM được theo
 dõi tại [SCDC-READY-001](project.md#readiness).
-Repo có bộ test tự động cho Identity/response; lần chỉnh docs này chưa chạy hoặc nghiệm thu sản phẩm. Không đánh dấu yêu cầu đạt chỉ vì có test.
+Repo có bộ test Identity/response: 44 backend và 11 frontend tests đã qua ngày 2026-10-05; build và Chrome smoke local Accounts qua. Sender giả chưa chứng minh Gmail thật; chưa nghiệm thu toàn MVP hoặc các AC xuyên module.
 
 ### Tiến độ hoàn thiện tài liệu ngày 2026-10-04
 
@@ -380,7 +380,7 @@ Bảng này đánh giá nội dung đã viết và quyết định còn cần, k
 | Phần | Nội dung đã hoàn thiện trong đợt này | Còn cần để khóa tài liệu |
 |---|---|---|
 | Mục tiêu/phạm vi | REQ/SCP/SUC, luồng ưu tiên và ranh giới MVP nhất quán | Nhóm sử dụng đầu tiên/ngôn ngữ và cách đánh giá nội bộ đang được hỏi |
-| Tài khoản | Quy tắc, UX, [12 use case và đối chiếu source/test](features/accounts.md#use-cases), AC/TC; hành vi mật khẩu trùng DEC-113; thiết kế chi tiết token/consume/EmailDelivery, recovery OpenAPI 4 thao tác | Limiter bổ sung hoãn DEC-089; provider/key store và kiểm chứng ACC-GAP/API/UI thuộc triển khai |
+| Tài khoản | API/UI/core/email worker/maintenance cùng migration đã có; 44 backend/11 frontend tests và Chrome smoke local qua | Limiter hoãn DEC-089; Gmail thật cần credentials; realtime/admin/restore và cấu hình production còn phụ thuộc |
 | DM | Quy tắc/UX, OpenAPI 7 thao tác, schema SignalR, HMAC/mapping SQL/guard/cursor-resume; validation/draft và fixture; account lock/restore placeholder DEC-104/108 | Review/mock, migration/projection/sổ bảo vệ và proof concurrency/thu hồi/restore khi triển khai |
 | Cộng đồng/quyền | Quy tắc DEC-092–098; role/ACL/epoch, OpenAPI 45 thao tác, realtime 9 loại, fingerprint/fixture, AC/TC; room retention/restore DEC-105/108 | Review/mock, migration/guards và proof concurrency/thu hồi/restore; metadata nghiệp vụ khác chưa đặt TTL riêng |
 | Vòng đời dữ liệu | Policy/matrix DEC-103–109, schema sổ bảo vệ, placeholder/availability, 49 vector +10 schema cases +6 kịch bản, AC/TC và DATA-GAP-01–06 | Review/migration/worker, kho sổ/key/checkpoint và proof hai kho/restore; scope quyền/thẩm quyền vận hành còn mở |
@@ -400,7 +400,7 @@ Rà soát ngày 2026-10-04. Các mục dưới đây tách công việc viết/r
 |---|---|---|---|
 | Nhu cầu và giá trị sản phẩm | Người dùng đầu tiên, ngôn ngữ/khu vực, kết quả mong muốn và cách đánh giá nội bộ | Kịch bản đánh giá theo hành trình DM và tổ chức phòng; ghi rõ giả định chưa khảo sát | Chọn nhóm sử dụng/ngôn ngữ và cách đánh giá; OQ-001/OQ-012 |
 | UX/UI | Có wireframe văn bản; chưa có hồ sơ tương tác/prototype được rà soát, tiêu chí tiếp cận và cấu hình thiết bị cụ thể | Chi tiết trạng thái màn hình, thao tác bàn phím/focus, lỗi/mất mạng/mất quyền, bố cục cuộc gọi và checklist rà soát | Nhóm dùng/ngôn ngữ; ghi browser/OS/thiết bị thực tế khi có build, giữ ma trận DEC-082 |
-| Tài khoản | Có thiết kế chi tiết/request-response/consume/schema email; provider/key store và limiter còn mở | Rà soát contract recovery + schema migration/policy/delivery; ACC-GAP theo gói triển khai | Ngưỡng limiter được hoãn DEC-089; email provider/domain/key store; OQ-002/OQ-008 |
+| Tài khoản | API/UI/core/email worker Gmail SMTP đã triển khai và có test | Thử Gmail thật khi có credentials; cấu hình origin/certificate/key ring theo môi trường | Limiter hoãn DEC-089; realtime/admin/restore và nghiệm thu còn phụ thuộc |
 | DM | Validation/bản nháp đã chốt; HMAC/SQL/Hub/cursor-resume và fixture đã chi tiết hóa, chưa có mock/proof | Review đồng bộ OpenAPI/schema và UI, migration legacy/transaction guard; mock/proof thuộc triển khai | DEC-103/104/108 chốt no self-delete/account lock/restore placeholder; projection/guard/schema và DATA-GAP proof còn triển khai |
 | Cộng đồng và quyền | Có thiết kế chi tiết role/ACL/epoch, OpenAPI/realtime/fixture và mapping migration; chưa có review/mock/proof | Rà soát contract/UX, migration Unicode và guards/outbox/key ring; bằng chứng transaction/thu hồi thuộc triển khai | Vai trò/search/tên/private switch/issuer/quản lý phòng đã chốt DEC-092–098; limiter bổ sung còn mở, không xóa server MVP; retention chính DEC-105–109 đã chốt, còn proof/migration |
 | Media | Có thiết kế chi tiết/OpenAPI/realtime/fixture/coordinator/lease/quota gate; chưa có implementation hoặc proof | Review schema/UX/fingerprint, migration/shared guards; thử quota gate và fail-close trên build LiveKit tự host được pin | Quy tắc bổ sung đã chốt DEC-099–102; limiter media, host/domain/key store, extension/server/SDK và kho sổ/worker còn OQ-006/007/008/010/011; retention DEC-106/107 đã chốt |
@@ -513,13 +513,13 @@ MVP không có điều kiện bắt buộc tách microservices. Quyết định 
 
 ## 9. Sẵn sàng phát triển và gói chuẩn bị
 
-Trạng thái của bảng này là mức sẵn sàng đặc tả và bằng chứng bàn giao. Identity đã có implementation; Messaging/Community mới có nền module. Bộ ca TC trong docs chưa có kết quả chạy được ghi nhận. Các test tự động có trong repo được liệt kê ở [hướng dẫn phát triển](development.md#testing).
+Bảng theo dõi mức sẵn sàng đặc tả và bằng chứng bàn giao. Identity core đã triển khai và có kết quả test/smoke local; Messaging/Community còn Foundation. Các TC xuyên module chưa có kết quả nghiệm thu. Xem [hướng dẫn phát triển](development.md#testing).
 
 ### Bảng điều kiện sẵn sàng
 
 | Mã | Điều kiện/đầu ra | Tình trạng và bằng chứng | Việc còn lại/đầu mối dự kiến |
 |---|---|---|---|
-| READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 (DEC-063–068) và mật khẩu trùng DEC-113; có thiết kế token/email/consume, OpenAPI recovery 4 thao tác, AC-ACC-01–22 và [12 use case/coverage source-test](features/accounts.md#use-case-coverage); chưa chạy kiểm thử trong bước tài liệu | Rà soát provider/key store; limiter bổ sung được hoãn DEC-089; giải quyết ACC-GAP/API/UI và ghi bằng chứng khi triển khai; Vg/Sáng |
+| READY-01 | Tài khoản tối thiểu | Policy DEC-063–068/113, Gmail SMTP DEC-114; API/UI/worker/migration/maintenance đã triển khai. 44 backend/11 frontend tests, build và Chrome smoke local qua; [coverage](features/accounts.md#use-case-coverage) | Credentials/Gmail thật và production origin/key ring/certificate; limiter hoãn DEC-089; realtime/admin/restore theo module phụ thuộc; Vg/Sáng |
 | READY-02 | DM và ngoại lệ | Đã chốt 2.000 UTF-16, tìm người, không tự hết hạn, cách gửi, validation và bản nháp (DEC-068–071/090/091); có AC-DM và ngoại lệ tại [đặc tả](features/direct-messaging.md#requirements) | Validation/bản nháp đã chốt DEC-090/091; có Unicode fixture, HMAC/mapping SQL/Hub/resume; còn review/mock, kiểm chứng đồng thời và no self-delete/account lock/restore đã chốt DEC-103/104/108, còn DATA-GAP proof; Vg/Sáng, Thái đối chiếu |
 | READY-03 | Ma trận quyền và thiết kế Community | Quy tắc DEC-092–098 và [thiết kế chi tiết](features/community.md#detailed-design) có role/ACL/epoch/45 REST/9 realtime/fixture, AC-COM-01–42 | Review/mock và migration/guard/thu hồi cần proof; media deadline DEC-099 và retention chính DEC-105–109 đã chốt, còn worker/restore proof; DM vẫn độc lập role cộng đồng |
 | READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg rà soát, Thái dựng prototype; ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
@@ -569,7 +569,7 @@ chế và người rà soát. Viết kế hoạch hoặc sơ đồ không thay t
 
 ### Thứ tự xử lý tiếp theo
 
-Ngày 2026-10-04 đã bổ sung thiết kế chi tiết Accounts/DM, Community/quyền/tin phòng, Media/LiveKit tự host, [vòng đời dữ liệu](data-lifecycle.md) và [nghiệm thu/vận hành](release-operations.md) với gate/smoke/runbook/mẫu hồ sơ. Ngày 2026-10-05 bổ sung use case Identity và DEC-113 về mật khẩu trùng; chưa sửa mã hoặc chạy kiểm thử sản phẩm. Quyết định cập nhật tới DEC-113; limiter tài khoản hoãn DEC-089, người duyệt chưa chọn DEC-111. Các bản thiết kế còn cần rà soát; provider/key store/kho sổ, phân công và bằng chứng triển khai ở [phần còn cần hoàn thiện](#documentation-remaining). UX/UI là phần có thể soạn tiếp. Chỉ xác nhận gói phát triển khi các phụ thuộc trực tiếp được giải quyết; không cần chờ toàn bộ media để rà soát Accounts/DM/Community.
+Ngày 2026-10-04 bổ sung thiết kế Accounts/DM/Community/Media, vòng đời dữ liệu và vận hành. Ngày 2026-10-05 hoàn thiện Identity core/email worker Gmail SMTP theo DEC-114 cùng API/UI/migration/maintenance và bằng chứng test trong [Accounts](features/accounts.md#implementation-review). Quyết định tới DEC-114; limiter hoãn DEC-089, người duyệt chưa chọn DEC-111. Gmail thật cần credentials; các module còn lại và kho sổ/production topology/cutoff/restore vẫn cần triển khai và kiểm chứng theo các phụ thuộc trực tiếp.
 
 Các nội dung còn mở được tập trung tại OQ-002–OQ-011; bảng này dẫn chiếu
 và theo dõi đầu ra, không tạo một nguồn quyết định sản phẩm khác.

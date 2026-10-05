@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initials } from './ServerRail.jsx';
-import { getSessions, revokeSession, logoutAll, changePassword, updateMe, logout } from '../api.js';
+import { getSessions, revokeSession, logoutAll, changePassword, updateMe, logout, sessionStore } from '../api.js';
 
 export function UserSettingsModal({
   currentUser,
@@ -12,6 +12,7 @@ export function UserSettingsModal({
   const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [timezone, setTimezone] = useState(currentUser?.timezone || 'Asia/Ho_Chi_Minh');
+  const [locale, setLocale] = useState(currentUser?.locale || 'vi-VN');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Password state
@@ -21,16 +22,11 @@ export function UserSettingsModal({
   const [savingPassword, setSavingPassword] = useState(false);
 
   // Sessions state
-  const [sessions, setSessions] = useState([
-    {
-      id: 'sess-current',
-      deviceName: 'Trình duyệt hiện tại (Linux / Chrome)',
-      createdByIp: '127.0.0.1',
-      lastSeenAt: new Date().toISOString(),
-      isCurrent: true,
-    }
-  ]);
+  const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [sessionsError, setSessionsError] = useState('');
+  const [busySession, setBusySession] = useState(null);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'sessions') {
@@ -40,13 +36,14 @@ export function UserSettingsModal({
 
   async function loadSessions() {
     setLoadingSessions(true);
+    setSessionsError('');
     try {
       const data = await getSessions();
-      if (Array.isArray(data) && data.length > 0) {
-        setSessions(data);
-      }
-    } catch {
-      // Fallback session
+      if (!Array.isArray(data)) throw new Error('Danh sách phiên không hợp lệ.');
+      setSessions(data);
+    } catch (err) {
+      setSessions([]);
+      setSessionsError(err.message || 'Không thể tải danh sách phiên.');
     } finally {
       setLoadingSessions(false);
     }
@@ -59,7 +56,7 @@ export function UserSettingsModal({
       const updatedUser = await updateMe({
         displayName,
         bio,
-        locale: currentUser?.locale || 'vi-VN',
+        locale,
         timezone,
       });
       onUserUpdated?.(updatedUser);
@@ -85,10 +82,11 @@ export function UserSettingsModal({
     setSavingPassword(true);
     try {
       await changePassword(currentPassword, newPassword);
-      notify?.('success', 'Đã đổi mật khẩu thành công.');
+      notify?.('success', 'Đã đổi mật khẩu. Hãy đăng nhập lại.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      onClose();
     } catch (err) {
       notify?.('error', err.message || 'Đổi mật khẩu thất bại.');
     } finally {
@@ -96,24 +94,34 @@ export function UserSettingsModal({
     }
   }
 
-  async function handleRevokeSession(sessionId) {
+  async function handleRevokeSession(sessionId, isCurrent) {
+    setBusySession(sessionId);
     try {
       await revokeSession(sessionId);
+      if (isCurrent) {
+        sessionStore.clear();
+        onClose();
+      }
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       notify?.('success', 'Đã thu hồi phiên đăng nhập.');
     } catch (err) {
       notify?.('error', err.message || 'Không thể thu hồi phiên.');
+    } finally {
+      setBusySession(null);
     }
   }
 
   async function handleLogoutAll() {
-    if (!confirm('Bạn có chắc chắn muốn đăng xuất khỏi tất cả thiết bị khác không?')) return;
+    if (!confirm('Đăng xuất tất cả thiết bị, bao gồm thiết bị này?')) return;
+    setLoggingOutAll(true);
     try {
       await logoutAll();
       notify?.('success', 'Đã đăng xuất toàn bộ thiết bị.');
       onClose();
     } catch (err) {
       notify?.('error', err.message);
+    } finally {
+      setLoggingOutAll(false);
     }
   }
 
@@ -207,6 +215,14 @@ export function UserSettingsModal({
               </div>
 
               <label className="form-group">
+                <span>Tên tài khoản</span>
+                <input value={currentUser?.username || ''} readOnly />
+              </label>
+              <label className="form-group">
+                <span>Email</span>
+                <input value={currentUser?.email || ''} readOnly />
+              </label>
+              <label className="form-group">
                 <span>Tên hiển thị (Display Name)</span>
                 <input
                   type="text"
@@ -229,11 +245,17 @@ export function UserSettingsModal({
               </label>
 
               <label className="form-group">
+                <span>Ngôn ngữ (Locale)</span>
+                <input value={locale} onChange={(e) => setLocale(e.target.value)} required maxLength={16} />
+              </label>
+              <label className="form-group">
                 <span>Múi giờ (Timezone)</span>
                 <input
                   type="text"
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
+                  required
+                  maxLength={64}
                 />
               </label>
 
@@ -265,6 +287,8 @@ export function UserSettingsModal({
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    minLength={8}
+                    maxLength={128}
                     required
                   />
                 </label>
@@ -274,6 +298,8 @@ export function UserSettingsModal({
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={8}
+                    maxLength={128}
                     required
                   />
                 </label>
@@ -284,19 +310,6 @@ export function UserSettingsModal({
                 </div>
               </form>
 
-              <div className="security-card">
-                <div>
-                  <h4>Xác thực 2 yếu tố (2FA / TOTP)</h4>
-                  <p>Bảo vệ tài khoản của bạn bằng mã xác thực từ ứng dụng Authenticator (Google/Microsoft Authenticator).</p>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn--secondary"
-                  onClick={() => alert('Tính năng kích hoạt 2FA TOTP đang được xử lý theo lộ trình.')}
-                >
-                  Kích hoạt 2FA
-                </button>
-              </div>
             </div>
           )}
 
@@ -305,13 +318,16 @@ export function UserSettingsModal({
             <div className="settings-sections">
               <div className="sessions-header-action">
                 <p>Danh sách các thiết bị hiện đang đăng nhập vào tài khoản của bạn.</p>
-                <button type="button" className="btn btn--danger btn-sm" onClick={handleLogoutAll}>
-                  Đăng xuất tất cả thiết bị khác
+                <button type="button" className="btn btn--danger btn-sm" onClick={handleLogoutAll} disabled={loggingOutAll}>
+                  {loggingOutAll ? 'Đang đăng xuất...' : 'Đăng xuất tất cả thiết bị'}
                 </button>
               </div>
 
               <div className="sessions-list">
-                {sessions.map((sess) => (
+                {loadingSessions && <p role="status">Đang tải phiên...</p>}
+                {sessionsError && <div role="alert"><p>{sessionsError}</p><button type="button" className="btn btn--secondary" onClick={loadSessions}>Thử lại</button></div>}
+                {!loadingSessions && !sessionsError && sessions.length === 0 && <p>Không có phiên đang hoạt động.</p>}
+                {!loadingSessions && sessions.map((sess) => (
                   <div className="session-card" key={sess.id}>
                     <span className="session-icon">💻</span>
                     <div className="session-info">
@@ -319,17 +335,15 @@ export function UserSettingsModal({
                       <small>IP: {sess.createdByIp || sess.lastSeenIp || 'Localhost'}</small>
                       <small>Hoạt động gần nhất: {new Date(sess.lastSeenAt || Date.now()).toLocaleString('vi-VN')}</small>
                     </div>
-                    {sess.isCurrent ? (
-                      <span className="current-badge">Thiết bị này</span>
-                    ) : (
+                    {sess.isCurrent && <span className="current-badge">Thiết bị này</span>}
                       <button
                         type="button"
                         className="btn btn--secondary btn-sm"
-                        onClick={() => handleRevokeSession(sess.id)}
+                        onClick={() => handleRevokeSession(sess.id, sess.isCurrent)}
+                        disabled={busySession !== null}
                       >
                         Thu hồi
                       </button>
-                    )}
                   </div>
                 ))}
               </div>

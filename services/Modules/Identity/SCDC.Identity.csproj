@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="SCDC.Api.Tests" />
   </ItemGroup>
 
   <ItemGroup>

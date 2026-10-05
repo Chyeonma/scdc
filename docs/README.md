@@ -10,6 +10,7 @@ Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng
 | Tra cứu quyết định, căn cứ hoặc vấn đề chưa chốt | [Quyết định](decisions.md) |
 | Thiết kế/tích hợp xuyên module | [Kiến trúc](architecture.md) |
 | Chạy repo, chuẩn bị dữ liệu hoặc kiểm thử kỹ thuật | [Phát triển](development.md) |
+| Cấu hình Gmail SMTP, worker và migration Identity | [Email Identity](identity-email.md) |
 | Triển khai một tính năng | Mở đặc tả tương ứng bên dưới; trong cùng file có nghiệp vụ, UX, hợp đồng, AC và test |
 | Tra cứu vòng đời dữ liệu, cleanup và bảo vệ sau restore | [Vòng đời dữ liệu](data-lifecycle.md) |
 | Nghiệm thu, phát hành, vận hành | [Phát hành và vận hành](release-operations.md) |
@@ -60,7 +61,7 @@ docs/
 
 Các artefact hiện có:
 
-- [OpenAPI xác minh/khôi phục](contracts/account-recovery.openapi.json): 4 thao tác mục tiêu, tách rõ endpoint hiện có và resend chưa triển khai.
+- [OpenAPI xác minh/khôi phục](contracts/account-recovery.openapi.json): 4 thao tác verify/resend/forgot/reset đã triển khai; Swagger source là runtime contract, limiter bổ sung vẫn hoãn.
 - [OpenAPI DM](contracts/direct-messaging.openapi.json): 7 thao tác REST, có cursor/resume và schema tin/tombstone.
 - [Schema thông điệp chat](contracts/chat-realtime.schema.json): catalogue ứng dụng cho SignalR, không phải wire frame.
 - [OpenAPI cộng đồng/quyền/tin phòng](contracts/community.openapi.json): 45 thao tác mục tiêu, gồm role/ACL, lời mời/yêu cầu, membership và channel text.

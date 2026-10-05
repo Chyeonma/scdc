@@ -42,6 +42,18 @@ public sealed class AuthController(
     }
 
     [AllowAnonymous]
+    [HttpPost("resend-verification")]
+    [ProducesResponseType<VerificationRequestedResponse>(StatusCodes.Status202Accepted)]
+    public async Task<ActionResult<VerificationRequestedResponse>> ResendVerification(
+        ResendVerificationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await registrationService.ResendVerificationAsync(
+            new ResendVerificationCommand(request.Email, CreateRequestContext()), cancellationToken);
+        return FromAcceptedResult(result);
+    }
+
+    [AllowAnonymous]
     [HttpPost("login")]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<AuthResponse>> Login(

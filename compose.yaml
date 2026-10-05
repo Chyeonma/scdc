@@ -7,12 +7,20 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
       Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
+      Modules__Identity__ExposeDevelopmentTokens: ${SCDC_EXPOSE_DEVELOPMENT_TOKENS:-false}
+      Modules__Identity__Email__Enabled: ${SCDC_EMAIL_ENABLED:-false}
+      Modules__Identity__Email__PublicOrigin: ${SCDC_PUBLIC_ORIGIN:-http://localhost:3000}
+      Modules__Identity__Email__SenderAddress: ${SCDC_GMAIL_ADDRESS:-}
+      Modules__Identity__Email__AppPassword: ${SCDC_GMAIL_APP_PASSWORD:-}
+      Modules__Identity__Email__KeyRingPath: /var/lib/scdc/identity-keys
     ports:
       - "5026:8080"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - scdc-identity-keys:/var/lib/scdc/identity-keys
 
   web-client:
     build:
@@ -42,6 +50,8 @@ services:
       - scdc-postgres-data:/var/lib/postgresql
       - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
       - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro
+      - ./database/postgres/migrations:/docker-entrypoint-initdb.d/migrations:ro
 
 volumes:
   scdc-postgres-data:
+  scdc-identity-keys:

@@ -34,6 +34,8 @@ internal sealed class UserAccountService(
             return Result.Failure<UserAccountResponse>(validationError);
         }
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(command.UserId, cancellationToken);
         var user = await LoadUserAsync(command.UserId, cancellationToken);
         if (user?.Profile is null)
         {
@@ -49,6 +51,7 @@ internal sealed class UserAccountService(
         user.UpdatedAt = now;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success(IdentityData.ToResponse(user));
     }
 
@@ -75,6 +78,11 @@ internal sealed class UserAccountService(
             return Result.Failure(IdentityErrors.UserNotFound);
         }
 
+        var now = timeProvider.GetUtcNow();
+        if (user.Status != UserStatus.Active || !user.Sessions.Any(session => session.Id == command.SessionId
+            && session.RevokedAt == null && session.ExpiresAt > now))
+            return Result.Failure(IdentityErrors.InvalidRefreshToken);
+
         var currentPasswordResult = VerifyPassword(
             user,
             user.PasswordCredential.PasswordHash,
@@ -90,7 +98,6 @@ internal sealed class UserAccountService(
             return Result.Failure(IdentityErrors.PasswordUnchanged);
         }
 
-        var now = timeProvider.GetUtcNow();
         user.PasswordCredential.PasswordHash = passwordHasher.HashPassword(user, command.NewPassword);
         user.PasswordCredential.HashAlgorithm = PasswordAlgorithm;
         user.PasswordCredential.PasswordVersion++;
@@ -117,6 +124,9 @@ internal sealed class UserAccountService(
         {
             token.ConsumedAt = now;
         }
+        var resetPolicy = await dbContext.AccountTokenPolicies.SingleOrDefaultAsync(policy => policy.UserId == user.Id
+            && policy.Purpose == AccountTokenPurpose.ResetPassword, cancellationToken);
+        if (resetPolicy is not null) resetPolicy.ActiveTokenId = null;
 
         dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
             user.Id,

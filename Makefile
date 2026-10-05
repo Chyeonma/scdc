@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 PYTHON ?= python3
-ENGINE ?= docker
+ENGINE ?= podman
 COMPOSE ?= $(ENGINE) compose
 FROM ?= main
 TO ?=
@@ -10,7 +10,7 @@ TO ?=
 export SCDC_DOCS_FROM = $(FROM)
 export SCDC_DOCS_TO = $(TO)
 
-.PHONY: help up down status logs db compose-check api web build test test-api test-web docs-check docs-sync docs-sync-preview test-tools
+.PHONY: help up down status logs db db-migrate compose-check api web build test test-api test-web docs-check docs-sync docs-sync-preview test-tools
 
 help:
 	@printf '%s\n' \
@@ -21,6 +21,7 @@ help:
 	  '  make status             Xem trạng thái container' \
 	  '  make logs               Xem log API và PostgreSQL' \
 	  '  make db                 Chạy riêng PostgreSQL' \
+	  '  make db-migrate         Áp migration Identity vào PostgreSQL đang chạy' \
 	  '  make compose-check      Kiểm tra cấu hình Compose, chưa chạy container' \
 	  '  make api                Chạy backend local' \
 	  '  make web                Cài dependency và chạy frontend local' \
@@ -31,7 +32,7 @@ help:
 	  '  make docs-check         Kiểm tra link và anchor tài liệu' \
 	  '  make test-tools         Kiểm thử công cụ đồng bộ trong repo Git tạm' \
 	  '' \
-	  '  ENGINE mặc định là docker (Docker Desktop hoặc Docker Engine).' \
+	  '  Dùng ENGINE=podman hoặc ENGINE=docker để chọn engine.' \
 	  '  make up ENGINE=podman   Dùng Podman và Compose provider đã cài.' \
 	  '  Dùng cùng ENGINE cho down/status/logs/db/compose-check.' \
 	  '  Có thể override COMPOSE, ví dụ COMPOSE="podman-compose".' \
@@ -62,6 +63,9 @@ logs:
 
 db:
 	$(COMPOSE) up -d postgres
+
+db-migrate:
+	$(COMPOSE) exec -T postgres psql -U scdc -d scdc_chat --single-transaction -v ON_ERROR_STOP=1 < database/postgres/migrations/001_identity_email.sql
 
 compose-check:
 	$(COMPOSE) config --quiet

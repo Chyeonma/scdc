@@ -2,9 +2,9 @@
 
 Cập nhật: 2026-10-05. Phạm vi: REQ-010, SCP-002. Quy tắc ACC, use case UC-ACC, tiêu chí AC-ACC, màn hình ACC-S, ca TC-ACC và ACL-01/02.
 
-Nghiệp vụ cốt lõi và chính sách tài khoản đã xác nhận theo DEC-063–067; phép đếm UTF-16 theo DEC-068. Identity có implementation và test tự động; gửi lại xác minh, giao email và một số hành vi còn thiếu hoặc khác yêu cầu. Đối chiếu source ngày 2026-10-04 ở mục implementation-review. Các ca TC chưa có kết quả thực thi được ghi nhận trong hồ sơ này.
+Nghiệp vụ cốt lõi theo DEC-063–068 và mật khẩu trùng DEC-113 đã được triển khai trong Identity. Ngày 2026-10-05 hoàn thiện resend/cooldown, pending reset, consume đồng thời, chuẩn hóa UTF-16, email worker Gmail SMTP và giao diện verify/reset/profile/session. Provider chọn theo DEC-114; [hướng dẫn email](../identity-email.md) có cấu hình, migration và key ring.
 
-Ngày 2026-10-05 bổ sung use case và ma trận đối chiếu API, giao diện, AC/TC và assertion trong test hiện có. Đây là kết quả đọc source; chưa chạy kiểm thử sản phẩm hoặc xác nhận nghiệm thu. Các lựa chọn chưa chốt được ghi riêng tại [điểm cần xác nhận](#use-case-review).
+Bằng chứng ngày 2026-10-05: 44 backend tests qua trên .NET 10/PostgreSQL 18 với database thử riêng, 11 frontend tests và production build qua trên Node 24; Chrome headless local chạy đăng ký→verify→login→profile→change-password→reset→login. Test worker dùng sender giả; chưa có credentials để xác nhận giao Gmail thật. Các TC/AC xuyên DM/realtime/admin/restore và nghiệm thu toàn MVP vẫn cần bằng chứng riêng.
 
 ## Mục lục
 
@@ -61,7 +61,7 @@ email; sau đó vẫn phải hoàn tất xác minh trước khi đăng nhập �
 
 [Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal và restore DEC-106–109; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Self-delete chưa thuộc MVP; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
 
-Đợt tài khoản bao gồm đăng ký/xác minh, đăng nhập, khôi phục mật khẩu và hồ sơ. Code hiện còn có đổi mật khẩu và quản lý phiên/thiết bị. MFA, recovery code và external identity để Identity v2; chưa có API cho các phần này. Gửi lại xác minh và giao email thật là phần chưa hoàn thiện.
+Đợt tài khoản bao gồm đăng ký/xác minh, đăng nhập, khôi phục mật khẩu và hồ sơ. Code hiện còn có đổi mật khẩu và quản lý phiên/thiết bị. MFA, recovery code và external identity để Identity v2; chưa có API cho các phần này. Gửi lại xác minh và worker Gmail SMTP đã có; giao email thật cần credentials và kiểm chứng hộp thư thử.
 
 DEC-062 đồng bộ trường `displayName` bắt buộc theo form và API hiện tại; DEC-054 tiếp tục quản lý cách đăng nhập và quy tắc định danh. Username/email thuộc định danh, tên hiển thị thuộc hồ sơ có thể đổi.
 
@@ -345,26 +345,26 @@ Bảng này xác định UC thực hiện từng quy tắc và ranh giới cần
 
 ### Đối chiếu use case với code và test
 
-Rà soát ngày 2026-10-05. Prefix API là `/api/v1`. `Lifecycle` là test `Identity_v1_supports_the_complete_password_account_lifecycle` trong [IdentityV1FlowTests](../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs); các test có tên riêng khác nằm trong [IdentityConcurrencyTests](../../tests/SCDC.Api.Tests/Identity/IdentityConcurrencyTests.cs). `Client` là [api.test.js](../../clients/WebClient/tests/api.test.js), gồm assertion rotation giữa tab, storage event bị bỏ lỡ, 401 đến trễ, logout khi refresh đang chờ, login mới và trường hợp thiếu Web Locks. Các test này dùng browser/fetch mô phỏng, chưa chứng minh UI hoặc trình duyệt thật.
+Prefix API `/api/v1`. `Lifecycle` là [IdentityV1FlowTests](../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs); `Concurrency` là [IdentityConcurrencyTests](../../tests/SCDC.Api.Tests/Identity/IdentityConcurrencyTests.cs); `Completion` là [IdentityCompletionTests](../../tests/SCDC.Api.Tests/Identity/IdentityCompletionTests.cs). `Client` là [api.test.js](../../clients/WebClient/tests/api.test.js) và [accountLinks.test.js](../../clients/WebClient/tests/accountLinks.test.js). Tổng backend 44/frontend 11 test đã qua trên môi trường thử ngày 2026-10-05; không đánh đồng test sender giả với giao email thật.
 
-Source nghiệp vụ: [RegistrationService](../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [UserDirectory](../../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs). Giao diện/wrapper: [AuthScreen](../../clients/WebClient/src/components/AuthScreen.jsx), [UserSettingsModal](../../clients/WebClient/src/components/UserSettingsModal.jsx), [api.js](../../clients/WebClient/src/api.js).
+Source: [RegistrationService](../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [AuthScreen](../../clients/WebClient/src/components/AuthScreen.jsx), [UserSettingsModal](../../clients/WebClient/src/components/UserSettingsModal.jsx), [api.js](../../clients/WebClient/src/api.js).
 
-| UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
-|---|---|---|---|---|
-| UC-ACC-01 | AC-01/09/11/12/19; TC-01/04/09/10/16 | `RegisterAsync`; `POST /auth/register`; form đăng ký | Lifecycle: status 201, token Development, từ chối login trước verify | ACC-GAP-04/05/07; đăng ký trùng đồng thời/Unicode/policy mật khẩu chưa có test; UI đang tự verify bằng token Development |
-| UC-ACC-02 | AC-05/07/15/19/20; TC-01/02/06/13/17/18 | `VerifyEmailAsync`; `POST /auth/verify-email`; wrapper verify | Lifecycle: verify 204, login sau verify, `emailVerified=true` | ACC-GAP-03/05; chưa có test verify đồng thời/hết hạn/dùng lại; chưa có trang mở liên kết và xác minh chủ động |
-| UC-ACC-03 | AC-14/19/20/21; TC-07/12/16/17/18 | Resend chỉ có thiết kế/OpenAPI mục tiêu | Chưa có test cho resend | ACC-GAP-02/05; thiếu endpoint, cooldown, email và UI |
-| UC-ACC-04 | AC-02/04/07/12; TC-01/02/08/10 | `LoginAsync`; `POST /auth/login`; form login | Lifecycle: login username trước/sau verify; `Parallel_wrong_passwords_are_counted_and_trigger_lockout`; hai test login/đổi mật khẩu tranh khóa | Login bằng email, biên hết lockout và UI dẫn tới xác minh chưa có test; form hiện chỉ báo lỗi chung |
-| UC-ACC-05 | AC-10/14/18/19/21; TC-03/07/12/15/16/18 | `ForgotPasswordAsync`; `POST /auth/forgot-password`; form quên mật khẩu | Lifecycle: accepted và token reset cho account đã verify | ACC-GAP-01/02/05; chưa cấp token cho pending; chưa có cooldown/email thật hoặc test phản hồi các trạng thái |
-| UC-ACC-06 | AC-06/10/12/15/16/20/22; TC-03/06/10/13/14/17/18/19 | `ResetPasswordAsync`; `POST /auth/reset-password`; wrapper reset | Lifecycle: reset 204 với mật khẩu khác, access cũ bị từ chối, mật khẩu cũ không đăng nhập được; `Concurrent_reset_requests_can_consume_a_token_only_once` | Chưa có trang reset; thiếu test pending, biên hạn token, reset sai policy giữ token, verify/reset độc lập và reset mật khẩu trùng |
-| UC-ACC-07 | AC-03/08/11/17; TC-05/09/15 | `GetAsync`, `UpdateProfileAsync`; `GET/PATCH /users/me`; `UserDirectory`; form hồ sơ | Lifecycle: đọc username/emailVerified và PATCH trả 200 | Chưa assertion giá trị hồ sơ sau lưu/quyền riêng tư/biên UTF-16; UI chưa cho sửa locale hoặc xem email chỉ đọc; tìm người DM thuộc scope tích hợp |
-| UC-ACC-08 | AC-12/16/17/22; TC-10/14/17/19 | `ChangePasswordAsync`; `POST /auth/change-password`; form đổi mật khẩu | Lifecycle: đổi 204, access cũ bị từ chối; `Changing_password_invalidates_previously_issued_reset_tokens`; hai test login/đổi mật khẩu tranh khóa | UI chưa xóa phiên ngay sau thành công; thiếu test sai mật khẩu hiện tại/policy/trùng |
-| UC-ACC-09 | AC-13/16; TC-08/11/14 | `RefreshAsync`; `POST /auth/refresh`; wrapper refresh | Lifecycle: rotation/reuse và access bị từ chối; Client: phối hợp refresh/không khôi phục logout hoặc ghi đè login mới | Chưa có test biên hạn phiên/access, response rotation bị mất hoặc trình duyệt thật; thu hồi realtime chưa triển khai |
-| UC-ACC-10 | AC-04/16; TC-08/14 | `GetSessionsAsync`, `RevokeSessionAsync`; `GET /auth/sessions`, `DELETE /auth/sessions/{id}`; tab phiên | Lifecycle: đánh dấu current, revoke phiên khác và access phiên đó bị từ chối | Chưa assertion phiên người gọi vẫn sống ngay sau revoke, revoke phiên hiện tại/quyền sở hữu; UI dùng phiên mẫu khi lỗi/rỗng và chưa có thao tác revoke phiên hiện tại |
-| UC-ACC-11 | AC-04/16; TC-08/14 | `LogoutAsync`, `LogoutAllAsync`; `POST /auth/logout`, `POST /auth/logout-all`; wrapper xóa phiên local | Lifecycle: logout/logout-all và từ chối access; Client: logout giữa tab không bị refresh khôi phục | UI ghi “tất cả thiết bị khác” trong khi logout-all gồm phiên gọi; thiếu test logout token không nhận diện, lỗi mạng/phạm vi phiên và cleanup dữ liệu riêng/realtime |
-| UC-ACC-12 | ACC-015, ACL-02; [AC-DATA-02/03, TC-DATA-01](../data-lifecycle.md#acceptance) | RB-ACCOUNT và enum/status trong Identity; chưa có API/CLI khóa/mở khóa | Chưa có test quy trình khóa/mở khóa; kiểm tra Bearer hiện có chỉ là một phần guard | Công cụ, phân quyền, audit/receipt và status policy cụ thể còn OQ-011; cần chứng minh thu hồi/cutoff, giữ lịch sử và unlock không khôi phục phiên |
+| UC | AC / TC liên quan | Implementation và bằng chứng hiện có | Phụ thuộc/bằng chứng còn lại |
+|---|---|---|---|
+| UC-ACC-01 | AC-01/09/11/12/19; TC-01/04/09/10/16 | Register 201, pending; Completion kiểm tra đăng ký trùng đồng thời không tạo dữ liệu dở, normalize/Unicode; UI không tự verify | Giao Gmail thật ngoài Development |
+| UC-ACC-02 | AC-05/07/15/19/20; TC-01/02/06/13/17/18 | Verify dưới khóa user, active policy, một lần; Completion kiểm tra đồng thời/hạn/reuse; browser GET chưa consume, bấm verify mới POST | Quyền gửi tin thuộc DM/Community; Gmail thật |
+| UC-ACC-03 | AC-14/19/20/21; TC-07/12/16/17/18 | Resend endpoint/UI; Completion kiểm tra biên 59/60 giây, resend đồng thời, thay link và phản hồi accepted các trạng thái | Giao Gmail thật; limiter bổ sung hoãn DEC-089 |
+| UC-ACC-04 | AC-02/04/07/12; TC-01/02/08/10 | Login email/username, lockout và tranh khóa đổi mật khẩu; UI dẫn pending khi chưa verify; browser login qua | Biên lockout và browser/device matrix đầy đủ trước nghiệm thu |
+| UC-ACC-05 | AC-10/14/18/19/21; TC-03/07/12/15/16/18 | Forgot cho pending/active, cooldown theo reset purpose; accepted công khai; email queue cùng transaction | Giao Gmail thật |
+| UC-ACC-06 | AC-06/10/12/15/16/20/22; TC-03/06/10/13/14/17/18/19 | Reset pending không verify, consume một lần, policy sai giữ token, verify/reset độc lập, trùng mật khẩu vẫn thu hồi; browser reset/login qua | Cutoff realtime thuộc DM |
+| UC-ACC-07 | AC-03/08/11/17; TC-05/09/15 | Completion assertion hồ sơ lưu/identity bất biến/UTF-16 HTTP–DB; UI locale và username/email chỉ đọc; browser lưu/đọc lại qua | Tìm người và quyền lịch sử thuộc DM |
+| UC-ACC-08 | AC-12/16/17/22; TC-10/14/17/19 | Change kiểm tra phiên lại dưới khóa, trùng bị từ chối; reset token bị vô hiệu; Client/browser xác nhận thành công xóa phiên | Cutoff realtime thuộc DM |
+| UC-ACC-09 | AC-13/16; TC-08/11/14 | Rotation/reuse, Client phối hợp tab và không khôi phục logout/login cũ; Completion biên access/session và maintenance giữ active family | Kết nối realtime và browser matrix đầy đủ |
+| UC-ACC-10 | AC-04/16; TC-08/14 | Completion quyền sở hữu/current/phiên khác còn sống; UI danh sách thật, lỗi/rỗng/thử lại và revoke current | Cutoff realtime; đầy đủ các trạng thái UI khi mất mạng |
+| UC-ACC-11 | AC-04/16; TC-08/14 | Lifecycle logout/logout-all; Client không cho refresh khôi phục logout; UI mô tả đúng phạm vi và xóa cache theo account | Cutoff realtime, lỗi mạng trên các trình duyệt |
+| UC-ACC-12 | ACC-015, ACL-02; AC-DATA-02/03, TC-DATA-01 | Enum/status/Bearer guard và RB-ACCOUNT; chưa có công cụ khóa/mở khóa | OQ-011: công cụ/phân quyền/audit/receipt/cutoff/restore cần triển khai cùng các module |
 
-Trong ma trận, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`; dùng dạng ngắn để dễ đọc. Assertion status 200/204 không đủ chứng minh mọi hậu điều kiện. Toàn bộ UC/AC/TC vẫn chưa có kết quả chạy trong bước tài liệu này; các điểm thiếu là đầu vào cho gói triển khai và kiểm thử sau khi người dùng xác nhận.
+`AC-01`/`TC-01` viết tắt cho `AC-ACC-01`/`TC-ACC-01`. Test tự động và smoke local chứng minh phạm vi đã thực thi; chưa tạo kết quả nghiệm thu toàn bộ các AC/TC hoặc toàn MVP.
 
 <a id="use-case-review"></a>
 
@@ -372,8 +372,8 @@ Trong ma trận, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`; dùng dạng 
 
 | Nội dung | Căn cứ hiện có | Trạng thái / việc cần làm |
 |---|---|---|
-| Mật khẩu mới trùng mật khẩu hiện tại — UC-ACC-06/08 | Người dùng chọn giữ hành vi hiện tại ngày 2026-10-05: đổi từ chối trùng, reset cho phép trùng. | Đã chốt [DEC-113](../decisions.md#dec-113); ACC-016, AC-ACC-22 và TC-ACC-19 ghi rõ kết quả/thu hồi phiên. Chưa có assertion tự động cho trường hợp trùng. |
-| Email dùng được — UC-ACC-01/03/05 | ACC-GAP-05 và thiết kế delivery/envelope đã có; chưa có worker/provider. | OQ-002/OQ-008: cần chọn provider, public origin/domain và nơi lưu key trước triển khai giao email thật; tiếp nhận outbox chưa chứng minh email đã giao. |
+| Mật khẩu mới trùng mật khẩu hiện tại — UC-ACC-06/08 | Người dùng chọn giữ hành vi hiện tại ngày 2026-10-05: đổi từ chối trùng, reset cho phép trùng. | Đã chốt [DEC-113](../decisions.md#dec-113); ACC-016, AC-ACC-22 và TC-ACC-19 ghi rõ kết quả/thu hồi phiên. Completion và browser smoke đã kiểm tra trường hợp trùng/thu hồi phiên. |
+| Email dùng được — UC-ACC-01/03/05 | Gmail SMTP/App Password đã chọn DEC-114; delivery/envelope/worker đã triển khai. | Còn credentials, origin/domain/certificate theo môi trường và bằng chứng hộp thư Gmail thật; tiếp nhận outbox/SMTP không chứng minh email đã giao. |
 | Limiter bổ sung | Cooldown 60 giây và lockout 5 lần/15 phút đã chốt; ngưỡng theo nguồn/tài khoản chỉ là đề xuất DEC-089. | Giữ trạng thái hoãn; không tự thêm ngưỡng thành điều kiện nghiệm thu của UC. |
 | Thu hồi trên kết nối đang mở — UC-ACC-08–11 | HTTP đã kiểm tra session/stamp; DEC-083 yêu cầu kết nối chat ngừng nhận dữ liệu trong ≤5 giây sau commit thu hồi. | Tích hợp và kiểm chứng cùng DM; test Identity HTTP và Client mô phỏng chưa đủ chứng minh. |
 | Khóa/mở khóa quản trị | DEC-104/112 và RB-ACCOUNT đã chốt hành vi/phạm vi; chưa có công cụ thật. | Theo dõi ở OQ-011/runbook; không thêm UI quản trị hoặc tự coi verify/reset là thao tác mở khóa. |
@@ -435,6 +435,7 @@ Prefix `/api/v1`. Bảng này mô tả code có trong repo; schema đầy đủ 
 | Method / đường dẫn | Xác thực và đầu vào JSON | Kết quả thành công |
 |---|---|---|
 | `POST /auth/register` | Public; `username, displayName, email, password` | 201 `RegistrationResponse`; chưa cấp phiên |
+| `POST /auth/resend-verification` | `email` | 202 accepted; cooldown verify 60 giây, không trả token |
 | `POST /auth/verify-email` | Public; `token` | 204 |
 | `POST /auth/login` | Public; `login, password, deviceName?` | 200 `AuthResponse` |
 | `POST /auth/refresh` | Public; `refreshToken` | 200 `AuthResponse` với token mới |
@@ -452,11 +453,12 @@ Prefix `/api/v1`. Bảng này mô tả code có trong repo; schema đầy đủ 
 
 - `RegistrationResponse`: `userId, username, email, verificationRequired, developmentVerificationToken`.
 - `AuthResponse`: `accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, user`.
+- `VerificationRequestedResponse`: `accepted`.
 - `PasswordResetRequestedResponse`: `accepted, developmentResetToken`.
 - `UserAccountResponse`: `id, username, displayName, email, emailVerified, status, bio, avatarObjectKey, locale, timezone, createdAt, updatedAt, version`.
 - `SessionResponse`: `id, deviceName, userAgent, lastSeenIp, createdAt, lastSeenAt, expiresAt, isCurrent`.
 
-Email nằm trong hồ sơ riêng `users/me`, không phải hồ sơ công khai cho tìm kiếm. Token Development chỉ có giá trị khi `ExposeDevelopmentTokens` bật; không sử dụng chúng làm giao diện sản phẩm.
+Email nằm trong hồ sơ riêng `users/me`, không phải hồ sơ công khai cho tìm kiếm. Token Development chỉ được trả khi môi trường Development và `ExposeDevelopmentTokens` bật; không sử dụng chúng làm giao diện sản phẩm.
 
 ### Giá trị đang áp dụng trong implementation
 
@@ -468,12 +470,12 @@ Email nằm trong hồ sơ riêng `users/me`, không phải hồ sơ công khai 
 | Password | 8–128; có ít nhất một chữ và một số |
 | Hồ sơ | Bio tối đa 500, locale 1–16, timezone 1–64; cập nhật không đổi username/email |
 | Access token / phiên | Mặc định 15 phút / 30 ngày; cấu hình được |
-| Token verify/reset | Mặc định 30 phút, token dùng một lần; cấu hình được |
+| Token verify/reset | Mặc định 30 phút, dùng một lần; cooldown tối thiểu 60 giây, active policy riêng theo purpose |
 | Lockout | Mặc định sau 5 lần sai, khóa 15 phút; cấu hình được |
 | Refresh | Rotation; reuse thu hồi phiên |
 | Thu hồi | Request Bearer kiểm tra session, trạng thái tài khoản và security stamp; đổi/reset mật khẩu thu hồi phiên |
 
-Thời hạn/mật khẩu đã được chọn tại DEC-064/065. Bảng vẫn mô tả implementation; rate limit bổ sung, email và các chênh lệch bên dưới chưa có bằng chứng nghiệm thu.
+Thời hạn/mật khẩu đã được chọn tại DEC-064/065. Rate limit bổ sung vẫn hoãn; Gmail thật và nghiệm thu xuyên module còn cần bằng chứng.
 
 ### Lỗi cần tích hợp
 
@@ -503,7 +505,7 @@ Bảng tài khoản mô tả yêu cầu đã chốt. `Suspended`, `Disabled`, `D
 | Chưa có tài khoản | Đăng ký hợp lệ, email/username không trùng | Tạo tài khoản chờ xác minh và yêu cầu email; chưa cấp phiên ứng dụng |
 | Chờ xác minh | Liên kết xác minh còn hạn, đúng mục đích, chưa dùng | Email được xác minh, tài khoản active; đăng nhập để nhận phiên |
 | Chờ xác minh | Đăng nhập với đúng mật khẩu | 403 `Identity.EmailNotVerified`, không cấp phiên |
-| Chờ xác minh | Khôi phục/đặt lại mật khẩu qua email | Đổi mật khẩu, vẫn chờ xác minh; source hiện chưa cấp liên kết cho trường hợp này |
+| Chờ xác minh | Khôi phục/đặt lại mật khẩu qua email | Đổi mật khẩu, vẫn chờ xác minh; Completion đã kiểm tra |
 | Active | Đăng nhập đúng, không bị khóa | Cấp một phiên cùng access/refresh token |
 | Active | Đặt lại/đổi mật khẩu thành công | Mật khẩu mới có hiệu lực; mọi phiên cũ bị thu hồi; email giữ trạng thái xác minh trước đó |
 | Active | Đủ 5 lần sai theo DEC-064 | Khóa đăng nhập 15 phút; account vẫn active, lockout nằm trong security state |
@@ -529,6 +531,8 @@ HTTP Bearer hiện kiểm tra session, trạng thái active và security stamp t
 | `identity.user_security_states` | Bộ đếm sai, thời hạn khóa, security stamp |
 | `identity.auth_sessions` / `refresh_tokens` | Phiên/thu hồi và chuỗi rotation; DB giữ hash token |
 | `identity.account_tokens` | Token băm, mục đích, target email, hạn và thời điểm dùng; token verify/reset không thay thế nhau |
+| `identity.account_token_policies` | Timestamp cooldown và token active theo user/purpose; cleanup token giữ timestamp |
+| `identity.email_deliveries` | Envelope mã hóa, trạng thái/lease/retry và purge terminal; SMTP ngoài transaction |
 | `audit.security_events` / `integration.outbox_events` | Ghi cùng thay đổi nghiệp vụ; outbox chưa đồng nghĩa email được gửi |
 
 Module khác lấy `UserSummary(id, username, displayName)` qua `IUserDirectory`; interface hiện hỗ trợ tìm ID, username chính xác và nhiều ID, chưa có tìm một phần tên. Hồ sơ công khai không trả email, mật khẩu, security stamp hoặc thông tin phiên.
@@ -537,19 +541,19 @@ Nguồn đối chiếu: [RegistrationService](../../services/Modules/Identity/In
 
 ### Chênh lệch và bằng chứng còn thiếu
 
-Kết quả đọc source ngày 2026-10-04, không phải kết quả chạy test. ACC-GAP theo dõi chênh lệch kỹ thuật, không tạo quyết định sản phẩm mới.
+Đối chiếu implementation và test ngày 2026-10-05. ACC-GAP giữ mã để truy vết, không tạo policy mới.
 
-| Mã | Yêu cầu/căn cứ | Source hiện tại | Việc phải hoàn tất |
+| Mã | Yêu cầu/căn cứ | Trạng thái hiện tại | Bằng chứng/phần còn lại |
 |---|---|---|---|
-| ACC-GAP-01 | Khôi phục trước xác minh — ACC-007/014, AC-ACC-10 | `ForgotPasswordAsync` không tạo token nếu `VerifiedAt` null | Cho cấp token đúng yêu cầu; chứng minh reset không tự xác minh bằng TC-ACC-03 |
-| ACC-GAP-02 | Gửi lại sau 60 giây, vô hiệu link cũ — ACC-012 | Chưa có resend verification hoặc cooldown reset; reset request mới đã vô hiệu token reset cũ | Thiết kế/cài đặt cooldown và resend; kiểm chứng request đồng thời |
-| ACC-GAP-03 | Xác minh bằng token dùng một lần — ACC-012 | Verify đọc token/lưu nhưng không có khóa hoặc conditional consume như reset | Thử verify đồng thời; nếu nhiều request cùng thành công thì sửa consume; chưa có bằng chứng |
-| ACC-GAP-04 | Chuẩn hóa định danh nhất quán — ACC-008/009 | Service trim nhưng MVC kiểm tra regex/độ dài trước service | Khóa thứ tự chuẩn hóa/validation HTTP–service–DB; fixture khoảng trắng/hoa thường |
-| ACC-GAP-05 | Giao liên kết email dùng được — ACC-012 | Outbox chỉ chứa email/token ID; DB giữ hash, chưa có worker/provider | Thiết kế đưa link/token gửi được tới worker, trạng thái gửi/retry và kiểm thử email thật |
-| ACC-GAP-06 | Chống lạm dụng đăng ký/login/reset/resend | Có lockout; chưa có rate limiter theo nguồn yêu cầu/gửi email | Chọn ngưỡng/cửa sổ cấu hình được; đo lỗi 429 và phản hồi không tiết lộ email |
-| ACC-GAP-07 | Tên hiển thị UTF-16 — ACC-008, DEC-068 | Service dùng `.Length`; MVC và DB có giới hạn riêng | Fixture tiếng Việt tổ hợp/emoji và biên 64; kiểm chứng HTTP–DB |
+| ACC-GAP-01 | Pending reset ACC-007/014 | Đã triển khai | Completion: reset không tự verify, cần verify trước login |
+| ACC-GAP-02 | Resend/cooldown ACC-012 | Đã triển khai | Completion: biên 59/60 giây, concurrent resend, link mới thay link cũ, verify/reset độc lập |
+| ACC-GAP-03 | Verify consume một lần ACC-012 | Đã triển khai dưới khóa user | Completion: hai verify chỉ một thành công; hết hạn/reuse bị từ chối |
+| ACC-GAP-04 | Normalize ACC-008/009 | Normalize trước MVC/service validation | Completion: whitespace/email case và unique HTTP–DB |
+| ACC-GAP-05 | Email dùng được ACC-012 | Gmail SMTP worker, protected delivery, lease/retry/cleanup đã có | Completion dùng sender giả: rollback/lease/crash/timeout/retry/purge; chưa có credentials để kiểm chứng Gmail thật |
+| ACC-GAP-06 | Limiter bổ sung | Hoãn theo DEC-089 | Giữ cooldown 60 giây và lockout 5 lần/15 phút; chưa chọn ngưỡng bổ sung |
+| ACC-GAP-07 | UTF-16 ACC-008/DEC-068 | HTTP/service/DB nhất quán | Completion: 32 emoji hợp lệ, 33 bị từ chối qua HTTP và constraint DB |
 
-Rà soát ngày 2026-10-05 bổ sung chênh lệch giao diện tại [ma trận use case](#use-case-coverage): tự verify bằng token Development, thiếu trang verify/reset, chưa cho sửa locale, chưa xóa phiên ngay sau đổi mật khẩu, danh sách phiên dùng dữ liệu mẫu khi lỗi/rỗng và nhãn logout-all sai phạm vi. Các chênh lệch này cần triển khai/kiểm chứng cùng UC tương ứng; chưa sửa mã trong bước tài liệu.
+Giao diện đã bỏ auto verify Development và phiên mẫu; thêm route verify/reset có thao tác chủ động, locale/identity chỉ đọc, logout-all đúng phạm vi và xóa phiên sau đổi/reset mật khẩu. Smoke Chrome local kiểm tra đăng ký, GET link chưa consume, verify, hồ sơ, change và reset; browser matrix, Gmail thật, realtime/admin/restore vẫn cần kiểm chứng riêng.
 
 <a id="gaps"></a>
 
@@ -561,29 +565,29 @@ Giữ các mã ACC-P để truy vết; phần đã xác nhận dẫn tới DEC, 
 
 | Mã phương án cũ | Kết luận | Trạng thái |
 |---|---|---|
-| ACC-P01 | Định danh theo ACC-008/009; tên hiển thị đếm UTF-16 | Đã chốt DEC-063/068; còn kiểm chứng chuẩn hóa |
-| ACC-P02 | Verify/reset một lần, 30 phút; cấp lại vô hiệu link cũ cùng mục đích | Đã chốt DEC-065; đã có thiết kế consume/resend, còn triển khai và kiểm chứng |
+| ACC-P01 | Định danh theo ACC-008/009; tên hiển thị đếm UTF-16 | Đã chốt DEC-063/068; có Completion normalize/UTF-16 |
+| ACC-P02 | Verify/reset một lần, 30 phút; cấp lại vô hiệu link cũ cùng mục đích | Đã chốt DEC-065; consume/resend đã triển khai và có test đồng thời |
 | ACC-P03 | Cooldown 60 giây; reset/resend không tiết lộ email tồn tại; rate limit bổ sung theo nguồn/tài khoản | Cooldown chốt DEC-065; ngưỡng bổ sung được hoãn DEC-089 |
 | ACC-P04 | Phiên tối đa 30 ngày; đổi/reset thu hồi mọi phiên | Đã chốt DEC-065; transport hiện tại Bearer/refresh JSON, thiết kế thu hồi realtime tại DM còn cần triển khai |
 | ACC-P05 | Hồ sơ theo ACC-013; không đổi username/email; công khai chỉ ID/username/displayName; khôi phục chỉ qua email | Đã chốt DEC-063/066/067 |
 
-### Hợp đồng gửi lại cần triển khai
+### Hợp đồng gửi lại hiện có
 
-`POST /api/v1/auth/resend-verification` là endpoint đề xuất, chưa có controller/service. Đầu vào `{email}` hợp lệ; thành công `202 {accepted: true}` cùng ý nghĩa cho email tồn tại/không tồn tại/đã xác minh/không đủ điều kiện. Với tài khoản chờ xác minh đủ điều kiện, trong một transaction khóa tài khoản, kiểm tra cooldown, vô hiệu token verify cũ rồi tạo token/outbox mới. Hai request đồng thời chỉ tạo tối đa một token mới trong cooldown; không vô hiệu token reset khi gửi lại verify.
+`POST /api/v1/auth/resend-verification` đã có controller/service/UI và test. Đầu vào `{email}` hợp lệ; thành công `202 {accepted: true}` cùng ý nghĩa cho email tồn tại/không tồn tại/đã xác minh/không đủ điều kiện. Với tài khoản chờ xác minh đủ điều kiện, trong một transaction khóa tài khoản, kiểm tra cooldown, vô hiệu token verify cũ rồi tạo token/outbox mới. Hai request đồng thời chỉ tạo tối đa một token mới trong cooldown; không vô hiệu token reset khi gửi lại verify.
 
 Cooldown theo email yêu cầu cần có cùng phản hồi công khai cho các trạng thái tài khoản để tránh tiết lộ tồn tại; limiter theo nguồn có thể trả 429 ProblemDetails và `Retry-After` mà không phụ thuộc email tồn tại. Schema/mã lỗi và ngưỡng bổ sung là thiết kế cần rà soát. Không trả token thô ngoài Development.
 
 ### Email và thiết kế còn lại
 
-Repo chưa có worker/provider; payload token ID không đủ dựng lại token từ hash. Thiết kế dưới đây là phương án kỹ thuật để rà soát, chưa có implementation:
+Worker Gmail SMTP đã triển khai theo [hướng dẫn email](../identity-email.md). Cơ chế hiện có:
 
 1. Identity sinh token ngẫu nhiên, ghi hash/mục đích/hạn 30 phút trong `account_tokens`; cùng transaction tạo `EmailDelivery` và outbox tham chiếu delivery ID. Delivery giữ recipient, template version, token ID và envelope liên kết được mã hóa, không ghi token thô vào payload outbox/audit/log. Domain liên kết lấy từ cấu hình tin cậy, không từ header/URL do người gọi gửi.
-2. Worker lấy delivery bằng lease có hạn để nhiều worker không đồng thời xử lý cùng lần gửi; trước mỗi lần gửi kiểm tra token còn hiệu lực/chưa dùng/chưa bị thay thế và tài khoản đúng trạng thái. Giải mã ngay trước gọi provider. Khóa mã hóa được quản lý ngoài DB, có key version và quy trình phục hồi; chọn công cụ/key store cùng topology.
-3. Trạng thái `Pending → Sending → ProviderAccepted`, hoặc `RetryPending / Failed / Suppressed`. `ProviderAccepted` chỉ nghĩa provider đã nhận yêu cầu; delivered/bounce cập nhật từ callback được xác thực nếu provider hỗ trợ, không tự coi đã vào hộp thư. Callback lặp cập nhật có điều kiện và không chứa link/token trong log.
-4. Retry kỹ thuật đề xuất tối đa 5 lần với khoảng chờ 10/30/90/300 giây và jitter; dừng trước hạn token, khi token bị thay thế/đã dùng hoặc lỗi recipient không thể retry. Provider timeout sau khi có thể đã nhận cho phép email lặp; dùng delivery ID làm idempotency key nếu provider hỗ trợ. Mỗi link vẫn chỉ dùng một lần.
-5. Xóa envelope ngay sau provider accepted hoặc suppressed/failed cuối; job dọn tối đa 1 phút sau hạn token cho delivery bị bỏ dở. Chỉ giữ metadata cần đối soát theo chính sách vận hành. Không giữ transaction/khóa tài khoản trong lúc gọi dịch vụ email bên ngoài.
+2. Worker lấy delivery bằng lease có hạn để nhiều worker không đồng thời xử lý cùng lần gửi; trước mỗi lần gửi kiểm tra token còn hiệu lực/chưa dùng/chưa bị thay thế và tài khoản đúng trạng thái. Giải mã ngay trước gọi provider. Khóa mã hóa được quản lý ngoài DB, có key version và quy trình phục hồi; key ring lưu filesystem bền vững; ngoài Development bắt buộc certificate bảo vệ key.
+3. Trạng thái `Pending → Sending → ProviderAccepted`, hoặc `RetryPending / Failed / Suppressed`. `ProviderAccepted` chỉ nghĩa provider đã nhận yêu cầu; Gmail SMTP hiện không có callback delivered/bounce trong module, không tự coi đã vào hộp thư.
+4. Retry kỹ thuật tối đa 5 lần với khoảng chờ 10/30/90/300 giây và jitter; dừng trước hạn token, khi token bị thay thế/đã dùng hoặc lỗi recipient không thể retry. Provider timeout sau khi có thể đã nhận cho phép email lặp; dùng delivery ID làm idempotency key nếu provider hỗ trợ. Mỗi link vẫn chỉ dùng một lần.
+5. Xóa envelope ngay sau provider accepted hoặc suppressed/failed cuối; worker dọn trong mỗi vòng poll khi đang chạy; API dừng thì cleanup tiếp tục sau restart. Chỉ giữ metadata cần đối soát theo chính sách vận hành. Không giữ transaction/khóa tài khoản trong lúc gọi dịch vụ email bên ngoài.
 
-Token mới có thể được cấp trong lúc provider đang giao email cũ; không bảo đảm thu hồi email đã gửi. Liên kết cũ phải bị từ chối phía server và UI chỉ dẫn yêu cầu lại. Kiểm thử rollback không gửi mail, worker crash trước/sau provider accept, email giao lặp/đảo thứ tự, verify/reset song song và cleanup envelope. Provider/domain, cơ chế khóa, schema/migration và kết quả thử email thật vẫn là đầu việc trước phát hành.
+Token mới có thể được cấp trong lúc provider đang giao email cũ; không bảo đảm thu hồi email đã gửi. Liên kết cũ phải bị từ chối phía server và UI chỉ dẫn yêu cầu lại. Kiểm thử rollback không gửi mail, worker crash trước/sau provider accept, email giao lặp/đảo thứ tự, verify/reset song song và cleanup envelope. Provider/migration/key ring đã có; domain/certificate/credentials theo môi trường và kết quả thử email thật vẫn cần trước phát hành.
 
 ### Chuẩn hóa và giới hạn truy cập đề xuất
 
@@ -597,7 +601,7 @@ Thiết kế còn mở: ACC-GAP-01–07; ngưỡng limiter/email pipeline cần 
 
 ### Thiết kế chi tiết tài khoản
 
-Phương án ngày 2026-10-04 để triển khai DEC-063–067; thuật toán/schema dưới đây được soạn trong phạm vi tài liệu, chưa thay source. [OpenAPI luồng xác minh/khôi phục](../contracts/account-recovery.openapi.json) có 4 thao tác, ghi rõ resend chưa có endpoint và các endpoint hiện có còn chênh lệch. Swagger sinh từ source vẫn là nguồn cho API hiện đang chạy.
+Thiết kế ngày 2026-10-04 được triển khai ngày 2026-10-05 theo DEC-063–067/114. [OpenAPI luồng xác minh/khôi phục](../contracts/account-recovery.openapi.json) có 4 thao tác hiện có. Swagger sinh từ source là runtime contract; limiter 429 bổ sung vẫn là đề xuất hoãn DEC-089.
 
 #### HTTP xác minh, gửi lại và khôi phục
 
@@ -612,7 +616,7 @@ Validation 400 theo ProblemDetails chung; lỗi limiter theo nguồn 429 `Common
 
 #### Cấp và dùng token đồng thời
 
-Token hiện tại sinh từ 48 byte ngẫu nhiên, chuyển base64url và DB giữ SHA-256 hash; giữ cơ chế này. Đề xuất thêm `identity.account_token_policies` khóa `(user_id,purpose)` với `last_issued_at,active_token_id`; lần đăng ký đầu cũng ghi policy để resend không bỏ cooldown 60 giây. Clock server UTC và điều kiện `expires_at > now`; tại đúng mốc hết hạn từ chối.
+Token hiện tại sinh từ 48 byte ngẫu nhiên, chuyển base64url và DB giữ SHA-256 hash; giữ cơ chế này. Có `identity.account_token_policies` khóa `(user_id,purpose)` với `last_issued_at,active_token_id`; lần đăng ký đầu cũng ghi policy để resend không bỏ cooldown 60 giây. Clock server UTC và điều kiện `expires_at > now`; tại đúng mốc hết hạn từ chối.
 
 1. Cấp lại: chuẩn hóa email, tra user qua Identity, mở transaction và `LockUserAsync` trước đọc trạng thái/token/policy. Kiểm tra purpose, điều kiện tài khoản, cooldown và limiter gửi email nếu sau này được chọn; nếu không cấp thì trả accepted giống nhau. Đọc DB dưới khóa, không dựa vào kiểm tra trước transaction.
 2. Khi đủ điều kiện, đánh dấu token cũ cùng purpose không còn hợp lệ, tạo token mới + policy + EmailDelivery + outbox + audit trong cùng transaction. Việc cấp lại verify không thu hồi reset và ngược lại; audit chỉ ghi ID/purpose/lý do, không plaintext/hash token.
@@ -624,17 +628,17 @@ Token hiện tại sinh từ 48 byte ngẫu nhiên, chuyển base64url và DB gi
 
 #### Mô hình EmailDelivery và worker
 
-| Trường đề xuất | Quy tắc |
+| Trường hiện có | Quy tắc |
 |---|---|
 | `id,user_id,account_token_id,purpose,recipient,template_version` | Identity sở hữu; duy nhất delivery theo token/template; không dùng email làm aggregate ID public |
 | `protected_envelope,envelope_expires_at` | Link/token được mã hóa và xác thực; hạn không vượt hạn token 30 phút; nullable sau purge |
 | `status,attempt_count,next_attempt_at` | Pending/Sending/RetryPending/ProviderAccepted/Failed/Suppressed; số lần gửi thực tế, không tăng chỉ vì poll |
-| `lease_owner,lease_until,provider_message_id,last_error_code` | Lease kỹ thuật đề xuất 30 giây, provider timeout 10 giây; lỗi chỉ mã an toàn, không lưu response chứa bí mật |
-| `created_at,accepted_at,delivered_at,bounced_at` | ProviderAccepted/delivered khác nhau; callback lặp cập nhật có điều kiện |
+| `lease_owner,lease_until,provider_message_id,last_error_code` | Lease kỹ thuật mặc định 30 giây, provider timeout 10 giây; lỗi chỉ mã an toàn, không lưu response chứa bí mật |
+| `created_at,terminal_at,outbox_event_id` | Terminal gồm accepted/failed/suppressed; không có delivered/bounce callback Gmail |
 
 Worker claim bằng transaction ngắn, ghi lease rồi commit trước gọi provider; hết lease có thể xử lý lại, nên không cam kết email giao đúng một lần. Payload outbox chỉ delivery ID/user ID/purpose, không có envelope/token; recipient chỉ có trong bản ghi Identity cần thiết và request provider. Việc tiếp nhận sau timeout dùng delivery ID đối soát nếu provider hỗ trợ.
 
-Thiết kế envelope chọn ASP.NET Core Data Protection với purpose `Identity.EmailDelivery.v1` và hạn token; cursor dùng purpose khác. Key ring riêng theo môi trường, được bảo vệ khi lưu, lưu bền qua restart và có bản phục hồi cùng cấu hình. Xóa key làm dữ liệu đã bảo vệ bằng key không giải mã được theo [tài liệu Microsoft](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-management?view=aspnetcore-10.0); phải đối chiếu tuổi envelope/cursor và backup 30 ngày trước dọn key. Cách lưu key/certificate/secret store cụ thể cần topology, không lưu khóa trong SQL payload hoặc repo.
+Thiết kế envelope chọn ASP.NET Core Data Protection với purpose `Identity.EmailDelivery.v1` và hạn token; cursor dùng purpose khác. Key ring riêng theo môi trường, được bảo vệ khi lưu, lưu bền qua restart và có bản phục hồi cùng cấu hình. Xóa key làm dữ liệu đã bảo vệ bằng key không giải mã được theo [tài liệu Microsoft](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-management?view=aspnetcore-10.0); phải đối chiếu tuổi envelope/cursor và backup 30 ngày trước dọn key. Filesystem key ring/certificate theo [hướng dẫn email](../identity-email.md); deployment topology và phục hồi keys cần cấu hình theo môi trường, không lưu khóa trong SQL payload hoặc repo.
 
 Worker kiểm tra token trước gửi; cleanup và giới hạn retry theo phương án ở trên. Bảo vệ envelope không thay việc server từ chối link bị thay thế/hết hạn; khi restore không gửi lại delivery quá hạn hoặc đã bị thu hồi sau recovery point.
 
@@ -642,7 +646,7 @@ Worker kiểm tra token trước gửi; cleanup và giới hạn retry theo phư
 
 Thiết kế route SPA `/auth/verify#token=…` và `/auth/reset#token=…` từ public origin cấu hình. Fragment không đi trong HTTP request URI theo [tài liệu URI fragment](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment); app lấy một lần vào bộ nhớ rồi `history.replaceState` bỏ khỏi URL. Trang này không có analytics/script bên thứ ba, dùng `Referrer-Policy: no-referrer`, không ghi toàn bộ URL vào lỗi; fragment không thay bảo vệ khỏi script trên trang.
 
-Trang verify hiển thị nút xác minh để chỉ POST khi người dùng thực hiện thao tác; GET mở link không consume. Reset chỉ POST khi người dùng điền mật khẩu mới hợp lệ. Link sai/hết hạn/đã dùng đều báo “Liên kết không còn sử dụng được” và đường yêu cầu mới, không hiện token. Thành công verify/reset dẫn đến login; reset của pending account vẫn cần verify. Đây là chi tiết UX kỹ thuật cần rà soát cùng prototype.
+Trang verify hiển thị nút xác minh để chỉ POST khi người dùng thực hiện thao tác; GET mở link không consume. Reset chỉ POST khi người dùng điền mật khẩu mới hợp lệ. Link sai/hết hạn/đã dùng đều báo “Liên kết không còn sử dụng được” và đường yêu cầu mới, không hiện token. Thành công verify/reset dẫn đến login; reset của pending account vẫn cần verify. Route đã triển khai và smoke Chrome local đã kiểm tra GET không consume/fragment scrub.
 
 Đổi/reset mật khẩu, logout hoặc đổi tài khoản xóa state UI, nội dung DM đang cache và đóng Hub của phiên đó. Source [api.js](../../clients/WebClient/src/api.js) hiện chia sẻ token phiên qua localStorage khi có Web Locks; DEC-091 chỉ nói nội dung DM/bản nháp, không tuyên bố đã đổi cơ chế lưu token. Refresh token đã rotation mà response mất không tự retry token cũ vì có thể kích hoạt reuse; client về login theo lỗi hiện tại.
 
@@ -650,7 +654,7 @@ Trang verify hiển thị nút xác minh để chỉ POST khi người dùng th�
 
 Chốt pipeline normalize → validate → transaction → constraint; validation HTTP không chạy bộ quy tắc khác service. Username/email unique ở DB xử lý cả đăng ký đồng thời. DisplayName trim/UTF-16 như ACC-008; bio hiện trim và rỗng thành null; locale/timezone giữ validation độ dài hiện tại, chưa tự thêm allowlist locale/zone chỉ vì có giá trị trông hợp lệ. Source đang dùng version hồ sơ ở response; cập nhật optimistic concurrency là hướng thiết kế, chưa thêm `expectedVersion` vào API hiện có khi chưa thay contract.
 
-Đầu ra triển khai tài khoản: thêm resend/policy/delivery migration + worker; sửa reset pending/verify consume; cập nhật shared validator và auth UI; mở rộng hợp đồng thu hồi session cho chat. Kết quả của các gói này phải ghi vào ACC-GAP và TC, không đánh dấu đã hoàn thành chỉ vì có schema trong docs.
+Resend/policy/delivery migration, worker, pending reset/verify consume, validator và auth UI đã có implementation/test. Mở rộng thu hồi session cho realtime chat, quản trị kỹ thuật và restore vẫn cần triển khai cùng các module phụ thuộc; Gmail thật cần credentials.
 
 <a id="acceptance"></a>
 

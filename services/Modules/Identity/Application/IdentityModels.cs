@@ -21,6 +21,10 @@ public sealed record RegistrationResponse(
 
 public sealed record VerifyEmailCommand(string Token, RequestContext Context);
 
+public sealed record ResendVerificationCommand(string Email, RequestContext Context);
+
+public sealed record VerificationRequestedResponse(bool Accepted);
+
 public sealed record LoginCommand(
     string Login,
     string Password,

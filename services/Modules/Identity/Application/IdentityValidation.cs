@@ -48,17 +48,17 @@ internal static partial class IdentityValidation
             errors["displayName"] = ["Display name must contain 1-64 characters."];
         }
 
-        if (command.Bio?.Length > 500)
+        if (command.Bio?.Trim().Length > 500)
         {
             errors["bio"] = ["Bio cannot exceed 500 characters."];
         }
 
-        if (string.IsNullOrWhiteSpace(command.Locale) || command.Locale.Length > 16)
+        if (string.IsNullOrWhiteSpace(command.Locale) || command.Locale.Trim().Length > 16)
         {
             errors["locale"] = ["Locale must contain 1-16 characters."];
         }
 
-        if (string.IsNullOrWhiteSpace(command.Timezone) || command.Timezone.Length > 64)
+        if (string.IsNullOrWhiteSpace(command.Timezone) || command.Timezone.Trim().Length > 64)
         {
             errors["timezone"] = ["Timezone must contain 1-64 characters."];
         }
@@ -68,7 +68,7 @@ internal static partial class IdentityValidation
 
     public static bool IsValidEmail(string email)
     {
-        if (string.IsNullOrWhiteSpace(email) || email.Length > 254)
+        if (string.IsNullOrWhiteSpace(email) || email.Trim().Length > 254 || email.Contains('\r') || email.Contains('\n'))
         {
             return false;
         }
@@ -82,6 +82,10 @@ internal static partial class IdentityValidation
             return false;
         }
     }
+
+    public static ValidationError? ValidateEmail(string email) => IsValidEmail(email) ? null
+        : new ValidationError("Identity.EmailInvalid", "Email address is invalid.",
+            new Dictionary<string, string[]> { ["email"] = ["Email address is invalid."] });
 
     private static void AddPasswordErrors(
         IDictionary<string, string[]> errors,

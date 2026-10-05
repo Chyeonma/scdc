@@ -38,16 +38,18 @@ docker compose up -d --build
 
 Compose khởi tạo PostgreSQL, API và web. Identity gọi backend thật; giao diện chat/cộng đồng chưa có backend nghiệp vụ.
 
+WebClient dùng `/` cho trang chat sau đăng nhập và `/login` cho các form tài khoản. Người chưa đăng nhập mở `/` được chuyển sang `/login`; đăng nhập thành công trở về `/`, đăng xuất trở về `/login`. Liên kết email vẫn dùng `/auth/verify` và `/auth/reset`; hoàn tất thao tác sẽ trở về luồng đăng nhập.
+
 <a id="container-engines"></a>
 
 ### Docker Desktop, Docker Engine và Podman
 
-Cả ba môi trường dùng chung [compose.yaml](../compose.yaml) và Dockerfile. Makefile chọn Docker mặc định; dùng `ENGINE=podman` để chọn Podman. Chọn engine rõ ràng khi máy cài cả hai.
+Cả ba môi trường dùng chung [compose.yaml](../compose.yaml) và Dockerfile. Makefile hiện chọn Podman mặc định; dùng `ENGINE=docker` để chọn Docker. Chọn engine rõ ràng khi máy cài cả hai.
 
 | Môi trường | Chuẩn bị | Lệnh khởi chạy qua Make |
 |---|---|---|
-| Docker Desktop trên Windows | Mở Docker Desktop, dùng Linux containers; để chạy Make trong WSL, bật WSL integration cho distro và cài Make/Python/Git trong distro | `make up` |
-| Docker Engine với CLI | Engine đang chạy, CLI kết nối được và đã cài Compose plugin | `make up` |
+| Docker Desktop trên Windows | Mở Docker Desktop, dùng Linux containers; để chạy Make trong WSL, bật WSL integration cho distro và cài Make/Python/Git trong distro | `make up ENGINE=docker` |
+| Docker Engine với CLI | Engine đang chạy, CLI kết nối được và đã cài Compose plugin | `make up ENGINE=docker` |
 | Podman | Podman hoạt động và có Compose provider; Windows/macOS cần Podman machine đang chạy | `make up ENGINE=podman` |
 
 [Docker Desktop](https://docs.docker.com/compose/install/) đã bao gồm Engine, CLI và Compose. CLI cần kết nối được một engine đang chạy. [`podman compose`](https://docs.podman.io/en/latest/markdown/podman-compose.1.html) gọi Compose provider bên ngoài như `podman-compose` hoặc `docker-compose`; chọn provider qua `PODMAN_COMPOSE_PROVIDER` nếu cần. Với [Podman machine](https://docs.podman.io/en/latest/markdown/podman-machine.1.html), tạo bằng `podman machine init` nếu chưa có, rồi `podman machine start`.
@@ -117,6 +119,7 @@ Vite nghe ở cổng 3000 và proxy `/api`, `/hubs`, `/swagger` về API 5026. N
 | `make up` / `make down` | Build/chạy hoặc dừng stack Compose; `down` giữ volume |
 | `make status` / `make logs` | Xem container hoặc log API/PostgreSQL |
 | `make db` | Chạy riêng PostgreSQL |
+| `make db-migrate` | Áp migration Identity vào database đang chạy, giữ dữ liệu hiện có |
 | `make compose-check` | Kiểm tra cấu hình Compose qua engine đã chọn |
 | `make api` / `make web` | Chạy backend/frontend local; frontend cài dependency bằng `npm ci` |
 | `make build` | Build backend và frontend |
@@ -164,7 +167,8 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `ConnectionStrings:Database` | `Host=localhost;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev` khi API chạy local; host `postgres` trong Compose |
 | `Modules:Identity:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient` |
 | `Modules:Identity:SigningKey` | Khóa local có trong cấu hình Development; cấu hình ngoài Development cần khóa riêng đủ dài |
-| `Modules:Identity:ExposeDevelopmentTokens` | `true` trong Development, dùng token trả về để thử xác minh/reset; giá trị mặc định `false` |
+| `Modules:Identity:ExposeDevelopmentTokens` | `true` khi debug local Development, dùng token trả về để thử xác minh/reset; Compose mặc định `false`, override bằng `SCDC_EXPOSE_DEVELOPMENT_TOKENS=true` |
+| `Modules:Identity:Email:*` | Worker Gmail SMTP, public origin và key ring; xem [hướng dẫn email](identity-email.md) và [.env.example](../.env.example) |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
 Các thời hạn token/phiên và lockout hiện tại nằm trong [đặc tả Accounts](features/accounts.md#api-current). Khi override bằng environment variable, dùng `__` thay dấu `:`, ví dụ `ConnectionStrings__Database`.
@@ -180,7 +184,7 @@ Nguồn: [appsettings.json](../services/SCDC.Api/appsettings.json), [cấu hình
 3. Đăng nhập bằng email hoặc username. Dùng `accessToken` làm Bearer token khi gọi endpoint yêu cầu xác thực.
 4. Quên mật khẩu dùng `POST /api/v1/auth/forgot-password`; response Development có thể chứa `developmentResetToken`. Dùng token đó cùng `newPassword` ở endpoint reset.
 
-Token Development chỉ phục vụ kiểm thử local; chúng không thuộc trải nghiệm sản phẩm. Hiện chưa có endpoint gửi lại xác minh và chưa có worker gửi email. Quy trình gửi email thật cần hoàn thiện trước phát hành; xem [Accounts](features/accounts.md#gaps).
+Token Development chỉ được trả khi vừa bật cờ vừa chạy Development; giao diện sản phẩm không dùng chúng để tự xác minh. `POST /api/v1/auth/resend-verification` gửi lại link verify sau cooldown 60 giây; forgot/reset hỗ trợ cả tài khoản pending. Worker Gmail SMTP mặc định tắt khi chưa cấu hình credentials. [Hướng dẫn email](identity-email.md) mô tả cấu hình App Password, liên kết frontend, key ring và migration.
 
 Frontend quản lý phiên ở [api.js](../clients/WebClient/src/api.js). Khi có Web Locks, nó đồng bộ phiên giữa tab và khóa refresh; khi thiếu Web Locks, token giữ trong tab. Wrapper hiện có thử lại sau 401; khi tích hợp gửi tin phải xử lý rõ theo DEC-021 để không tự gửi lại mutation ngoài thao tác người dùng.
 
@@ -192,7 +196,7 @@ Database local: `scdc_chat`, user `scdc`, password `scdc_dev`, port 5432. SSL t�
 
 `schema.sql` tạo schema, constraint, index, trigger và view. `seed.sql` có dữ liệu mẫu cho nhiều domain; password/token mẫu chỉ minh họa, không dùng đăng nhập. Tạo tài khoản mới bằng API để thử luồng Identity.
 
-Compose mount hai script vào `/docker-entrypoint-initdb.d/`; chúng chỉ chạy khi khởi tạo database trên volume mới. Sửa SQL không tự cập nhật volume đang có dữ liệu. Chưa có quy trình migration production được hoàn thiện; không dùng script tạo lại schema như migration cho môi trường chứa dữ liệu cần giữ.
+Compose mount script init và thư mục migration vào `/docker-entrypoint-initdb.d/`; init chỉ chạy trên volume mới. Volume hiện có cần áp dụng migration Identity additive theo [hướng dẫn email](identity-email.md). Sửa SQL không tự cập nhật dữ liệu; không dùng `schema.sql` tạo lại schema để nâng cấp database cần giữ.
 
 Các view để quan sát: `identity.v_user_accounts`, `identity.v_active_sessions`, `messaging.v_space_overview`, `messaging.v_message_timeline`. Ví dụ:
 
@@ -228,7 +232,7 @@ Khi review thay đổi, đối chiếu requirement và AC bị ảnh hưởng, q
 dotnet test SCDC.slnx --configuration Release
 ```
 
-`IdentityV1FlowTests` và `IdentityConcurrencyTests` cần PostgreSQL Development với schema repo. Các nhóm test hiện có: vòng đời tài khoản/phiên, xử lý đồng thời, response/ProblemDetails và Result. Factory dùng môi trường Development, cấu hình DB local và token thử.
+`IdentityV1FlowTests`, `IdentityConcurrencyTests` và `IdentityCompletionTests` cần PostgreSQL với schema/migration repo. Đặt `SCDC_TEST_DATABASE` để chọn database thử riêng thay cấu hình local mặc định. Factory dùng Development, tắt hosted email worker và dùng sender giả trong test processor. Các nhóm test bao phủ vòng đời tài khoản/phiên, cooldown/đồng thời, validation UTF-16, email lease/retry/cleanup, retention, response/ProblemDetails và Result. Ngày 2026-10-05: 44 backend tests qua trên .NET 10/PostgreSQL 18; chưa gửi Gmail thật.
 
 ### Frontend — trong clients/WebClient
 
@@ -237,7 +241,7 @@ npm test
 npm run build
 ```
 
-Test hiện có kiểm tra wrapper API và quản lý phiên; build kiểm tra đóng gói frontend. Không coi chúng là bằng chứng toàn bộ hành trình chat/cộng đồng/media đã chạy.
+11 frontend tests kiểm tra wrapper API, quản lý phiên, xóa phiên sau đổi/reset mật khẩu và đọc/xóa fragment của link. Test và production build đã qua trên Node 24 ngày 2026-10-05; Chrome headless local đã chạy đăng ký→verify→login→profile→change-password→reset→login. SMTP vẫn dùng credentials chưa được cung cấp; smoke này không chứng minh hộp thư Gmail nhận email. Không coi chúng là bằng chứng toàn bộ hành trình chat/cộng đồng/media đã chạy.
 
 ### Tài liệu
 
@@ -263,6 +267,9 @@ Hiện chưa có kịch bản k6 trong repo. Ngưỡng chat/media, browser và b
 | Login trả 403 | Xem `errorCode`; chưa xác minh cần hoàn tất verify, không tự coi mọi 403 là phiên hết hạn |
 | Không thấy Swagger | Swagger chỉ bật khi môi trường Development |
 | Sửa SQL nhưng dữ liệu không đổi | Script init không chạy lại trên volume đã khởi tạo; xác định cách cập nhật dữ liệu trước khi thực hiện |
+| Worker báo `relation "identity.email_deliveries" does not exist` hoặc recovery 500 | Chạy `make db-migrate ENGINE=podman` với stack Podman (hoặc engine đang dùng); build API không cập nhật schema trong volume cũ |
+| API trực tiếp hoạt động nhưng frontend trả 502 sau restart API | Build lại WebClient để dùng cấu hình nginx DNS động; upstream theo tên dịch vụ tự cập nhật khi IP container thay đổi |
+| Quên mật khẩu trả accepted nhưng không có email | Kiểm tra email đã có tài khoản Identity và trạng thái delivery; địa chỉ Gmail trong `.env` là tài khoản gửi, không tự tạo tài khoản ứng dụng |
 | Chat UI hiện dữ liệu nhưng không gọi được DM API | DM backend chưa triển khai; dùng đặc tả đề xuất để làm tích hợp tiếp theo |
 
 Quan sát container local:

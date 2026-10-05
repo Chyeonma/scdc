@@ -223,19 +223,29 @@ export async function forgotPassword(email) {
   });
 }
 
+export async function resendVerification(email) {
+  return api('/auth/resend-verification', {
+    method: 'POST', body: { email }, auth: false,
+  });
+}
+
 export async function resetPassword(token, newPassword) {
-  return api('/auth/reset-password', {
+  const result = await api('/auth/reset-password', {
     method: 'POST',
     body: { token, newPassword },
     auth: false,
   });
+  emitSession(null);
+  return result;
 }
 
 export async function changePassword(currentPassword, newPassword) {
-  return api('/auth/change-password', {
+  const result = await api('/auth/change-password', {
     method: 'POST',
     body: { currentPassword, newPassword },
   });
+  emitSession(null);
+  return result;
 }
 
 export async function getSessions() {

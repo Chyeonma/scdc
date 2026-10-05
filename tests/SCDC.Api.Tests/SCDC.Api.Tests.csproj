@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="../../services/SCDC.Api/SCDC.Api.csproj" />
     <ProjectReference Include="../../services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
+    <ProjectReference Include="../../services/Modules/Identity/SCDC.Identity.csproj" />
   </ItemGroup>
 
 </Project>

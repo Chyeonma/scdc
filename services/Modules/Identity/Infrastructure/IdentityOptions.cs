@@ -13,5 +13,6 @@ internal sealed class IdentityOptions
     public int PasswordResetTokenMinutes { get; init; } = 30;
     public int MaxFailedLoginAttempts { get; init; } = 5;
     public int LockoutMinutes { get; init; } = 15;
+    public int AccountTokenCooldownSeconds { get; init; } = 60;
     public bool ExposeDevelopmentTokens { get; init; }
 }

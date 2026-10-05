@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure.Persistence;
+using SCDC.Modules.Identity.Infrastructure.Email;
 using SCDC.Modules.Identity.Infrastructure.Security;
 
 namespace SCDC.Modules.Identity.Infrastructure.Services;
@@ -15,7 +17,9 @@ internal sealed class RegistrationService(
     IPasswordHasher<User> passwordHasher,
     ITokenService tokenService,
     IOptions<IdentityOptions> options,
-    TimeProvider timeProvider) : IRegistrationService
+    TimeProvider timeProvider,
+    AccountEmailQueue emailQueue,
+    IHostEnvironment environment) : IRegistrationService
 {
     private const string PasswordAlgorithm = "aspnetcore-identity-v3";
     private readonly IdentityOptions _options = options.Value;
@@ -32,8 +36,8 @@ internal sealed class RegistrationService(
 
         var username = command.Username.Trim();
         var normalizedUsername = username.ToLowerInvariant();
-        var email = command.Email.Trim();
-        var normalizedEmail = email.ToLowerInvariant();
+        var email = command.Email.Trim().ToLowerInvariant();
+        var normalizedEmail = email;
 
         if (await dbContext.Users.AnyAsync(
                 user => user.NormalizedUsername == normalizedUsername,
@@ -119,12 +123,14 @@ internal sealed class RegistrationService(
             command.Context,
             now,
             new { email_verified = false }));
-        dbContext.OutboxEvents.Add(IdentityData.Outbox(
-            "Identity.EmailVerificationRequested",
-            user.Id,
-            user.Version,
-            now,
-            new { user_id = user.Id, email, account_token_id = accountToken.Id }));
+        dbContext.AccountTokenPolicies.Add(new AccountTokenPolicy
+        {
+            UserId = user.Id,
+            Purpose = AccountTokenPurpose.VerifyEmail,
+            LastIssuedAt = now,
+            ActiveTokenId = accountToken.Id
+        });
+        emailQueue.Enqueue(user, accountToken, verificationToken.Value, now);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
@@ -143,7 +149,7 @@ internal sealed class RegistrationService(
             user.Username,
             email,
             true,
-            _options.ExposeDevelopmentTokens ? verificationToken.Value : null));
+            ExposeDevelopmentTokens ? verificationToken.Value : null));
     }
 
     public async Task<Result> VerifyEmailAsync(
@@ -151,6 +157,13 @@ internal sealed class RegistrationService(
         CancellationToken cancellationToken)
     {
         var tokenHash = tokenService.HashOpaqueToken(command.Token);
+        var userId = await dbContext.AccountTokens
+            .Where(token => token.TokenHash == tokenHash && token.Purpose == AccountTokenPurpose.VerifyEmail)
+            .Select(token => (Guid?)token.UserId).SingleOrDefaultAsync(cancellationToken);
+        if (userId is null) return Result.Failure(IdentityErrors.InvalidAccountToken);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockUserAsync(userId.Value, cancellationToken);
         var accountToken = await dbContext.AccountTokens
             .Include(token => token.User)
             .ThenInclude(user => user.Emails)
@@ -163,7 +176,8 @@ internal sealed class RegistrationService(
         if (accountToken is null
             || accountToken.ConsumedAt is not null
             || accountToken.ExpiresAt <= now
-            || accountToken.User.Status is UserStatus.Deleted or UserStatus.Disabled)
+            || accountToken.User.Status is not (UserStatus.PendingVerification or UserStatus.Active)
+            || !await IsActiveTokenAsync(accountToken, cancellationToken))
         {
             return Result.Failure(IdentityErrors.InvalidAccountToken);
         }
@@ -179,6 +193,9 @@ internal sealed class RegistrationService(
         email.VerifiedAt ??= now;
         email.UpdatedAt = now;
         accountToken.ConsumedAt = now;
+        var policy = await dbContext.AccountTokenPolicies.SingleAsync(item => item.UserId == accountToken.UserId
+            && item.Purpose == AccountTokenPurpose.VerifyEmail, cancellationToken);
+        policy.ActiveTokenId = null;
 
         if (accountToken.User.Status == UserStatus.PendingVerification)
         {
@@ -210,87 +227,91 @@ internal sealed class RegistrationService(
             new { user_id = accountToken.UserId, email = email.Email }));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result.Success();
+    }
+
+    public async Task<Result<VerificationRequestedResponse>> ResendVerificationAsync(
+        ResendVerificationCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await RequestTokenAsync(command.Email, command.Context,
+            AccountTokenPurpose.VerifyEmail, cancellationToken);
+        return result.IsFailure ? Result.Failure<VerificationRequestedResponse>(result.Error)
+            : Result.Success(new VerificationRequestedResponse(true));
     }
 
     public async Task<Result<PasswordResetRequestedResponse>> ForgotPasswordAsync(
         ForgotPasswordCommand command,
         CancellationToken cancellationToken)
     {
-        var genericResponse = new PasswordResetRequestedResponse(true, null);
-        if (!IdentityValidation.IsValidEmail(command.Email))
-        {
-            return Result.Success(genericResponse);
-        }
+        var result = await RequestTokenAsync(command.Email, command.Context,
+            AccountTokenPurpose.ResetPassword, cancellationToken);
+        return result.IsFailure ? Result.Failure<PasswordResetRequestedResponse>(result.Error)
+            : Result.Success(new PasswordResetRequestedResponse(true, result.Value));
+    }
 
-        var normalizedEmail = command.Email.Trim().ToLowerInvariant();
+    private async Task<Result<string?>> RequestTokenAsync(
+        string requestedEmail, RequestContext context, AccountTokenPurpose purpose,
+        CancellationToken cancellationToken)
+    {
+        var validation = IdentityValidation.ValidateEmail(requestedEmail);
+        if (validation is not null) return Result.Failure<string?>(validation);
+        var normalizedEmail = requestedEmail.Trim().ToLowerInvariant();
         var userId = await dbContext.UserEmails
             .Where(item => item.NormalizedEmail == normalizedEmail && item.IsPrimary)
-            .Select(item => (Guid?)item.UserId)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (userId is null)
-        {
-            return Result.Success(genericResponse);
-        }
+            .Select(item => (Guid?)item.UserId).SingleOrDefaultAsync(cancellationToken);
+        if (userId is null) return Result.Success<string?>(null);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         await dbContext.LockUserAsync(userId.Value, cancellationToken);
-        var email = await dbContext.UserEmails
-            .Include(item => item.User)
-            .SingleOrDefaultAsync(
-                item => item.NormalizedEmail == normalizedEmail && item.IsPrimary,
-                cancellationToken);
-
-        if (email is null
-            || email.User.Status is UserStatus.Deleted or UserStatus.Disabled
-            || email.VerifiedAt is null)
-        {
-            return Result.Success(genericResponse);
-        }
+        var email = await dbContext.UserEmails.Include(item => item.User)
+            .SingleOrDefaultAsync(item => item.NormalizedEmail == normalizedEmail && item.IsPrimary, cancellationToken);
+        if (email is null || email.User.Status is not (UserStatus.PendingVerification or UserStatus.Active)
+            || purpose == AccountTokenPurpose.VerifyEmail && email.VerifiedAt is not null)
+            return Result.Success<string?>(null);
 
         var now = timeProvider.GetUtcNow();
+        var policy = await dbContext.AccountTokenPolicies.SingleOrDefaultAsync(item => item.UserId == userId
+            && item.Purpose == purpose, cancellationToken);
+        if (policy is not null && now < policy.LastIssuedAt.AddSeconds(_options.AccountTokenCooldownSeconds))
+            return Result.Success<string?>(null);
+
+        var oldTokens = await dbContext.AccountTokens.Where(token => token.UserId == userId
+            && token.Purpose == purpose && token.ConsumedAt == null).ToListAsync(cancellationToken);
+        foreach (var oldToken in oldTokens) oldToken.ConsumedAt = now;
+
         var rawToken = tokenService.CreateOpaqueToken();
-        var activeTokens = await dbContext.AccountTokens
-            .Where(token => token.UserId == email.UserId
-                && token.Purpose == AccountTokenPurpose.ResetPassword
-                && token.ConsumedAt == null)
-            .ToListAsync(cancellationToken);
-        foreach (var token in activeTokens)
+        var token = new AccountToken
         {
-            token.ConsumedAt = now;
-        }
-
-        var accountToken = new AccountToken
-        {
-            Id = Guid.CreateVersion7(),
-            UserId = email.UserId,
-            User = email.User,
-            Purpose = AccountTokenPurpose.ResetPassword,
-            TokenHash = rawToken.Hash,
-            TargetValue = email.Email,
-            CreatedByIp = IdentityData.ParseIp(command.Context.IpAddress),
-            CreatedAt = now,
-            ExpiresAt = now.AddMinutes(_options.PasswordResetTokenMinutes)
+            Id = Guid.CreateVersion7(), UserId = email.UserId, User = email.User,
+            Purpose = purpose, TokenHash = rawToken.Hash, TargetValue = email.Email,
+            CreatedByIp = IdentityData.ParseIp(context.IpAddress), CreatedAt = now,
+            ExpiresAt = now.AddMinutes(purpose == AccountTokenPurpose.VerifyEmail
+                ? _options.EmailVerificationTokenMinutes : _options.PasswordResetTokenMinutes)
         };
-        dbContext.AccountTokens.Add(accountToken);
-        dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
-            email.UserId,
-            "password_reset_requested",
-            command.Context,
-            now));
-        dbContext.OutboxEvents.Add(IdentityData.Outbox(
-            "Identity.PasswordResetRequested",
-            email.UserId,
-            email.User.Version,
-            now,
-            new { user_id = email.UserId, email = email.Email, account_token_id = accountToken.Id }));
-
+        dbContext.AccountTokens.Add(token);
+        if (policy is null)
+        {
+            policy = new AccountTokenPolicy { UserId = email.UserId, Purpose = purpose };
+            dbContext.AccountTokenPolicies.Add(policy);
+        }
+        policy.LastIssuedAt = now;
+        policy.ActiveTokenId = token.Id;
+        emailQueue.Enqueue(email.User, token, rawToken.Value, now);
+        dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(email.UserId,
+            purpose == AccountTokenPurpose.VerifyEmail ? "email_verification_requested" : "password_reset_requested",
+            context, now, new { purpose = (short)purpose, account_token_id = token.Id }));
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return Result.Success(new PasswordResetRequestedResponse(
-            true,
-            _options.ExposeDevelopmentTokens ? rawToken.Value : null));
+        return Result.Success<string?>(ExposeDevelopmentTokens ? rawToken.Value : null);
     }
+
+    private bool ExposeDevelopmentTokens => _options.ExposeDevelopmentTokens && environment.IsDevelopment();
+
+    private Task<bool> IsActiveTokenAsync(AccountToken token, CancellationToken cancellationToken) =>
+        dbContext.AccountTokenPolicies.AnyAsync(policy => policy.UserId == token.UserId
+            && policy.Purpose == token.Purpose && policy.ActiveTokenId == token.Id, cancellationToken);
 
     public async Task<Result> ResetPasswordAsync(
         ResetPasswordCommand command,
@@ -321,6 +342,8 @@ internal sealed class RegistrationService(
             .Include(token => token.User)
             .ThenInclude(user => user.SecurityState)
             .Include(token => token.User)
+            .ThenInclude(user => user.Emails)
+            .Include(token => token.User)
             .ThenInclude(user => user.Sessions)
             .ThenInclude(session => session.RefreshTokens)
             .SingleOrDefaultAsync(
@@ -334,7 +357,9 @@ internal sealed class RegistrationService(
             || accountToken.ExpiresAt <= now
             || accountToken.User.PasswordCredential is null
             || accountToken.User.SecurityState is null
-            || accountToken.User.Status is UserStatus.Deleted or UserStatus.Disabled)
+            || accountToken.User.Status is not (UserStatus.PendingVerification or UserStatus.Active)
+            || !accountToken.User.Emails.Any(email => email.IsPrimary && email.Email == accountToken.TargetValue)
+            || !await IsActiveTokenAsync(accountToken, cancellationToken))
         {
             return Result.Failure(IdentityErrors.InvalidAccountToken);
         }
@@ -353,6 +378,10 @@ internal sealed class RegistrationService(
         accountToken.User.SecurityState.UpdatedAt = now;
         accountToken.User.UpdatedAt = now;
         accountToken.ConsumedAt = now;
+
+        var policy = await dbContext.AccountTokenPolicies.SingleAsync(item => item.UserId == accountToken.UserId
+            && item.Purpose == AccountTokenPurpose.ResetPassword, cancellationToken);
+        policy.ActiveTokenId = null;
 
         foreach (var session in accountToken.User.Sessions)
         {

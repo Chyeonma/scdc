@@ -42,9 +42,22 @@ import { CreateDmModal } from './components/CreateDmModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
+import { takeAccountLink } from './accountLinks.js';
+import { navigateTo, pageNavigation } from './navigation.js';
+
+let initialAccountLink = takeAccountLink(window);
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
+  const pathname = useSyncExternalStore(pageNavigation.subscribe, pageNavigation.getSnapshot);
+  const [accountLink, setAccountLink] = useState(initialAccountLink);
+  useEffect(() => { initialAccountLink = null; }, []);
+
+  useEffect(() => {
+    if (accountLink) return;
+    const destination = session ? '/' : '/login';
+    if (pathname !== destination) navigateTo(destination, { replace: true });
+  }, [session, pathname, accountLink]);
 
   // Toast notification state
   const [toast, setToast] = useState(null);
@@ -93,13 +106,36 @@ export default function App() {
 
   // Initialize or fetch current user on session change
   useEffect(() => {
+    let active = true;
     if (session?.user) {
       setCurrentUser(session.user);
       getMe().then((res) => {
-        if (res) setCurrentUser(res);
+        if (active && res) setCurrentUser(res);
       }).catch(() => {});
+    } else {
+      setCurrentUser(null);
     }
+    return () => { active = false; };
   }, [session]);
+
+  useEffect(() => {
+    setMessagesMap(INITIAL_MESSAGES);
+    setThreadsMap(INITIAL_THREADS);
+    setServers(INITIAL_SERVERS);
+    setDms(INITIAL_DMS);
+    setMembers(INITIAL_MEMBERS);
+    setShowUserSettings(false);
+    setShowServerSettings(false);
+    setShowCreateServer(false);
+    setShowCreateChannel(false);
+    setShowCreateDm(false);
+    setShowInviteModal(false);
+    setReportingMessage(null);
+    setInspectingUser(null);
+    setReplyingTo(null);
+    setThreadRootMessage(null);
+    setSearchQuery('');
+  }, [session?.user?.id]);
 
   // Active Server & Channel reference
   const activeServer = useMemo(
@@ -140,7 +176,7 @@ export default function App() {
 
   // SignalR Hub Connection Setup
   useEffect(() => {
-    if (!session?.accessToken || !currentSpaceId) return undefined;
+    if (pathname !== '/' || accountLink || !session?.accessToken || !currentSpaceId) return undefined;
 
     let disposed = false;
     const connection = new HubConnectionBuilder()
@@ -206,7 +242,7 @@ export default function App() {
         connection.stop();
       }
     };
-  }, [session, currentSpaceId]);
+  }, [session, currentSpaceId, accountLink, pathname]);
 
   // Send Message Handler
   function handleSendMessage({ content, replyTo, attachments }) {
@@ -392,10 +428,10 @@ export default function App() {
   }
 
   // If not logged in, render Auth Screen
-  if (!session) {
+  if (accountLink || !session) {
     return (
       <>
-        <AuthScreen notify={notify} />
+        <AuthScreen notify={notify} initialLink={accountLink} onLinkComplete={() => setAccountLink(null)} />
         {toast && (
           <div className="toast-container">
             <div className={`toast toast--${toast.type}`}>

@@ -313,6 +313,8 @@ CREATE INDEX ix_account_tokens_active
 
 COMMENT ON TABLE identity.account_tokens IS '1=verify_email, 2=reset_password, 3=change_email, 4=unlock_account.';
 
+\ir migrations/001_identity_email.sql
+
 -- ============================================================================
 -- Chat spaces, direct/group conversations, servers and permissions
 -- ============================================================================

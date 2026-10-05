@@ -1,6 +1,6 @@
 # SCDC — Vòng đời dữ liệu
 
-Cập nhật: 2026-10-04. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
+Cập nhật: 2026-10-05. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Identity đã có maintenance/cleanup cho dữ liệu kỹ thuật theo [hướng dẫn email](identity-email.md); worker các module khác, sổ bảo vệ độc lập và proof restore còn là thiết kế.
 
 ## Mục lục
 
@@ -103,7 +103,9 @@ Chat/media receipt ngừng phục vụ sau cutoff không chứng minh byte cũ t
 
 <a id="cleanup"></a>
 
-## 5. Worker dọn dữ liệu kỹ thuật — thiết kế đề xuất
+## 5. Worker dọn dữ liệu kỹ thuật
+
+[IdentityMaintenance](../services/Modules/Identity/Infrastructure/Email/IdentityMaintenance.cs) chạy startup/mỗi giờ, batch tối đa 100 user, khóa user theo thứ tự trước dọn family/token. Email envelope bị loại trong mỗi vòng poll. Các thuật toán xuyên module bên dưới tiếp tục là thiết kế; implementation Identity không cung cấp sổ restore độc lập.
 
 Chỉ áp dụng các TTL đã được chọn ở mục policy. Mỗi hàng có `terminal_at`/`effective_until`/`purged_at` rõ, UTC; eligibility `now >= retain_until`, không tính từ createdAt của job. Family refresh active giữ đầy đủ liên kết used/replaced để phát hiện reuse; chỉ khi cả session terminal và không còn nhiệm vụ cần dữ liệu thì mới dọn family theo thứ tự FK. Cooldown/last_issued_at/security stamp/deny marker không nằm trong payload được dọn.
 
@@ -113,7 +115,7 @@ Worker dự kiến chạy theo batch nhỏ, chọn candidate bằng index `(reta
 
 Tách payload khỏi marker: outbox/inbox/operation có thể bỏ payload/kết quả lớn nhưng giữ `operationId,eventId,resourceId,version,fingerprint/keyVersion,terminal/revoked` cần chống replay. Minimized marker chưa đặt TTL riêng nếu tài nguyên/tombstone hoặc tác dụng thu hồi còn cần; không gộp vào audit 90 ngày. Muốn dọn marker phải có phương án từ chối mọi ID cũ/generation cũ và quyết định riêng, không mặc định sau 7 ngày tạo lại được.
 
-Đối chiếu PostgreSQL FK: nhiều bảng Messaging/Community dùng RESTRICT tới `identity.users`; refresh token có self-reference RESTRICT. Vì vậy worker không hard-delete user hoặc dọn token family bằng cascade giả định. Dọn `identity.account_tokens` không reset policy chống gửi lại; audit user_id không FK không có nghĩa được giữ dữ liệu vô hạn. Schema/index/migration/job vẫn chưa thực hiện.
+Đối chiếu PostgreSQL FK: nhiều bảng Messaging/Community dùng RESTRICT tới `identity.users`; refresh token có self-reference RESTRICT. Vì vậy worker không hard-delete user hoặc dọn token family bằng cascade giả định. Dọn `identity.account_tokens` không reset policy chống gửi lại; audit user_id không FK không có nghĩa được giữ dữ liệu vô hạn. Identity đã có migration/policy/maintenance và test giữ active refresh family/cooldown/deny marker. Các schema/index/job module khác vẫn cần triển khai.
 
 <a id="restore"></a>
 
@@ -167,10 +169,10 @@ Tác giả active còn quyền được chủ động sửa tin unavailable bằ
 |---|---|
 | `identity.users` có suspended/disabled/deleted; username unique ở mọi status | Không có API self-delete/suspend trong scope đã triển khai; không tự purge account theo tuổi |
 | `IUserDirectory` chỉ Active | Cần projection lịch sử riêng để không làm mất trang tin của tác giả bị khóa; guard actor/read/send khác nhau |
-| Audit có IP/user-agent/metadata và append-only comment | Cần allowlist metadata, redact/purge theo policy, không cho thao tác tay sửa audit |
-| Account/session/refresh tables có expiry/revoke và FK | Chưa có retention worker/family cleanup, index/terminal marker và proof reuse/cooldown sau purge |
+| Audit Identity | Maintenance redact IP/UA sau 7 ngày, purge audit Identity sau 90 ngày; audit module khác còn cần triển khai |
+| Account/session/refresh Identity | Maintenance dọn terminal token/family/chi tiết sau 7 ngày; giữ active family/cooldown/stamp/deny marker. Completion đã kiểm tra reuse sau cleanup; restore store còn thiếu |
 | `message_edits.previous_content` trong SQL/seed | Migration dữ liệu serving theo DEC-052; không tự xóa backup hoặc dùng SQL comment làm bằng chứng đã dọn |
-| Outbox/inbox trong schema | Chưa có dispatcher/retention/receipt độc lập để chống replay sau purge/restore |
+| Outbox/inbox trong schema | Email Identity có dispatcher/purge envelope và redact payload terminal; dispatcher module khác/receipt độc lập chống replay sau restore chưa có |
 | Media vẫn chưa có module/provider | Terminal/draining và fencing theo [Media](features/voice-video.md#detailed-design), không dọn theo TTL trước quiescence |
 
 Nguồn: [schema.sql](../database/postgres/schema.sql), [IdentityEnums](../services/Modules/Identity/Domain/IdentityEnums.cs), [IdentityData](../services/Modules/Identity/Infrastructure/IdentityData.cs), [UserDirectory](../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs).

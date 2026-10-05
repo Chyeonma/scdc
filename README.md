@@ -72,3 +72,5 @@ Link và anchor tài liệu, chạy từ root:
 ```bash
 python3 scripts/check_docs.py
 ```
+
+Cấu hình Gmail SMTP, email worker và migration Identity: [hướng dẫn email](docs/identity-email.md).

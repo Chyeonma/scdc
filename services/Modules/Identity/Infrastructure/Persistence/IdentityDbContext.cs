@@ -14,6 +14,8 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AccountToken> AccountTokens => Set<AccountToken>();
+    public DbSet<AccountTokenPolicy> AccountTokenPolicies => Set<AccountTokenPolicy>();
+    public DbSet<EmailDelivery> EmailDeliveries => Set<EmailDelivery>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
@@ -44,6 +46,8 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
         ConfigureSession(modelBuilder);
         ConfigureRefreshToken(modelBuilder);
         ConfigureAccountToken(modelBuilder);
+        ConfigureAccountTokenPolicy(modelBuilder);
+        ConfigureEmailDelivery(modelBuilder);
         ConfigureSecurityEvent(modelBuilder);
         ConfigureOutbox(modelBuilder);
     }
@@ -232,6 +236,47 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
         entity.HasIndex(token => token.TokenHash)
             .IsUnique()
             .HasDatabaseName("ux_account_tokens_hash");
+    }
+
+    private static void ConfigureAccountTokenPolicy(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<AccountTokenPolicy>();
+        entity.ToTable("account_token_policies", "identity");
+        entity.HasKey(policy => new { policy.UserId, policy.Purpose });
+        entity.Property(policy => policy.UserId).HasColumnName("user_id");
+        entity.Property(policy => policy.Purpose).HasColumnName("purpose").HasConversion<short>();
+        entity.Property(policy => policy.LastIssuedAt).HasColumnName("last_issued_at");
+        entity.Property(policy => policy.ActiveTokenId).HasColumnName("active_token_id");
+        entity.HasOne<User>().WithMany().HasForeignKey(policy => policy.UserId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<AccountToken>().WithMany().HasForeignKey(policy => policy.ActiveTokenId).OnDelete(DeleteBehavior.SetNull);
+    }
+
+    private static void ConfigureEmailDelivery(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<EmailDelivery>();
+        entity.ToTable("email_deliveries", "identity");
+        entity.HasKey(delivery => delivery.Id);
+        entity.Property(delivery => delivery.Id).HasColumnName("id");
+        entity.Property(delivery => delivery.UserId).HasColumnName("user_id");
+        entity.Property(delivery => delivery.AccountTokenId).HasColumnName("account_token_id");
+        entity.Property(delivery => delivery.OutboxEventId).HasColumnName("outbox_event_id");
+        entity.Property(delivery => delivery.Purpose).HasColumnName("purpose").HasConversion<short>();
+        entity.Property(delivery => delivery.Recipient).HasColumnName("recipient").HasMaxLength(254);
+        entity.Property(delivery => delivery.TemplateVersion).HasColumnName("template_version");
+        entity.Property(delivery => delivery.ProtectedEnvelope).HasColumnName("protected_envelope");
+        entity.Property(delivery => delivery.EnvelopeExpiresAt).HasColumnName("envelope_expires_at");
+        entity.Property(delivery => delivery.Status).HasColumnName("status").HasConversion<short>();
+        entity.Property(delivery => delivery.AttemptCount).HasColumnName("attempt_count");
+        entity.Property(delivery => delivery.NextAttemptAt).HasColumnName("next_attempt_at");
+        entity.Property(delivery => delivery.LeaseOwner).HasColumnName("lease_owner");
+        entity.Property(delivery => delivery.LeaseUntil).HasColumnName("lease_until");
+        entity.Property(delivery => delivery.ProviderMessageId).HasColumnName("provider_message_id").HasMaxLength(200);
+        entity.Property(delivery => delivery.LastErrorCode).HasColumnName("last_error_code").HasMaxLength(80);
+        entity.Property(delivery => delivery.CreatedAt).HasColumnName("created_at");
+        entity.Property(delivery => delivery.TerminalAt).HasColumnName("terminal_at");
+        entity.HasOne<User>().WithMany().HasForeignKey(delivery => delivery.UserId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<AccountToken>().WithMany().HasForeignKey(delivery => delivery.AccountTokenId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasIndex(delivery => new { delivery.AccountTokenId, delivery.TemplateVersion }).IsUnique();
     }
 
     private static void ConfigureSecurityEvent(ModelBuilder modelBuilder)

@@ -9,7 +9,7 @@ using SCDC.Modules.Messaging;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddIdentityModule(builder.Configuration);
+builder.Services.AddIdentityModule(builder.Configuration, builder.Environment);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 
@@ -54,6 +54,17 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/v1/auth")
+        || context.Request.Path.StartsWithSegments("/api/v1/users"))
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+    }
+    await next(context);
+});
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

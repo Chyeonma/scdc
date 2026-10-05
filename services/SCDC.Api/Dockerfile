@@ -22,11 +22,15 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8080 \
-    DOTNET_EnableDiagnostics=0
+    DOTNET_EnableDiagnostics=0 \
+    Modules__Identity__Email__KeyRingPath=/var/lib/scdc/identity-keys
 
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+RUN mkdir -p /var/lib/scdc/identity-keys \
+    && chown "$APP_UID:$APP_UID" /var/lib/scdc/identity-keys \
+    && chmod 700 /var/lib/scdc/identity-keys
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "SCDC.Api.dll"]

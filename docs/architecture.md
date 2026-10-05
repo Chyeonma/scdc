@@ -1,6 +1,6 @@
 # SCDC — Kiến trúc và quy ước tích hợp
 
-Cập nhật: 2026-10-04. MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
+Cập nhật: 2026-10-05. MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
 
 Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền/media còn thiết kế cần kiểm chứng; microservices thuộc đợt sau.
 
@@ -31,9 +31,11 @@ flowchart LR
     Identity -->|EF Core| Pg[(PostgreSQL 18)]
 ```
 
-Compose hiện có ba service: `web-client` (cổng 3000), `chat-service` (5026) và `postgres` (5432). Không có Gateway, Redis, MinIO, LiveKit hoặc worker đang chạy trong compose.
+Compose hiện có ba service: `web-client` (cổng 3000), `chat-service` (5026) và `postgres` (5432). Email worker Identity chạy trong tiến trình API; chưa có worker container riêng, Gateway, Redis, MinIO hoặc LiveKit.
 
 `SCDC.Api` đăng ký ba module và map controllers. Identity có endpoint và implementation. Community/Messaging đăng ký mô tả module; chưa có API nghiệp vụ hoặc SignalR Hub. Giao diện chat/cộng đồng có dữ liệu mẫu, không chứng minh backend các tính năng đã hoạt động.
+
+Nginx frontend dùng upstream `resolve` và DNS lấy từ `/etc/resolv.conf` qua template của image, nên cập nhật IP API sau restart/recreate trên Docker hoặc Podman. Cấu hình cần nginx ≥1.27.3; xem [tài liệu nginx](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server).
 
 Nguồn đối chiếu: [Program.cs](../services/SCDC.Api/Program.cs), [compose.yaml](../compose.yaml), [package.json](../clients/WebClient/package.json), [CommunityModule](../services/Modules/Community/CommunityModule.cs), [MessagingModule](../services/Modules/Messaging/MessagingModule.cs).
 
@@ -57,11 +59,11 @@ Identity có `IdentityDbContext`; không mô tả Community/Messaging như đã 
 
 Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [đặc tả Community](features/community.md#permissions).
 
-Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
+Identity ghi token/policy/delivery/audit/outbox cùng transaction. Email worker claim delivery có lease, giải mã envelope Data Protection rồi gọi Gmail SMTP ngoài transaction; outbox chỉ giữ ID/purpose. Resend và pending reset đã triển khai, consume/cooldown được tuần tự hóa theo user. [Email Identity](identity-email.md) mô tả cấu hình, migration và giới hạn delivery; [đối chiếu Identity](features/accounts.md#implementation-review) ghi bằng chứng test ngày 2026-10-05. SMTP mặc định tắt và chưa thử Gmail thật khi chưa có credentials.
 
 ### Thiết kế tích hợp tài khoản/DM bổ sung
 
-[Accounts](features/accounts.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [DM](features/direct-messaging.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế tương lai của cùng Modular Monolith, không là các module/service đang chạy.
+[Accounts](features/accounts.md#detailed-design) có policy token/cooldown, EmailDelivery/envelope và worker đã triển khai. [DM](features/direct-messaging.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry còn là thiết kế để triển khai trong cùng modular monolith.
 
 Hợp đồng đề xuất cần thêm `IAccountAccessGuard`, `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi theo session. Để chặn race revoke/send, Identity giữ kiểm tra/row lock của user qua transaction scope dùng chung tới commit Messaging; BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module. Mỗi module vẫn chỉ đọc dữ liệu mình sở hữu. Proof guard/lock order và session revocation còn phải chạy; không suy IUserDirectory summary khác null thành đủ quyền gửi.
 
@@ -81,7 +83,7 @@ DEC-099–102 chốt cutoff/fail-close ≤5 giây, first accept/no handoff, thi�
 
 ### Thiết kế vòng đời dữ liệu bổ sung
 
-[Vòng đời dữ liệu](data-lifecycle.md) là nguồn chuẩn DEC-103–109: account lock/no self-delete, room deleted giữ chưa hạn purge, TTL payload/log/audit và restore placeholder. Đề xuất IHistoricalUserSummaryReader cho author/peer inactive, guard phân biệt read/author-mutation/send, Messaging restore_redacted_at/contentState và sổ bảo vệ độc lập có phase/checkpoint. Kho sổ/worker/interface/SQL chưa có; protocol hai kho cần proof, không coi outbox sau commit đủ chống phục hồi quyền/nội dung cũ. Cleanup giữ refresh family active, dedup/tombstone/revoke marker; chưa chọn scope quyền worker hoặc đầu mối vận hành.
+[Vòng đời dữ liệu](data-lifecycle.md) là nguồn chuẩn DEC-103–109: account lock/no self-delete, room deleted giữ chưa hạn purge, TTL payload/log/audit và restore placeholder. Đề xuất IHistoricalUserSummaryReader cho author/peer inactive, guard phân biệt read/author-mutation/send, Messaging restore_redacted_at/contentState và sổ bảo vệ độc lập có phase/checkpoint. Identity đã có maintenance cho token/session/email/audit kỹ thuật; kho sổ bảo vệ độc lập, worker các module khác và interface/SQL lịch sử chưa có; protocol hai kho cần proof, không coi outbox sau commit đủ chống phục hồi quyền/nội dung cũ. Cleanup giữ refresh family active, dedup/tombstone/revoke marker; chưa chọn scope quyền worker hoặc đầu mối vận hành.
 
 <a id="contracts"></a>
 

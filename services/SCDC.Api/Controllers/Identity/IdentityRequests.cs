@@ -11,7 +11,12 @@ public sealed record RegisterRequest(
     [param: Required, EmailAddress, StringLength(254)]
     string Email,
     [param: Required, StringLength(128, MinimumLength = 8)]
-    string Password);
+    string Password)
+{
+    public string Username { get; init; } = Username?.Trim()!;
+    public string DisplayName { get; init; } = DisplayName?.Trim()!;
+    public string Email { get; init; } = Email?.Trim().ToLowerInvariant()!;
+}
 
 public sealed record VerifyEmailRequest(
     [param: Required, StringLength(512, MinimumLength = 20)]
@@ -23,7 +28,10 @@ public sealed record LoginRequest(
     [param: Required, StringLength(128, MinimumLength = 1)]
     string Password,
     [param: StringLength(100)]
-    string? DeviceName);
+    string? DeviceName)
+{
+    public string Login { get; init; } = Login?.Trim()!;
+}
 
 public sealed record RefreshRequest(
     [param: Required, StringLength(512, MinimumLength = 20)]
@@ -35,7 +43,16 @@ public sealed record LogoutRequest(
 
 public sealed record ForgotPasswordRequest(
     [param: Required, EmailAddress, StringLength(254)]
-    string Email);
+    string Email)
+{
+    public string Email { get; init; } = Email?.Trim().ToLowerInvariant()!;
+}
+
+public sealed record ResendVerificationRequest(
+    [param: Required, EmailAddress, StringLength(254)] string Email)
+{
+    public string Email { get; init; } = Email?.Trim().ToLowerInvariant()!;
+}
 
 public sealed record ResetPasswordRequest(
     [param: Required, StringLength(512, MinimumLength = 20)]
@@ -57,4 +74,10 @@ public sealed record UpdateProfileRequest(
     [param: Required, StringLength(16, MinimumLength = 1)]
     string Locale,
     [param: Required, StringLength(64, MinimumLength = 1)]
-    string Timezone);
+    string Timezone)
+{
+    public string DisplayName { get; init; } = DisplayName?.Trim()!;
+    public string? Bio { get; init; } = Bio?.Trim();
+    public string Locale { get; init; } = Locale?.Trim()!;
+    public string Timezone { get; init; } = Timezone?.Trim()!;
+}

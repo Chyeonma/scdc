@@ -2319,6 +2319,8 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .brand__mark {
@@ -2524,4 +2526,8 @@ button:disabled {
     transform: translateY(0);
     opacity: 1;
   }
+}
+:root .auth-field-error {
+  color: #ff8c8c;
+  font-size: 0.8rem;
 }

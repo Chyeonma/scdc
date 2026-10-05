@@ -177,3 +177,28 @@ test('without Web Locks each tab keeps an independent session and deduplicates i
   assert.deepEqual(sentTokens.sort(), ['first-tab', 'second-tab']);
   assert.equal(JSON.parse(app.storage.get(sessionKey)).refreshToken, 'refresh-1');
 });
+
+test('successful password change clears the local session and a rejected change preserves it', async () => {
+  const app = browser(rotatedSession);
+  let status = 400;
+  const client = await app.openTab(async () => response(status, { errorCode: 'Identity.PasswordUnchanged' }));
+  await assert.rejects(client.changePassword('Current123', 'Current123'));
+  assert.equal(client.sessionStore.getSnapshot().refreshToken, 'refresh-2');
+  status = 204;
+  await client.changePassword('Current123', 'Changed123');
+  assert.equal(client.sessionStore.getSnapshot(), null);
+  assert.equal(app.storage.has(sessionKey), false);
+});
+
+test('reset clears session on success and token consume is never retried automatically', async () => {
+  const app = browser(rotatedSession);
+  const paths = [];
+  let status = 401;
+  const client = await app.openTab(async (path) => { paths.push(path); return response(status, {}); });
+  await assert.rejects(client.resetPassword('opaque-token', 'Changed123'));
+  assert.deepEqual(paths, ['/api/v1/auth/reset-password']);
+  assert.equal(client.sessionStore.getSnapshot().refreshToken, 'refresh-2');
+  status = 204;
+  await client.resetPassword('opaque-token', 'Changed123');
+  assert.equal(client.sessionStore.getSnapshot(), null);
+});
