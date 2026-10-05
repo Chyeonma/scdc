@@ -1,12 +1,14 @@
 # SCDC — Hướng dẫn phát triển
 
-Cập nhật: 2026-10-04. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại project.md.
+Cập nhật: 2026-10-05. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại project.md.
 
 Các lệnh dưới đây chạy từ root repo trừ khi có ghi thư mục khác. Cấu hình và dữ liệu mẫu dành cho local Development.
 
 ## Mục lục
 
 - [Chuẩn bị và khởi chạy](#setup)
+- [Docker Desktop, Docker Engine và Podman](#container-engines)
+- [Lệnh ngắn và đồng bộ docs giữa các nhánh](#short-commands)
 - [Cấu hình](#configuration)
 - [Tài khoản để tích hợp](#identity)
 - [Database và dữ liệu mẫu](#database)
@@ -18,7 +20,7 @@ Các lệnh dưới đây chạy từ root repo trừ khi có ghi thư mục kh�
 
 ## 1. Chuẩn bị và khởi chạy
 
-Chuẩn bị Docker với Compose để chạy stack. Nếu debug local, cần .NET SDK 10 và Node.js 24/npm (cùng major với Dockerfile frontend). Repo dùng `SCDC.slnx`, backend .NET 10, frontend React 19/Vite.
+Chuẩn bị Docker hoặc Podman với Compose để chạy stack. Nếu debug local, cần .NET SDK 10 và Node.js 24/npm (cùng major với Dockerfile frontend). Repo dùng `SCDC.slnx`, backend .NET 10, frontend React 19/Vite.
 
 ### Chạy bằng Compose
 
@@ -35,6 +37,49 @@ docker compose up -d --build
 | PostgreSQL | `localhost:5432` |
 
 Compose khởi tạo PostgreSQL, API và web. Identity gọi backend thật; giao diện chat/cộng đồng chưa có backend nghiệp vụ.
+
+<a id="container-engines"></a>
+
+### Docker Desktop, Docker Engine và Podman
+
+Cả ba môi trường dùng chung [compose.yaml](../compose.yaml) và Dockerfile. Makefile chọn Docker mặc định; dùng `ENGINE=podman` để chọn Podman. Chọn engine rõ ràng khi máy cài cả hai.
+
+| Môi trường | Chuẩn bị | Lệnh khởi chạy qua Make |
+|---|---|---|
+| Docker Desktop trên Windows | Mở Docker Desktop, dùng Linux containers; để chạy Make trong WSL, bật WSL integration cho distro và cài Make/Python/Git trong distro | `make up` |
+| Docker Engine với CLI | Engine đang chạy, CLI kết nối được và đã cài Compose plugin | `make up` |
+| Podman | Podman hoạt động và có Compose provider; Windows/macOS cần Podman machine đang chạy | `make up ENGINE=podman` |
+
+[Docker Desktop](https://docs.docker.com/compose/install/) đã bao gồm Engine, CLI và Compose. CLI cần kết nối được một engine đang chạy. [`podman compose`](https://docs.podman.io/en/latest/markdown/podman-compose.1.html) gọi Compose provider bên ngoài như `podman-compose` hoặc `docker-compose`; chọn provider qua `PODMAN_COMPOSE_PROVIDER` nếu cần. Với [Podman machine](https://docs.podman.io/en/latest/markdown/podman-machine.1.html), tạo bằng `podman machine init` nếu chưa có, rồi `podman machine start`.
+
+Kiểm tra cấu hình trước khi khởi chạy và dùng cùng engine cho mọi thao tác:
+
+```bash
+make compose-check ENGINE=podman
+make up ENGINE=podman
+make status ENGINE=podman
+make logs ENGINE=podman
+make down ENGINE=podman
+```
+
+Có thể đặt `export ENGINE=podman` trong shell để các lệnh `make up`, `make down` dùng Podman mặc định. Nếu gọi trực tiếp provider, dùng `make up COMPOSE="podman-compose"`; cùng override áp dụng cho các tác vụ container còn lại. `compose-check` chỉ kiểm tra cấu hình qua provider; vẫn cần chạy stack để xác nhận build, healthcheck và thứ tự khởi động trên môi trường thực tế. Docker và Podman quản lý volume riêng; đổi engine không chuyển dữ liệu PostgreSQL.
+
+Tên image trong Compose/Dockerfile chỉ rõ registry (`docker.io/library/...` và `mcr.microsoft.com/...`) để tránh Podman phải phân giải tên rút gọn theo cấu hình từng máy; xem [quy tắc tên image của Podman](https://docs.podman.io/en/latest/markdown/podman-pull.1.html).
+
+**Windows dùng PowerShell:** Makefile hiện dùng shell POSIX cho `help`, nên chạy qua WSL nếu muốn dùng `make`. Nếu không dùng WSL, có thể gọi trực tiếp CLI và script từ root repo; Python/Git phải có trên Windows:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+docker compose down
+# Thay bằng podman compose nếu dùng Podman:
+podman compose up -d --build
+py -3 scripts/check_docs.py
+py -3 scripts/sync_docs.py --source main --target feat/identity --dry-run
+py -3 scripts/sync_docs.py --source main --target feat/identity
+```
+
+Nếu Python của máy cung cấp lệnh `python` thay vì `py`, thay `py -3` bằng `python`. Đồng bộ docs chỉ cần Python/Git; không phụ thuộc Docker hay Podman.
 
 ### Debug backend local
 
@@ -60,6 +105,53 @@ npm run dev
 ```
 
 Vite nghe ở cổng 3000 và proxy `/api`, `/hubs`, `/swagger` về API 5026. Nếu web-client Compose đang chiếm cổng 3000, dừng riêng service đó trước khi chạy Vite.
+
+<a id="short-commands"></a>
+
+### Lệnh ngắn và đồng bộ docs giữa các nhánh
+
+[Makefile](../Makefile) gom các lệnh thường dùng; chạy từ root repo. Dùng `make help` hoặc chỉ `make` để xem danh sách. Công cụ đồng bộ cần `make`, Python 3 và Git hỗ trợ `switch`/`restore` cùng `rev-parse --end-of-options`. Các lệnh khác dùng dependency backend/frontend/container đã nêu ở phần chuẩn bị.
+
+| Lệnh | Tác dụng |
+|---|---|
+| `make up` / `make down` | Build/chạy hoặc dừng stack Compose; `down` giữ volume |
+| `make status` / `make logs` | Xem container hoặc log API/PostgreSQL |
+| `make db` | Chạy riêng PostgreSQL |
+| `make compose-check` | Kiểm tra cấu hình Compose qua engine đã chọn |
+| `make api` / `make web` | Chạy backend/frontend local; frontend cài dependency bằng `npm ci` |
+| `make build` | Build backend và frontend |
+| `make test` | Test backend và frontend; backend cần PostgreSQL Development |
+| `make test-api` / `make test-web` | Test riêng backend/frontend |
+| `make docs-check` | Kiểm tra link và anchor tài liệu |
+| `make test-tools` | Kiểm thử công cụ đồng bộ trong các repo Git tạm |
+
+Đồng bộ tài liệu từ một nhánh nguồn vào nhánh đang làm:
+
+```bash
+make docs-sync-preview FROM=main
+make docs-sync FROM=main
+```
+
+Hoặc chỉ định nhánh đích local đã tồn tại:
+
+```bash
+make docs-sync-preview FROM=main TO=feat/identity
+make docs-sync FROM=main TO=feat/identity
+```
+
+`FROM` mặc định là `main`; `TO` mặc định là nhánh hiện tại. Lệnh preview so sánh bản đã commit của hai nhánh và liệt kê file thêm/sửa/xóa. Khi thực hiện, công cụ chuyển sang `TO` nếu cần, chép toàn bộ `docs/` (gồm archive) từ commit nguồn rồi đưa thay đổi vào staging. File tracked chỉ có ở đích sẽ bị xóa để khớp nguồn; đây là chép snapshot, không hòa trộn nội dung hai nhánh. Phạm vi chép là `docs/`; README ở root và code không được lấy từ nguồn.
+
+Những thay đổi chưa commit ở nguồn chưa được đồng bộ. Khi dùng `origin/main`, chạy `git fetch origin` trước để cập nhật ref remote; công cụ dùng ref đã có ở local. Công cụ dừng khi docs có thay đổi/file mới/ignored, khi đang merge/rebase hoặc khi working tree có thay đổi trước việc chuyển nhánh. Nếu đang giữ nguyên nhánh, thay đổi code ngoài docs được giữ nguyên. Khi chuyển nhánh, code hiện ra là code vốn có của nhánh đích.
+
+Sau đồng bộ, bạn đang ở nhánh đích và có thể review/lưu thay đổi:
+
+```bash
+git diff --cached -- docs/
+git commit -m "docs: sync documentation from main"
+git push
+```
+
+Commit theo phạm vi staging đã review; nếu trước đó có code staged thì commit sẽ bao gồm cả code đó. Công cụ không tự stash, commit hoặc push. Trước khi dùng `TO`, commit bộ công cụ; các lệnh `make` khả dụng trên những nhánh đã nhận Makefile và script. Có thể gọi trực tiếp `python3 scripts/sync_docs.py --source main --target feat/identity --dry-run` khi cần; cách mở rộng lệnh ngắn là thêm target và recipe trong Makefile.
 
 <a id="configuration"></a>
 
