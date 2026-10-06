@@ -1,6 +1,6 @@
 # SCDC — Cộng đồng, phòng và phân quyền
 
-Cập nhật: 2026-10-04. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–20, AC-COM, COM-S và TC-ACL.
+Cập nhật: 2026-10-06. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–20, use case UC-COM, tiêu chí AC-COM, màn hình COM-S và ca TC-COM/TC-ACL.
 
 Quy tắc tham gia/quyền cốt lõi đã xác nhận; các luồng DEC-072–077/087 và bổ sung vai trò/tìm kiếm/tên/phạm vi/visibility/lời mời/quản lý phòng DEC-092–098 được cụ thể hóa bên dưới. Thiết kế dữ liệu/API là bản dự thảo để rà soát. Community/Messaging mới có nền module; wireframe và ca kiểm thử chưa phải kết quả triển khai hoặc nghiệm thu.
 
@@ -8,6 +8,7 @@ Quy tắc tham gia/quyền cốt lõi đã xác nhận; các luồng DEC-072–0
 
 - [Phạm vi và quy tắc](#requirements)
 - [Quyền và thu hồi](#permissions)
+- [Use case Community](#use-cases)
 - [Giao diện](#ux)
 - [Thiết kế dữ liệu và API](#contracts)
 - [Thiết kế chi tiết cộng đồng và quyền](#detailed-design)
@@ -182,9 +183,659 @@ và độ trễ thu hồi cần được cụ thể hóa trong thiết kế và 
 
 Quy tắc có thẩm quyền là DEC-055–058: giữa vai trò có DENY thì DENY thắng, cá nhân áp dụng cuối; chủ sở hữu được xem sau khi thỏa điều kiện nền. Cách mã hóa bằng bit mask 64-bit từng được đề xuất là lựa chọn biểu diễn dữ liệu; nó không được thay thứ tự ưu tiên đã chốt. Không suy “toàn quyền tuyệt đối” thành quyền sửa/xóa tin của người khác hoặc đọc DM.
 
+<a id="use-cases"></a>
+
+## 3. Use case Community
+
+Bổ sung ngày 2026-10-06. Các UC tổng hợp hành vi mục tiêu từ [quy tắc COM](#requirements), [ma trận ACL](#permissions) và các quyết định đã dẫn chiếu; phần use case là bản dự thảo để rà soát trước triển khai. Community/Messaging vẫn ở Foundation, toàn bộ UC-COM chưa có implementation hoặc kết quả kiểm thử sản phẩm. Thuật toán, lỗi, giao dịch và schema kỹ thuật tiếp tục được quản lý tại [thiết kế chi tiết](#detailed-design).
+
+Community thực hiện quản lý server, membership, phòng, lời mời và quyền. UC-COM-17 đọc lịch sử qua Messaging; UC-COM-23/24 do Messaging thực hiện trên quyền Community; UC-COM-25 phối hợp Identity/Community/Messaging và WebClient. Chức năng vào phòng thoại/gọi/video thuộc [đặc tả media](voice-video.md), không được coi đã triển khai khi tạo được metadata phòng voice.
+
+### Điều kiện và ngoại lệ dùng chung
+
+- Mọi actor dùng ứng dụng phải có tài khoản active, email đã xác minh và phiên hợp lệ theo DEC-051. Thao tác quản lý còn đòi membership active và quyền đúng thao tác ở thời điểm thực hiện; owner cũng chịu điều kiện nền. Hệ thống lấy actor từ phiên, không nhận actor tùy ý từ client.
+- Luồng chính giả định dữ liệu hợp lệ và phụ thuộc sẵn sàng. Validation, trạng thái tài nguyên và quyền đều kiểm tra phía server theo COM/ACL. Private server không được biết hoặc phòng không được xem trả 404 theo hợp đồng mục tiêu; thiếu quyền quản lý trong scope được biết trả 403. Không trả metadata/nội dung bị ẩn trong lỗi hoặc thông báo.
+- Các thao tác có version dùng version đã tải; ACL dùng accessVersion, leave/gán role/ngoại lệ dùng đúng membershipId. Xung đột trả 409 và yêu cầu đọc lại hiện trạng, không tự đổi version/epoch rồi ghi đè.
+- Không tự phát lại mutation sau refresh, timeout hoặc mất kết nối. Khi kết quả không rõ, tải lại trạng thái trước khi người dùng quyết định tiếp. Riêng thao tác tạo giữ clientOperationId và payload ban đầu cho lần thử lại chủ động; gửi tin giữ clientMessageId theo thiết kế DM. Cùng khóa khác payload hoặc tài nguyên đã deleted/terminal không tạo lại tài nguyên bằng khóa cũ.
+- Khi transaction rollback, không để lại dữ liệu nghiệp vụ dở dang hoặc phát cập nhật như đã thành công. Khi không xác nhận được quyền, dừng thao tác/phát nội dung theo hợp đồng; lỗi phụ thuộc không trở thành quyền truy cập.
+- Thu hồi chat đo từ commit, deadline ≤5 giây theo DEC-083; HTTP tiếp theo kiểm tra quyền hiện hành. Media có proof riêng theo DEC-099. Vòng đời nội dung, cleanup và bảo vệ sau restore theo [data-lifecycle.md](../data-lifecycle.md).
+
+### Danh mục use case
+
+| Use case | Mục tiêu | Màn hình/thành phần |
+|---|---|---|
+| [UC-COM-01](#uc-com-01) | Tạo cộng đồng | COM-S10 |
+| [UC-COM-02](#uc-com-02) | Tìm và xem cộng đồng công khai | COM-S01/02 |
+| [UC-COM-03](#uc-com-03) | Xem cộng đồng đang tham gia và tư cách của mình | COM-S03, danh sách cộng đồng |
+| [UC-COM-04](#uc-com-04) | Sửa thông tin và visibility cộng đồng | COM-S10 |
+| [UC-COM-05](#uc-com-05) | Đổi chế độ tham gia | COM-S07 |
+| [UC-COM-06](#uc-com-06) | Tham gia cộng đồng công khai vào ngay | COM-S02 |
+| [UC-COM-07](#uc-com-07) | Gửi, xem và hủy yêu cầu tham gia | COM-S02/06 |
+| [UC-COM-08](#uc-com-08) | Duyệt hoặc từ chối yêu cầu tham gia | COM-S06 |
+| [UC-COM-09](#uc-com-09) | Tạo, xem và sao chép link mời | COM-S05 |
+| [UC-COM-10](#uc-com-10) | Thu hồi link mời | COM-S05 |
+| [UC-COM-11](#uc-com-11) | Xem trước và tham gia bằng link mời | COM-S02 |
+| [UC-COM-12](#uc-com-12) | Gửi, xem và hủy lời mời đích danh | COM-S11, quản lý lời mời |
+| [UC-COM-13](#uc-com-13) | Xem, chấp nhận hoặc từ chối lời mời đích danh | COM-S11, inbox người nhận |
+| [UC-COM-14](#uc-com-14) | Chuyển chủ sở hữu | COM-S12 |
+| [UC-COM-15](#uc-com-15) | Rời cộng đồng | COM-S03, menu cộng đồng |
+| [UC-COM-16](#uc-com-16) | Tạo phòng | COM-S04 |
+| [UC-COM-17](#uc-com-17) | Xem phòng được phép và lịch sử tin văn bản | COM-S03 |
+| [UC-COM-18](#uc-com-18) | Sửa thông tin phòng | Quản lý phòng từ COM-S03 |
+| [UC-COM-19](#uc-com-19) | Xóa phòng | Quản lý phòng từ COM-S03 |
+| [UC-COM-20](#uc-com-20) | Tạo, sửa và xóa vai trò tự tạo | COM-S08 |
+| [UC-COM-21](#uc-com-21) | Gán hoặc thu hồi vai trò thành viên | COM-S08 |
+| [UC-COM-22](#uc-com-22) | Xem và thay cấu hình quyền xem phòng | COM-S09 |
+| [UC-COM-23](#uc-com-23) | Gửi và chủ động thử lại tin văn bản | COM-S03, composer; Messaging |
+| [UC-COM-24](#uc-com-24) | Sửa hoặc xóa tin của mình | COM-S03, menu tin; Messaging |
+| [UC-COM-25](#uc-com-25) | Nhận cập nhật, kết nối lại và xử lý mất quyền | COM-S03, Hub chat và thông báo theo người nhận |
+
+<a id="use-case-rules"></a>
+
+### Truy vết quy tắc cộng đồng
+
+Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này chỉ xác định UC áp dụng. COM-009 và phần scope của COM-039 được ghi thành giới hạn, không tạo UC chức năng ngoài MVP.
+
+| Quy tắc | Use case áp dụng | Điểm cần đối chiếu |
+|---|---|---|
+| COM-001 | UC-COM-02/06/07/11 | Tìm kiếm hoặc lời mời dẫn tới đúng nhánh tham gia |
+| COM-002 | UC-COM-02/04 | Chỉ public xuất hiện trong tìm kiếm |
+| COM-003 | UC-COM-01/05/06/07 | Mặc định vào ngay; approval tạo pending |
+| COM-004 | UC-COM-11 | Link hợp lệ bỏ qua chờ duyệt |
+| COM-005 | UC-COM-09 | Người tạo chọn hạn link |
+| COM-006 | UC-COM-05 | Đúng quyền đổi join mode |
+| COM-007 | UC-COM-16 | Đúng quyền tạo phòng |
+| COM-008 | UC-COM-17/25 | Danh sách, nội dung và cập nhật đều theo view |
+| COM-009 | UC-COM-23 | Composer chỉ gửi văn bản; file trong phòng ở đợt sau |
+| COM-010 | UC-COM-09 | Đúng quyền tạo lời mời |
+| COM-011 | UC-COM-08 | Đúng quyền duyệt |
+| COM-012 | UC-COM-16/22 | Phòng mới mặc định cho mọi thành viên xem |
+| COM-013 | UC-COM-23/24 | Gửi, sửa, xóa và trạng thái tương tự DM |
+| COM-014 | UC-COM-17/25 | Tin lưu bền đọc lại khi còn quyền |
+| COM-015 | UC-COM-17 | Thành viên mới được xem lịch sử cũ theo view |
+| COM-016 | UC-COM-22 | Đúng quyền thay ACL |
+| COM-017 | UC-COM-17/23 | Có view thì gửi text khi đủ điều kiện tài khoản |
+| COM-018 | UC-COM-23 | Thử lại cùng thao tác không tạo tin trùng |
+| COM-019 | UC-COM-11/12/13 | Private tham gia bằng lời mời hợp lệ |
+| COM-020 | UC-COM-10/11 | Link thu hồi không cấp membership |
+| COM-021 | UC-COM-15 | Thành viên thường tự rời |
+| COM-022 | UC-COM-23 | Chưa xác minh không được dùng ứng dụng/gửi tin |
+| COM-023 | UC-COM-24 | Sửa chỉ giữ nội dung hiện hành |
+| COM-024 | UC-COM-23/24 | Validation nội dung dùng chung DM |
+| COM-025 | UC-COM-20/21/22 | Vai trò quản lý và ngoại lệ view cá nhân |
+| COM-026 | UC-COM-17/22 | Owner luôn view sau điều kiện nền |
+| COM-027 | UC-COM-17/22/25 | Role deny thắng, cá nhân sau cùng |
+| COM-028 | UC-COM-20/21 | Chỉ owner quản lý vai trò/assignment |
+| COM-029 | UC-COM-01/04 | Tạo bởi account đã xác minh, metadata chỉ owner sửa |
+| COM-030 | UC-COM-07/08 | Hủy/từ chối và gửi yêu cầu mới |
+| COM-031 | UC-COM-12/13 | Nhận mời đích danh mới tạo membership |
+| COM-032 | UC-COM-09/10/11 | Hạn/lượt và thu hồi link |
+| COM-033 | UC-COM-14/15 | Chuyển ngay; owner phải chuyển trước rời |
+| COM-034 | UC-COM-16/18/19 | Tạo/sửa/xóa phòng và vòng đời |
+| COM-035 | UC-COM-06/07/11/13/15 | Rejoin dùng epoch mới và role mặc định |
+| COM-036 | UC-COM-12/13 | Mời đích danh hết hạn hoặc terminal không accept được |
+| COM-037 | UC-COM-01/20/21 | @everyone và giới hạn custom role, union management |
+| COM-038 | UC-COM-02 | Search/UTF-16/khớp/phân trang |
+| COM-039 | UC-COM-01/04/16/18/20 | Tên Unicode; xóa toàn server ngoài MVP |
+| COM-040 | UC-COM-04/07/08 | Private switch kết thúc pending nguyên tử |
+| COM-041 | UC-COM-09/10/11/12/13 | Hiệu lực mời độc lập creator; actor thao tác xét quyền hiện hành |
+| COM-042 | UC-COM-16/17/18/19/22 | Quản lý phòng có sẵn cần view |
+
+<a id="uc-com-01"></a>
+
+### UC-COM-01 — Tạo cộng đồng
+
+**Tác nhân:** Người dùng đủ điều kiện ứng dụng.
+
+**Điều kiện trước:** Phiên hợp lệ; người dùng chưa cần là thành viên cộng đồng nào.
+
+**Kích hoạt:** Người dùng chọn tạo cộng đồng tại COM-S10.
+
+**Luồng chính:**
+
+1. Người dùng nhập tên, mô tả tùy chọn và chọn public/private theo COM-029/039.
+2. Hệ thống kiểm tra dữ liệu và quyền, tạo server, membership owner và @everyone trong cùng transaction; ghi khóa thao tác tạo theo thiết kế retry.
+3. Sau commit, giao diện mở cộng đồng vừa tạo và tải thông tin/tư cách hiện hành.
+
+**Ngoại lệ:** Dữ liệu không hợp lệ trả lỗi trường. Create đồng thời hoặc thử lại cùng khóa/payload chỉ có một server. Khi mất response, người dùng thử lại bằng khóa cũ; xung đột payload không tạo server khác. Không để lại server thiếu owner hoặc @everyone khi rollback.
+
+**Kết quả sau cùng:** Người tạo là owner và thành viên active; public mới mặc định vào ngay. Use case tạo server không yêu cầu tự tạo phòng đầu tiên; tạo phòng thực hiện bằng UC-COM-16.
+
+<a id="uc-com-02"></a>
+
+### UC-COM-02 — Tìm và xem cộng đồng công khai
+
+**Tác nhân:** Người dùng đủ điều kiện ứng dụng, gồm người chưa tham gia cộng đồng đích.
+
+**Điều kiện trước:** Phiên hợp lệ; người dùng mở khu vực khám phá.
+
+**Kích hoạt:** Người dùng tìm theo tên hoặc mở kết quả công khai tại COM-S01/02.
+
+**Luồng chính:**
+
+1. Người dùng nhập từ khóa; hệ thống kiểm tra và tìm literal theo COM-038, lọc public/active trên từng trang.
+2. Giao diện hiển thị summary công khai, ưu tiên tên khớp đúng và cho tải trang tiếp theo.
+3. Người dùng mở summary, xem join mode hiện hành rồi chọn UC-COM-06 hoặc UC-COM-07.
+
+**Ngoại lệ:** Query/cursor không hợp lệ trả lỗi; không có kết quả hiển thị trạng thái rỗng. Server đã đổi private không xuất hiện từ cursor cũ, người ngoài mở trực tiếp nhận 404. Preview lời mời hợp lệ dùng UC-COM-11/13.
+
+**Kết quả sau cùng:** Chỉ xem thông tin được công khai; chưa có membership, phòng hoặc nội dung tin.
+
+<a id="uc-com-03"></a>
+
+### UC-COM-03 — Xem cộng đồng đang tham gia và tư cách của mình
+
+**Tác nhân:** Người dùng đủ điều kiện ứng dụng.
+
+**Điều kiện trước:** Phiên hợp lệ; quyền đối với server đích được kiểm tra khi đọc.
+
+**Kích hoạt:** Người dùng mở danh sách cộng đồng, chọn một server hoặc kiểm tra trạng thái sau thao tác có kết quả không rõ.
+
+**Luồng chính:**
+
+1. Hệ thống trả danh sách server người dùng đang là thành viên active, có phân trang.
+2. Khi chọn server, hệ thống trả member detail, membershipId/version và quyền quản lý hiệu lực theo tư cách hiện hành.
+3. Giao diện hiển thị thao tác phù hợp và tải các phòng qua UC-COM-17; khi cần đối soát join/leave, người dùng đọc tư cách của chính mình.
+
+**Ngoại lệ:** Chưa tham gia server nào hiển thị danh sách rỗng. Sau leave, server không còn trong danh sách active nhưng người dùng vẫn đọc được membership đã left của chính mình theo contract. Quyền đọc status không cấp lại member detail/private content. Danh sách thay đổi được dedup ID và tải lại trang đầu.
+
+**Kết quả sau cùng:** Giao diện có trạng thái tham gia và quyền hiện hành, không tạo hoặc phục hồi membership bằng thao tác đọc.
+
+<a id="uc-com-04"></a>
+
+### UC-COM-04 — Sửa thông tin và visibility cộng đồng
+
+**Tác nhân:** Owner hiện hành.
+
+**Điều kiện trước:** Điều kiện nền hợp lệ; đã tải server và version. Quyền owner kiểm tra lại khi ghi.
+
+**Kích hoạt:** Owner mở COM-S10 và lưu tên, mô tả hoặc visibility mới.
+
+**Luồng chính:**
+
+1. Owner chỉnh các trường theo COM-029/039 và gửi kèm expectedVersion.
+2. Hệ thống kiểm tra quyền/dữ liệu/version rồi cập nhật. Nếu public→private, đồng thời chuyển mọi join request còn pending sang cancelled với reason server_private theo COM-040.
+3. Sau commit, trả server hiện hành; thông báo cho sender về request bị hủy và yêu cầu các client đủ quyền tải lại metadata.
+
+**Ngoại lệ:** Actor mất ownership hoặc version cũ không được ghi đè. Approve và private switch tranh nhau có một thứ tự commit: membership đã tạo trước switch được giữ, request đã bị hủy không approve được. Private→public không tự mở lại request terminal.
+
+**Kết quả sau cùng:** Metadata/visibility và trạng thái request nhất quán; thành viên hiện có và lời mời hợp lệ được giữ. Xóa toàn bộ server nằm ngoài MVP theo COM-039.
+
+<a id="uc-com-05"></a>
+
+### UC-COM-05 — Đổi chế độ tham gia
+
+**Tác nhân:** Owner hoặc thành viên có manage_join_mode.
+
+**Điều kiện trước:** Server/membership active, phiên hợp lệ; đã tải version và join mode.
+
+**Kích hoạt:** Actor chọn vào ngay/chờ duyệt tại COM-S07.
+
+**Luồng chính:**
+
+1. Actor chọn join mode mới và gửi expectedVersion.
+2. Hệ thống kiểm tra manage_join_mode/version và cập nhật server.
+3. Sau commit, giao diện tải lại chế độ; lần join công khai tiếp theo xét mode hiện hành.
+
+**Ngoại lệ:** Mất quyền hoặc version cũ từ chối thao tác. Quyền đổi join mode không cấp quyền sửa tên/mô tả/visibility. Đổi mode không tự duyệt request cũ; review thực hiện qua UC-COM-08 theo trạng thái pending.
+
+**Kết quả sau cùng:** Join công khai áp dụng mode mới; link hợp lệ vẫn cho vào ngay theo COM-004. Server private vẫn yêu cầu đường tham gia bằng lời mời.
+
+<a id="uc-com-06"></a>
+
+### UC-COM-06 — Tham gia cộng đồng công khai vào ngay
+
+**Tác nhân:** Người dùng đủ điều kiện ứng dụng chưa là thành viên active của server đích.
+
+**Điều kiện trước:** Server public/active và join mode vào ngay tại thời điểm join.
+
+**Kích hoạt:** Người dùng bấm Tham gia tại COM-S02.
+
+**Luồng chính:**
+
+1. Hệ thống kiểm tra lại visibility, join mode, actor và tư cách hiện hành dưới cùng transaction.
+2. Tạo hoặc kích hoạt lại membership với membershipId mới; chỉ áp vai trò mặc định. Kết thúc pending cũ bằng reason joined_elsewhere theo thiết kế transition.
+3. Sau commit, trả membership và mở các phòng được phép qua UC-COM-17.
+
+**Ngoại lệ:** Join lặp/đồng thời của người đang active trả tư cách hiện hành, không nhân membership. Nếu mode đã đổi sang chờ duyệt thì xử lý UC-COM-07; nếu đã private thì đường join công khai bị chặn. Mất response được đối soát qua UC-COM-03 trước thao tác tiếp.
+
+**Kết quả sau cùng:** Có một membership active; lần rejoin không phục hồi role/ngoại lệ cá nhân cũ. Lịch sử phòng đọc theo view hiện hành.
+
+<a id="uc-com-07"></a>
+
+### UC-COM-07 — Gửi, xem và hủy yêu cầu tham gia
+
+**Tác nhân:** Người dùng đủ điều kiện ứng dụng chưa là thành viên active; chỉ sender quản lý yêu cầu của mình.
+
+**Điều kiện trước:** Gửi mới vào server public/active có join mode chờ duyệt. Xem/hủy cần quyền đối với request của chính mình, không đòi đã là thành viên.
+
+**Kích hoạt:** Người dùng gửi yêu cầu, mở trạng thái hoặc chọn hủy pending tại COM-S02/06.
+
+**Luồng chính:**
+
+1. Khi gửi yêu cầu, hệ thống kiểm tra join mode/visibility và trả request pending duy nhất của cặp server/user; nếu chưa có thì tạo mới.
+2. Sender xem trạng thái mới nhất; pending chưa cấp quyền phòng. Nếu chưa từng có request thì trạng thái trả null.
+3. Khi sender hủy, hệ thống kiểm tra expectedVersion và chuyển pending sang cancelled; giao diện hiển thị trạng thái cuối. Sau rejected/cancelled, sender có thể gửi request mới nếu server còn cho phép.
+
+**Ngoại lệ:** Gửi lặp trả cùng pending. Hủy tranh approve/reject/private switch chỉ một transition thắng. Sau server chuyển private, sender vẫn đọc được cancelled/server_private, nhưng không gửi mới qua đường công khai. Join qua đường khác đóng pending với reason joined_elsewhere; UI hiển thị đường tham gia đó.
+
+**Kết quả sau cùng:** Request và trạng thái của chính sender có thể theo dõi; pending/rejected/cancelled không tự tạo membership. Request mới có ID mới, không mở lại request terminal.
+
+<a id="uc-com-08"></a>
+
+### UC-COM-08 — Duyệt hoặc từ chối yêu cầu tham gia
+
+**Tác nhân:** Owner hoặc thành viên có review_join_requests.
+
+**Điều kiện trước:** Phiên/server/membership hợp lệ; request còn pending và actor còn quyền review tại thời điểm xử lý.
+
+**Kích hoạt:** Reviewer mở COM-S06, chọn approve hoặc reject.
+
+**Luồng chính:**
+
+1. Hệ thống chỉ trả danh sách request cho reviewer đủ quyền.
+2. Reviewer chọn request và gửi quyết định cùng expectedVersion; hệ thống đọc lại trạng thái và quyền.
+3. Approve chuyển trạng thái và tạo/kích hoạt membership cùng transaction; reject chỉ chuyển request sang rejected. Sau commit, sender và reviewer đủ quyền nhận trạng thái mới.
+
+**Ngoại lệ:** Request đã cancelled/rejected/resolved không chuyển lần nữa; xung đột tải lại trạng thái. Target phải đủ điều kiện khi approve. Nếu target đã joined bằng đường khác, đóng request theo joined_elsewhere và giữ membership hiện hành. Private switch và sender cancel không thể cùng thắng với approve.
+
+**Kết quả sau cùng:** Approve có một membership active với role mặc định; reject không cấp quyền thành viên. Request cuối trạng thái được giữ để sender theo dõi.
+
+<a id="uc-com-09"></a>
+
+### UC-COM-09 — Tạo, xem và sao chép link mời
+
+**Tác nhân:** Owner hoặc thành viên có manage_invites.
+
+**Điều kiện trước:** Actor có phiên/membership hợp lệ và quyền mời hiện hành trong server.
+
+**Kích hoạt:** Actor mở COM-S05 để tạo link hoặc sao chép lại link còn dùng được.
+
+**Luồng chính:**
+
+1. Actor chọn hạn/lượt theo COM-032; hệ thống kiểm tra quyền/dữ liệu và ghi invite cùng operation tạo.
+2. Sau commit, trả metadata và URL mời; danh sách quản lý chỉ chứa metadata, không chứa token.
+3. Khi cần sao chép lại, hệ thống kiểm tra quyền hiện hành và hiệu lực invite, đọc secret được bảo vệ rồi trả đúng URL theo thiết kế.
+
+**Ngoại lệ:** Tạo lặp cùng khóa/payload không tạo link khác. Link hết hạn/thu hồi/hết lượt không được cấp lại URL sử dụng. Key thiếu trả lỗi phụ thuộc, không đổi token âm thầm. Creator rời/mất manage_invites không tự vô hiệu link, nhưng không còn quyền lấy link hoặc thu hồi chỉ vì từng tạo.
+
+**Kết quả sau cùng:** Link đã tạo có hạn/lượt đã chọn, có thể chia sẻ để người nhận dùng UC-COM-11. Việc tạo/copy link chưa tạo membership và không cấp custom role qua link.
+
+<a id="uc-com-10"></a>
+
+### UC-COM-10 — Thu hồi link mời
+
+**Tác nhân:** Owner hoặc thành viên hiện có manage_invites, không cần là creator.
+
+**Điều kiện trước:** Phiên/membership/quyền hợp lệ; actor biết invite thuộc server và version đã tải.
+
+**Kích hoạt:** Actor chọn thu hồi tại COM-S05.
+
+**Luồng chính:**
+
+1. Actor xác nhận invite cần thu hồi và gửi expectedVersion.
+2. Hệ thống kiểm tra quyền/version, đánh dấu revoked và xử lý secret theo thiết kế trong transaction.
+3. Sau commit, danh sách hiển thị invite đã thu hồi; preview/join tiếp theo không sử dụng được link đó.
+
+**Ngoại lệ:** Version cũ hoặc actor đã mất quyền từ chối. Revoke tranh join tuân thứ tự commit: join đã commit trước được giữ; revoke thắng trước chặn join. Mất response đọc lại metadata, không tự phát lại mutation.
+
+**Kết quả sau cùng:** Link không cấp membership mới. Thành viên đã tham gia bằng link không bị rời server vì thao tác thu hồi link.
+
+<a id="uc-com-11"></a>
+
+### UC-COM-11 — Xem trước và tham gia bằng link mời
+
+**Tác nhân:** Người dùng đủ điều kiện ứng dụng đang giữ link mời.
+
+**Điều kiện trước:** Phiên hợp lệ; hiệu lực token/server được kiểm tra riêng khi preview và khi join.
+
+**Kích hoạt:** Người dùng mở link và chọn tham gia tại COM-S02.
+
+**Luồng chính:**
+
+1. Giao diện lấy token theo thiết kế link; preview kiểm tra hiệu lực và trả summary server cùng hạn/lượt còn lại, không trả phòng/tin.
+2. Người dùng xác nhận join; hệ thống kiểm tra lại hạn/thu hồi/lượt dưới khóa, tạo/kích hoạt membership và tăng lượt trong cùng transaction.
+3. Kết thúc pending join request hoặc mời đích danh đang chờ theo joined_elsewhere. Sau commit, mở server và phòng được phép, bỏ qua join mode chờ duyệt.
+
+**Ngoại lệ:** Preview không tiêu lượt hoặc giữ chỗ. Token sai/hết hạn/thu hồi không cấp membership hoặc lộ nội dung private. Hai người tranh lượt cuối chỉ một người vào; rollback không tiêu lượt. Người đang active join bằng link còn hợp lệ không tiêu thêm lượt. Creator đã rời/mất quyền không làm link mất hiệu lực.
+
+**Kết quả sau cùng:** Có một membership active với role mặc định; rejoin dùng epoch mới. Link không còn hợp lệ không trở thành cách phục hồi membership đã left.
+
+<a id="uc-com-12"></a>
+
+### UC-COM-12 — Gửi, xem và hủy lời mời đích danh
+
+**Tác nhân:** Owner hoặc thành viên có manage_invites.
+
+**Điều kiện trước:** Phiên/membership/quyền hợp lệ; tạo mời đích danh vào server private, recipient chưa là thành viên active.
+
+**Kích hoạt:** Actor mở quản lý lời mời tại COM-S11, gửi mời hoặc hủy mời pending.
+
+**Luồng chính:**
+
+1. Actor chọn recipient theo ID; hệ thống kiểm tra điều kiện và tạo mời pending hạn 7 ngày, ghi operation tạo.
+2. Actor xem danh sách mời theo quyền; recipient nhận thông báo để mở UC-COM-13. Chưa accept chưa tạo membership.
+3. Khi actor có quyền hiện hành chọn hủy pending, hệ thống kiểm tra version/trạng thái rồi chuyển cancelled và thông báo đúng recipient sau commit.
+
+**Ngoại lệ:** Recipient đã active nhận xung đột. Pending còn hạn được trả lại khi tạo lặp, không kéo dài hạn; pending quá hạn được kết thúc trước khi tạo mời mới theo thiết kế. Cancel tranh accept/reject chỉ một transition thắng. Lời mời không tự vô hiệu khi creator rời/mất quyền; creator đó không được hủy nếu mất manage_invites.
+
+**Kết quả sau cùng:** Mời pending hoặc cancelled có trạng thái theo dõi được; tạo/hủy mời không cấp quyền đọc phòng. Trạng thái terminal của khóa tạo cũ không bị mở lại.
+
+<a id="uc-com-13"></a>
+
+### UC-COM-13 — Xem, chấp nhận hoặc từ chối lời mời đích danh
+
+**Tác nhân:** Đúng recipient của lời mời.
+
+**Điều kiện trước:** Recipient đủ điều kiện ứng dụng; đọc inbox của mình. Accept/reject kiểm tra pending còn hạn và server/actor hiện hành.
+
+**Kích hoạt:** Recipient mở inbox/COM-S11 rồi chọn accept hoặc reject.
+
+**Luồng chính:**
+
+1. Hệ thống chỉ trả lời mời của recipient cùng summary server được phép biết; chưa nhận không tải phòng/tin.
+2. Khi accept, kiểm tra recipient/expiry/trạng thái rồi chuyển accepted và tạo/kích hoạt membership với role mặc định cùng transaction, không cần reviewer duyệt thêm.
+3. Khi reject, kiểm tra expectedVersion rồi chuyển rejected. Sau commit, giao diện hiển thị trạng thái cuối; accept mở phòng được xem qua UC-COM-17.
+
+**Ngoại lệ:** Người khác nhận thay bị từ chối. Expired/cancelled/rejected không accept được; accept/reject/cancel đồng thời chỉ một transition thắng. Accept lặp chỉ trả membership còn đúng epoch đã tạo, không rejoin người đã rời. Joined bằng đường khác kết thúc pending mời theo joined_elsewhere. Creator mất quyền không ảnh hưởng hiệu lực mời còn hợp lệ.
+
+**Kết quả sau cùng:** Accept có một membership active và mời accepted; reject/expiry không tạo membership. Recipient vẫn xem được trạng thái lời mời của mình theo contract.
+
+<a id="uc-com-14"></a>
+
+### UC-COM-14 — Chuyển chủ sở hữu
+
+**Tác nhân:** Owner hiện hành; target là thành viên active/đã xác minh.
+
+**Điều kiện trước:** Actor và target đủ điều kiện, target còn membership active; owner đã tải server version.
+
+**Kích hoạt:** Owner chọn người nhận và xác nhận chuyển ngay tại COM-S12.
+
+**Luồng chính:**
+
+1. Owner chọn target theo ID từ roster được phép biết và gửi expectedVersion.
+2. Hệ thống kiểm tra lại actor/target/membership/version dưới cùng transaction rồi đổi owner và phiên bản quyền.
+3. Sau commit, trả server hiện hành; giao diện hai bên tải lại quyền. Chủ cũ vẫn là thành viên và có thể thực hiện UC-COM-15.
+
+**Ngoại lệ:** Target đã rời hoặc không đủ điều kiện thì chuyển thất bại. Target leave và transfer được tuần tự hóa: leave trước chặn transfer, transfer trước biến target thành owner không được leave. Actor mất ownership/version cũ phải tải lại; không tự thử lại sau kết quả không rõ.
+
+**Kết quả sau cùng:** Luôn đúng một owner, chuyển có hiệu lực ngay và không cần target accept. Chủ cũ giữ role hiện có, không tự được gán role quản lý để thay quyền owner.
+
+<a id="uc-com-15"></a>
+
+### UC-COM-15 — Rời cộng đồng
+
+**Tác nhân:** Thành viên thường rời tư cách của chính mình.
+
+**Điều kiện trước:** Phiên/tài khoản hợp lệ, có membershipId của lần tham gia muốn rời; actor hiện không phải owner.
+
+**Kích hoạt:** Thành viên chọn rời và xác nhận từ COM-S03.
+
+**Luồng chính:**
+
+1. Hệ thống kiểm tra lại membershipId và tư cách owner hiện hành.
+2. Chuyển membership sang left, dọn assignment/ngoại lệ epoch hiện tại và ghi thay đổi quyền trong cùng transaction.
+3. Sau commit, chặn truy cập member content, thu hồi subscription theo UC-COM-25 và đóng vùng nội dung/draft của scope trên giao diện.
+
+**Ngoại lệ:** Owner phải hoàn tất UC-COM-14 trước khi rời. Leave lặp cùng epoch đã left trả thành công; leave cũ sau rejoin nhận MEMBERSHIP_CHANGED, không rời epoch mới. HTTP/send và leave tranh nhau được xử lý bằng guard/giao dịch theo thiết kế.
+
+**Kết quả sau cùng:** Mất quyền nội dung server, DM độc lập vẫn dùng được và tin đã viết được giữ. Muốn rejoin phải đi UC-COM-06/07/11/13 theo điều kiện hiện hành; dùng membershipId mới và role mặc định.
+
+<a id="uc-com-16"></a>
+
+### UC-COM-16 — Tạo phòng
+
+**Tác nhân:** Owner hoặc thành viên có manage_channels.
+
+**Điều kiện trước:** Server/membership/phiên hợp lệ; tạo mới chỉ cần manage_channels, không đòi xem một phòng khác.
+
+**Kích hoạt:** Actor mở COM-S04, nhập tên/chủ đề và chọn kind text/voice.
+
+**Luồng chính:**
+
+1. Actor nhập dữ liệu theo COM-034/039 và gửi thao tác tạo.
+2. Hệ thống kiểm tra quyền, tên unique trong server và kind; tạo metadata cùng chat space qua hợp đồng lifecycle trong cùng transaction theo thiết kế. Phòng mới mặc định mọi thành viên view.
+3. Sau commit, trả phòng vừa tạo và tải lại danh sách theo quyền; voice gọi lifecycle Media theo thiết kế riêng khi tích hợp.
+
+**Ngoại lệ:** Tên sai/trùng hoặc actor mất quyền không tạo phòng dở dang. Retry cùng khóa/payload không tạo thêm space/phòng. Phụ thuộc lifecycle không đáp ứng phải rollback; tạo metadata voice chưa chứng minh gọi/media hoạt động.
+
+**Kết quả sau cùng:** Có một phòng active đúng kind; text có thể dùng UC-COM-17/23. Phòng read-only và text bên trong voice nằm ngoài hợp đồng MVP.
+
+<a id="uc-com-17"></a>
+
+### UC-COM-17 — Xem phòng được phép và lịch sử tin văn bản
+
+**Tác nhân:** Thành viên active; owner vẫn phải thỏa điều kiện nền.
+
+**Điều kiện trước:** Actor/server/membership hợp lệ; phòng còn active và actor có view tại mỗi lần đọc.
+
+**Kích hoạt:** Thành viên chọn server, mở phòng hoặc tải lịch sử cũ tại COM-S03.
+
+**Luồng chính:**
+
+1. Community tính quyền theo thuật toán view và chỉ trả các phòng được xem trên từng trang.
+2. Khi người dùng chọn phòng, kiểm tra lại quyền rồi trả metadata. Với text, Messaging tải lịch sử có phân trang qua guard Community.
+3. Giao diện hiển thị tin hiện hành, dấu đã sửa/tombstone; thành viên mới được xem lịch sử cũ khi còn view. Voice chuyển sang hành trình Media.
+
+**Ngoại lệ:** Không có phòng được xem hoặc chưa có tin hiển thị trạng thái rỗng. Hidden/deleted channel trả 404 kể cả biết ID hoặc có management permission; owner không vượt điều kiện nền. Tác giả cũ inactive không làm mất trang lịch sử của người đọc đủ quyền, projection theo thiết kế vòng đời dữ liệu. Mất view khi đang đọc chuyển UC-COM-25.
+
+**Kết quả sau cùng:** Có danh sách/nội dung đúng quyền hiện hành; đọc lịch sử không phục hồi phòng đã deleted và không cấp quyền mới.
+
+<a id="uc-com-18"></a>
+
+### UC-COM-18 — Sửa thông tin phòng
+
+**Tác nhân:** Owner hoặc thành viên có manage_channels và view phòng đích.
+
+**Điều kiện trước:** Actor/server/membership/phòng hợp lệ; đã tải metadata và version.
+
+**Kích hoạt:** Actor sửa tên/chủ đề từ phần quản lý phòng.
+
+**Luồng chính:**
+
+1. Actor chỉnh tên/chủ đề theo COM-034/039 và gửi expectedVersion.
+2. Hệ thống kiểm tra quyền quản lý cùng view, dữ liệu/version và tên unique rồi cập nhật metadata.
+3. Sau commit, trả phòng hiện hành và thông báo tải lại thông tin cho các client đủ quyền.
+
+**Ngoại lệ:** Hidden/deleted channel không lộ metadata; thiếu manage_channels trong phòng được biết từ chối. Tên trùng/version cũ không ghi đè, lỗi giữ form để người dùng sửa. Kind không thay đổi qua PATCH trong MVP; ACL dùng UC-COM-22.
+
+**Kết quả sau cùng:** Metadata phòng được cập nhật; lịch sử/kind không bị đổi bởi thao tác sửa tên/chủ đề.
+
+<a id="uc-com-19"></a>
+
+### UC-COM-19 — Xóa phòng
+
+**Tác nhân:** Owner hoặc thành viên có manage_channels và view phòng đích.
+
+**Điều kiện trước:** Actor/server/membership/phòng hợp lệ; đã tải version và được biết phòng.
+
+**Kích hoạt:** Actor chọn xóa và xác nhận phòng cần xóa.
+
+**Luồng chính:**
+
+1. Hệ thống kiểm tra lại view/manage_channels/version.
+2. Chuyển channel và Messaging space sang deleted, tăng version quyền và ghi sự kiện thu hồi cùng transaction qua hợp đồng lifecycle; voice phối hợp lifecycle Media theo thiết kế.
+3. Sau commit, phòng biến mất khỏi danh sách, chặn đọc/gửi/join/resume; thu hồi kết nối và giao diện đóng nội dung theo UC-COM-25.
+
+**Ngoại lệ:** Quyền/version cũ hoặc deleted không biến thành phòng mới. Delete tranh send/media admission tuân guard và thứ tự commit; nội dung đã commit trước vẫn giữ theo retention. Lỗi lifecycle rollback toàn bộ; proof cutoff media cần thực hiện riêng.
+
+**Kết quả sau cùng:** Phòng không truy cập/khôi phục trong MVP, giữ ID và nội dung theo DEC-105. Thao tác này không xóa toàn server hoặc purge backup.
+
+<a id="uc-com-20"></a>
+
+### UC-COM-20 — Tạo, sửa và xóa vai trò tự tạo
+
+**Tác nhân:** Chỉ owner hiện hành.
+
+**Điều kiện trước:** Actor/server/membership hợp lệ; role sửa/xóa thuộc server và là custom role, đã tải version.
+
+**Kích hoạt:** Owner mở COM-S08 để quản lý định nghĩa vai trò.
+
+**Luồng chính:**
+
+1. Owner đọc danh mục, nhập tên và chọn management permission của custom role theo COM-037.
+2. Hệ thống kiểm tra owner/dữ liệu/giới hạn; tạo role theo operation key hoặc sửa role với expectedVersion.
+3. Khi xóa, hệ thống bỏ role cùng assignment/role override, cập nhật phiên bản quyền trong cùng transaction; sau commit, tính lại quyền và thông báo tải lại.
+
+**Ngoại lệ:** Chỉ một create thắng khi tranh slot thứ 20. Tên trùng, permission sai/trùng, version cũ hoặc actor mất ownership bị từ chối. @everyone không sửa/xóa/gán tay/cấp management. Xóa role deny có thể mở view, xóa role allow có thể mất view; phải tính lại kết quả thực.
+
+**Kết quả sau cùng:** Danh mục custom role hợp lệ; management là hợp quyền allow, không có DENY quản lý/hierarchy vượt owner. Mất view do thay đổi role phải thu hồi theo UC-COM-25.
+
+<a id="uc-com-21"></a>
+
+### UC-COM-21 — Gán hoặc thu hồi vai trò thành viên
+
+**Tác nhân:** Chỉ owner hiện hành.
+
+**Điều kiện trước:** Actor/target đủ điều kiện liên quan; target còn membership active của server. Owner đã tải membershipId/version và tập role hiện tại.
+
+**Kích hoạt:** Owner chọn thành viên tại COM-S08 và lưu tập custom role.
+
+**Luồng chính:**
+
+1. Owner đọc roster và tập vai trò của target; roster chỉ có user summary và membership, không có email.
+2. Owner thêm/bỏ role rồi gửi toàn bộ tập custom role cùng membershipId/expectedVersion.
+3. Hệ thống kiểm tra owner, epoch/version và role cùng server rồi thay assignment nguyên tử, cập nhật quyền; sau commit, target tải lại quyền/subscription theo UC-COM-25.
+
+**Ngoại lệ:** Target đã leave/rejoin, role khác server/trùng hoặc system role không được gán. Actor có manage_channels/manage_channel_access vẫn không được thay assignment. Membership/version cũ không áp vào lần tham gia mới.
+
+**Kết quả sau cùng:** Tập role của đúng epoch được lưu; @everyone tự áp theo membership active. Management permission không tự mở view của phòng bị ẩn.
+
+<a id="uc-com-22"></a>
+
+### UC-COM-22 — Xem và thay cấu hình quyền xem phòng
+
+**Tác nhân:** Owner hoặc thành viên có manage_channel_access và view phòng đích.
+
+**Điều kiện trước:** Actor/server/membership/phòng hợp lệ; actor đã tải ACL snapshot/accessVersion. Member override chỉ dùng membership active đúng epoch.
+
+**Kích hoạt:** Actor mở COM-S09 và lưu mặc định phòng, role override hoặc member override.
+
+**Luồng chính:**
+
+1. Hệ thống kiểm tra quyền đọc ACL, trả cấu hình và danh mục role/member phục vụ chọn ngoại lệ trong scope được phép.
+2. Actor chỉnh snapshot và gửi expectedAccessVersion; hệ thống kiểm tra view/manage_channel_access cùng role/member/epoch hợp lệ.
+3. Thay snapshot nguyên tử, tăng accessVersion và tính lại view theo default → role deny thắng → cá nhân sau cùng; owner theo COM-026. Sau commit, thu hồi scope mất view theo UC-COM-25.
+
+**Ngoại lệ:** Role/member duplicate/khác server/epoch cũ hoặc accessVersion cũ rollback toàn cấu hình. Management permission không cho đọc ACL của hidden channel. Actor tự mất view qua cấu hình hợp lệ vẫn nhận kết quả commit, nhưng request/subscription tiếp theo bị chặn. DENY owner không vượt quyền owner sau điều kiện nền.
+
+**Kết quả sau cùng:** ACL nhất quán và áp dụng cho đọc/gửi/cập nhật; cấu hình ACL không cấp quyền quản lý role hoặc quyền sửa/xóa tin người khác.
+
+<a id="uc-com-23"></a>
+
+### UC-COM-23 — Gửi và chủ động thử lại tin văn bản
+
+**Tác nhân:** Thành viên active có view phòng text, tài khoản đã xác minh và phiên hợp lệ.
+
+**Điều kiện trước:** Phòng text active; điều kiện Identity/Community được giữ tới commit Messaging theo thiết kế guard.
+
+**Kích hoạt:** Người dùng bấm gửi từ composer hoặc chủ động thử lại thao tác gửi chưa rõ kết quả.
+
+**Luồng chính:**
+
+1. Client giữ payload và clientMessageId của thao tác; Messaging chuẩn hóa/kiểm tra nội dung theo COM-024 và thiết kế DM.
+2. Messaging kiểm tra quyền, xử lý operation chống trùng rồi lưu tin, sequence theo space và outbox trong cùng transaction.
+3. Sau commit, trả tin hiện hành và hiển thị đã gửi. Khi người dùng thử lại cùng khóa/payload, trả cùng tin hiện hành, không tạo tin/outbox mới.
+
+**Ngoại lệ:** Chưa xác minh/mất phiên/mất view/deleted/voice channel bị chặn. Cùng clientMessageId khác payload trả xung đột; thiếu fingerprint key dừng thao tác. Response mất giữ trạng thái chưa rõ/lỗi để người dùng đối soát hoặc thử lại chủ động. Revoke tranh send không chen giữa kiểm tra quyền và commit.
+
+**Kết quả sau cùng:** Một tin cho mỗi thao tác hợp lệ, lưu bền trước trạng thái đã gửi. Nội dung và retry dùng cùng cơ chế DM; file và quyền chỉ đọc độc lập chưa thuộc tin phòng MVP.
+
+<a id="uc-com-24"></a>
+
+### UC-COM-24 — Sửa hoặc xóa tin của mình
+
+**Tác nhân:** Tác giả tin, còn view phòng text và đủ điều kiện ứng dụng.
+
+**Điều kiện trước:** Phòng active, tin thuộc phòng; tác giả đã tải message version. Quyền tác giả và view kiểm tra lại khi thực hiện.
+
+**Kích hoạt:** Tác giả chọn sửa hoặc xóa từ menu tin tại COM-S03.
+
+**Luồng chính:**
+
+1. Khi sửa, tác giả gửi nội dung mới và expectedVersion; Messaging kiểm tra validation dùng chung DM và quyền tác giả.
+2. Khi xóa, tác giả gửi expectedVersion; Messaging bỏ content và giữ tombstone/ID/sequence cùng operation chống trùng.
+3. Thay đổi tin/version/outbox commit nguyên tử; client đủ quyền nhận nội dung hiện hành cùng dấu đã sửa hoặc dòng thay thế tin đã xóa.
+
+**Ngoại lệ:** Owner/manager không sửa/xóa tin người khác. Tin đã xóa không được sửa, stale version hoặc mất view yêu cầu đọc lại/chặn thao tác. Sửa không hợp lệ giữ form; response không rõ không tự replay mutation. Nội dung cũ không được trả lại từ receipt của thao tác gửi.
+
+**Kết quả sau cùng:** Sửa chỉ giữ nội dung mới nhất; xóa không làm mất khóa chống trùng hoặc phục hồi tin khi retry send. Lịch sử bản sửa cũ không được cung cấp.
+
+<a id="uc-com-25"></a>
+
+### UC-COM-25 — Nhận cập nhật, kết nối lại và xử lý mất quyền
+
+**Tác nhân:** Người dùng đang sử dụng Community; client và hệ thống realtime hỗ trợ đồng bộ/thu hồi.
+
+**Điều kiện trước:** Subscribe phòng cần actor/membership/view hiện hành. Thông báo request/invitation định tuyến theo đúng user/session và manager còn quyền, không đòi người ngoài subscribe server.
+
+**Kích hoạt:** Mở phòng, có sự kiện đã commit, kết nối lại hoặc thay đổi quyền/phiên/membership/phòng.
+
+**Luồng chính:**
+
+1. Client subscribe phòng text qua Hub chat; server kiểm tra điều kiện và gắn subscription với session, server/channel, membershipId và accessVersion.
+2. Dispatcher phát bản tin hiện hành cho connection còn quyền; thông báo CommunityChanged chỉ yêu cầu tải lại metadata/quyền. Request/invitation/membership gửi đúng đối tượng được biết.
+3. Khi reconnect, kiểm tra quyền và subscribe lại rồi REST bù tin, tải lại trang cũ để nhận edit/delete; merge theo ID/version và chỉ tiến resume cursor sau khi merge đủ trang.
+4. Khi quyền bị thu hồi, server tự gỡ subscription/chặn nội dung mới; client đóng nội dung/composer và dọn cache/draft của scope. Thu hồi chat được kiểm chứng trong ≤5 giây từ commit.
+
+**Ngoại lệ:** Mất quyền/phiên không được reconnect vào scope cũ; kiểm tra quyền lỗi thì dừng phát. Sự kiện trùng/đảo thứ tự không nhân tin hoặc hạ version. Revoke membershipId cũ không xóa cache epoch rejoin mới. Client không hợp tác vẫn bị server ngừng phát; không broadcast roster/ACL/request/invitation cho toàn server.
+
+**Kết quả sau cùng:** Client đủ quyền hội tụ về trạng thái đã lưu, scope mất quyền không tiếp tục nhận nội dung; DM và phòng khác vẫn theo quyền riêng. Cutoff media được kiểm chứng riêng theo đặc tả Media.
+
+<a id="use-case-coverage"></a>
+
+### Đối chiếu use case với API và kiểm thử
+
+API trong bảng là hợp đồng mục tiêu tại [community.openapi.json](../contracts/community.openapi.json), chưa phải endpoint hoạt động. Các đường dẫn dùng prefix `/api/v1`; `{id}` là serverId, `{channelId}` là phòng đích. AC và TC dẫn tới [tiêu chí chấp nhận](#acceptance) và [ca kiểm thử](#tests) hiện có. Mọi UC-COM đang ở trạng thái **chưa triển khai/chưa chạy**; bảng là kế hoạch truy vết, không phải bằng chứng đạt.
+
+| Use case | API/thành phần mục tiêu | AC-COM | TC hiện có và phụ thuộc |
+|---|---|---|---|
+| UC-COM-01 | POST /servers | 29, 36, 38 | TC-COM-02/19/23/26; account guard, server/owner/@everyone/operation nguyên tử |
+| UC-COM-02 | GET /servers/search; GET /servers/{id} | 01, 19, 37 | TC-COM-01/18; search key/cursor/visibility |
+| UC-COM-03 | GET /servers; GET /servers/{id}; GET /servers/{id}/membership/me | 06, 19, 21, 35 | TC-COM-11/16/22; cần bổ sung assertion list/detail/own status sau left |
+| UC-COM-04 | PATCH /servers/{id} | 29, 38, 39, 40 | TC-COM-02/19/20/27; private switch tranh approve/cancel |
+| UC-COM-05 | PATCH /servers/{id}/join-mode | 08 | TC-COM-07; quyền/version và ảnh hưởng request pending cần assertion riêng |
+| UC-COM-06 | POST /servers/{id}/join → membership | 02, 35 | TC-COM-03/16/22; membership epoch/unique/role mặc định |
+| UC-COM-07 | POST /servers/{id}/join → pending; GET .../join-requests/me; DELETE .../join-requests/{requestId} | 03, 30, 40 | TC-COM-04/05/20; pending unique/transition |
+| UC-COM-08 | GET .../join-requests; POST .../{requestId}/approve hoặc /reject | 10, 30, 40 | TC-COM-04/05/20; guard actor/target và membership cùng commit |
+| UC-COM-09 | GET/POST .../invites; GET .../invites/{inviteId}/link | 09, 32, 41 | TC-COM-07/21/23/24; secret/key ring/operation |
+| UC-COM-10 | DELETE .../invites/{inviteId} | 20, 32, 41 | TC-COM-06/07/21/24; revoke tranh join |
+| UC-COM-11 | POST /invites/preview; POST /invites/join | 04, 05, 19, 20, 32, 35, 41 | TC-COM-06/13/16/21/24; lượt cuối/rollback, pending joined_elsewhere |
+| UC-COM-12 | GET/POST .../member-invitations; DELETE .../{invitationId} | 19, 31, 35, 41 | TC-COM-08/17/21/23; unique pending/expiry/operation |
+| UC-COM-13 | GET /member-invitations; POST .../{invitationId}/accept hoặc /reject | 19, 31, 35, 41 | TC-COM-08/17/21; đúng recipient/terminal/epoch |
+| UC-COM-14 | POST /servers/{id}/ownership-transfer; GET .../members | 33 | TC-COM-14; Identity→server→membership lock order |
+| UC-COM-15 | DELETE /servers/{id}/members/me | 21, 35 | TC-COM-11/14/16/22; epoch/clear role/override/revocation |
+| UC-COM-16 | POST /servers/{id}/channels | 07, 11, 38, 42 | TC-ACL-01/06/08; TC-COM-19/23/26/27; lifecycle Messaging/Media |
+| UC-COM-17 | GET .../channels; GET .../channels/{channelId}; GET .../messages | 06, 11, 13, 14, 15, 25, 26, 27, 42 | TC-ACL-01–05/08/12; TC-COM-09/12/25/27; lịch sử theo guard/projection |
+| UC-COM-18 | PATCH .../channels/{channelId} | 34, 38, 42 | TC-ACL-12; TC-COM-19; cần assertion sửa tên/topic/version riêng |
+| UC-COM-19 | DELETE .../channels/{channelId} | 34, 39, 42 | TC-ACL-12; TC-COM-15/25/27; lifecycle/retention, cutoff media riêng |
+| UC-COM-20 | GET/POST .../roles; PATCH/DELETE .../roles/{roleId} | 28, 36, 38 | TC-ACL-06/08/09/11; TC-COM-19/23/26; limit/system role/version |
+| UC-COM-21 | GET .../members; GET/PUT .../members/{userId}/roles | 28, 35, 36 | TC-ACL-06/08; TC-COM-16/22/25; đúng epoch/union quyền |
+| UC-COM-22 | GET/PUT .../channels/{channelId}/access; GET .../roles; GET .../members | 11, 16, 25, 26, 27, 42 | TC-ACL-02–05/08/10/12; TC-COM-22/25; ACL snapshot/guard |
+| UC-COM-23 | POST .../channels/{channelId}/messages | 12, 17, 18, 22, 24 | TC-COM-10/12/25/27; TC-TEXT ở DM, HMAC/sequence/outbox |
+| UC-COM-24 | PATCH/DELETE .../messages/{messageId} | 12, 13, 23, 24 | TC-COM-10; TC-TEXT ở DM, tác giả/version/tombstone |
+| UC-COM-25 | /hubs/chat; REST bù lịch sử và đọc lại resource | 06, 11, 13, 14, 18, 21, 25, 26, 34, 35, 42 | TC-ACL-07/11; TC-COM-09/11/15/22/25; cần proof dispatch/reconnect/notification routing và DEC-083 |
+
+42 AC-COM và 42 quy tắc COM đều được truy vết; COM-009/039 có phần giới hạn scope. Các TC hiện có cần bổ sung assertion cho từng endpoint/nhánh khi triển khai, đặc biệt UC-COM-03/05/18 và định tuyến thông báo UC-COM-25. TC-COM-23/26 cùng fixtures operation/quyền kiểm chứng cơ chế dùng chung; fixture khớp không chứng minh UC/API đã đạt. Phương pháp ghi kết quả và đo tải/thu hồi theo [nghiệm thu](../release-operations.md#testing).
+
+<a id="use-case-delivery"></a>
+
+### Thứ tự rà soát và triển khai theo use case
+
+Áp dụng [quy trình dự án](../project.md#process) cho từng nhóm UC: rà soát luồng/ngoại lệ và AC/TC → đối chiếu UX, API, dữ liệu/giao dịch → xác định phụ thuộc và gói việc → triển khai cùng kiểm thử → tích hợp và ghi bằng chứng. Các bước được lặp theo nhóm chức năng; không đợi hoàn tất mọi module mới kiểm thử luồng đầu tiên.
+
+| Nhóm | Use case | Đầu vào kỹ thuật cần có | Đầu ra cần kiểm chứng |
+|---|---|---|---|
+| 1. Server và tư cách | UC-COM-01–04/06 | Account guard, shared transaction, migration server/membership/@everyone/version/operation và search | Tạo nguyên tử, join trực tiếp, list/detail đúng quyền và tên Unicode; private switch và đóng pending của UC-COM-04/06 hoàn thiện cùng request ở nhóm 3 |
+| 2. Vai trò và phòng | UC-COM-16–22 | Permission evaluator/catalog, migration role/ACL/epoch, channel guard và Messaging lifecycle | Role limit, assignment/ACL nguyên tử, hidden channel, create/delete và race quyền; voice cần Media lifecycle riêng |
+| 3. Tham gia và lời mời | UC-COM-05–15 | Role/quyền từ nhóm 2, request/invitation migration, token protection/key ring, guard actor/target | Pending/approve/cancel/private switch, lượt cuối, accept/expiry, transfer/leave/rejoin và retry |
+| 4. Tin phòng và cập nhật | UC-COM-17/23–25 | Messaging writer/history dùng chung DM, outbox/Hub/registry/revoker và frontend API | Lưu bền/chống trùng/tác giả, reconnect/routing, thu hồi chat ≤5 giây, scope cache đúng epoch |
+
+Các nhóm gồm API và trạng thái frontend tương ứng, có kiểm thử quyền/đồng thời ngay trong gói. Hiện các guard/lifecycle/shared transaction và migrations còn cần triển khai theo COM-SQL-01–10; scope room deleted/restore/media và các đầu vào chưa chốt tiếp tục được theo dõi ở [vấn đề còn mở](#gaps), không đánh dấu đã nghiệm thu từ danh mục UC.
+
 <a id="ux"></a>
 
-## 3. Giao diện và trạng thái
+## 4. Giao diện và trạng thái
 
 ### Khám phá và tham gia
 
@@ -269,12 +920,13 @@ và phản hồi sau lưu cần kiểm thử trong prototype.
 
 ### Trạng thái theo quyết định mới
 
-COM-S10 Tạo/sửa cộng đồng theo DEC-072: thu tên/mô tả/công khai; chủ sở hữu mới được sửa. COM-S11 Lời mời đích danh theo DEC-074: người nhận xem đúng cộng đồng, chấp nhận hoặc từ chối; người mời được hủy khi còn chờ theo DEC-087; chưa nhận không tải phòng/tin. COM-S12 Chuyển chủ sở hữu: chọn thành viên active/đã xác minh, xác nhận chuyển ngay; chủ cũ vẫn là thành viên và được rời sau đó. Phòng bị xóa đóng vùng nội dung và cuộc gọi theo DEC-077. Bộ đếm trường mới đề xuất dùng UTF-16 để thống nhất API; không suy DEC-068 là đã quyết định phép đếm mọi trường cộng đồng.
+COM-S10 Tạo/sửa cộng đồng theo DEC-072: thu tên/mô tả/công khai; chủ sở hữu mới được sửa. COM-S11 Lời mời đích danh theo DEC-074: người nhận xem đúng cộng đồng, chấp nhận hoặc từ chối; người mời được hủy khi còn chờ theo DEC-087; chưa nhận không tải phòng/tin. COM-S12 Chuyển chủ sở hữu: chọn thành viên active/đã xác minh, xác nhận chuyển ngay; chủ cũ vẫn là thành viên và được rời sau đó. Phòng bị xóa đóng vùng nội dung và cuộc gọi theo DEC-077. Bộ đếm tên/mô tả/chủ đề dùng UTF-16 theo DEC-092/093 để thống nhất API; giới hạn và validation theo COM-029/034/037–039.
 
 Đề xuất màn hình hẹp dùng lần lượt danh sách cộng đồng → danh sách
-phòng → hội thoại; quản lý mở thành trang riêng. DEC-059 mới chốt mục
-tiêu thiết bị cho tài khoản/DM; phạm vi thiết bị của cộng đồng và media
-cần được rà soát riêng ở OQ-007.
+phòng → hội thoại; quản lý mở thành trang riêng. DEC-082 đã chốt desktop
+Chrome/Edge/Firefox/Safari và Chrome Android/Safari iOS cho Community;
+phiên bản/OS/thiết bị/build và bằng chứng khả dụng còn cần khóa tại OQ-007.
+Media MVP cam kết trên desktop, điện thoại ở đợt sau.
 
 Vg rà soát wireframe; Thái dựng prototype và trạng thái; Sáng đối chiếu
 quyền/API. Chưa có prototype, kết quả rà soát hoặc kiểm thử khả dụng
@@ -298,7 +950,7 @@ Máy chủ kiểm tra quyền ở thời điểm commit. Thiết kế unique m�
 
 <a id="contracts"></a>
 
-## 4. Thiết kế dữ liệu và API
+## 5. Thiết kế dữ liệu và API
 
 Repo có schema `community`/`messaging` và seed, nhưng chưa có controller/service hoặc Swagger runtime nghiệp vụ Community. OpenAPI mục tiêu và thiết kế dưới đây đã được bổ sung; wireframe/schema không tự chứng minh endpoint hoạt động.
 
@@ -491,7 +1143,7 @@ Review contract/schema/fixture với UX và AC/TC trước tích hợp. Proof c�
 
 <a id="acceptance"></a>
 
-## 5. Tiêu chí chấp nhận
+## 6. Tiêu chí chấp nhận
 
 | Mã | Tình huống kiểm tra | Kết quả mong đợi |
 |---|---|---|
@@ -542,7 +1194,7 @@ Các tiêu chí mới dẫn tới DEC-072–077/087/092–098; toàn bộ AC-COM
 
 <a id="tests"></a>
 
-## 6. Ca kiểm thử
+## 7. Ca kiểm thử
 
 Dữ liệu: O là chủ sở hữu; M được cấp một quyền quản lý cụ thể; N là thành viên thường. Chuẩn bị phòng mở/phòng giới hạn, vai trò R-allow/R-deny, người ngoài cộng đồng, lời mời hợp lệ/hết hạn/thu hồi và yêu cầu chờ duyệt. Tài khoản thử phải có trạng thái xác minh/phiên được kiểm soát.
 | Mã ca | Tình huống | Kết quả | Dẫn chiếu |
@@ -600,7 +1252,7 @@ Ca AC-COM-22 kiểm tra điều kiện chưa xác minh phía máy chủ; DEC-051
 
 <a id="gaps"></a>
 
-## 7. Vấn đề còn mở
+## 8. Vấn đề còn mở
 
 ### Quy tắc cần làm rõ trước khi xác nhận
 
