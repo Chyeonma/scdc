@@ -409,8 +409,8 @@ Dữ liệu kiểm chứng cần có: một tài khoản đủ điều kiện l�
 | Bước | Đầu ra cần bàn giao | Trạng thái |
 |---|---|---|
 | 1. Chốt phạm vi và thứ tự | Gói đầu UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03; tiêu chí hoàn thành, phần để sau và thứ tự phụ thuộc | Đã xác định phạm vi trong tài liệu ngày 2026-10-07 |
-| 2. Rà soát nghiệp vụ gói đầu | Điều kiện tạo, trạng thái ban đầu, ownership/membership/@everyone, dữ liệu hợp lệ, luồng lỗi và ngoại lệ; ghi riêng điểm cần người dùng quyết định | Chờ người dùng duyệt bắt đầu |
-| 3. Chốt thiết kế kỹ thuật | Model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử cho gói đầu | Chưa bắt đầu |
+| 2. Rà soát nghiệp vụ gói đầu | [Kết quả rà soát](community/servers.md#first-package-business): điều kiện tạo, trạng thái ban đầu, ownership/membership/@everyone, dữ liệu hợp lệ, luồng lỗi và ngoại lệ; ghi riêng đầu vào kỹ thuật còn cần chốt | Đã rà soát theo các quyết định hiện có ngày 2026-10-07; chưa có kết quả chạy |
+| 3. Chốt thiết kế kỹ thuật | Model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử cho gói đầu | Chờ người dùng duyệt bắt đầu |
 | 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Chưa bắt đầu |
 | 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Chưa bắt đầu |
 | 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. | Chưa bắt đầu |
