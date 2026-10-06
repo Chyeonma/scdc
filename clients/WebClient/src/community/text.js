@@ -24,7 +24,7 @@ export function validateServerInput(input) {
   const errors = {};
   const name = typeof input.name === 'string' ? trimWhitespace(input.name) : '';
   const description = input.description == null || input.description === ''
-    ? null : input.description.replace(/\r\n?/g, '\n');
+    ? null : typeof input.description === 'string' ? input.description.replace(/\r\n?/g, '\n') : input.description;
   const visibility = input.visibility ?? 'public';
   const scalars = [...name].map((character) => character.codePointAt(0));
   if (!isValidUnicode(name) || name.length < 2 || name.length > 100
