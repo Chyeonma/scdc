@@ -265,7 +265,7 @@ Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích h�
 
 HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
-[Thiết kế gói tạo/xem](create-view-design.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. Phần này vẫn chưa có implementation/runtime proof; search/chỉnh sửa/transfer tiếp tục theo các gói sau.
+[Thiết kế gói tạo/xem](create-view-design.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. Gói đã có [backend bước 4](create-view-backend.md) và [UI bước 5](create-view-ui.md) trên nhánh feature, chưa merge code vào main; search/chỉnh sửa/transfer tiếp tục theo các gói sau.
 
 | Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
 |---|---|---|

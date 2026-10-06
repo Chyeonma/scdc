@@ -120,7 +120,7 @@ Controllers đặt tại services/SCDC.Api/Controllers/Community theo từng nh�
 
 ## Use case theo hành trình cộng đồng và module phụ trách
 
-Bổ sung ngày 2026-10-06. Các UC tổng hợp hành vi mục tiêu từ [quy tắc COM](#requirements), [ma trận ACL](community/permissions.md#permissions) và các quyết định đã dẫn chiếu; phần use case là bản dự thảo để rà soát trước triển khai. Community/Messaging trên `main` vẫn ở Foundation. [Backend gói đầu](community/create-view-backend.md) đã có implementation và kiểm thử riêng trên nhánh feature; phần UC còn lại và UI chưa được nghiệm thu. Thuật toán, lỗi, giao dịch và schema kỹ thuật tiếp tục được quản lý tại [thiết kế chi tiết](community/integration.md#detailed-design).
+Bổ sung ngày 2026-10-06. Các UC tổng hợp hành vi mục tiêu từ [quy tắc COM](#requirements), [ma trận ACL](community/permissions.md#permissions) và các quyết định đã dẫn chiếu; phần use case là bản dự thảo để rà soát trước triển khai. Community/Messaging trên `main` vẫn ở Foundation. [Backend gói đầu](community/create-view-backend.md) đã có implementation và kiểm thử riêng trên nhánh feature; phần UI gói đầu đã có [bằng chứng bước 5](community/create-view-ui.md); các UC còn lại chưa được nghiệm thu. Thuật toán, lỗi, giao dịch và schema kỹ thuật tiếp tục được quản lý tại [thiết kế chi tiết](community/integration.md#detailed-design).
 
 Community thực hiện quản lý server, membership, phòng, lời mời và quyền. [UC-COM-17](community/channels.md#uc-com-17) đọc lịch sử qua Messaging; [UC-COM-23](community/integration.md#uc-com-23), [UC-COM-24](community/integration.md#uc-com-24) do Messaging thực hiện trên quyền Community; [UC-COM-25](community/integration.md#uc-com-25) phối hợp Identity/Community/Messaging và WebClient. Chức năng vào phòng thoại/gọi/video thuộc [đặc tả media](voice-video.md), không được coi đã triển khai khi tạo được metadata phòng voice.
 
@@ -373,7 +373,7 @@ Các nhóm gồm API và trạng thái frontend tương ứng, có kiểm thử 
 
 ### Gói triển khai đầu tiên — tạo và xem cộng đồng
 
-Ngày 2026-10-07, người dùng đồng ý bắt đầu bước 1 và chọn gói tạo cộng đồng, xem danh sách và xem chi tiết. Bước này xác định phạm vi và tiêu chí hoàn thành; các quyết định nghiệp vụ và thiết kế kỹ thuật được rà soát ở bước 2/3. Source Community vẫn Foundation, chưa có kết quả triển khai hoặc nghiệm thu gói.
+Ngày 2026-10-07, người dùng đồng ý bắt đầu bước 1 và chọn gói tạo cộng đồng, xem danh sách và xem chi tiết. Bước này xác định phạm vi và tiêu chí hoàn thành; các quyết định nghiệp vụ và thiết kế kỹ thuật được rà soát ở bước 2/3. Source Community trên `main` vẫn Foundation; gói đã có [backend bước 4](community/create-view-backend.md) và [UI bước 5](community/create-view-ui.md) trên `feat/community-create-view`, chưa merge code vào `main`.
 
 Luồng cần bàn giao: **đăng nhập bằng tài khoản đủ điều kiện → tạo cộng đồng → mở chi tiết → thấy cộng đồng trong danh sách của mình → tải lại và vẫn đọc được dữ liệu đã lưu**.
 
@@ -412,8 +412,8 @@ Dữ liệu kiểm chứng cần có: một tài khoản đủ điều kiện l�
 | 1. Chốt phạm vi và thứ tự | Gói đầu UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03; tiêu chí hoàn thành, phần để sau và thứ tự phụ thuộc | Đã xác định phạm vi trong tài liệu ngày 2026-10-07 |
 | 2. Rà soát nghiệp vụ gói đầu | [Kết quả rà soát](community/servers.md#first-package-business): điều kiện tạo, trạng thái ban đầu, ownership/membership/@everyone, dữ liệu hợp lệ, luồng lỗi và ngoại lệ; ghi riêng đầu vào kỹ thuật còn cần chốt | Đã rà soát theo các quyết định hiện có ngày 2026-10-07; chưa có kết quả chạy |
 | 3. Chốt thiết kế kỹ thuật | [Thiết kế gói tạo/xem](community/create-view-design.md): model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử | Đã đối chiếu source và xác định thiết kế ngày 2026-10-07; chưa có kết quả runtime |
-| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Đã triển khai trên `feat/community-create-view`; [bằng chứng backend](community/create-view-backend.md): 63 kiểm thử Release đạt, chưa merge/push |
-| 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Chờ người dùng duyệt; backend đã có trên nhánh feature |
+| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Đã triển khai trên `feat/community-create-view`; [bằng chứng backend](community/create-view-backend.md): 63 kiểm thử Release đạt, chưa merge code vào main |
+| 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Đã được duyệt và triển khai; [bằng chứng UI](community/create-view-ui.md): 16 ca Node, 14 ca Chromium đạt, production build đạt. Đã commit local trên feature; người dùng sẽ tự push |
 | 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. | Chưa bắt đầu |
 | 7. Tích hợp Messaging và realtime | Messaging lưu/đọc/gửi tin phòng trên quyền Community; sau đó kiểm chứng Hub, reconnect và xử lý mất quyền | Chưa bắt đầu |
 
