@@ -1,6 +1,6 @@
 # SCDC — Hồ sơ bàn giao MVP
 
-Cập nhật: 2026-10-06. Phạm vi ba tính năng theo DEC-114, một API host theo [DEC-116](../decisions.md#dec-116), phân công kế hoạch theo [DEC-117](../decisions.md#dec-117). Danh sách UC/AC tối thiểu và lịch còn cần khóa theo gói; chưa có xác nhận hoàn tất.
+Cập nhật: 2026-10-07. Phạm vi ba tính năng theo DEC-114, một API host theo [DEC-116](../decisions.md#dec-116), phân công kế hoạch theo [DEC-117](../decisions.md#dec-117). Đã chọn phạm vi gói Community đầu; danh sách UC/AC toàn MVP và lịch còn cần khóa theo gói, chưa có xác nhận hoàn tất.
 
 ## Mục đích và giới hạn
 
@@ -22,9 +22,9 @@ MVP là mốc đầu tiên trước [v1](v1.md): có bản chạy được để
 | Community | Tạo/xem cộng đồng của mình; một đường tham gia hoạt động; tạo/xem phòng text và giao tiếp trong phòng | [UC-COM](../features/community.md#use-cases), [Servers](../features/community/servers.md), [Memberships](../features/community/memberships.md), [Channels](../features/community/channels.md), [tin phòng](../features/community/integration.md#use-cases) | Đủ các đường tham gia/lời mời, quản lý vai trò/ACL, chuyển owner và các nhánh quản lý trong đặc tả v1 |
 | Direct Messaging | Tìm người, mở hội thoại hai người, gửi/nhận văn bản, xem lại lịch sử sau reload hoặc mở lại | [Quy tắc DM](../features/direct-messaging.md#requirements), [hợp đồng](../features/direct-messaging.md#contracts), [AC](../features/direct-messaging.md#acceptance) | Bổ sung và kiểm chứng đầy đủ sửa/xóa, retry không trùng, phân trang/reconnect và các tình huống đồng thời của v1 |
 
-Gói Community đầu tiên đã được mô tả tại [gói tạo/xem server](../features/community.md#use-case-delivery): bắt đầu bằng UC-COM-01/03, rồi bổ sung UC-COM-06 và phòng/tin theo phụ thuộc. Các UC được chọn vẫn giữ quy tắc của đặc tả nguồn; thêm mốc MVP không tự thay đổi quyền, nội dung tin hoặc hợp đồng API.
+Ngày 2026-10-07 đã chọn [gói Community đầu tiên](../features/community.md#first-package): UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03. Phạm vi, tiêu chí hoàn thành và các bước duyệt/triển khai được quản lý tại nguồn này. Tải phòng/lịch sử và đối soát sau leave/rejoin của UC-COM-03 thuộc các gói sau; gói đầu đạt chưa đồng nghĩa toàn bộ UC-COM-03 đạt. Tiếp theo bổ sung UC-COM-06 và phòng/tin theo phụ thuộc. Các UC vẫn giữ quy tắc của đặc tả nguồn; thêm mốc MVP không tự thay đổi quyền, nội dung tin hoặc hợp đồng API.
 
-Việc chưa đưa một thao tác vào gói đầu không đồng nghĩa tự bỏ nó khỏi toàn bộ MVP. Trước khi khóa mốc, Vg và người thực hiện lập danh sách UC/AC cụ thể, gồm các nhánh cần thiết của luồng đã chọn. Bảng trên chưa phải baseline UC/AC đã được xác nhận.
+Việc chưa đưa một thao tác vào gói đầu không đồng nghĩa tự bỏ nó khỏi toàn bộ MVP. Trước khi khóa mốc, Vg và người thực hiện lập danh sách UC/AC cụ thể, gồm các nhánh cần thiết của luồng đã chọn. Phạm vi tạo/xem của gói Community đầu đã được chọn; bảng trên chưa phải baseline UC/AC của toàn MVP đã được xác nhận.
 
 <a id="packages"></a>
 

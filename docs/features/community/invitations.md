@@ -42,6 +42,10 @@ Sở hữu hiệu lực, trạng thái và secret của link mời/lời mời �
 
 ### UC-COM-09 — Tạo, xem và sao chép link mời
 
+**Module phụ trách:** Community / Invitations.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Owner hoặc thành viên có manage_invites.
 
 **Điều kiện trước:** Actor có phiên/membership hợp lệ và quyền mời hiện hành trong server.
@@ -61,6 +65,10 @@ Sở hữu hiệu lực, trạng thái và secret của link mời/lời mời �
 <a id="uc-com-10"></a>
 
 ### UC-COM-10 — Thu hồi link mời
+
+**Module phụ trách:** Community / Invitations.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Owner hoặc thành viên hiện có manage_invites, không cần là creator.
 
@@ -82,6 +90,10 @@ Sở hữu hiệu lực, trạng thái và secret của link mời/lời mời �
 
 ### UC-COM-11 — Xem trước và tham gia bằng link mời
 
+**Module phụ trách:** Community / Invitations.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Người dùng đủ điều kiện ứng dụng đang giữ link mời.
 
 **Điều kiện trước:** Phiên hợp lệ; hiệu lực token/server được kiểm tra riêng khi preview và khi join.
@@ -102,6 +114,10 @@ Sở hữu hiệu lực, trạng thái và secret của link mời/lời mời �
 
 ### UC-COM-12 — Gửi, xem và hủy lời mời đích danh
 
+**Module phụ trách:** Community / Invitations.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Owner hoặc thành viên có manage_invites.
 
 **Điều kiện trước:** Phiên/membership/quyền hợp lệ; tạo mời đích danh vào server private, recipient chưa là thành viên active.
@@ -121,6 +137,10 @@ Sở hữu hiệu lực, trạng thái và secret của link mời/lời mời �
 <a id="uc-com-13"></a>
 
 ### UC-COM-13 — Xem, chấp nhận hoặc từ chối lời mời đích danh
+
+**Module phụ trách:** Community / Invitations.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Đúng recipient của lời mời.
 

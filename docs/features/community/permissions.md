@@ -116,6 +116,10 @@ Quy tắc có thẩm quyền là DEC-055–058: giữa vai trò có DENY thì DE
 
 ### UC-COM-20 — Tạo, sửa và xóa vai trò tự tạo
 
+**Module phụ trách:** Community / Permissions.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Chỉ owner hiện hành.
 
 **Điều kiện trước:** Actor/server/membership hợp lệ; role sửa/xóa thuộc server và là custom role, đã tải version.
@@ -136,6 +140,10 @@ Quy tắc có thẩm quyền là DEC-055–058: giữa vai trò có DENY thì DE
 
 ### UC-COM-21 — Gán hoặc thu hồi vai trò thành viên
 
+**Module phụ trách:** Community / Permissions.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Chỉ owner hiện hành.
 
 **Điều kiện trước:** Actor/target đủ điều kiện liên quan; target còn membership active của server. Owner đã tải membershipId/version và tập role hiện tại.
@@ -155,6 +163,10 @@ Quy tắc có thẩm quyền là DEC-055–058: giữa vai trò có DENY thì DE
 <a id="uc-com-22"></a>
 
 ### UC-COM-22 — Xem và thay cấu hình quyền xem phòng
+
+**Module phụ trách:** Community / Permissions.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Owner hoặc thành viên có manage_channel_access và view phòng đích.
 

@@ -1,15 +1,16 @@
-# SCDC — Community — Giao dịch và tích hợp dùng chung
+# SCDC — Community — Quy ước chung và tích hợp liên module
 
 Cập nhật: 2026-10-06. Tài liệu dùng chung của năm thành phần Community. Quy tắc nghiệp vụ đã xác nhận theo các DEC dẫn chiếu; use case và thiết kế kỹ thuật là bản dự thảo để rà soát. Source còn Foundation, chưa có kết quả chạy UC-COM.
 
-Nguồn chuẩn cho điều kiện dùng chung, ID/version, transaction/lock order, operation retry, migration, lỗi, tin phòng và realtime. Tin nhắn/Hub thuộc Messaging; tài liệu này mô tả phần phối hợp Community.
+Nguồn chuẩn cho điều kiện dùng chung của hành trình cộng đồng, ID/version, transaction/lock order, operation retry Community, migration, lỗi và phối hợp tin phòng/realtime. Tin nhắn/Hub thuộc Messaging; cơ chế nhắn tin dùng chung dẫn chiếu đặc tả DM theo [bảng nguồn chuẩn](#responsibilities).
 
 [Tổng quan và truy vết Community](../community.md#use-cases) · [Kế hoạch triển khai](../community.md#use-case-delivery).
 
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
-- [Use case](#use-cases)
+- [Module phụ trách và nguồn chuẩn](#responsibilities)
+- [Use case tích hợp tin phòng và realtime](#use-cases)
 - [UX và trạng thái](#ux)
 - [Thiết kế dữ liệu/API](#contracts)
 - [Tiêu chí chấp nhận](#acceptance)
@@ -31,15 +32,37 @@ Nguồn chuẩn cho điều kiện dùng chung, ID/version, transaction/lock ord
 | <a id="com-023"></a> COM-023 | Tin đã sửa chỉ giữ nội dung mới nhất; không cung cấp lịch sử bản cũ. | DEC-052, nguyên tắc tương tự DM tại DEC-034 |
 | <a id="com-024"></a> COM-024 | Tin văn bản tối đa 2.000 đơn vị UTF-16 sau CRLF/CR → LF; cho xuống dòng/emoji; từ chối UTF-16 lỗi và tin rỗng/chỉ trắng hoặc vô hình. Dùng chung [quy tắc nội dung DM](../direct-messaging.md#detailed-design). | DEC-053, DEC-068, DEC-090 |
 
+<a id="responsibilities"></a>
+
+## Module phụ trách và nguồn chuẩn
+
+Tài liệu được đặt theo hành trình người dùng. Mỗi use case ghi module thực hiện và các phần phối hợp; khi triển khai, mỗi module giữ dữ liệu và nghiệp vụ thuộc ranh giới của mình.
+
+| Nội dung | Module phụ trách | Nguồn chuẩn |
+|---|---|---|
+| Cộng đồng, membership, lời mời, metadata/phân quyền phòng | Community | [Servers](servers.md), [Memberships](memberships.md), [Invitations](invitations.md), [Channels](channels.md), [Permissions](permissions.md) |
+| Nội dung tin, lưu/gửi/lịch sử, sửa/xóa, chống trùng, sequence/cursor và tombstone dùng chung | Messaging | [Hợp đồng nhắn tin](../direct-messaging.md#contracts), [thiết kế chi tiết](../direct-messaging.md#detailed-design), [ca TC-TEXT](../direct-messaging.md#tests) |
+| Áp dụng cơ chế nhắn tin vào phòng, kiểm tra view/membership, route và định tuyến cập nhật | Messaging phối hợp Community/Identity/WebClient | [UC-COM-23/24/25](#use-cases), [tin phòng và realtime](#channel-messaging), [OpenAPI](../../contracts/community.openapi.json), [catalogue realtime](../../contracts/community-realtime.schema.json) |
+| Điều kiện tài khoản và phiên | Identity | [Accounts](../accounts.md#use-cases); Community/Messaging dùng hợp đồng Identity |
+| Giao diện, trạng thái gửi, cập nhật và đối soát sau reconnect | WebClient | [UX Community](#ux), [UX DM dùng chung cho tin](../direct-messaging.md#ux) |
+
+COM-013/014/017/018/022/023/024 và các AC/TC bên dưới giữ quy tắc áp dụng cho tin phòng. Phần thuật toán nhắn tin chung chỉ dẫn chiếu nguồn Messaging ở bảng trên; thay đổi cơ chế chung cập nhật tại nguồn đó và các liên kết/phần tích hợp bị ảnh hưởng. Thứ tự quyền và thu hồi của Community tiếp tục ở [Permissions](permissions.md#view-permissions).
+
+UC-COM-17 tại [Channels](channels.md#uc-com-17) mô tả một luồng mở phòng: Community trả danh sách/metadata theo view, Messaging trả lịch sử qua guard Community. UC-COM-23/24 có module thực hiện chính là Messaging. UC-COM-25 phối hợp các module: Messaging giữ Hub/dispatcher, Community cung cấp quyền/lifecycle và thay đổi cần thu hồi, Identity cung cấp trạng thái phiên, WebClient đồng bộ giao diện. DM giữ quyền truy cập riêng theo [đặc tả DM](../direct-messaging.md#permissions).
+
 <a id="use-cases"></a>
 
-## Use case
+## Use case tích hợp tin phòng và realtime
 
 Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](../community.md#use-case-coverage).
 
 <a id="uc-com-23"></a>
 
 ### UC-COM-23 — Gửi và chủ động thử lại tin văn bản
+
+**Module phụ trách:** Messaging.
+
+**Phối hợp:** Community (membership/quyền phòng), Identity (tài khoản/phiên), WebClient (gửi/thử lại).
 
 **Tác nhân:** Thành viên active có view phòng text, tài khoản đã xác minh và phiên hợp lệ.
 
@@ -61,6 +84,10 @@ Nguồn chuẩn cho điều kiện dùng chung, ID/version, transaction/lock ord
 
 ### UC-COM-24 — Sửa hoặc xóa tin của mình
 
+**Module phụ trách:** Messaging.
+
+**Phối hợp:** Community (membership/quyền phòng), Identity (tài khoản/phiên), WebClient (sửa/xóa).
+
 **Tác nhân:** Tác giả tin, còn view phòng text và đủ điều kiện ứng dụng.
 
 **Điều kiện trước:** Phòng active, tin thuộc phòng; tác giả đã tải message version. Quyền tác giả và view kiểm tra lại khi thực hiện.
@@ -80,6 +107,10 @@ Nguồn chuẩn cho điều kiện dùng chung, ID/version, transaction/lock ord
 <a id="uc-com-25"></a>
 
 ### UC-COM-25 — Nhận cập nhật, kết nối lại và xử lý mất quyền
+
+**Module phụ trách:** Luồng tích hợp; Messaging phụ trách Hub/dispatcher.
+
+**Phối hợp:** Community (quyền/lifecycle và yêu cầu thu hồi), Identity (phiên), WebClient (đồng bộ).
 
 **Tác nhân:** Người dùng đang sử dụng Community; client và hệ thống realtime hỗ trợ đồng bộ/thu hồi.
 

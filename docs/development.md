@@ -213,8 +213,9 @@ Schema/seed chứa cấu trúc cho cả tính năng chưa triển khai. Dữ li�
 - Mỗi module sở hữu dữ liệu riêng. Không tham chiếu implementation hoặc truy vấn trực tiếp dữ liệu module khác.
 - Lỗi nghiệp vụ trả `Result` / `Result<T>` tại `SCDC.BuildingBlocks`; dùng `Success` hoặc `Failure`, không ném exception cho lỗi dự kiến.
 - Controllers ánh xạ lỗi theo [hợp đồng lỗi chung](architecture.md#contracts). JSON lỗi phải khớp schema và hành vi frontend.
-- Nhánh: `feature/<module>-<chức-năng>`, `fix/<tên-lỗi>`; nhánh ổn định `main`.
+- Nhánh code: `feat/<module>-<gói-chức-năng>`, `fix/<tên-lỗi>`; nhánh ổn định `main`. Mỗi nhánh phục vụ một gói có đầu ra kiểm chứng được, gồm code, migration, kiểm thử và tài liệu liên quan. Tài liệu độc lập có thể commit trực tiếp trên `main` theo thỏa thuận làm việc hiện tại.
 - Commit: `<loại>(<phạm vi>): <mô tả>`, dùng `feat`, `fix`, `refactor`, `perf`, `test`, `docs`.
+- Khi hoàn thành một phần có thể review, kiểm tra rồi commit và push lên nhánh tương ứng. Merge nhánh code vào `main` sau review/kiểm chứng; quyền commit/push không tự cấp quyền merge.
 
 Khi review thay đổi, đối chiếu requirement và AC bị ảnh hưởng, quyền/API/dữ liệu, ngoại lệ, test phù hợp và docs hiện hành. Thay đổi phạm vi hoặc quyết định cần cập nhật [sổ quyết định](decisions.md) và các tài liệu phụ thuộc. Không chỉ sửa bản archive.
 

@@ -55,7 +55,9 @@ Các interface và transaction/guard bên dưới mô tả source hoặc thiết
 
 Mỗi module sở hữu dữ liệu của mình; giao tiếp qua interfaces trong `SCDC.Contracts`, không tham chiếu trực tiếp implementation của module khác. Mã ứng dụng không đọc/JOIN bảng của module khác. Các view quan sát trong SQL phục vụ kiểm tra dữ liệu và không thay thế hợp đồng nghiệp vụ.
 
-Identity có `IdentityDbContext`; không mô tả Community/Messaging như đã có DbContext hoặc implementation chưa tồn tại. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
+Tài liệu tính năng tổ chức theo hành trình người dùng; module thực hiện được ghi tại [danh mục UC-COM](features/community.md#use-cases) và [bảng nguồn chuẩn/phối hợp](features/community/integration.md#responsibilities). UC-COM-23/24 và route tin phòng nằm trong tài liệu Community nhưng Messaging giữ nghiệp vụ/dữ liệu tin; UC-COM-17/25 phối hợp theo phần trách nhiệm. Vị trí tài liệu, mã use case và prefix API không thay ranh giới module.
+
+Identity có `IdentityDbContext` đã được đăng ký. CommunityModule hiện chỉ đăng ký descriptor Foundation; chưa có model/DTO, DbContext, service/controller hoặc bằng chứng chạy nghiệp vụ. Messaging vẫn chỉ có nền module. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
 Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/permissions.md#permissions).
 

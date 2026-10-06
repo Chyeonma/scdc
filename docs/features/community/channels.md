@@ -38,6 +38,10 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 
 ### UC-COM-16 — Tạo phòng
 
+**Module phụ trách:** Community / Channels.
+
+**Phối hợp:** Identity, Messaging (lifecycle chat space), WebClient; Media cho phòng voice ở v1.
+
 **Tác nhân:** Owner hoặc thành viên có manage_channels.
 
 **Điều kiện trước:** Server/membership/phiên hợp lệ; tạo mới chỉ cần manage_channels, không đòi xem một phòng khác.
@@ -57,6 +61,10 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 <a id="uc-com-17"></a>
 
 ### UC-COM-17 — Xem phòng được phép và lịch sử tin văn bản
+
+**Module phụ trách:** Community / Channels (danh sách, metadata); Messaging (lịch sử tin).
+
+**Phối hợp:** Identity, WebClient; Messaging đọc lịch sử qua guard quyền của Community.
 
 **Tác nhân:** Thành viên active; owner vẫn phải thỏa điều kiện nền.
 
@@ -78,6 +86,10 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 
 ### UC-COM-18 — Sửa thông tin phòng
 
+**Module phụ trách:** Community / Channels.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Owner hoặc thành viên có manage_channels và view phòng đích.
 
 **Điều kiện trước:** Actor/server/membership/phòng hợp lệ; đã tải metadata và version.
@@ -97,6 +109,10 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 <a id="uc-com-19"></a>
 
 ### UC-COM-19 — Xóa phòng
+
+**Module phụ trách:** Community / Channels.
+
+**Phối hợp:** Identity, Messaging (lifecycle/thu hồi), WebClient; Media cho phòng voice ở v1.
 
 **Tác nhân:** Owner hoặc thành viên có manage_channels và view phòng đích.
 

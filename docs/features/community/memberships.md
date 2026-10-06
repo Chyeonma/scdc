@@ -38,6 +38,10 @@ Sở hữu tư cách thành viên, membership epoch và yêu cầu tham gia. Cá
 
 ### UC-COM-06 — Tham gia cộng đồng công khai vào ngay
 
+**Module phụ trách:** Community / Memberships.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Người dùng đủ điều kiện ứng dụng chưa là thành viên active của server đích.
 
 **Điều kiện trước:** Server public/active và join mode vào ngay tại thời điểm join.
@@ -57,6 +61,10 @@ Sở hữu tư cách thành viên, membership epoch và yêu cầu tham gia. Cá
 <a id="uc-com-07"></a>
 
 ### UC-COM-07 — Gửi, xem và hủy yêu cầu tham gia
+
+**Module phụ trách:** Community / Memberships.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Người dùng đủ điều kiện ứng dụng chưa là thành viên active; chỉ sender quản lý yêu cầu của mình.
 
@@ -78,6 +86,10 @@ Sở hữu tư cách thành viên, membership epoch và yêu cầu tham gia. Cá
 
 ### UC-COM-08 — Duyệt hoặc từ chối yêu cầu tham gia
 
+**Module phụ trách:** Community / Memberships.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Owner hoặc thành viên có review_join_requests.
 
 **Điều kiện trước:** Phiên/server/membership hợp lệ; request còn pending và actor còn quyền review tại thời điểm xử lý.
@@ -97,6 +109,10 @@ Sở hữu tư cách thành viên, membership epoch và yêu cầu tham gia. Cá
 <a id="uc-com-15"></a>
 
 ### UC-COM-15 — Rời cộng đồng
+
+**Module phụ trách:** Community / Memberships.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Thành viên thường rời tư cách của chính mình.
 

@@ -41,6 +41,10 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 ### UC-COM-01 — Tạo cộng đồng
 
+**Module phụ trách:** Community / Servers.
+
+**Phối hợp:** Identity (tài khoản/phiên), Memberships/Permissions trong Community và WebClient (giao diện).
+
 **Tác nhân:** Người dùng đủ điều kiện ứng dụng.
 
 **Điều kiện trước:** Phiên hợp lệ; người dùng chưa cần là thành viên cộng đồng nào.
@@ -60,6 +64,10 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 <a id="uc-com-02"></a>
 
 ### UC-COM-02 — Tìm và xem cộng đồng công khai
+
+**Module phụ trách:** Community / Servers.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Người dùng đủ điều kiện ứng dụng, gồm người chưa tham gia cộng đồng đích.
 
@@ -81,6 +89,10 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 ### UC-COM-03 — Xem cộng đồng đang tham gia và tư cách của mình
 
+**Module phụ trách:** Community / Servers.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Người dùng đủ điều kiện ứng dụng.
 
 **Điều kiện trước:** Phiên hợp lệ; quyền đối với server đích được kiểm tra khi đọc.
@@ -100,6 +112,10 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 <a id="uc-com-04"></a>
 
 ### UC-COM-04 — Sửa thông tin và visibility cộng đồng
+
+**Module phụ trách:** Community / Servers.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
 
 **Tác nhân:** Owner hiện hành.
 
@@ -121,6 +137,10 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 ### UC-COM-05 — Đổi chế độ tham gia
 
+**Module phụ trách:** Community / Servers.
+
+**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+
 **Tác nhân:** Owner hoặc thành viên có manage_join_mode.
 
 **Điều kiện trước:** Server/membership active, phiên hợp lệ; đã tải version và join mode.
@@ -140,6 +160,10 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 <a id="uc-com-14"></a>
 
 ### UC-COM-14 — Chuyển chủ sở hữu
+
+**Module phụ trách:** Community / Servers.
+
+**Phối hợp:** Identity (actor/target), Memberships trong Community và WebClient (giao diện).
 
 **Tác nhân:** Owner hiện hành; target là thành viên active/đã xác minh.
 

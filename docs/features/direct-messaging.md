@@ -6,6 +6,8 @@ Cập nhật: 2026-10-06. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-
 
 Quy tắc cốt lõi đã xác nhận. UX và hợp đồng dưới đây còn đề xuất; Messaging mới ở nền module, chưa có DM API/Hub. Các ca TC chưa có kết quả chạy được ghi nhận.
 
+Module thực hiện DM là **Messaging**. [Hợp đồng](#contracts), [thiết kế chi tiết](#detailed-design) và [ca TC-TEXT](#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](community/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
+
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)

@@ -1,19 +1,22 @@
 # SCDC — Cộng đồng, phòng và phân quyền
 
-Cập nhật: 2026-10-06. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–20, use case UC-COM, tiêu chí AC-COM, màn hình COM-S và ca TC-COM/TC-ACL.
+Cập nhật: 2026-10-07. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–20, use case UC-COM, tiêu chí AC-COM, màn hình COM-S và ca TC-COM/TC-ACL.
+
+Tài liệu này tổ chức theo **hành trình sử dụng cộng đồng**: tạo/tham gia, mở phòng và giao tiếp. Mã UC-COM dùng để truy vết hành trình; module thực hiện được ghi trong từng use case và [bảng phân công](#use-cases). Community sở hữu cộng đồng/thành viên/phòng/quyền; Messaging sở hữu tin nhắn và Hub chat. [Nguồn chuẩn và phối hợp liên module](community/integration.md#responsibilities) xác định nơi tra cứu mỗi loại quy tắc.
 
 Đặc tả đầy đủ cho [v1](../releases/v1.md). [MVP](../releases/mvp.md) chọn các gói tạo/tham gia/phòng text để làm trước trong một API host; bắt đầu theo [gói đầu tiên](#use-case-delivery), không yêu cầu triển khai ngay cả 25 UC. Thiết kế tích hợp xuyên module được rà soát khi chuyển sang [microservice ở v1](../architecture.md#target) theo DEC-116.
 
 Quy tắc tham gia/quyền cốt lõi đã xác nhận; các luồng DEC-072–077/087 và bổ sung vai trò/tìm kiếm/tên/phạm vi/visibility/lời mời/quản lý phòng DEC-092–098 được cụ thể hóa bên dưới. Thiết kế dữ liệu/API là bản dự thảo để rà soát. Community/Messaging mới có nền module; wireframe và ca kiểm thử chưa phải kết quả triển khai hoặc nghiệm thu.
 
-Đã thống nhất tổ chức ngày 2026-10-06: năm thành phần nghiệp vụ nội bộ trong cùng SCDC.Community. Tài liệu chi tiết được chuyển về từng thành phần; trang này giữ scope, điều hướng, truy vết và kế hoạch. Source hiện vẫn chỉ đăng ký module Foundation.
+Đã thống nhất tổ chức ngày 2026-10-06: năm thành phần nghiệp vụ nội bộ trong cùng SCDC.Community. Tài liệu chi tiết được chuyển về từng thành phần; trang này giữ scope, điều hướng, truy vết và kế hoạch. CommunityModule hiện chỉ đăng ký descriptor Foundation, chưa có model/DTO, DbContext, service/controller hoặc kết quả kiểm thử Community.
 
 ## Mục lục
 
 - [Phạm vi và hành trình](#requirements)
 - [Năm thành phần và cấu trúc code](#organization)
 - [Quyền và thu hồi](community/permissions.md#permissions)
-- [Use case và truy vết quy tắc](#use-cases)
+- [Use case theo hành trình và module phụ trách](#use-cases)
+- [Nguồn chuẩn và phối hợp liên module](community/integration.md#responsibilities)
 - [Giao diện](#ux)
 - [Hợp đồng và thiết kế](community/integration.md#contracts)
 - [Tiêu chí chấp nhận](#acceptance)
@@ -71,11 +74,11 @@ Các quy tắc COM giữ nguyên mã và nội dung, nguồn chuẩn ở từng 
 | Channels | Metadata/kind/vòng đời phòng, danh sách theo view | [UC-COM-16](community/channels.md#uc-com-16), [UC-COM-17](community/channels.md#uc-com-17), [UC-COM-18](community/channels.md#uc-com-18), [UC-COM-19](community/channels.md#uc-com-19) | [Channels](community/channels.md) |
 | Permissions | Role, assignment, ACL, evaluator/checker/guard | [UC-COM-20](community/permissions.md#uc-com-20), [UC-COM-21](community/permissions.md#uc-com-21), [UC-COM-22](community/permissions.md#uc-com-22) | [Permissions](community/permissions.md) |
 
-[Tích hợp dùng chung](community/integration.md) quản lý transaction, ID/version/retry, migration, lỗi, tin phòng và realtime; [UC-COM-23](community/integration.md#uc-com-23), [UC-COM-24](community/integration.md#uc-com-24) do Messaging thực hiện, [UC-COM-25](community/integration.md#uc-com-25) phối hợp các module. Đây là tài liệu hỗ trợ năm phần nghiệp vụ, không thêm module độc lập.
+[Quy ước chung và tích hợp liên module](community/integration.md) quản lý transaction, ID/version/retry, migration, lỗi và các luồng phối hợp tin phòng/realtime. [UC-COM-23](community/integration.md#uc-com-23), [UC-COM-24](community/integration.md#uc-com-24) do Messaging thực hiện; [UC-COM-25](community/integration.md#uc-com-25) phối hợp Identity, Community, Messaging và WebClient. Năm phần trong bảng trên là cấu trúc nội bộ của Community; luồng tích hợp được mô tả riêng với [module phụ trách và nguồn chuẩn](community/integration.md#responsibilities).
 
 ### Cấu trúc code mục tiêu
 
-Source hiện chỉ có CommunityModule.cs và project reference; cây dưới đây là bố cục đã thống nhất để dùng khi triển khai. Nghiệp vụ đặt theo feature, Domain/Application ở trong từng phần; các phần cùng một assembly, schema community và CommunityDbContext.
+Source hiện mới có nền project và CommunityModule đăng ký descriptor Foundation; chưa có các feature hoặc CommunityDbContext. Cây dưới đây là bố cục mục tiêu đã thống nhất. Nghiệp vụ đặt theo feature, Domain/Application ở trong từng phần; các phần cùng một assembly, schema community và CommunityDbContext.
 
 ```text
 services/Modules/Community/
@@ -114,7 +117,7 @@ Controllers đặt tại services/SCDC.Api/Controllers/Community theo từng nh�
 
 <a id="use-cases"></a>
 
-## Use case Community
+## Use case theo hành trình cộng đồng và module phụ trách
 
 Bổ sung ngày 2026-10-06. Các UC tổng hợp hành vi mục tiêu từ [quy tắc COM](#requirements), [ma trận ACL](community/permissions.md#permissions) và các quyết định đã dẫn chiếu; phần use case là bản dự thảo để rà soát trước triển khai. Community/Messaging vẫn ở Foundation, toàn bộ UC-COM chưa có implementation hoặc kết quả kiểm thử sản phẩm. Thuật toán, lỗi, giao dịch và schema kỹ thuật tiếp tục được quản lý tại [thiết kế chi tiết](community/integration.md#detailed-design).
 
@@ -122,33 +125,35 @@ Community thực hiện quản lý server, membership, phòng, lời mời và q
 
 [Điều kiện và ngoại lệ dùng chung](community/integration.md#use-case-conditions) áp dụng cho toàn bộ UC; nội dung UC nằm ở thành phần chủ trì dưới đây.
 
-| Use case | Mục tiêu | Màn hình/thành phần |
-|---|---|---|
-| <a id="uc-com-01"></a> [UC-COM-01](community/servers.md#uc-com-01) | Tạo cộng đồng | COM-S10 |
-| <a id="uc-com-02"></a> [UC-COM-02](community/servers.md#uc-com-02) | Tìm và xem cộng đồng công khai | COM-S01/02 |
-| <a id="uc-com-03"></a> [UC-COM-03](community/servers.md#uc-com-03) | Xem cộng đồng đang tham gia và tư cách của mình | COM-S03, danh sách cộng đồng |
-| <a id="uc-com-04"></a> [UC-COM-04](community/servers.md#uc-com-04) | Sửa thông tin và visibility cộng đồng | COM-S10 |
-| <a id="uc-com-05"></a> [UC-COM-05](community/servers.md#uc-com-05) | Đổi chế độ tham gia | COM-S07 |
-| <a id="uc-com-06"></a> [UC-COM-06](community/memberships.md#uc-com-06) | Tham gia cộng đồng công khai vào ngay | COM-S02 |
-| <a id="uc-com-07"></a> [UC-COM-07](community/memberships.md#uc-com-07) | Gửi, xem và hủy yêu cầu tham gia | COM-S02/06 |
-| <a id="uc-com-08"></a> [UC-COM-08](community/memberships.md#uc-com-08) | Duyệt hoặc từ chối yêu cầu tham gia | COM-S06 |
-| <a id="uc-com-09"></a> [UC-COM-09](community/invitations.md#uc-com-09) | Tạo, xem và sao chép link mời | COM-S05 |
-| <a id="uc-com-10"></a> [UC-COM-10](community/invitations.md#uc-com-10) | Thu hồi link mời | COM-S05 |
-| <a id="uc-com-11"></a> [UC-COM-11](community/invitations.md#uc-com-11) | Xem trước và tham gia bằng link mời | COM-S02 |
-| <a id="uc-com-12"></a> [UC-COM-12](community/invitations.md#uc-com-12) | Gửi, xem và hủy lời mời đích danh | COM-S11, quản lý lời mời |
-| <a id="uc-com-13"></a> [UC-COM-13](community/invitations.md#uc-com-13) | Xem, chấp nhận hoặc từ chối lời mời đích danh | COM-S11, inbox người nhận |
-| <a id="uc-com-14"></a> [UC-COM-14](community/servers.md#uc-com-14) | Chuyển chủ sở hữu | COM-S12 |
-| <a id="uc-com-15"></a> [UC-COM-15](community/memberships.md#uc-com-15) | Rời cộng đồng | COM-S03, menu cộng đồng |
-| <a id="uc-com-16"></a> [UC-COM-16](community/channels.md#uc-com-16) | Tạo phòng | COM-S04 |
-| <a id="uc-com-17"></a> [UC-COM-17](community/channels.md#uc-com-17) | Xem phòng được phép và lịch sử tin văn bản | COM-S03 |
-| <a id="uc-com-18"></a> [UC-COM-18](community/channels.md#uc-com-18) | Sửa thông tin phòng | Quản lý phòng từ COM-S03 |
-| <a id="uc-com-19"></a> [UC-COM-19](community/channels.md#uc-com-19) | Xóa phòng | Quản lý phòng từ COM-S03 |
-| <a id="uc-com-20"></a> [UC-COM-20](community/permissions.md#uc-com-20) | Tạo, sửa và xóa vai trò tự tạo | COM-S08 |
-| <a id="uc-com-21"></a> [UC-COM-21](community/permissions.md#uc-com-21) | Gán hoặc thu hồi vai trò thành viên | COM-S08 |
-| <a id="uc-com-22"></a> [UC-COM-22](community/permissions.md#uc-com-22) | Xem và thay cấu hình quyền xem phòng | COM-S09 |
-| <a id="uc-com-23"></a> [UC-COM-23](community/integration.md#uc-com-23) | Gửi và chủ động thử lại tin văn bản | COM-S03, composer; Messaging |
-| <a id="uc-com-24"></a> [UC-COM-24](community/integration.md#uc-com-24) | Sửa hoặc xóa tin của mình | COM-S03, menu tin; Messaging |
-| <a id="uc-com-25"></a> [UC-COM-25](community/integration.md#uc-com-25) | Nhận cập nhật, kết nối lại và xử lý mất quyền | COM-S03, Hub chat và thông báo theo người nhận |
+Module phụ trách xác định phần triển khai nghiệp vụ, độc lập với vị trí lưu tài liệu và mã UC. Identity kiểm tra tài khoản/phiên, WebClient thực hiện giao diện; các phối hợp bổ sung được ghi tại từng UC. UC-COM-17 tách trách nhiệm metadata/phòng của Community và lịch sử tin của Messaging; UC-COM-25 là luồng tích hợp, Messaging phụ trách Hub/dispatcher còn mỗi module giữ điều kiện và dữ liệu mình sở hữu.
+
+| Use case | Mục tiêu | Module phụ trách | Màn hình |
+|---|---|---|---|
+| <a id="uc-com-01"></a> [UC-COM-01](community/servers.md#uc-com-01) | Tạo cộng đồng | Community / Servers | COM-S10 |
+| <a id="uc-com-02"></a> [UC-COM-02](community/servers.md#uc-com-02) | Tìm và xem cộng đồng công khai | Community / Servers | COM-S01/02 |
+| <a id="uc-com-03"></a> [UC-COM-03](community/servers.md#uc-com-03) | Xem cộng đồng đang tham gia và tư cách của mình | Community / Servers | COM-S03, danh sách cộng đồng |
+| <a id="uc-com-04"></a> [UC-COM-04](community/servers.md#uc-com-04) | Sửa thông tin và visibility cộng đồng | Community / Servers | COM-S10 |
+| <a id="uc-com-05"></a> [UC-COM-05](community/servers.md#uc-com-05) | Đổi chế độ tham gia | Community / Servers | COM-S07 |
+| <a id="uc-com-06"></a> [UC-COM-06](community/memberships.md#uc-com-06) | Tham gia cộng đồng công khai vào ngay | Community / Memberships | COM-S02 |
+| <a id="uc-com-07"></a> [UC-COM-07](community/memberships.md#uc-com-07) | Gửi, xem và hủy yêu cầu tham gia | Community / Memberships | COM-S02/06 |
+| <a id="uc-com-08"></a> [UC-COM-08](community/memberships.md#uc-com-08) | Duyệt hoặc từ chối yêu cầu tham gia | Community / Memberships | COM-S06 |
+| <a id="uc-com-09"></a> [UC-COM-09](community/invitations.md#uc-com-09) | Tạo, xem và sao chép link mời | Community / Invitations | COM-S05 |
+| <a id="uc-com-10"></a> [UC-COM-10](community/invitations.md#uc-com-10) | Thu hồi link mời | Community / Invitations | COM-S05 |
+| <a id="uc-com-11"></a> [UC-COM-11](community/invitations.md#uc-com-11) | Xem trước và tham gia bằng link mời | Community / Invitations | COM-S02 |
+| <a id="uc-com-12"></a> [UC-COM-12](community/invitations.md#uc-com-12) | Gửi, xem và hủy lời mời đích danh | Community / Invitations | COM-S11, quản lý lời mời |
+| <a id="uc-com-13"></a> [UC-COM-13](community/invitations.md#uc-com-13) | Xem, chấp nhận hoặc từ chối lời mời đích danh | Community / Invitations | COM-S11, inbox người nhận |
+| <a id="uc-com-14"></a> [UC-COM-14](community/servers.md#uc-com-14) | Chuyển chủ sở hữu | Community / Servers | COM-S12 |
+| <a id="uc-com-15"></a> [UC-COM-15](community/memberships.md#uc-com-15) | Rời cộng đồng | Community / Memberships | COM-S03, menu cộng đồng |
+| <a id="uc-com-16"></a> [UC-COM-16](community/channels.md#uc-com-16) | Tạo phòng | Community / Channels | COM-S04 |
+| <a id="uc-com-17"></a> [UC-COM-17](community/channels.md#uc-com-17) | Xem phòng được phép và lịch sử tin văn bản | Community (phòng); Messaging (lịch sử) | COM-S03 |
+| <a id="uc-com-18"></a> [UC-COM-18](community/channels.md#uc-com-18) | Sửa thông tin phòng | Community / Channels | Quản lý phòng từ COM-S03 |
+| <a id="uc-com-19"></a> [UC-COM-19](community/channels.md#uc-com-19) | Xóa phòng | Community / Channels | Quản lý phòng từ COM-S03 |
+| <a id="uc-com-20"></a> [UC-COM-20](community/permissions.md#uc-com-20) | Tạo, sửa và xóa vai trò tự tạo | Community / Permissions | COM-S08 |
+| <a id="uc-com-21"></a> [UC-COM-21](community/permissions.md#uc-com-21) | Gán hoặc thu hồi vai trò thành viên | Community / Permissions | COM-S08 |
+| <a id="uc-com-22"></a> [UC-COM-22](community/permissions.md#uc-com-22) | Xem và thay cấu hình quyền xem phòng | Community / Permissions | COM-S09 |
+| <a id="uc-com-23"></a> [UC-COM-23](community/integration.md#uc-com-23) | Gửi và chủ động thử lại tin văn bản | Messaging | COM-S03, composer |
+| <a id="uc-com-24"></a> [UC-COM-24](community/integration.md#uc-com-24) | Sửa hoặc xóa tin của mình | Messaging | COM-S03, menu tin |
+| <a id="uc-com-25"></a> [UC-COM-25](community/integration.md#uc-com-25) | Nhận cập nhật, kết nối lại và xử lý mất quyền | Tích hợp liên module; Messaging (Hub/dispatcher) | COM-S03, Hub chat và thông báo theo người nhận |
 
 <a id="use-case-rules"></a>
 
@@ -249,6 +254,8 @@ Màn hình và trạng thái theo [Servers](community/servers.md#ux), [Membershi
 
 [OpenAPI Community](../contracts/community.openapi.json) giữ schema máy đọc được; [schema realtime](../contracts/community-realtime.schema.json) giữ catalogue Hub chat. Các route/mutation theo từng thành phần trong đặc tả của phần đó.
 
+Hai artefact tổng hợp hợp đồng của hành trình cộng đồng, gồm cả thao tác tin phòng do Messaging thực hiện. Prefix route `/servers/...` và mã COM/UC-COM phục vụ giao diện/truy vết; quyền sở hữu dữ liệu và nơi triển khai theo [bảng phân công](#use-cases), [ranh giới module](../architecture.md#boundaries).
+
 <a id="detailed-design"></a>
 
 [Thiết kế tích hợp](community/integration.md#contracts) quản lý ID/version, transaction/guard, operation retry, danh sách, lỗi và COM-SQL-01–10. [Permissions](community/permissions.md#detailed-design) giữ role/ACL snapshot; [Invitations](community/invitations.md#invite-secret) giữ token/link secret; [Servers](community/servers.md#search) giữ thiết kế search. Các artefact vẫn là mục tiêu, chưa có runtime API/Hub Community.
@@ -346,6 +353,12 @@ Màn hình và trạng thái theo [Servers](community/servers.md#ux), [Membershi
 
 Áp dụng [quy trình dự án](../project.md#process) cho từng nhóm UC: rà soát luồng/ngoại lệ và AC/TC → đối chiếu UX, API, dữ liệu/giao dịch → xác định phụ thuộc và gói việc → triển khai cùng kiểm thử → tích hợp và ghi bằng chứng. Các bước được lặp theo nhóm chức năng; không đợi hoàn tất mọi module mới kiểm thử luồng đầu tiên.
 
+Trước mỗi bước, trình bày phạm vi, đầu ra và nội dung cần quyết định để người dùng duyệt. Sau mỗi bước, báo những gì đã làm, kết quả kiểm tra và phần còn thiếu. Việc duyệt một bước chỉ áp dụng cho phạm vi bước đó.
+
+Theo thỏa thuận ngày 2026-10-07, các phần đã hoàn thành và kiểm tra được commit/push theo tiến độ: tài liệu độc lập trên `main`, code trên nhánh theo gói chức năng (gói đầu là `feat/community-create-view`). Quyền commit/push không thay thế việc duyệt bước tiếp theo hoặc duyệt merge nhánh code.
+
+Các nhóm dưới đây là lộ trình tổng thể; nhóm 1 được bắt đầu bằng [gói tạo/xem cộng đồng](#first-package), rồi bổ sung tìm kiếm, tham gia và chỉnh sửa theo các gói tiếp theo.
+
 | Nhóm | Use case | Đầu vào kỹ thuật cần có | Đầu ra cần kiểm chứng |
 |---|---|---|---|
 | 1. Server và tư cách | [UC-COM-01](community/servers.md#uc-com-01), [UC-COM-02](community/servers.md#uc-com-02), [UC-COM-03](community/servers.md#uc-com-03), [UC-COM-04](community/servers.md#uc-com-04), [UC-COM-06](community/memberships.md#uc-com-06) | Account guard, shared transaction, migration server/membership/@everyone/version/operation và search | Tạo nguyên tử, join trực tiếp, list/detail đúng quyền và tên Unicode; private switch và đóng pending của [UC-COM-04](community/servers.md#uc-com-04), [UC-COM-06](community/memberships.md#uc-com-06) hoàn thiện cùng request ở nhóm 3 |
@@ -355,16 +368,53 @@ Màn hình và trạng thái theo [Servers](community/servers.md#ux), [Membershi
 
 Các nhóm gồm API và trạng thái frontend tương ứng, có kiểm thử quyền/đồng thời ngay trong gói. Hiện các guard/lifecycle/shared transaction và migrations còn cần triển khai theo COM-SQL-01–10; scope room deleted/restore/media và các đầu vào chưa chốt tiếp tục được theo dõi ở [vấn đề còn mở](#gaps), không đánh dấu đã nghiệm thu từ danh mục UC.
 
-### Gói triển khai đầu tiên
+<a id="first-package"></a>
 
-Mục tiêu gói đầu: [UC-COM-01](community/servers.md#uc-com-01) và [UC-COM-03](community/servers.md#uc-com-03) — tạo server, xem danh sách/detail và membership của chính mình. Gói tiếp theo bổ sung [UC-COM-06](community/memberships.md#uc-com-06) tham gia trực tiếp để kiểm thử hai thành viên và chuẩn bị role/phòng. Search, sửa metadata/private switch, transfer và requests hoàn thiện trong các gói tương ứng; một UC chỉ hoàn tất khi đủ các nhánh đã đặc tả.
+### Gói triển khai đầu tiên — tạo và xem cộng đồng
 
-| Bước | Việc cần làm | Kết quả review/kiểm chứng |
+Ngày 2026-10-07, người dùng đồng ý bắt đầu bước 1 và chọn gói tạo cộng đồng, xem danh sách và xem chi tiết. Bước này xác định phạm vi và tiêu chí hoàn thành; các quyết định nghiệp vụ và thiết kế kỹ thuật được rà soát ở bước 2/3. Source Community vẫn Foundation, chưa có kết quả triển khai hoặc nghiệm thu gói.
+
+Luồng cần bàn giao: **đăng nhập bằng tài khoản đủ điều kiện → tạo cộng đồng → mở chi tiết → thấy cộng đồng trong danh sách của mình → tải lại và vẫn đọc được dữ liệu đã lưu**.
+
+| Phần trong gói | Phạm vi được chọn | Truy vết |
 |---|---|---|
-| 1. Thiết kế lát cắt | Đối chiếu OpenAPI create/list/detail/own membership với UC, DTO/lỗi/actor; chốt account guard và shared transaction | Các phần chỉ đọc dữ liệu sở hữu, quyền tới commit và lock order rõ |
-| 2. Nền persistence | Migration additive server visibility/join mode/access version, membershipId/version, @everyone và operation dedup; mapping CommunityDbContext | Có preflight dữ liệu legacy, một nguồn tăng version và rollback an toàn |
-| 3. Application/API | Tạo Servers/Memberships/Permissions Domain cần cho lát cắt; handlers create/read và DI/controllers theo cấu trúc đã thống nhất | Tạo server+owner+@everyone+operation nguyên tử; list/detail theo membership hiện hành |
-| 4. Kiểm thử và UI | API integration với PostgreSQL; nối tạo/xem server với trạng thái frontend | Chưa xác minh/phiên sai bị chặn; private nonmember 404; retry create không trùng; rollback không để server dở; status đọc không cấp lại membership |
+| Tạo cộng đồng | Tên, mô tả tùy chọn, public/private; người tạo trở thành owner và thành viên active; khởi tạo @everyone theo đặc tả. Tạo server chưa bao gồm tạo phòng đầu tiên. | [UC-COM-01](community/servers.md#uc-com-01) |
+| Danh sách của mình | Chỉ cộng đồng có membership active của người dùng; phân trang và trạng thái chưa có cộng đồng. Đây là danh sách đã tham gia, không phải tìm kiếm cộng đồng công khai. | Phần danh sách của [UC-COM-03](community/servers.md#uc-com-03) |
+| Chi tiết và tư cách của mình | Metadata cộng đồng, membership hiện hành và quyền quản lý hiệu lực; đọc dữ liệu không tạo hoặc phục hồi membership. | Phần đọc detail/tư cách của [UC-COM-03](community/servers.md#uc-com-03) |
+| Giao diện và kiểm chứng | Form tạo, danh sách, chi tiết; trạng thái đang tải/rỗng/lỗi và thử lại thao tác chưa rõ kết quả; gọi API trực tiếp để kiểm tra điều kiện và quyền. | [UX Servers](community/servers.md#ux), [điều kiện chung](community/integration.md#use-case-conditions) |
+
+UC-COM-03 là phạm vi bàn giao từng phần: tải phòng/lịch sử qua [UC-COM-17](community/channels.md#uc-com-17), đối soát sau leave/rejoin và thay đổi membership đồng thời được kiểm chứng khi triển khai các luồng tương ứng. Các nhánh này vẫn giữ nguyên trong đặc tả nguồn; hoàn thành gói đầu chưa đủ để đánh dấu toàn bộ UC-COM-03 đạt.
+
+Phần để sau gói đầu: tìm kiếm/summary công khai (UC-COM-02), sửa thông tin/chế độ tham gia (UC-COM-04/05), tham gia/rời và lời mời (UC-COM-06–15), phòng/vai trò/ACL (UC-COM-16–22), tin phòng và realtime (UC-COM-23–25). Ownership và @everyone cần cho việc tạo vẫn nằm trong gói đầu; giao diện quản lý vai trò nằm ở gói sau. Media thuộc v1 theo [phạm vi MVP](../releases/mvp.md). Việc để sau gói đầu không tự loại use case khỏi toàn bộ MVP.
+
+### Tiêu chí hoàn thành gói đầu
+
+Các dòng dưới đây chọn phần cần kiểm chứng từ đặc tả nguồn, không thay thế hoặc đánh dấu đạt toàn bộ AC/TC liên quan. Bước 2 rà soát nghiệp vụ và bổ sung tình huống cụ thể; bước 3 chốt request/response, lỗi và cách thử. Khi nghiệm thu, mỗi dòng cần có bằng chứng và kết quả riêng.
+
+| Phần cần kiểm chứng | Kết quả cần quan sát | Nguồn đặc tả/ca kiểm thử |
+|---|---|---|
+| Tạo hợp lệ | Tài khoản đủ điều kiện tạo được public/private; đọc lại đúng metadata và trạng thái ban đầu đã chốt. | [UC-COM-01](community/servers.md#uc-com-01), phần tạo của [AC-COM-29](community/servers.md#ac-com-29)/[TC-COM-02](community/servers.md#tc-com-02) |
+| Điều kiện tài khoản/phiên | Phiên không hợp lệ hoặc tài khoản không đủ điều kiện bị chặn cả khi gọi API trực tiếp. | [Điều kiện chung](community/integration.md#use-case-conditions), [COM-029](community/servers.md#com-029) |
+| Dữ liệu biên | Chấp nhận/từ chối tên, mô tả và Unicode đúng quy tắc; lỗi trả về không để lại cộng đồng dở dang. | Phần tên server của [AC-COM-38](community/servers.md#ac-com-38)/[TC-COM-19](community/servers.md#tc-com-19), phần tạo của [AC-COM-29](community/servers.md#ac-com-29) |
+| Tạo nguyên tử | Server, owner membership, @everyone và dữ liệu thao tác cùng commit; lỗi giữa chừng rollback toàn bộ phần tạo. | [UC-COM-01](community/servers.md#uc-com-01), [giao dịch](community/integration.md#transactions), phần tạo của [TC-COM-02](community/servers.md#tc-com-02) |
+| Thử lại/đồng thời | Mất response rồi thử lại cùng khóa/payload chỉ có một server; cùng khóa khác payload bị từ chối theo hợp đồng. | [UC-COM-01](community/servers.md#uc-com-01), phần tạo server của [TC-COM-23](community/integration.md#tc-com-23) |
+| Danh sách/detail/tư cách | Người tạo thấy cộng đồng, tư cách owner và quyền hiệu lực; danh sách rỗng/phân trang đúng; đọc không ghi hoặc phục hồi membership. | Phần được chọn của [UC-COM-03](community/servers.md#uc-com-03), [thiết kế danh sách](community/integration.md#contracts) |
+| Quyền đọc | Tài khoản khác không nhận member detail hoặc tư cách của người tạo; người ngoài mở cộng đồng private nhận 404. | [UC-COM-02](community/servers.md#uc-com-02) (quy tắc che private), [UC-COM-03](community/servers.md#uc-com-03), [điều kiện chung](community/integration.md#use-case-conditions) |
+| Luồng giao diện và lưu bền | Thực hiện trọn luồng qua UI/API với dữ liệu DB; reload hoặc restart API vẫn đọc được cộng đồng; trạng thái lỗi và thử lại đúng kết quả đã lưu. | [UX Servers](community/servers.md#ux), [điều kiện bàn giao MVP](../releases/mvp.md#acceptance) |
+
+Dữ liệu kiểm chứng cần có: một tài khoản đủ điều kiện làm người tạo, một tài khoản đủ điều kiện chưa tham gia để kiểm tra quyền, tài khoản chưa xác minh và phiên không hợp lệ; cộng đồng public/private và đủ dữ liệu để kiểm tra phân trang. Đây là kế hoạch dữ liệu thử, chưa tạo tài khoản hoặc dữ liệu trong bước 1. Kết quả gói được ghi theo [mẫu nghiệm thu](../release-operations.md#testing), kèm bản build, thao tác API/UI, kết quả từng dòng và phần UC còn lại.
+
+### Các bước thực hiện đã thống nhất
+
+| Bước | Đầu ra cần bàn giao | Trạng thái |
+|---|---|---|
+| 1. Chốt phạm vi và thứ tự | Gói đầu UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03; tiêu chí hoàn thành, phần để sau và thứ tự phụ thuộc | Đã xác định phạm vi trong tài liệu ngày 2026-10-07 |
+| 2. Rà soát nghiệp vụ gói đầu | Điều kiện tạo, trạng thái ban đầu, ownership/membership/@everyone, dữ liệu hợp lệ, luồng lỗi và ngoại lệ; ghi riêng điểm cần người dùng quyết định | Chờ người dùng duyệt bắt đầu |
+| 3. Chốt thiết kế kỹ thuật | Model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử cho gói đầu | Chưa bắt đầu |
+| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Chưa bắt đầu |
+| 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Chưa bắt đầu |
+| 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. | Chưa bắt đầu |
+| 7. Tích hợp Messaging và realtime | Messaging lưu/đọc/gửi tin phòng trên quyền Community; sau đó kiểm chứng Hub, reconnect và xử lý mất quyền | Chưa bắt đầu |
 
 Evaluator Permissions được triển khai ở mức cần cho gói hiện hành và đối chiếu fixture khi mở role/ACL. Cơ chế outbox/revoker cho các mutation thu hồi phải hoàn thiện trước khi gói đó được coi đạt; tin phòng/realtime/Media có bằng chứng riêng theo phụ thuộc.
 
