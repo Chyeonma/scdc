@@ -1,6 +1,6 @@
 # SCDC — Kết quả backend tạo và xem cộng đồng
 
-Cập nhật: 2026-10-07. Bước 4 của [gói đầu](../community.md#first-package) đã được người dùng duyệt và triển khai trên nhánh `feat/community-create-view`. Code chưa merge vào main; tài liệu này ghi bằng chứng backend, chưa nghiệm thu luồng WebClient. Source Community trên `main` vẫn Foundation.
+Cập nhật: 2026-10-07. Bước 4 của [gói đầu](../community.md#first-package) đã được người dùng duyệt và triển khai trên nhánh `feat/community-create-view`. Code chưa merge vào main; tài liệu này ghi bằng chứng backend, luồng WebClient được kiểm chứng riêng tại [bước 5](create-view-ui.md). Source Community trên `main` vẫn Foundation.
 
 ## Phạm vi đã triển khai
 
@@ -51,8 +51,8 @@ Các phần nằm trên `feat/community-create-view`:
 
 Chuyển sang nhánh backend để đọc hướng dẫn runtime trong `services/Modules/Community/README.md`. HMAC cần key ID và base64 secret ít nhất 32 byte; key ring cần thư mục bền đọc/ghi được. Compose dùng `COMMUNITY_OPERATION_KEY` từ `.env` local và volume `scdc-community-keys`. Giữ HMAC key cũ khi rotation để đọc operation còn lưu; giữ key ring và ApplicationName theo môi trường qua restart.
 
-Các commit hiện chỉ có local. Push `main` và nhánh backend vẫn thiếu xác thực GitHub HTTPS; chưa thể đọc username/credential. Không merge code vào main.
+Nhánh `feat/community-create-view` đã có upstream `origin/feat/community-create-view`. Push các cập nhật bước 5 trong môi trường agent vẫn lỗi `could not read Username for https://github.com`; các cập nhật mới được giữ bằng commit local và người dùng đã chọn tự push hai nhánh. Không merge code vào main.
 
 ## Bước tiếp theo
 
-Bước 5 chờ người dùng duyệt: nối form tạo, danh sách và chi tiết Community với API; xử lý trạng thái rỗng/lỗi/loading, giữ operation key khi đối soát và thử lại; chạy luồng UI thật từ đăng nhập tới create/detail/list/reload và ghi kết quả theo [tiêu chí gói](../community.md#first-package). Các gói tham gia, quyền, lời mời, phòng và realtime được duyệt riêng sau đó.
+Bước 5 đã được duyệt và triển khai; [nghiệm thu UI](create-view-ui.md) ghi 16 ca Node, 14 ca Chromium, production build và bằng chứng theo [tiêu chí gói](../community.md#first-package). Bước 6 đề xuất UC-COM-06 tham gia trực tiếp; các gói tiếp theo được duyệt riêng.
