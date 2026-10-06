@@ -2,6 +2,8 @@
 
 Cập nhật: 2026-10-06. Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Quy tắc COM, ACL-06–20, use case UC-COM, tiêu chí AC-COM, màn hình COM-S và ca TC-COM/TC-ACL.
 
+Đặc tả đầy đủ cho [v1](../releases/v1.md). [MVP](../releases/mvp.md) chọn các gói tạo/tham gia/phòng text để làm trước trong một API host; bắt đầu theo [gói đầu tiên](#use-case-delivery), không yêu cầu triển khai ngay cả 25 UC. Thiết kế tích hợp xuyên module được rà soát khi chuyển sang [microservice ở v1](../architecture.md#target) theo DEC-116.
+
 Quy tắc tham gia/quyền cốt lõi đã xác nhận; các luồng DEC-072–077/087 và bổ sung vai trò/tìm kiếm/tên/phạm vi/visibility/lời mời/quản lý phòng DEC-092–098 được cụ thể hóa bên dưới. Thiết kế dữ liệu/API là bản dự thảo để rà soát. Community/Messaging mới có nền module; wireframe và ca kiểm thử chưa phải kết quả triển khai hoặc nghiệm thu.
 
 Đã thống nhất tổ chức ngày 2026-10-06: năm thành phần nghiệp vụ nội bộ trong cùng SCDC.Community. Tài liệu chi tiết được chuyển về từng thành phần; trang này giữ scope, điều hướng, truy vết và kế hoạch. Source hiện vẫn chỉ đăng ký module Foundation.
@@ -152,7 +154,7 @@ Community thực hiện quản lý server, membership, phòng, lời mời và q
 
 ## Truy vết quy tắc cộng đồng
 
-Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này chỉ xác định UC áp dụng. [COM-009](community/integration.md#com-009) và phần scope của [COM-039](community/servers.md#com-039) được ghi thành giới hạn, không tạo UC chức năng ngoài MVP.
+Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này chỉ xác định UC áp dụng. [COM-009](community/integration.md#com-009) và phần scope của [COM-039](community/servers.md#com-039) được ghi thành giới hạn, không tạo UC chức năng ngoài v1.
 
 | Quy tắc | Use case áp dụng | Điểm cần đối chiếu |
 |---|---|---|
@@ -194,7 +196,7 @@ Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này ch�
 | [COM-036](community/invitations.md#com-036) | [UC-COM-12](community/invitations.md#uc-com-12), [UC-COM-13](community/invitations.md#uc-com-13) | Mời đích danh hết hạn hoặc terminal không accept được |
 | [COM-037](community/permissions.md#com-037) | [UC-COM-01](community/servers.md#uc-com-01), [UC-COM-20](community/permissions.md#uc-com-20), [UC-COM-21](community/permissions.md#uc-com-21) | @everyone và giới hạn custom role, union management |
 | [COM-038](community/servers.md#com-038) | [UC-COM-02](community/servers.md#uc-com-02) | Search/UTF-16/khớp/phân trang |
-| [COM-039](community/servers.md#com-039) | [UC-COM-01](community/servers.md#uc-com-01), [UC-COM-04](community/servers.md#uc-com-04), [UC-COM-16](community/channels.md#uc-com-16), [UC-COM-18](community/channels.md#uc-com-18), [UC-COM-20](community/permissions.md#uc-com-20) | Tên Unicode; xóa toàn server ngoài MVP |
+| [COM-039](community/servers.md#com-039) | [UC-COM-01](community/servers.md#uc-com-01), [UC-COM-04](community/servers.md#uc-com-04), [UC-COM-16](community/channels.md#uc-com-16), [UC-COM-18](community/channels.md#uc-com-18), [UC-COM-20](community/permissions.md#uc-com-20) | Tên Unicode; xóa toàn server ngoài v1 |
 | [COM-040](community/servers.md#com-040) | [UC-COM-04](community/servers.md#uc-com-04), [UC-COM-07](community/memberships.md#uc-com-07), [UC-COM-08](community/memberships.md#uc-com-08) | Private switch kết thúc pending nguyên tử |
 | [COM-041](community/invitations.md#com-041) | [UC-COM-09](community/invitations.md#uc-com-09), [UC-COM-10](community/invitations.md#uc-com-10), [UC-COM-11](community/invitations.md#uc-com-11), [UC-COM-12](community/invitations.md#uc-com-12), [UC-COM-13](community/invitations.md#uc-com-13) | Hiệu lực mời độc lập creator; actor thao tác xét quyền hiện hành |
 | [COM-042](community/permissions.md#com-042) | [UC-COM-16](community/channels.md#uc-com-16), [UC-COM-17](community/channels.md#uc-com-17), [UC-COM-18](community/channels.md#uc-com-18), [UC-COM-19](community/channels.md#uc-com-19), [UC-COM-22](community/permissions.md#uc-com-22) | Quản lý phòng có sẵn cần view |

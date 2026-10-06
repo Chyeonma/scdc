@@ -237,4 +237,4 @@ Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../community.
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
 | Lời mời | Hạn/lượt/issuer theo DEC-075/087/097; đã có schema/secret/transaction, còn proof và migration/key store. | OQ-003, OQ-004, OQ-008 |
-| Cộng đồng riêng tư | Đã chốt DEC-074/087/096; schema/inbox/notification có thiết kế; còn review/proof. Không xóa server MVP theo DEC-094. | OQ-003, OQ-008 |
+| Cộng đồng riêng tư | Đã chốt DEC-074/087/096; schema/inbox/notification có thiết kế; còn review/proof. Không xóa server v1 theo DEC-094. | OQ-003, OQ-008 |

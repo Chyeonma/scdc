@@ -1,12 +1,12 @@
 # Mẫu hồ sơ nghiệm thu và phát hành SCDC
 
-Mẫu trống, không phải kết quả nghiệm thu. Copy cho từng đợt vào nơi nhóm chọn; không điền Đạt từ việc tài liệu/test đã tồn tại. Quy trình ở [release-operations.md](../release-operations.md#acceptance-process); runbook ở [operations-runbook.md](../operations-runbook.md). Không ghi token, secrets hoặc nội dung người dùng thật.
+Mẫu trống, không phải kết quả nghiệm thu. Copy cho từng đợt vào nơi nhóm chọn; không điền Đạt từ việc tài liệu/test đã tồn tại. Ghi rõ mốc [MVP](../releases/mvp.md#acceptance) hoặc [v1](../releases/v1.md#acceptance), UC/AC và các điều kiện áp dụng; không bắt MVP điền Đạt cho gate media ngoài scope. Quy trình ở [release-operations.md](../release-operations.md#acceptance-process); runbook ở [operations-runbook.md](../operations-runbook.md). Không ghi token, secrets hoặc nội dung người dùng thật.
 
 ## 1. Định danh đợt
 
 | Trường | Giá trị |
 |---|---|
-| Mã hồ sơ / loại | Chưa điền — bàn giao nội bộ / nghiệm thu MVP / diễn tập / phát hành |
+| Mã hồ sơ / loại | Chưa điền — bàn giao nội bộ / bàn giao MVP / nghiệm thu v1 / diễn tập / phát hành |
 | Phạm vi SCP và phần loại trừ có căn cứ | Chưa điền |
 | Commit / artefact digest Web/API / cấu hình | Chưa điền |
 | Schema/migration / media server-extension-SDK | Chưa điền |

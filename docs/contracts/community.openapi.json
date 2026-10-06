@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Community, permissions and channel text — target design",
     "version": "0.1.0-draft",
-    "description": "Community/Messaging Foundation only; all operations not implemented. Product decisions DEC-092–098 confirmed; algorithms/schema/errors are draft review artefacts. No server deletion endpoint in MVP."
+    "description": "Community/Messaging Foundation only; all operations not implemented. Product decisions DEC-092–098 confirmed; algorithms/schema/errors are draft review artefacts. No server deletion endpoint in v1."
   },
   "servers": [
     {
@@ -1667,7 +1667,7 @@
       "patch": {
         "operationId": "updateChannel",
         "summary": "Sửa tên/chủ đề phòng",
-        "description": "DEC-098; kind immutable in MVP.",
+        "description": "DEC-098; kind immutable in v1.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1726,7 +1726,7 @@
       "delete": {
         "operationId": "deleteChannel",
         "summary": "Xóa logic phòng",
-        "description": "Community deletion + Messaging space deletion + revocation outbox same transaction. No restore/purge in MVP.",
+        "description": "Community deletion + Messaging space deletion + revocation outbox same transaction. No restore/purge in v1.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"

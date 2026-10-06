@@ -55,7 +55,7 @@ Nguồn chuẩn cho điều kiện dùng chung, ID/version, transaction/lock ord
 
 **Ngoại lệ:** Chưa xác minh/mất phiên/mất view/deleted/voice channel bị chặn. Cùng clientMessageId khác payload trả xung đột; thiếu fingerprint key dừng thao tác. Response mất giữ trạng thái chưa rõ/lỗi để người dùng đối soát hoặc thử lại chủ động. Revoke tranh send không chen giữa kiểm tra quyền và commit.
 
-**Kết quả sau cùng:** Một tin cho mỗi thao tác hợp lệ, lưu bền trước trạng thái đã gửi. Nội dung và retry dùng cùng cơ chế DM; file và quyền chỉ đọc độc lập chưa thuộc tin phòng MVP.
+**Kết quả sau cùng:** Một tin cho mỗi thao tác hợp lệ, lưu bền trước trạng thái đã gửi. Nội dung và retry dùng cùng cơ chế DM; file và quyền chỉ đọc độc lập chưa thuộc tin phòng v1.
 
 <a id="uc-com-24"></a>
 
@@ -108,11 +108,9 @@ Bộ đếm tên/mô tả/chủ đề dùng UTF-16 theo DEC-092/093 để thốn
 phòng → hội thoại; quản lý mở thành trang riêng. DEC-082 đã chốt desktop
 Chrome/Edge/Firefox/Safari và Chrome Android/Safari iOS cho Community;
 phiên bản/OS/thiết bị/build và bằng chứng khả dụng còn cần khóa tại OQ-007.
-Media MVP cam kết trên desktop, điện thoại ở đợt sau.
+Media v1 cam kết trên desktop, điện thoại ở đợt sau.
 
-Vg rà soát wireframe; Thái dựng prototype và trạng thái; Sáng đối chiếu
-quyền/API. Chưa có prototype, kết quả rà soát hoặc kiểm thử khả dụng
-được ghi nhận trong tài liệu này.
+Vg sở hữu UI Community và quyền/lifecycle phòng; Sáng cung cấp nền Messaging và đối chiếu hợp đồng tin phòng. Thái cung cấp dataset/bộ chạy kiểm tra theo [DEC-117](../../project.md#team). Chưa có prototype, kết quả rà soát hoặc kiểm thử khả dụng được ghi nhận trong tài liệu này.
 
 <a id="contracts"></a>
 
@@ -122,7 +120,7 @@ Repo có schema `community`/`messaging` và seed, nhưng chưa có controller/se
 
 | Nhóm | Dữ liệu/hành vi tối thiểu | Phụ thuộc |
 |---|---|---|
-| Cộng đồng | Tạo/sửa, công khai/riêng tư, chủ sở hữu, vòng đời | DEC-072/094/096; chưa có xóa toàn bộ cộng đồng trong MVP |
+| Cộng đồng | Tạo/sửa, công khai/riêng tư, chủ sở hữu, vòng đời | DEC-072/094/096; chưa có xóa toàn bộ cộng đồng trong v1 |
 | Tìm/tham gia | Chỉ tìm công khai, vào ngay/chờ duyệt, trạng thái yêu cầu và tư cách thành viên | [COM-001](memberships.md#com-001), [COM-002](servers.md#com-002), [COM-003](servers.md#com-003), [COM-004](invitations.md#com-004), DEC-073; cần transaction chống request lặp |
 | Lời mời | Tạo, thời hạn, kiểm tra, tiêu thụ và thu hồi; ghi thành viên nhất quán khi gọi lặp | [COM-005](invitations.md#com-005), [COM-010](invitations.md#com-010), [COM-020](invitations.md#com-020), [COM-032](invitations.md#com-032); cần tiêu thụ lượt nhất quán |
 | Phòng | Tạo, danh sách theo quyền, chủ đề và cấu hình xem | [COM-007](channels.md#com-007), [COM-008](channels.md#com-008), [COM-012](channels.md#com-012); trường/quyền theo DEC-077; kiểm tra xóa và thu hồi đồng thời |
@@ -165,7 +163,7 @@ Giới hạn sau trim: server 2–100, channel 1–100, role 1–64 UTF-16; desc
 
 `version` của server/channel/role/membership/request/invitation truyền chuỗi số nguyên dương. Server có `accessVersion` tăng khi membership, role/assignment, ACL hoặc trạng thái truy cập đổi. Channel có `accessVersion` riêng cho cấu hình xem; PUT ACL dùng expectedAccessVersion, không lẫn version metadata. Client gửi đúng version đã tải, 409 thì đọc lại; không tự thay version rồi ghi đè.
 
-Membership giữ unique `(serverId,userId)` nhưng mỗi lần tham gia tạo `membershipId` UUIDv7 mới và tăng version; trạng thái chỉ active/left thuộc MVP. Gán role/ngoại lệ cá nhân gắn membershipId để bản cấu hình cũ không áp nhầm khi người dùng rời rồi vào lại. Kicked/banned/timeout/nickname trong schema chưa là chức năng MVP được đặc tả.
+Membership giữ unique `(serverId,userId)` nhưng mỗi lần tham gia tạo `membershipId` UUIDv7 mới và tăng version; trạng thái chỉ active/left thuộc v1. Gán role/ngoại lệ cá nhân gắn membershipId để bản cấu hình cũ không áp nhầm khi người dùng rời rồi vào lại. Kicked/banned/timeout/nickname trong schema chưa là chức năng v1 được đặc tả.
 
 <a id="transactions"></a>
 
@@ -173,9 +171,9 @@ Membership giữ unique `(serverId,userId)` nhưng mỗi lần tham gia tạo `m
 
 Thứ tự khóa: Identity user rows theo UUID network order → server → membership/role/request/invite/channel → Messaging space/message/operation → outbox. Lookup ban đầu chỉ định tuyến; đọc lại trạng thái/permission sau khi có khóa. `IAccountAccessGuard` đã đề xuất ở DM kiểm tra actor session và tài khoản target khi cần; không JOIN Identity từ Community.
 
-Phương án MVP tuần tự hóa mutation Community bằng `FOR UPDATE` trên server. `IChannelAccessGuard` mới giữ `FOR SHARE` trên server và channel tới commit Messaging, nên thay role/ACL/rời/xóa không chen giữa kiểm tra và lưu tin. Cơ chế [row lock PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS) hỗ trợ xung đột share/write này; đây là suy luận thiết kế cần proof, không là kết quả đo. `IChannelAccessChecker.CheckAsync` hiện chỉ trả bool, không giữ transaction/lease nên chưa đủ chống race.
+Phương án v1 tuần tự hóa mutation Community bằng `FOR UPDATE` trên server. `IChannelAccessGuard` mới giữ `FOR SHARE` trên server và channel tới commit Messaging, nên thay role/ACL/rời/xóa không chen giữa kiểm tra và lưu tin. Cơ chế [row lock PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS) hỗ trợ xung đột share/write này; đây là suy luận thiết kế cần proof, không là kết quả đo. `IChannelAccessChecker.CheckAsync` hiện chỉ trả bool, không giữ transaction/lease nên chưa đủ chống race.
 
-Shared connection/transaction do BuildingBlocks quản lý, mỗi module chỉ đọc/ghi schema mình sở hữu. Hợp đồng cần bổ sung `IChannelAccessGuard`, `IChatSpaceLifecycle`, `ICommunityAccessReader` và định tuyến thu hồi server/channel/membership; tất cả chưa có implementation. Server lock đơn giản hóa correctness MVP nhưng cần đo contention ở workload đã chốt; không tự suy là đủ cho mọi tải.
+Shared connection/transaction do BuildingBlocks quản lý, mỗi module chỉ đọc/ghi schema mình sở hữu. Hợp đồng cần bổ sung `IChannelAccessGuard`, `IChatSpaceLifecycle`, `ICommunityAccessReader` và định tuyến thu hồi server/channel/membership; tất cả chưa có implementation. Server lock đơn giản hóa correctness v1 nhưng cần đo contention ở workload đã chốt; không tự suy là đủ cho mọi tải.
 
 Máy chủ kiểm tra quyền ở thời điểm commit. Thiết kế unique một pending mỗi cặp user/cộng đồng, unique membership và cập nhật có điều kiện để hai thao tác duyệt/hủy không cùng thắng. Gọi lặp join/accept của người đã là thành viên trả tư cách hiện hành, không nhân đôi. Dùng lời mời link hợp lệ khi đang pending join phải kết thúc pending trong cùng giao dịch tạo membership; chi tiết lịch sử và retention thuộc OQ-011. Link có hạn/lượt theo DEC-075; mời đích danh hạn 7 ngày theo DEC-087. Khi link hết lượt, request join mới bị từ chối; người đã là thành viên không tiêu tốn lượt mới.
 
@@ -213,7 +211,7 @@ Phân trang collection quản lý đề xuất mặc định 20/tối đa 50 the
 
 ### Tin phòng và realtime
 
-REST tin text dùng `/servers/{id}/channels/{channelId}/messages` với GET/POST/PATCH/DELETE tương tự DM. Message wire dùng `channelId` thay `conversationId`; `sequence` theo Messaging space, fingerprint/send operation/tombstone/version và cursor/resume dùng chung thiết kế DM. Voice channel chỉ có media, chưa mở luồng text bên trong voice; kind không đổi bằng PATCH trong MVP. Quyền quản lý/owner không thay kiểm tra tác giả khi sửa/xóa.
+REST tin text dùng `/servers/{id}/channels/{channelId}/messages` với GET/POST/PATCH/DELETE tương tự DM. Message wire dùng `channelId` thay `conversationId`; `sequence` theo Messaging space, fingerprint/send operation/tombstone/version và cursor/resume dùng chung thiết kế DM. Voice channel chỉ có media, chưa mở luồng text bên trong voice; kind không đổi bằng PATCH trong v1. Quyền quản lý/owner không thay kiểm tra tác giả khi sửa/xóa.
 
 Hub vẫn `/hubs/chat`; schema riêng [community-realtime.schema.json](../../contracts/community-realtime.schema.json) bổ sung SubscribeChannel/UnsubscribeChannel và ChannelMessageChanged. Subscribe kiểm tra phiên/membership/quyền hiện hành; registry gắn user/session/server/channel/membershipId/accessVersion. Dispatcher chỉ phát nội dung cho connection còn đủ điều kiện, reconciliation ≤1 giây và deadline chat ≤5 giây từ commit thu hồi theo DEC-083. Lỗi kiểm tra quyền dừng phát.
 
@@ -228,14 +226,14 @@ Mất quyền/rời/xóa phòng xóa cache/tin tạm của scope tương ứng v
 | Mã | SQL/source hiện tại | Mapping/đầu việc thiết kế |
 |---|---|---|
 | <a id="com-sql-01"></a> COM-SQL-01 | servers chưa có visibility/join_mode; description varchar(500), slug bắt buộc | Thêm visibility/join_mode/access_version, description 1.000; slug nội bộ sinh từ ID; backfill visibility/join mode được rà soát theo dữ liệu thực |
-| <a id="com-sql-02"></a> COM-SQL-02 | channel name regex slug, tối thiểu 2 ASCII; topic 500; visibility có read-only | Tên Unicode 1–100 UTF-16, topic 1.000; kind text/voice/default_view/deleted_at/version/access_version riêng; unique tên phòng đang active, ID đã deleted không khôi phục; không đưa read-only vào MVP |
+| <a id="com-sql-02"></a> COM-SQL-02 | channel name regex slug, tối thiểu 2 ASCII; topic 500; visibility có read-only | Tên Unicode 1–100 UTF-16, topic 1.000; kind text/voice/default_view/deleted_at/version/access_version riêng; unique tên phòng đang active, ID đã deleted không khôi phục; không đưa read-only vào v1 |
 | <a id="com-sql-03"></a> COM-SQL-03 | roles tên 50, unique generated lower; default index chỉ “tối đa một” | Role tên 64, key chuẩn hóa cùng service; đúng một @everyone tạo cùng server; system restrictions và giới hạn 20 dưới server lock |
 | <a id="com-sql-04"></a> COM-SQL-04 | member_roles/user_overrides gắn user nhưng chưa có epoch | Thêm membership_id/version, FK theo epoch; clear assignment/override khi leave; chống ABA rejoin |
 | <a id="com-sql-05"></a> COM-SQL-05 | Không có join_requests hoặc member_invitations | Thêm trạng thái/version/lý do/expiry, unique pending có điều kiện, membershipId đã tạo; transition có khóa và CAS |
 | <a id="com-sql-06"></a> COM-SQL-06 | invites giữ hash/lượt/hạn, default_role_id có thể khác default | Thêm version/protected_token; không cấp custom role qua link; use_count/membership cùng transaction |
 | <a id="com-sql-07"></a> COM-SQL-07 | channels FK sang Messaging space; chưa có nghiệp vụ writer | Create/delete qua IChatSpaceLifecycle trong shared transaction; Community không đọc/ghi bảng Messaging trực tiếp |
 | <a id="com-sql-08"></a> COM-SQL-08 | Trigger servers/spaces tự tăng version; channels/roles chỉ touch timestamp | Một nguồn tăng version cho mỗi resource, tránh trigger và service cùng tăng; wire chuỗi số, accessVersion tăng đúng khi quyền đổi |
-| <a id="com-sql-09"></a> COM-SQL-09 | Permission catalog/role overrides có thể chứa quyền ngoài MVP | Migrate danh mục 5 management codes + channel_view; chỉ channel_view nhận override allow/deny; không suy seed permissions thành tính năng |
+| <a id="com-sql-09"></a> COM-SQL-09 | Permission catalog/role overrides có thể chứa quyền ngoài v1 | Migrate danh mục 5 management codes + channel_view; chỉ channel_view nhận override allow/deny; không suy seed permissions thành tính năng |
 | <a id="com-sql-10"></a> COM-SQL-10 | Không có operation dedup hoặc realtime dispatcher Community | Thêm operation key `(actor,kind,scope,client_id)` với scope không null (create-server dùng UUID zero), fingerprint/key/version/resource ID; outbox metadata/lease, revoker/guards; key ring bền và thử restart |
 
 Nguồn: [schema.sql](../../../database/postgres/schema.sql), [CommunityModule](../../../services/Modules/Community/CommunityModule.cs), [IChannelAccessChecker](../../../services/SCDC.Contracts/Community/IChannelAccessChecker.cs). Không sửa schema/seed trong đợt tài liệu này. Trước bật unique key mới, dò collision Unicode/case và mapping tên legacy; không tự đổi tên/xóa dữ liệu thật. Giữ tin/phòng deleted theo [vòng đời dữ liệu](../../data-lifecycle.md#deletion): không tự hết hạn tin DEC-070, phòng deleted giữ nội dung chưa hạn purge DEC-105; backup tuổi tối đa 30 ngày DEC-109. Role/override epoch cũ dọn theo rule membership, không phục hồi từ backup; migration không tự xóa nội dung.

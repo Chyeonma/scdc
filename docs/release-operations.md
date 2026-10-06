@@ -1,8 +1,10 @@
 # SCDC — Kiểm thử nghiệm thu, phát hành và vận hành
 
-Cập nhật: 2026-10-04. Phạm vi: SCP-008, SUC-006 và yêu cầu chất lượng xuyên tính năng.
+Cập nhật: 2026-10-06. Phạm vi: SCP-008, SUC-006 và yêu cầu chất lượng xuyên tính năng.
 
 Kế hoạch chuẩn bị; chưa có kết quả nghiệm thu/phát hành được ghi nhận. Compose hiện tại là cấu hình Development. DEC-110 chốt điều kiện lỗi tồn; DEC-111 ghi người duyệt chưa được chọn; DEC-112 chốt phạm vi quản trị kỹ thuật có audit. Công cụ, người trực và cấu hình triển khai còn OQ-007/OQ-008/OQ-010/OQ-011.
+
+Các gate/ngưỡng đầy đủ trong file này áp dụng cho bản hoàn thiện [v1](releases/v1.md), trước đây được gọi là MVP. Mốc [MVP mới](releases/mvp.md#acceptance) có phạm vi và điều kiện bàn giao riêng; kết quả phải ghi đúng mốc và UC/AC áp dụng. Hoàn thành MVP không đồng nghĩa đạt gate media hoặc được phép phát hành công khai.
 
 ## Mục lục
 
@@ -23,8 +25,7 @@ Tài liệu thực hành: [runbook vận hành](operations-runbook.md), [mẫu h
 
 ### Phạm vi kiểm chứng
 
-Thái chuẩn bị và điều phối kiểm thử, Vg và Sáng rà soát tình huống liên
-quan đến UX, backend và kiến trúc. Kết quả kiểm thử phải nối tới mã tiêu
+Theo [DEC-117](decisions.md#dec-117), mỗi người tự kiểm thử phần sở hữu và có người khác kiểm tra lại; Vg/Sáng giữ kỳ vọng nghiệp vụ/quyền/đồng thời, Thái chuẩn bị dataset/bộ chạy và tổng hợp kết quả. Kết quả kiểm thử phải nối tới mã tiêu
 chí chấp nhận, môi trường, dữ liệu thử, phiên bản sản phẩm và lỗi phát hiện.
 Không coi tiêu chí dự thảo là đã đạt khi chưa có kết quả thực thi.
 Bộ ca và dữ liệu chuẩn bị cho tài khoản/DM/quyền phòng tại
@@ -45,13 +46,13 @@ Bộ ca và dữ liệu chuẩn bị cho tài khoản/DM/quyền phòng tại
 
 ### Quy trình nghiệm thu và trạng thái kết quả
 
-Phân biệt **bàn giao nội bộ theo đợt** với **nghiệm thu toàn MVP để phát hành**. Một đợt Accounts/DM có thể được rà soát riêng khi đủ phụ thuộc; không suy đã nghiệm thu media hoặc đã cho phép mở công khai. Mọi hồ sơ ghi phạm vi SCP, tiêu chí AC, build và phần chưa có implementation.
+Phân biệt **bàn giao nội bộ theo đợt** với **nghiệm thu toàn v1 để phát hành**. Một đợt Accounts/DM có thể được rà soát riêng khi đủ phụ thuộc; không suy đã nghiệm thu media hoặc đã cho phép mở công khai. Mọi hồ sơ ghi phạm vi SCP, tiêu chí AC, build và phần chưa có implementation.
 
 | Bước | Công việc | Đầu ra / đầu mối |
 |---|---|---|
-| 1. Khóa đợt | Phạm vi, build/artefact, schema/config, browser/thiết bị, dataset và tiêu chí đã chốt | Định danh trong [mẫu hồ sơ](templates/release-record.md); Vg/Sáng rà soát kỹ thuật, Thái chuẩn bị kiểm thử |
+| 1. Khóa đợt | Phạm vi, build/artefact, schema/config, browser/thiết bị, dataset và tiêu chí đã chốt | Định danh trong [mẫu hồ sơ](templates/release-record.md); từng chủ gói chuẩn bị ca/kỳ vọng, Thái chuẩn bị dataset/bộ chạy |
 | 2. Chuẩn bị | Tài khoản giả, email thử, quyền/thiết bị, quan sát trace/clock, khả năng fault injection và rollback | Ca chưa đủ đầu vào ghi Bị chặn; không dùng user/DM thật |
-| 3. Thực thi | Chạy AC/TC chức năng, quyền, đồng thời, tải/media và dữ liệu/vận hành theo phạm vi | Mỗi lần chạy có thực tế, evidence, người và thời điểm; Thái tổng hợp |
+| 3. Thực thi | Chạy AC/TC chức năng, quyền, đồng thời, tải/media và dữ liệu/vận hành theo phạm vi | Chủ gói thực thi phần sở hữu, có kiểm tra chéo; mỗi lần chạy có thực tế, evidence, người và thời điểm; Thái tổng hợp |
 | 4. Xử lý lỗi | Ghi ảnh hưởng/tái hiện, người/hạn sửa; sửa rồi kiểm tra lại trên build xác định | Lỗi đóng khi có bằng chứng kiểm tra lại; chạy hồi quy các phần chịu tác động |
 | 5. Tổng hợp | Đối chiếu tất cả gate, lỗi tồn, coverage và hạn chế | Kết luận kỹ thuật và hồ sơ cho người có thẩm quyền, chưa tự ký thay |
 | 6. Quyết định | Người được chọn xác nhận nghiệm thu; cho phép deploy/mở đăng ký là các quyết định có phạm vi riêng | Người duyệt còn mở DEC-111; thiếu người xác nhận thì chưa được ghi đã nghiệm thu/phát hành |
@@ -62,7 +63,7 @@ Phân biệt **bàn giao nội bộ theo đợt** với **nghiệm thu toàn MVP
 | Bị chặn | Không thể chạy vì thiếu implementation, môi trường, quyết định hoặc công cụ; ghi phụ thuộc/người xử lý |
 | Đạt | Kết quả thực tế đúng toàn bộ kỳ vọng, có bằng chứng và build/lần chạy |
 | Chưa đạt | Có kết quả không đáp ứng kỳ vọng; nối tới lỗi và lần kiểm tra lại |
-| Không áp dụng | Ngoài phạm vi đã chốt, có căn cứ DEC/SCP; ví dụ media điện thoại DEC-082. Không dùng cho ca MVP chưa có code hoặc chưa đo |
+| Không áp dụng | Ngoài phạm vi đã chốt, có căn cứ DEC/SCP; ví dụ media điện thoại DEC-082. Không dùng cho ca v1 chưa có code hoặc chưa đo |
 
 Kết luận hồ sơ là Chưa đánh giá / Chưa đạt / Đạt trong phạm vi ghi nhận, kèm người xác nhận. Bằng chứng từ mock, fixture, kiểm tra schema hoặc test local ghi đúng loại, không thay API/UI/DB/SFU thật. Thay build/schema/config ảnh hưởng kết quả phải đánh giá và chạy lại phần liên quan; không tự dùng kết quả build cũ cho bản mới.
 
@@ -99,13 +100,13 @@ Các gate cụ thể hóa phạm vi/ngưỡng đã chọn và DEC-110; chưa gat
 | RLS-GATE-09 | Lỗi tồn theo DEC-110, các ca bắt buộc không bị bỏ qua | Không M1/M2 chưa giải quyết; M3 có người/hạn sửa và chấp nhận; không tiêu chí bắt buộc chưa kiểm chứng |
 | RLS-GATE-10 | Có người có thẩm quyền xác nhận và quyết định | Xác nhận nghiệm thu, deploy/mở công khai, phạm vi/build/thời điểm; DEC-111 còn mở |
 
-Limiting bổ sung DEC-089 vẫn là đề xuất hoãn chọn, không tự biến ngưỡng chưa chọn thành tiêu chí nghiệm thu. Thay hoặc bỏ một gate bắt buộc cần quyết định phạm vi/ngưỡng mới được ghi nhận, không chỉ đánh dấu Không áp dụng. Bản MVP chưa có một tính năng trong scope vẫn chưa đủ nghiệm thu toàn MVP.
+Limiting bổ sung DEC-089 vẫn là đề xuất hoãn chọn, không tự biến ngưỡng chưa chọn thành tiêu chí nghiệm thu. Thay hoặc bỏ một gate bắt buộc cần quyết định phạm vi/ngưỡng mới được ghi nhận, không chỉ đánh dấu Không áp dụng. Bản v1 chưa có một tính năng trong scope vẫn chưa đủ nghiệm thu toàn v1.
 
 <a id="quality-targets"></a>
 
 ### Ma trận hỗ trợ và mục tiêu đo đã xác nhận
 
-DEC-082: desktop Chrome/Edge/Firefox/Safari, hai phiên bản ổn định gần nhất tại lúc khóa build nghiệm thu; điện thoại Chrome Android/Safari iOS cho Accounts/DM/Community; media MVP chỉ cam kết desktop. Thái ghi OS, thiết bị, kích thước viewport, phiên bản browser, build và ngày khóa ma trận. Kiểm tra bàn phím/IME, focus, thông báo lỗi, cuộn và trạng thái thiết bị; hai kích thước wireframe không thay thế ca trên thiết bị thật.
+DEC-082: desktop Chrome/Edge/Firefox/Safari, hai phiên bản ổn định gần nhất tại lúc khóa build nghiệm thu; điện thoại Chrome Android/Safari iOS cho Accounts/DM/Community; media v1 chỉ cam kết desktop. Thái ghi OS, thiết bị, kích thước viewport, phiên bản browser, build và ngày khóa ma trận. Kiểm tra bàn phím/IME, focus, thông báo lỗi, cuộn và trạng thái thiết bị; hai kích thước wireframe không thay thế ca trên thiết bị thật.
 
 | Chỉ số | Mục tiêu | Điều kiện/cách ghi nhận |
 |---|---|---|
@@ -217,9 +218,11 @@ SM-11 chạy trong diễn tập/restore với dữ liệu tương ứng; deploy 
 
 ## 2. Chuẩn bị phát hành
 
-MVP triển khai Modular Monolith theo DEC-060. Nơi host, topology, domain, tài nguyên và người vận hành chưa được chốt. Các mục dưới đây là đầu ra cần chuẩn bị, không phải hướng dẫn deployment production đã được kiểm chứng.
+v1 chuyển nền một API host của MVP sang microservice theo DEC-116; source hiện tại vẫn Modular Monolith. Phân công phát triển môi trường/công cụ theo DEC-117; nơi host, topology, domain, tài nguyên và người trực production chưa được chốt. Các mục dưới đây là đầu ra cần chuẩn bị, không phải hướng dẫn deployment production đã được kiểm chứng.
 
-### Topology MVP đề xuất
+### Topology trước khi chuyển sang microservice — cần rà soát
+
+Sơ đồ dưới giữ phương án một host từng được lập cho bản đầy đủ, gồm phần media chưa có ở MVP. Theo DEC-116, một API host là nền MVP; khi triển khai v1 phải thay phần API/DB trong sơ đồ theo [ranh giới microservice được chọn](architecture.md#target). Phần media cũng phải được kiểm chứng. Sơ đồ này chưa phải topology v1 đã chốt; cần cập nhật đường gọi/quyền/DB và điều khiển media trước khi dùng làm runbook triển khai.
 
 ```mermaid
 flowchart LR
@@ -239,7 +242,7 @@ Phương án ban đầu dùng một API instance để giữ thu hồi/định t
 
 Bộ kiểm soát media/quota/fail-close ở SFU có thể cần extension/fork; chưa lựa chọn hoặc có build. Phải đánh giá duy trì, pin server/SDK, proof cutoff và node fencing trước khóa topology/lịch. Sau restart/restore, admission dừng tới khi chứng minh room/node generation cũ không còn truyền, rồi mới tái cấp capacity. Restore phải kết thúc participation/grant/source và command start được phục hồi từ backup; gọi/vào lại bằng ID mới, không hồi sinh cuộc gọi cũ. Runbook/rollback phải tương thích epoch/lease; không để rollback mở lại signaling trực tiếp hoặc bỏ gate.
 
-Topology này ưu tiên ít thành phần cho MVP, chưa đáp ứng HA khi một node lỗi. Chọn region gần nhóm thử, định cỡ CPU/RAM/đĩa/băng thông qua workload dưới đây, rồi mới khóa nhà cung cấp, domain, email và báo giá. Key ring cursor/envelope và cấu hình phục hồi phải tồn tại qua deploy/restart; không ghi khóa/token trong repo. Không có thay đổi compose hoặc hạ tầng được thực hiện trong lần cập nhật tài liệu này.
+Topology này ưu tiên ít thành phần cho v1, chưa đáp ứng HA khi một node lỗi. Chọn region gần nhóm thử, định cỡ CPU/RAM/đĩa/băng thông qua workload dưới đây, rồi mới khóa nhà cung cấp, domain, email và báo giá. Key ring cursor/envelope và cấu hình phục hồi phải tồn tại qua deploy/restart; không ghi khóa/token trong repo. Không có thay đổi compose hoặc hạ tầng được thực hiện trong lần cập nhật tài liệu này.
 
 ### Trình tự phát hành để diễn tập
 
@@ -321,9 +324,9 @@ Policy online: log kỹ thuật 14 ngày, audit 90 ngày, IP/user-agent audit 7 
 
 ### Phạm vi quản trị đã chốt, phân công còn mở
 
-DEC-112 chốt MVP chưa có UI quản trị riêng; khóa/mở khóa qua quy trình kỹ thuật có phân quyền/audit, không cấp quyền đọc DM/sửa/xóa tin thay tác giả. Quy trình [RB-ACCOUNT](operations-runbook.md#account-support) chưa có công cụ triển khai. Người dùng chưa xác nhận đề xuất Vg hỗ trợ, Sáng hạ tầng/sự cố/backup, Thái kiểm tra phát hành; không ghi các thành viên đã nhận trách nhiệm vận hành. DEC-111 giữ người duyệt nghiệm thu/phát hành chưa được chọn.
+DEC-112 chốt v1 chưa có UI quản trị riêng; khóa/mở khóa qua quy trình kỹ thuật có phân quyền/audit, không cấp quyền đọc DM/sửa/xóa tin thay tác giả. Quy trình [RB-ACCOUNT](operations-runbook.md#account-support) chưa có công cụ triển khai. DEC-117 giao Thái phát triển môi trường/công cụ, từng chủ gói tự kiểm thử và Vg chủ trì chính sách; phân công phát triển này chưa chọn người trực hoặc cấp quyền vận hành production. DEC-111 giữ người duyệt nghiệm thu/phát hành chưa được chọn.
 
-Khi xử lý khóa tài khoản, runbook dự kiến ghi actor, user ID, lý do, thời điểm, trạng thái trước/sau và thu hồi mọi phiên/chat/media; mở khóa không tự khôi phục phiên cũ. Không mở quyền đọc DM/sửa hoặc xóa tin thay tác giả từ việc có quyền vận hành. Khôi phục tài khoản chỉ qua email đã đăng ký theo DEC-067; vấn đề mất email không có quy trình khôi phục thủ công trong MVP.
+Khi xử lý khóa tài khoản, runbook dự kiến ghi actor, user ID, lý do, thời điểm, trạng thái trước/sau và thu hồi mọi phiên/chat/media; mở khóa không tự khôi phục phiên cũ. Không mở quyền đọc DM/sửa hoặc xóa tin thay tác giả từ việc có quyền vận hành. Khôi phục tài khoản chỉ qua email đã đăng ký theo DEC-067; vấn đề mất email không có quy trình khôi phục thủ công trong v1.
 
 <a id="implementation-gaps"></a>
 
@@ -351,4 +354,4 @@ Các gói có thể đi cùng đợt phát triển phụ thuộc; chưa có kế
 - OQ-011: [vòng đời dữ liệu](data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof, phân công/người trực/lịch trực và người duyệt DEC-111.
 - OQ-008: có thiết kế Accounts/DM/Community/Media; còn review/migration/email worker, lựa chọn extension/SDK/version LiveKit, key store và proof guards/realtime/SFU.
 
-Vg/Sáng rà soát sản phẩm/kỹ thuật/triển khai, Thái chuẩn bị và tổng hợp kiểm thử theo phân công phát triển hiện tại. Người trực vận hành, người ký nghiệm thu và thẩm quyền mở công khai cần được chọn trước phát hành; DEC-111 không giao quyền duyệt cho Vg hoặc cho người dùng trong đợt này.
+Vg/Sáng rà soát sản phẩm/quyền/lifecycle; Thái phát triển môi trường/provider/công cụ và tổng hợp kết quả. Mỗi người tự kiểm thử phần sở hữu và kiểm tra chéo theo DEC-117. Người trực vận hành, người ký nghiệm thu và thẩm quyền mở công khai cần được chọn trước phát hành theo DEC-111.

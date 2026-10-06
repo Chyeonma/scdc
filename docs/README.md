@@ -1,22 +1,28 @@
 # Tài liệu SCDC
 
-Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng. Mỗi nội dung có một nguồn chuẩn; các bản đã thay thế nằm trong archive. Hợp nhất: 2026-10-03; cập nhật quyết định: 2026-10-05; cập nhật đặc tả: 2026-10-06.
+Bộ tài liệu hiện hành được tổ chức theo dự án, tính năng và mốc bàn giao. Mỗi nội dung có một nguồn chuẩn; các bản đã thay thế nằm trong archive. Hợp nhất: 2026-10-03; tách MVP/v1 và cập nhật quyết định: 2026-10-06.
+
+**MVP** là mốc nhỏ đầu tiên gồm Identity, Community và Direct Messaging trong một API host Modular Monolith. **v1** chuyển sang microservice và hoàn thiện phạm vi vốn được gọi là MVP trước đây, gồm cả gọi điện/video/chia sẻ màn hình. Bắt đầu từ [lộ trình](roadmap.md), rồi chọn [gói MVP](releases/mvp.md#packages) để đọc đúng phần đặc tả cần triển khai; [v1](releases/v1.md) giữ phạm vi đầy đủ.
 
 ## Bắt đầu từ đâu
 
 | Bạn cần làm gì | Đọc |
 |---|---|
+| Phân biệt MVP/v1 và chọn phần cần làm ngay | [Lộ trình](roadmap.md), [MVP](releases/mvp.md), [v1](releases/v1.md) |
 | Hiểu mục tiêu, requirement, scope và kế hoạch | [Dự án](project.md) |
+| Biết ai làm gì và cân tải theo từng giai đoạn | [Phân công](project.md#team), [công suất và quy tắc cân tải](project.md#capacity) |
 | Tra cứu quyết định, căn cứ hoặc vấn đề chưa chốt | [Quyết định](decisions.md) |
 | Thiết kế/tích hợp xuyên module | [Kiến trúc](architecture.md) |
 | Chạy repo, chuẩn bị dữ liệu hoặc kiểm thử kỹ thuật | [Phát triển](development.md) |
-| Triển khai một tính năng | Mở đặc tả tương ứng bên dưới; Community có trang tổng quan dẫn tới đặc tả từng thành phần, gồm nghiệp vụ, UX, hợp đồng, AC và test |
+| Triển khai một tính năng | Chọn gói trong hồ sơ MVP/v1, rồi mở mục đặc tả được dẫn chiếu; Community có trang tổng quan dẫn tới từng thành phần, gồm nghiệp vụ, UX, hợp đồng, AC và test |
 | Tra cứu vòng đời dữ liệu, cleanup và bảo vệ sau restore | [Vòng đời dữ liệu](data-lifecycle.md) |
-| Nghiệm thu, phát hành, vận hành | [Phát hành và vận hành](release-operations.md) |
+| Bàn giao MVP hoặc nghiệm thu/phát hành v1 | [Điều kiện MVP](releases/mvp.md#acceptance), [v1](releases/v1.md#acceptance), [phát hành và vận hành](release-operations.md) |
 | Làm theo hướng dẫn deploy/rollback/sự cố/restore | [Runbook vận hành](operations-runbook.md) |
 | Ghi kết quả kiểm thử/bàn giao hoặc xử lý sự cố | [Mẫu hồ sơ phát hành](templates/release-record.md), [mẫu hồ sơ sự cố](templates/incident-record.md) |
 
 ## Đặc tả tính năng
+
+Các file dưới đây giữ đặc tả đầy đủ cho v1. MVP chọn các luồng cần làm trước tại [hồ sơ MVP](releases/mvp.md); không tạo bản sao đặc tả hoặc coi mọi UC/AC trong một file là phải hoàn tất ngay ở gói đầu.
 
 | Tài liệu | Scope | Nội dung |
 |---|---|---|
@@ -30,6 +36,7 @@ Tình trạng sẵn sàng theo scope được quản lý tại [project.md](proj
 ## Cách quản lý thông tin
 
 - Scope xác định phạm vi bàn giao; requirement xác định hành vi/điều kiện cần đáp ứng. REQ/SCP/SUC ở project.md; quy tắc và AC/TC chi tiết ở từng tính năng.
+- Hồ sơ trong `releases/` xác định phần bàn giao theo mốc và cách kiểm chứng; roadmap dẫn đường. Giữ một nguồn đặc tả cho mỗi tính năng, giữ nguyên mã truy vết; bản MVP phát triển tiếp thành v1.
 - DEC/OQ quản lý kết luận và nội dung cần làm rõ; đặc tả dẫn chiếu các mã này. Giữ nguyên mã khi chuyển file, không cấp lại mã đã loại.
 - Mỗi đặc tả ghi riêng mức xác nhận nghiệp vụ, trạng thái thiết kế, implementation và bằng chứng kiểm thử. “Có code” hoặc “có ca test” không đồng nghĩa “đã nghiệm thu”.
 - API đã triển khai được đối chiếu với source/OpenAPI; phương án tương lai có nhãn đề xuất. Kiến trúc hiện tại và định hướng đợt sau được ghi riêng.
@@ -41,6 +48,10 @@ Tình trạng sẵn sàng theo scope được quản lý tại [project.md](proj
 docs/
 ├── README.md
 ├── project.md
+├── roadmap.md
+├── releases/
+│   ├── mvp.md                  # Mốc nhỏ để bắt đầu làm/tích hợp
+│   └── v1.md                   # Bản hoàn thiện kế thừa phạm vi cũ
 ├── decisions.md
 ├── architecture.md
 ├── data-lifecycle.md

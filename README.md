@@ -1,8 +1,8 @@
 # SCDC — Nền tảng giao tiếp trên web
 
-SCDC phát triển ứng dụng giao tiếp cho nhóm bạn và cộng đồng: tài khoản, nhắn tin riêng, phòng theo chủ đề, phân quyền, thoại/video và chia sẻ màn hình. [Requirements và scope MVP](docs/project.md#scope) xác định phạm vi bàn giao.
+SCDC phát triển ứng dụng giao tiếp cho nhóm bạn và cộng đồng. [MVP](docs/releases/mvp.md) bàn giao trước với Identity, Community và Direct Messaging; [v1](docs/releases/v1.md) là bản hoàn thiện kế thừa phạm vi đầy đủ, gồm thoại/video và chia sẻ màn hình. [Lộ trình](docs/roadmap.md) giải thích cách đọc và quản lý tài liệu theo hai mốc.
 
-MVP dùng **Modular Monolith** theo DEC-060; tách microservices ở đợt sau. Source hiện tại có Identity API; Community và Messaging ở nền module, giao diện chat/cộng đồng còn dùng dữ liệu mẫu. Media chưa triển khai. Tình trạng đặc tả và bằng chứng bàn giao ở [tài liệu dự án](docs/project.md#readiness).
+MVP giữ một API host Modular Monolith; **microservice thuộc v1** theo [DEC-116](docs/decisions.md#dec-116) để đáp ứng môn học. Ranh giới service cụ thể còn cần chốt. Source hiện tại có implementation Identity, Community và Messaging ở nền module, giao diện chat/cộng đồng còn dùng dữ liệu mẫu. Media chưa triển khai và thuộc v1. [Kiến trúc](docs/architecture.md) ghi riêng hiện trạng và phương án mục tiêu; [phân công](docs/project.md#team) và [công suất](docs/project.md#capacity) ghi gói việc của ba thành viên.
 
 ## Khởi chạy nhanh
 
@@ -46,6 +46,7 @@ Docker Desktop và Docker Engine dùng mặc định `ENGINE=docker`; Podman dù
 Điểm bắt đầu là [mục lục docs](docs/README.md). Đặc tả tính năng chứa phạm vi, requirements, UX, hợp đồng, ngoại lệ, tiêu chí chấp nhận và kiểm thử. [Community](docs/features/community.md#organization) có trang tổng quan và đặc tả theo năm thành phần nghiệp vụ, cùng tài liệu tích hợp dùng chung.
 
 - [Dự án: requirements, scope, nguồn lực và kế hoạch](docs/project.md)
+- [Lộ trình MVP và v1](docs/roadmap.md)
 - [Quyết định và vấn đề còn mở](docs/decisions.md)
 - [Kiến trúc và quy ước tích hợp](docs/architecture.md)
 - [Phát triển và kiểm thử kỹ thuật](docs/development.md)

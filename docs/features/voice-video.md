@@ -1,8 +1,8 @@
 # SCDC — Thoại, video và chia sẻ màn hình
 
-Cập nhật: 2026-10-04. Phạm vi: REQ-007/008/009, SCP-006/007, DEC-046–050/078–085/099–102 và AC-MEDIA.
+Cập nhật: 2026-10-06. Phạm vi: REQ-007/008/009, SCP-006/007, DEC-046–050/078–085/099–102 và AC-MEDIA.
 
-Media thuộc MVP. Điều kiện gọi, giới hạn 10/20/2 và reconnect 30 giây đã chốt DEC-078–080; thu hồi 5 giây, nhận đầu tiên thắng, thiết bị mặc định tắt và không truyền âm thanh màn hình đã chốt DEC-099–102. Có thiết kế chi tiết, OpenAPI, catalogue realtime và fixture; LiveKit tự host/media desktop/chất lượng theo DEC-082/084/085. Provider/backend/API chưa triển khai; bộ kiểm soát tại SFU và các mục tiêu cần thử nghiệm.
+Media thuộc [v1](../releases/v1.md) theo DEC-114; không phải điều kiện hoàn thành mốc MVP mới. Điều kiện gọi, giới hạn 10/20/2 và reconnect 30 giây đã chốt DEC-078–080; thu hồi 5 giây, nhận đầu tiên thắng, thiết bị mặc định tắt và không truyền âm thanh màn hình đã chốt DEC-099–102. Có thiết kế chi tiết, OpenAPI, catalogue realtime và fixture; LiveKit tự host/media desktop/chất lượng theo DEC-082/084/085. Provider/backend/API chưa triển khai; bộ kiểm soát tại SFU và các mục tiêu cần thử nghiệm.
 
 ## Mục lục
 
@@ -19,10 +19,10 @@ Media thuộc MVP. Điều kiện gọi, giới hạn 10/20/2 và reconnect 30 g
 
 ### Phạm vi đã thống nhất
 
-Phiên bản đầu có phòng thoại nhiều thành viên trong server và cuộc gọi
+Bản hoàn thiện v1 có phòng thoại nhiều thành viên trong server và cuộc gọi
 riêng giữa hai người. Cả hai ngữ cảnh có video và chia sẻ màn hình.
-Cuộc gọi trong nhóm chat riêng ngoài server không thuộc phiên bản đầu.
-Sản phẩm chạy trên trình duyệt web; ma trận trình duyệt desktop đã chốt DEC-082; phiên bản/OS/thiết bị thực tế phải ghi ở lần nghiệm thu. Ngày 2026-10-04, người dùng chốt 20 người tham gia gọi đồng thời toàn hệ thống là giới hạn MVP (DEC-079). Đây là thay đổi từ giả định dự toán AS-006 sang quy tắc cần kiểm chứng, chưa phải kết quả đo.
+Cuộc gọi trong nhóm chat riêng ngoài server không thuộc bản hoàn thiện v1.
+Sản phẩm chạy trên trình duyệt web; ma trận trình duyệt desktop đã chốt DEC-082; phiên bản/OS/thiết bị thực tế phải ghi ở lần nghiệm thu. Ngày 2026-10-04, người dùng chốt 20 người tham gia gọi đồng thời toàn hệ thống là giới hạn v1 (DEC-079). Đây là thay đổi từ giả định dự toán AS-006 sang quy tắc cần kiểm chứng, chưa phải kết quả đo.
 
 ### Hành trình cần đặc tả
 
@@ -73,7 +73,7 @@ MEDIA-S03 thể hiện mất mạng/đang reconnect và thời gian còn lại t
 
 ## 3. Dữ liệu, API và tích hợp cần thiết kế
 
-MVP vẫn chạy Modular Monolith theo DEC-060; một nhà cung cấp media bên ngoài có thể được tích hợp nếu thử nghiệm phù hợp. LiveKit tự host đã được chọn tại DEC-084; chưa có service/manifest hoặc kết quả tích hợp trong repo.
+v1 chuyển nền một API host của MVP sang microservice theo DEC-116; source hiện tại vẫn Modular Monolith. LiveKit tự host đã được chọn tại DEC-084; chưa có service/manifest hoặc kết quả tích hợp trong repo. Thiết kế shared transaction/guard dưới đây còn giả định một host; cần rà soát theo ranh giới service được chọn, không tự thay provider hoặc giảm các điều kiện media đã chốt.
 
 | Hợp đồng cần có | Hành vi cần xác định |
 |---|---|
@@ -145,7 +145,7 @@ Phần này cụ thể hóa DEC-078–085 và DEC-099–102. Các thuật toán,
 | Thu hồi media | DEC-099: ngừng phát/nhận và chặn vào lại ≤5 giây từ commit đăng xuất/thu hồi phiên, mất quyền hoặc xóa phòng; không xác nhận được quyền thì dừng media liên quan. Chưa có kết quả đo. |
 | Nhiều tab/thiết bị | DEC-100: báo cuộc gọi đến cho các phiên desktop khả dụng, lần accept đầu thắng; các phiên khác ngừng đổ chuông, không tự chuyển/chiếm participation. |
 | Thiết bị ban đầu | DEC-101: mic/camera tắt, chưa share; cho vào chỉ để nghe dù chưa cấp quyền mic/camera. |
-| Âm thanh màn hình | DEC-102: MVP chỉ hình màn hình, tiếng nói qua micro; âm thanh tab/ứng dụng để sau. |
+| Âm thanh màn hình | DEC-102: v1 chỉ hình màn hình, tiếng nói qua micro; âm thanh tab/ứng dụng để sau. |
 
 Các lựa chọn này đã ghi vào [sổ quyết định](../decisions.md#dec-099) ngày 2026-10-04. Limiter media, topology/provider version và người vận hành vẫn chưa khóa; retention chính theo DEC-103–109; không biến các timeout kỹ thuật đề xuất thành quyết định sản phẩm mới.
 
@@ -168,7 +168,7 @@ flowchart LR
 
 Media sở hữu trạng thái call/participation/nguồn và hạn mức. Identity xác nhận user active/verified, session còn hiệu lực/security stamp; Community xác nhận membership epoch, channel loại voice chưa deleted và quyền view hiện hành. Admission/renew gọi riêng kiểm tra cả hai account/session binding đã accept; một bên không còn hợp lệ thì không renew quyền của cả call. Không JOIN chéo schema hoặc suy `IUserDirectory` trả summary thành đủ quyền. REST/SignalR không truyền RTP; LiveKit không tự tạo thành viên hoặc bỏ qua quyền Community.
 
-Gọi riêng kiểm tra cả hai user đủ điều kiện DM, không gọi chính mình và không đòi kết bạn/cùng cộng đồng. User/session phía gọi phải còn hợp lệ khi accept; accept gắn phiên phía nhận. Nếu một bên mất phiên/quyền tài khoản hoặc rời sau accept, kết thúc cả cuộc gọi hai người. Trong phòng thoại chỉ kết thúc participation bị ảnh hưởng; xóa phòng kết thúc tất cả. Quyền quản lý phòng không cấp quyền tắt/bật thiết bị người khác; MVP không thêm kick/mute/ghi âm cuộc gọi từ quyền quản lý.
+Gọi riêng kiểm tra cả hai user đủ điều kiện DM, không gọi chính mình và không đòi kết bạn/cùng cộng đồng. User/session phía gọi phải còn hợp lệ khi accept; accept gắn phiên phía nhận. Nếu một bên mất phiên/quyền tài khoản hoặc rời sau accept, kết thúc cả cuộc gọi hai người. Trong phòng thoại chỉ kết thúc participation bị ảnh hưởng; xóa phòng kết thúc tất cả. Quyền quản lý phòng không cấp quyền tắt/bật thiết bị người khác; v1 không thêm kick/mute/ghi âm cuộc gọi từ quyền quản lý.
 
 `clientInstanceId` là UUIDv4 trong RAM tab, không dùng ID session chung nhiều tab thay nó. Participation gắn user, session, client instance và connection epoch. Các ID này phục vụ phân biệt phiên, không thay Bearer hoặc kiểm tra quyền. Mỗi participation có một kết nối provider hợp lệ; sao chép token sang tab khác không được thay kết nối đang hoạt động. Grant chỉ trả cho phiên/tab sở hữu; snapshot chung không chứa grant, token, session ID hoặc security stamp.
 
@@ -188,7 +188,7 @@ Gọi riêng kiểm tra cả hai user đủ điều kiện DM, không gọi chí
 | `operations` | actor/operationId, endpoint + canonical fingerprint, kết quả committed không chứa secret; unique actor + clientOperationId |
 | `provider_commands` / `provider_inbox` | command/event ID, room generation, participation/connection/source epoch, payload không secret, retry/status; đồng bộ provider sau commit |
 
-[Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt log 14/audit 90 ngày và chi tiết media terminal/quiesced 7 ngày (DEC-106/107), giữ operation/deny marker cần thiết. Không dọn participation/draining chưa xác nhận SFU ngừng hoặc cho phép thao tác ended tạo lại. Không lưu âm thanh/hình ảnh hoặc bản ghi màn hình trong các bảng/outbox/log này. LiveKit recording/egress không được cấp trong grant MVP.
+[Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt log 14/audit 90 ngày và chi tiết media terminal/quiesced 7 ngày (DEC-106/107), giữ operation/deny marker cần thiết. Không dọn participation/draining chưa xác nhận SFU ngừng hoặc cho phép thao tác ended tạo lại. Không lưu âm thanh/hình ảnh hoặc bản ghi màn hình trong các bảng/outbox/log này. LiveKit recording/egress không được cấp trong grant v1.
 
 Đề xuất thêm `IMediaRoomLifecycle` trong Contracts: tạo room DB rỗng cho voice channel cùng transaction Community create, đánh dấu closing khi xóa; chưa provision SFU khi room rỗng. Nhờ vậy GET phòng thoại chưa có người vẫn trả snapshot rỗng, không giả 404 phòng không tồn tại. Migration backfill room cho voice channel hiện có; vòng đời Media/Community qua shared scope, không tham chiếu implementation hoặc gọi SFU trong transaction. Interface/schema/source hiện chưa có.
 
@@ -248,7 +248,7 @@ Nội bộ: POST `/internal/media/admissions` xác nhận join/resume hoặc ren
 
 [media-realtime.schema.json](../contracts/media-realtime.schema.json) mô tả 8 loại thông điệp ứng dụng trên `/hubs/chat`, không là SignalR wire frame: `RegisterMediaClient`, `UnregisterMediaClient`, `MediaClientAcknowledgement`, `IncomingCall`, `CallChanged`, `ParticipationChanged`, `RoomMediaChanged`, `MediaAccessRevoked`. Schema không thay signaling LiveKit. Register chỉ công bố khả năng nhận cuộc gọi desktop của connection đã xác thực; không cho truyền userId/sessionId để đăng ký thay user khác.
 
-Presence đề xuất gắn SignalR connection + user/session/clientInstanceId; hết session/connection thì bỏ đăng ký. Tab lặp RegisterMediaClient mỗi 5 giây để renew presence idempotent, TTL 15 giây, kể cả chưa tham gia cuộc gọi; heartbeat REST chỉ dùng khi có participation. Registry không chứa media token. Kiểm tra presence và claim khi tạo call; trạng thái có thể thay đổi ngay sau kiểm tra, vì vậy người vừa đóng máy có thể kết thúc no-answer sau 30 giây thay vì báo unavailable tức thời. Mobile chưa nằm trong tập nhận/gọi media MVP. Presence/heartbeat không xác nhận RTP hoạt động; đó là trách nhiệm bộ kiểm soát provider.
+Presence đề xuất gắn SignalR connection + user/session/clientInstanceId; hết session/connection thì bỏ đăng ký. Tab lặp RegisterMediaClient mỗi 5 giây để renew presence idempotent, TTL 15 giây, kể cả chưa tham gia cuộc gọi; heartbeat REST chỉ dùng khi có participation. Registry không chứa media token. Kiểm tra presence và claim khi tạo call; trạng thái có thể thay đổi ngay sau kiểm tra, vì vậy người vừa đóng máy có thể kết thúc no-answer sau 30 giây thay vì báo unavailable tức thời. Mobile chưa nằm trong tập nhận/gọi media v1. Presence/heartbeat không xác nhận RTP hoạt động; đó là trách nhiệm bộ kiểm soát provider.
 
 IncomingCall/CallChanged chỉ gửi hai phía theo phiên đủ quyền; ParticipationChanged tới binding sở hữu; RoomMediaChanged tới người đang tham gia room còn view và lease hợp lệ. Người chưa tham gia GET snapshot khi chọn phòng và poll đề xuất 5 giây khi màn hình đó đang mở; catalogue chưa thêm subscribe room cho người ngoài cuộc gọi. Không broadcast global hoặc tới toàn server thiếu view. Sự kiện chỉ ID, version, trạng thái/reason; JWT/grant/permit không đi qua Hub. `MediaAccessRevoked` chỉ báo ID/reason cho binding cũ, không gửi metadata phòng sau thu hồi.
 
@@ -282,7 +282,7 @@ Theo [webhooks LiveKit](https://docs.livekit.io/intro/basics/rooms-participants-
 
 Observations từ bộ kiểm soát có node generation, provider room/participant SID, participation/connection/source epoch và observation sequence dạng chuỗi. Chấp nhận chỉ khi đúng generation/epoch; thấp/trùng bỏ qua; trạng thái terminal không hồi sinh. `connected` cần bằng chứng transport media sẵn sàng, không chỉ HTTP upgrade; `source_live` phải đã qua quota gate; `quiesced` phải bảo đảm cả forward/subscribe ngừng. Provider webhook cũ/lệch epoch dùng cho reconciliation, không cập nhật counter mù.
 
-Worker có commandId/idempotency và kiểm tra trạng thái desired mới nhất trước gọi SFU. Retry remove với backoff bị giới hạn bởi local lease, không kéo dài cutoff 5 giây. Không retry start/join/source cũ sau ended. Poll reconciliation mỗi giây là đề xuất cho MVP 20 người; so sánh room/participant/track thực tế với state, xử lý ghost và cảnh báo counter lệch. DB restart/restore: fence room/node generation cũ và chứng minh media cũ ngừng trước mở admission; không để backup hồi sinh token/participation đã kết thúc.
+Worker có commandId/idempotency và kiểm tra trạng thái desired mới nhất trước gọi SFU. Retry remove với backoff bị giới hạn bởi local lease, không kéo dài cutoff 5 giây. Không retry start/join/source cũ sau ended. Poll reconciliation mỗi giây là đề xuất cho v1 20 người; so sánh room/participant/track thực tế với state, xử lý ghost và cảnh báo counter lệch. DB restart/restore: fence room/node generation cũ và chứng minh media cũ ngừng trước mở admission; không để backup hồi sinh token/participation đã kết thúc.
 
 Riêng restore backup, kết thúc mọi call/ringing/participation/grant/source phục hồi và vô hiệu command start/thông báo ringing chưa xử lý trước mở admission; không tiếp tục cuộc gọi từ snapshot backup. Cấp room/node generation mới sau khi dừng/cách ly node cũ đã được chứng minh, rồi giải phóng user claims và tính lại capacity từ trạng thái quiesced. Counter/epoch phục hồi từ backup không tự chứng minh an toàn. Người dùng gọi/vào lại bằng participation mới; quy trình áp lại các thu hồi Identity/Community vẫn theo OQ-011 và runbook dữ liệu.
 
@@ -386,6 +386,4 @@ Mọi TC-MEDIA ở trạng thái Chưa chạy. Cần provider/môi trường, ma
 | Chất lượng | Đã chốt DEC-085; còn môi trường, thiết bị/version, hiệu chỉnh đồng hồ và kết quả đo. | OQ-007 |
 | Kỹ thuật/chi phí | LiveKit tự host DEC-084; có admission/lease/nguồn design, chưa chọn extension/fork hoặc pin server/SDK. Host/domain/TURN, key store, mức dùng, chi phí và công sức duy trì cần review. | OQ-008/010, MEDIA-GAP-03/06/07 |
 
-Vg và Sáng cần thử nghiệm giải pháp media theo kịch bản đã chốt trước
-khi xác nhận lịch, chi phí và điều kiện nghiệm thu. Thái chuẩn bị giao
-diện/trạng thái và kịch bản kiểm thử cùng nhóm.
+Theo [phân công DEC-117](../project.md#team), Vg giữ chính sách quyền/admission/quota/thu hồi; Sáng sở hữu backend và UI điều khiển lifecycle cuộc gọi; Thái sở hữu adapter provider/SDK, thiết bị/hiển thị nguồn và bộ chạy. Mỗi người chứng minh phần sở hữu theo kịch bản đã chốt trước khi xác nhận lịch, chi phí và nghiệm thu; [gói v1](../releases/v1.md) ghi phụ thuộc và công suất theo giai đoạn.

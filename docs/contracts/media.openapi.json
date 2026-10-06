@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Media control — target design",
     "version": "0.1.0-draft",
-    "description": "All operations unimplemented. DEC-078–085/099–102 are product inputs; coordinator/admission/SFU enforcement are proposed. 16 public + 3 internal operations. No recording, screen audio or device handoff in MVP."
+    "description": "All operations unimplemented. DEC-078–085/099–102 are product inputs; coordinator/admission/SFU enforcement are proposed. 16 public + 3 internal operations. No recording, screen audio or device handoff in v1."
   },
   "servers": [
     {

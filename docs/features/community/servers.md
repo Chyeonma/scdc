@@ -28,7 +28,7 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 | <a id="com-029"></a> COM-029 | Tài khoản đã xác minh được tạo cộng đồng; tên 2–100, mô tả tối đa 1.000; chọn công khai/riêng tư, mặc định công khai. Chủ sở hữu sửa các trường này. | DEC-072 |
 | <a id="com-033"></a> COM-033 | Chủ sở hữu chuyển ngay cho thành viên đã xác minh/active, không cần người nhận chấp nhận; chủ cũ vẫn là thành viên và chỉ được rời sau chuyển. | DEC-076 |
 | <a id="com-038"></a> COM-038 | Search chỉ cộng đồng công khai theo một phần tên, q 2–100 UTF-16; case-insensitive/accent-sensitive, tên khớp đúng trước; trang 20/tối đa 50. Trường tên/mô tả/chủ đề đếm UTF-16. | DEC-093 |
-| <a id="com-039"></a> COM-039 | Tên Unicode được trim và không trống/vô hình; tên server được trùng, tên phòng/vai trò unique trong server theo case-insensitive/accent-sensitive. MVP chưa có xóa server. | DEC-094/095 |
+| <a id="com-039"></a> COM-039 | Tên Unicode được trim và không trống/vô hình; tên server được trùng, tên phòng/vai trò unique trong server theo case-insensitive/accent-sensitive. v1 chưa có xóa server. | DEC-094/095 |
 | <a id="com-040"></a> COM-040 | Chuyển sang private hủy pending join requests và báo lý do; giữ member và lời mời hợp lệ. | DEC-096 |
 
 <a id="use-cases"></a>
@@ -115,7 +115,7 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 **Ngoại lệ:** Actor mất ownership hoặc version cũ không được ghi đè. Approve và private switch tranh nhau có một thứ tự commit: membership đã tạo trước switch được giữ, request đã bị hủy không approve được. Private→public không tự mở lại request terminal.
 
-**Kết quả sau cùng:** Metadata/visibility và trạng thái request nhất quán; thành viên hiện có và lời mời hợp lệ được giữ. Xóa toàn bộ server nằm ngoài MVP theo [COM-039](#com-039).
+**Kết quả sau cùng:** Metadata/visibility và trạng thái request nhất quán; thành viên hiện có và lời mời hợp lệ được giữ. Xóa toàn bộ server nằm ngoài v1 theo [COM-039](#com-039).
 
 <a id="uc-com-05"></a>
 
@@ -228,7 +228,7 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md
 | <a id="ac-com-33"></a> AC-COM-33 | Owner chuyển cho thành viên active/verified trong lúc target/chủ cũ thử rời | Chuyển ngay, không cần nhận chấp nhận; luôn đúng một owner; chủ cũ được rời sau chuyển thành công |
 | <a id="ac-com-37"></a> AC-COM-37 | Tìm tên Unicode có/không dấu, biên q và phân trang; đổi server public sang private giữa các trang | Đúng q 2–100/trang 20–50/exact-first; case-insensitive/accent-sensitive; private không xuất hiện từ cursor cũ theo DEC-093 |
 | <a id="ac-com-38"></a> AC-COM-38 | Tên có emoji/tiếng Việt, khoảng trắng, trống/vô hình, hai tên chỉ khác case/dấu | Đếm UTF-16/trim; server được trùng; active channel/role unique case-insensitive/accent-sensitive theo DEC-095 |
-| <a id="ac-com-39"></a> AC-COM-39 | Owner tìm thao tác xóa toàn server | Không có thao tác/API xóa server trong MVP theo DEC-094; vẫn có xóa phòng/chuyển owner |
+| <a id="ac-com-39"></a> AC-COM-39 | Owner tìm thao tác xóa toàn server | Không có thao tác/API xóa server trong v1 theo DEC-094; vẫn có xóa phòng/chuyển owner |
 | <a id="ac-com-40"></a> AC-COM-40 | Public có pending đổi sang private trong lúc reviewer duyệt | Một thứ tự commit xác định; pending còn lại cancelled/server_private, sender biết lý do; members/invites được giữ theo DEC-096 |
 
 

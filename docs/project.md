@@ -1,6 +1,6 @@
 # SCDC — Mục tiêu, yêu cầu, phạm vi và kế hoạch
 
-Cập nhật: 2026-10-05. Nguồn chuẩn cho REQ, SCP, SUC, COST, AS, RSK, READY và PREP.
+Cập nhật: 2026-10-06. Nguồn chuẩn cho REQ, SCP, SUC, COST, AS, RSK, READY và PREP. Phần bàn giao theo mốc ở [MVP](releases/mvp.md) và [v1](releases/v1.md); cách tổ chức ở [lộ trình](roadmap.md).
 
 Phạm vi sản phẩm đã được xác định ở mức tổng thể. Đặc tả và bằng chứng còn thiếu được theo dõi bên dưới; có code trong repo chưa đồng nghĩa đã nghiệm thu hoặc sẵn sàng phát hành.
 
@@ -8,7 +8,7 @@ Phạm vi sản phẩm đã được xác định ở mức tổng thể. Đặc
 
 - [Nhu cầu và người sử dụng](#needs)
 - [Yêu cầu cấp cao](#requirements)
-- [Phạm vi MVP](#scope)
+- [Phạm vi v1](#scope)
 - [Tiêu chí thành công và chất lượng](#success)
 - [Nhân sự](#team)
 - [Ngân sách, giả định, rủi ro](#budget)
@@ -82,7 +82,7 @@ Những quy tắc nghiệp vụ và giới hạn cần xác định được the
 |---|---|
 | REQ-001 | Phục vụ nhóm bạn và cộng đồng, không giới hạn chủ đề. |
 | REQ-002 | Có không gian cộng đồng (server), phòng, quản lý thành viên và quyền cơ bản. |
-| REQ-003 | Phiên bản đầu hoạt động trên trình duyệt web. |
+| REQ-003 | Bản hoàn thiện v1 hoạt động trên trình duyệt web. |
 | REQ-004 | Cho phép nhắn tin trong phòng thuộc server. |
 | REQ-005 | Cho phép nhắn tin riêng giữa hai người. |
 | REQ-007 | Có phòng thoại trong server, cho phép thành viên vào và rời phòng. |
@@ -90,7 +90,7 @@ Những quy tắc nghiệp vụ và giới hạn cần xác định được the
 | REQ-009 | Hỗ trợ camera/video và chia sẻ màn hình trong phòng thoại của server và cuộc gọi riêng giữa hai người. |
 | REQ-010 | Phát hành công khai, cho phép người dùng tự đăng ký. |
 | REQ-011 | Thời gian thực hiện mục tiêu khoảng 3 tháng. |
-| REQ-012 | Phát hành MVP bằng Modular Monolith, giữ ranh giới module; tách microservices ở đợt sau theo DEC-060 (thay yêu cầu microservices cho phiên bản đầu). |
+| REQ-012 | MVP giữ một API host Modular Monolith; v1 đáp ứng yêu cầu microservice của môn học theo DEC-116. Chưa bắt buộc số service, Gateway, broker hoặc Kubernetes; ranh giới/dữ liệu/hợp đồng và chuyển đổi được thiết kế, kiểm chứng trong v1. |
 | REQ-013 | Bên phát triển lập dự toán trên cơ sở phạm vi và nguồn lực cần thiết. |
 
 REQ-006 về nhóm chat riêng ngoài server đã được loại khỏi phạm vi từ phiên
@@ -98,9 +98,18 @@ bản 1.3. Mã yêu cầu này được giữ trong lịch sử và không sử 
 
 <a id="scope"></a>
 
-## 3. Phạm vi MVP và ràng buộc
+## 3. Hai mốc bàn giao, phạm vi v1 và ràng buộc
 
-### Phạm vi phiên bản đầu
+Theo [DEC-114](decisions.md#dec-114), thêm MVP trước bản đầy đủ đã đặc tả để nhóm dễ bắt đầu triển khai. Phạm vi đầy đủ trước đây được gọi là MVP nay mang tên **v1**; yêu cầu, mã truy vết và các quy tắc nghiệp vụ được giữ. DEC-116 chốt MVP một API host và microservice ở v1; DEC-117 cập nhật phân công kế hoạch.
+
+| Mốc | Phạm vi đã xác nhận | Hồ sơ sử dụng |
+|---|---|---|
+| MVP | Identity, Community và Direct Messaging; chọn luồng tối thiểu theo từng gói, chạy trong một API host | [Phạm vi, gói việc và điều kiện MVP](releases/mvp.md); phân công theo DEC-117, chi tiết UC/AC còn cần khóa |
+| v1 | Chuyển microservice và hoàn thiện toàn bộ phạm vi ở bảng SCP bên dưới, gồm gọi riêng/phòng thoại, video và chia sẻ màn hình | [Hồ sơ v1](releases/v1.md), đặc tả tính năng và điều kiện phát hành hiện có |
+
+REQ/SCP/SUC dưới đây mô tả sản phẩm mục tiêu v1. Hồ sơ từng mốc xác định phần bàn giao và các tiêu chí áp dụng; hoàn tất MVP không suy ra đã đạt toàn bộ SUC hoặc có thể mở công khai.
+
+### Phạm vi bản hoàn thiện v1
 
 | Mã | Hạng mục | Nội dung bàn giao |
 |---|---|---|
@@ -113,7 +122,7 @@ bản 1.3. Mã yêu cầu này được giữ trong lịch sử và không sử 
 | SCP-007 | Video và chia sẻ màn hình | Sử dụng camera và chia sẻ màn hình trong phòng thoại của server và cuộc gọi riêng giữa hai người. |
 | SCP-008 | Phát hành | Mở đăng ký công khai sau khi hoàn thành kiểm thử, nghiệm thu và chuẩn bị vận hành. |
 
-Ngoài phạm vi phiên bản đầu:
+Ngoài phạm vi bản hoàn thiện v1:
 
 - Nhóm chat riêng ngoài server và cuộc gọi trong loại nhóm này.
 - Ứng dụng cài đặt riêng trên desktop và thiết bị di động.
@@ -124,10 +133,10 @@ Các chức năng bổ sung được đánh giá theo quy trình quản lý thay
 
 | Nội dung | Giá trị |
 |---|---|
-| Kiến trúc | Modular Monolith cho MVP theo DEC-060; microservices ở đợt sau, cần quyết định thời điểm và kế hoạch riêng. |
+| Kiến trúc | MVP một API host Modular Monolith; microservice thuộc v1 theo DEC-116. Phương án ranh giới tại [kiến trúc](architecture.md#target) còn cần chốt, chưa có chuyển đổi code. |
 | Thời gian mục tiêu | Khoảng 3 tháng từ ngày khởi động. Ngày bắt đầu dự kiến 2026-10-05 theo DEC-088; lịch còn là đề xuất, chưa cam kết phát hành. |
-| Ngân sách minh họa | 250.000.000 VNĐ cho phương án 16 tuần đề xuất; ngân sách tượng trưng theo DEC-088, không là báo giá/trần được duyệt. Mốc 500 triệu giữ trong lịch sử. |
-| Nhân sự hiện có | Vg, Sáng và Thái dự kiến mỗi người 3–4 ngày/tuần, đủ ngày làm việc, từ 2026-10-05 theo DEC-088. Vg là trưởng nhóm, phụ trách kiến trúc tổng thể, lựa chọn công nghệ, UX/UI, trực tiếp lập trình và hướng dẫn Thái; Sáng phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg; Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn. |
+| Ngân sách minh họa | 250.000.000 VNĐ từ phương án 16 tuần trước khi tách MVP/v1; giữ làm cơ sở dự toán cũ theo DEC-088, không là báo giá/trần được duyệt. Mốc 500 triệu giữ trong lịch sử. |
+| Nhân sự hiện có | Vg, Sáng và Thái dự kiến mỗi người 3–4 ngày/tuần, đủ ngày làm việc, từ 2026-10-05 theo DEC-088. Theo DEC-117, Vg giữ quyết định quan trọng và Identity/Community; Sáng sở hữu DM/nền tin phòng; Thái sở hữu email worker/môi trường/công cụ, sau đó provider/SDK media. Chi tiết tại [phân công](#team) và [công suất](#capacity). |
 | Quy mô dự trù | 1.000 tài khoản, 100 người trực tuyến đồng thời và 20 người tham gia gọi đồng thời trên toàn hệ thống. |
 
 1.000 tài khoản và 100 người online là giả định tải phục vụ dự toán/kiểm thử; 20 người gọi đồng thời là giới hạn sản phẩm đã chốt DEC-079. Cơ cấu nhân sự hiện có khác với giả
@@ -158,7 +167,7 @@ Nội dung chi tiết và điều kiện chấp nhận của từng kết quả 
 | SUC-002 | Người quản lý cộng đồng có thể tổ chức phòng, mời thành viên và áp dụng quyền cơ bản. | Ma trận quyền và các tình huống cho phép/từ chối truy cập. |
 | SUC-003 | Tin nhắn được lưu và có thể xem lại. | Kiểm thử gửi, nhận và truy xuất lịch sử theo quy tắc nghiệp vụ. |
 | SUC-004 | Thoại, video và chia sẻ màn hình hoạt động trên trình duyệt được hỗ trợ. | Kiểm thử theo quy mô phòng, điều kiện mạng và chất lượng đã xác định. |
-| SUC-005 | MVP vận hành bằng Modular Monolith với ranh giới module rõ theo DEC-060. | Hồ sơ kiến trúc hiện tại, kiểm tra phụ thuộc module và kết quả triển khai/kiểm thử MVP. |
+| SUC-005 | v1 đáp ứng kiến trúc microservice theo DEC-116, giữ quyền sở hữu dữ liệu và khả năng triển khai độc lập; MVP giữ ranh giới module trong một API host. | v1 có hồ sơ ranh giới service, hợp đồng, dữ liệu và bằng chứng chạy/triển khai các API độc lập, cùng hồi quy luồng MVP; source hiện tại chưa chuyển đổi. |
 | SUC-006 | Sản phẩm sẵn sàng cho phát hành công khai. | Kết quả kiểm thử, nghiệm thu và xác nhận khả năng vận hành. |
 
 Chỉ tiêu định lượng đã chốt tại DEC-082/083/085/086; chính sách dữ liệu và cách áp dụng tuổi backup ở DEC-103–109; điều kiện lỗi tồn ở DEC-110. Môi trường, dữ liệu tải, kết quả chạy và người duyệt DEC-111 cần hoàn tất trước nghiệm thu/phát hành thực tế.
@@ -171,41 +180,39 @@ Chỉ tiêu định lượng đã chốt tại DEC-082/083/085/086; chính sách
 | Thu hồi quyền/phiên | Thời hạn hiệu lực trên HTTP và kết nối đang mở, cách đo | OQ-007/OQ-008 |
 | Lưu giữ và khôi phục | [Chính sách dữ liệu](data-lifecycle.md) DEC-103–109, RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày đã chốt; còn công cụ, cửa sổ PITR thực tế và bằng chứng restore | OQ-011 |
 
-1.000 tài khoản và 100 người trực tuyến là giả định dự toán, không phải giới hạn đăng ký/online. Ngày 2026-10-04, 20 người gọi đồng thời trở thành giới hạn media MVP theo DEC-079; chưa có kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.
+1.000 tài khoản và 100 người trực tuyến là giả định dự toán, không phải giới hạn đăng ký/online. Ngày 2026-10-04, 20 người gọi đồng thời trở thành giới hạn media v1 theo DEC-079; chưa có kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.
 
 <a id="team"></a>
 
 ## 5. Nhân sự và phối hợp
 
-### Nhân sự đã xác định
+### Phân công thực hiện hiện hành
 
-| Thành viên | Vai trò đã xác định | Khả năng tham gia | Cơ sở phân công |
+Theo [DEC-117](decisions.md#dec-117), phân công được cập nhật để mỗi người có đầu ra trọn vẹn và cân tải theo từng giai đoạn. Nhóm dùng AI hỗ trợ; gói việc bao gồm DB, backend, frontend, kiểm thử và tích hợp cần thiết. Vai trò frontend/QA riêng cho Thái và backend chung cho Sáng trước đây được thay bằng phân công dưới đây.
+
+| Thành viên | MVP — một host Modular Monolith | v1 — microservice và bản hoàn thiện | Khả năng tham gia |
 |---|---|---|---|
-| Vg | Trưởng nhóm, đại diện sản phẩm; phụ trách kiến trúc tổng thể, lựa chọn công nghệ, thiết kế UX/UI và trực tiếp lập trình; hướng dẫn Thái. | 3–4 ngày/tuần theo DEC-088. | Thiết kế hệ thống và UX/UI, lựa chọn công nghệ, phát triển phần mềm cùng Sáng; điều phối công việc, xác nhận yêu cầu và phạm vi, hướng dẫn thành viên mới. |
-| Sáng | Phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg. | 3–4 ngày/tuần theo DEC-088. | Thiết kế chi tiết và phát triển backend theo kiến trúc tổng thể; phối hợp với Vg trong các quyết định kỹ thuật. |
-| Thái | Phụ trách frontend và kiểm thử; thành viên mới được Vg hướng dẫn. | 3–4 ngày/tuần theo DEC-088. | Phát triển giao diện theo thiết kế UX/UI của Vg và thực hiện kiểm thử; cần đào tạo, chia nhỏ công việc và rà soát kết quả. |
+| Vg | Trưởng nhóm/đại diện sản phẩm; chốt quyết định quan trọng, hoàn thiện Identity gần xong và phụ trách Community từ DB tới frontend | Chủ trì ranh giới service và chính sách quyền/phiên/media; chuyển Identity, hoàn thiện Community và review phần rủi ro cao | 3–4 ngày/tuần theo DEC-088 |
+| Sáng | Phụ trách Direct Messaging từ DB tới frontend; nền lưu/gửi/nhận/lịch sử dùng chung cho tin phòng | Chuyển Messaging và các hợp đồng liên quan; hoàn thiện nhắn tin, backend và frontend điều khiển lifecycle cuộc gọi | 3–4 ngày/tuần theo DEC-088 |
+| Thái | Phụ trách Email Worker; bộ chạy Compose/config/CI, dữ liệu demo và công cụ kiểm tra tích hợp | Hiện thực môi trường nhiều service, định tuyến/CI; tích hợp provider/SDK media, thiết bị và hiển thị nguồn theo hợp đồng đã chốt; hoàn thiện worker/công cụ vận hành | 3–4 ngày/tuần theo DEC-088 |
 
-Cơ sở mới từ 2026-10-04 là 3–4 ngày/tuần mỗi người; 8 giờ/ngày và 3,5 ngày/tuần dùng làm baseline giả định. Công sức thực hiện cần
-tính riêng cho điều phối, phân tích, thiết kế, đào tạo, phát triển và kiểm thử.
-Nhóm hiện tại chưa đáp ứng giả định ba kỹ sư có kinh nghiệm trong dự toán ban đầu.
+Vg giữ thẩm quyền chốt phạm vi và quyết định kỹ thuật quan trọng. Phân công phát triển không tự chọn người ký nghiệm thu/mở công khai hoặc cấp quyền production; các nội dung này vẫn thuộc DEC-111/OQ-011.
 
-### Phương án phối hợp đề xuất
+### Ranh giới phối hợp
 
-| Hạng mục | Phụ trách đề xuất | Cách phối hợp |
+| Hạng mục | Người chịu trách nhiệm | Cách phối hợp để tránh dồn việc |
 |---|---|---|
-| Làm rõ yêu cầu với đại diện sản phẩm | Vg | Sáng góp ý tính khả thi; Thái hỗ trợ ghi nhận, đối chiếu với giao diện và tiêu chí kiểm thử. |
-| Kiến trúc tổng thể và lựa chọn công nghệ | Vg | Sáng góp ý khả năng triển khai, các ràng buộc backend và tích hợp. |
-| Thiết kế chi tiết backend | Sáng | Phối hợp với Vg để bảo đảm phù hợp với kiến trúc tổng thể và công nghệ đã lựa chọn. |
-| Lập trình và tích hợp | Vg, Sáng và Thái | Vg và Sáng trực tiếp lập trình; Thái triển khai frontend dưới sự hướng dẫn của Vg. Phân chia công việc cụ thể khi có thiết kế và phối hợp tích hợp, rà soát mã nguồn. |
-| Đào tạo thành viên mới | Vg | Chia công việc nhỏ, mô tả đầu ra và hướng dẫn cách tự kiểm tra; Sáng hỗ trợ rà soát phần kỹ thuật liên quan. |
-| Thiết kế UX/UI | Vg | Xác định luồng sử dụng, màn hình và trạng thái giao diện để Thái triển khai frontend. |
-| Frontend | Thái | Triển khai theo thiết kế của Vg; Vg hướng dẫn và rà soát, Sáng hỗ trợ tích hợp backend. |
-| Kiểm thử | Thái | Thực hiện theo tiêu chí chấp nhận và kịch bản kiểm thử, ghi nhận lỗi và kiểm tra lại sau sửa; Vg hoặc Sáng rà soát kịch bản và kết quả, đặc biệt với phần frontend do Thái phát triển. |
+| Sản phẩm và kiến trúc | Vg | Chốt quy tắc, hợp đồng và lựa chọn quan trọng; Sáng/Thái tự xử lý chi tiết trong gói đã thống nhất, chỉ đưa lên các thay đổi ảnh hưởng phạm vi/quyền/dữ liệu/tích hợp |
+| Identity và Community | Vg | Sáng cung cấp nền Messaging cho tin phòng; Thái cung cấp email worker và môi trường thử. Tận dụng code/UI đã có, tính công sức review/hướng dẫn trong quỹ của Vg |
+| DM và tin phòng | Sáng | Sở hữu nền Messaging và UI DM; Vg cung cấp quyền/lifecycle phòng và làm UI Community. Không xây hai cơ chế nhắn tin khác nhau |
+| Email và công cụ chạy hệ thống | Thái | Identity giữ logic cấp/consume token, hiệu lực link và dữ liệu job; Thái hiện thực delivery/retry và công cụ theo hợp đồng/policy Vg chốt |
+| Microservice ở v1 | Cả ba, Vg chủ trì thiết kế | Vg: ranh giới/Identity/quyền; Sáng: Messaging/hợp đồng/dữ liệu; Thái: container/config/định tuyến/CI. Việc chuyển Community được xếp trong quỹ Vg hoặc điều chuyển một gói triển khai đã thiết kế rõ khi quá tải |
+| Media ở v1 | Chia theo trách nhiệm | Vg: quyền/admission/quota/thu hồi và review; Sáng: lifecycle gọi riêng/phòng và trạng thái điều khiển; Thái: adapter provider/SDK, mic/camera/share, hiển thị nguồn và môi trường. Chốt hợp đồng trước khi làm; mỗi phần tự kiểm thử |
+| Kiểm thử và hồi quy | Người sở hữu gói; người khác kiểm tra lại | Vg thử Identity/Community, Sáng thử Messaging/lifecycle, Thái thử worker/adapter/môi trường và duy trì bộ chạy. Vg/Sáng viết kỳ vọng quyền/đồng thời; Thái chuẩn bị dữ liệu và tổng hợp kết quả, không chịu một mình chất lượng cả sản phẩm |
 
-Đã xác định Vg phụ trách UX/UI, Thái phụ trách frontend và kiểm thử. Cách
-phối hợp trong bảng là đề xuất để lập kế hoạch chi tiết. Công sức học,
-hướng dẫn, phát triển, kiểm thử và rà soát cần được phân bổ cụ thể; sản lượng
-độc lập của Thái chưa được dùng làm cơ sở cam kết tiến độ.
+Thái nhận gói có đầu vào/đầu ra và cách kiểm chứng rõ; thời gian học và sửa lại được tính trong công suất. Không giao cho Thái tự quyết định nghiệp vụ quyền hoặc lifecycle cuộc gọi chỉ vì dùng AI. Vg review các thay đổi nhạy cảm, Sáng kiểm tra luồng tích hợp liên quan; mỗi người phải chạy và giải thích kết quả của gói mình làm.
+
+Cơ sở nguồn lực giữ 3–4 ngày/tuần; 8 giờ/ngày và 3,5 ngày/tuần chỉ là baseline giả định. Phân bổ 80% công suất cho công việc đã xếp, giữ 20% dự phòng; xem [cân tải theo giai đoạn](#capacity). Tính thiết kế, học/hướng dẫn, kiểm thử, review và sửa lỗi trong gói tương ứng, không cộng thêm ngoài quỹ thời gian.
 
 ### Công việc làm rõ nhu cầu tiếp theo
 
@@ -223,8 +230,10 @@ OQ-012 vẫn mở về người dùng đại diện và cách đánh giá giá t
 
 - Cập nhật AS-001 theo cơ cấu nhân sự hiện có.
 - Tính thời gian hướng dẫn, học và rà soát vào công sức của nhóm.
-- Phân bổ công sức UX/UI của Vg, frontend và kiểm thử của Thái; làm rõ công
-  việc phân tích nghiệp vụ khi lập lịch chi tiết.
+- Tính DB/backend/frontend và tự kiểm thử trong gói tính năng của Vg/Sáng;
+  Thái sở hữu worker/công cụ/provider và tự kiểm chứng các đầu ra đó.
+- Chỉ phân bổ 80% công suất theo giai đoạn; giữ 20% dự phòng, tính cả
+  review/hướng dẫn của Vg và thời gian học/sửa lại của Thái.
 - Đánh giá lại mốc ba tháng và dự toán; chi tiết tại
   [SCDC-EST-001](project.md#budget).
 
@@ -234,13 +243,13 @@ OQ-012 vẫn mở về người dùng đại diện và cách đánh giá giá t
 
 ### Mô hình ngân sách minh họa cập nhật 2026-10-04
 
-Theo DEC-088, ngân sách mang tính tượng trưng và được phép điều chỉnh để trình bày rõ. Mô hình **250.000.000 VNĐ** dưới đây do agent ước lượng cho phương án **16 tuần**; đơn giá chưa được các thành viên cung cấp, không phải mức lương thị trường/báo giá hoặc nghĩa vụ thanh toán. Mốc 500 triệu trước đây giữ làm lịch sử, không tiếp tục làm trần. Lịch 16 tuần cần người dùng xác nhận; không đổi phạm vi MVP hoặc tự loại media.
+Theo DEC-088, ngân sách mang tính tượng trưng và được phép điều chỉnh để trình bày rõ. Mô hình **250.000.000 VNĐ** dưới đây do agent ước lượng cho phương án **16 tuần** trước khi tách MVP/v1 và cân lại phân công; chỉ giữ làm cơ sở dự toán cũ. Đơn giá chưa được các thành viên cung cấp, không phải mức lương thị trường/báo giá hoặc nghĩa vụ thanh toán. Mốc 500 triệu giữ làm lịch sử. Lịch mới cần ước lượng theo giai đoạn và kết quả thực tế tại [kế hoạch](#delivery); không đổi phạm vi v1 hoặc tự loại media.
 
 | Hạng mục | Cơ sở minh họa | Số tiền |
 |---|---|---:|
 | Vg | 4 tháng × 20 triệu/tháng; gồm sản phẩm, kiến trúc, UX, code và hướng dẫn | 80.000.000 VNĐ |
-| Sáng | 4 tháng × 20 triệu/tháng; gồm backend, tích hợp, thử nghiệm và review | 80.000.000 VNĐ |
-| Thái | 4 tháng × 10 triệu/tháng; gồm frontend, học, kiểm thử và sửa lỗi | 40.000.000 VNĐ |
+| Sáng | 4 tháng × 20 triệu/tháng; gồm DM/nền tin phòng, lifecycle media, tích hợp, tự kiểm thử và review | 80.000.000 VNĐ |
+| Thái | 4 tháng × 10 triệu/tháng; gồm worker/môi trường/provider, học, tự kiểm thử và sửa lỗi | 40.000.000 VNĐ |
 | Hạ tầng/công cụ | Khoản minh họa cho môi trường, LiveKit tự host/TURN, email, backup và giám sát | 20.000.000 VNĐ |
 | Dự phòng | Khoản minh họa cho biến động công sức, tích hợp và vận hành | 30.000.000 VNĐ |
 | **Tổng** | Không cộng thêm BA/UX/QA như nhân sự độc lập vì đang kiêm nhiệm | **250.000.000 VNĐ** |
@@ -266,20 +275,19 @@ tính công sức kiêm nhiệm cần được xác định khi cập nhật d�
 ### Nguồn lực và công sức cần ước lượng lại
 
 - Ba thành viên dự kiến 3–4 ngày/tuần mỗi người; cần tính quỹ thời gian thực tế theo DEC-088.
-- Vg phụ trách kiến trúc tổng thể, lựa chọn công nghệ, thiết kế UX/UI và trực
-  tiếp lập trình, đồng thời điều phối, đại diện sản phẩm và hướng dẫn Thái;
-  cần phân bổ thời gian cho từng trách nhiệm trong quỹ thời gian của một người.
-- Sáng phụ trách kỹ thuật backend và trực tiếp lập trình cùng Vg; cần tính
-  cả thiết kế chi tiết, tích hợp và rà soát bên cạnh phát triển tính năng.
-- Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn; công sức
-  cần bao gồm học, phát triển giao diện, chuẩn bị và thực hiện kiểm thử,
-  sửa lỗi, kiểm tra lại và thời gian rà soát cùng Vg hoặc Sáng.
+- Vg làm Identity còn lại/Community, giữ quyết định quan trọng, điều phối
+  và review/hướng dẫn; chuyển service và media được xếp ở giai đoạn v1.
+- Sáng làm DM/nền tin phòng từ DB tới frontend, sau đó chuyển Messaging
+  và lifecycle/UI điều khiển media; thiết kế, tích hợp và tự kiểm thử nằm trong gói.
+- Thái làm email worker/môi trường/công cụ, sau đó provider/SDK/thiết bị
+  media; tính cả học, tự kiểm thử, sửa lại và review với Vg/Sáng trong quỹ thời gian.
 - QA 2 tháng công và BA/UX/UI 1 tháng công là giả định khối lượng từ dự toán
   ban đầu; cần ước lượng lại theo phân công kiêm nhiệm hiện có và làm rõ
   công việc phân tích nghiệp vụ.
 
 Khi lập lịch, tổng phân bổ của mỗi người phải bao gồm công việc kiêm nhiệm,
 học, hướng dẫn và rà soát; tránh tính cùng một khoảng thời gian cho nhiều vai trò.
+[Bảng công suất](#capacity) là cơ sở hiện hành; tỷ lệ cần điều chỉnh sau khi đo kết quả thực tế.
 
 ### Cơ sở ước lượng hạ tầng
 
@@ -319,11 +327,11 @@ và chi phí, chưa phải cam kết năng lực hoặc hạn mức đăng ký c
 | Mã | Giả định | Cách kiểm chứng | Đầu mối dự kiến |
 |---|---|---|---|
 | AS-001 | Giả định ban đầu: có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Không còn phù hợp: đội ngũ 3 thành viên, mỗi người 3–4 ngày/tuần, có 1 thành viên mới cần hướng dẫn; phải ước lượng lại theo phân công và năng lực. | Vg, Sáng |
-| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Ước lượng theo yêu cầu, màn hình, kế hoạch kiểm thử và năng lực kiêm nhiệm của nhóm; làm rõ công việc phân tích nghiệp vụ. | Vg, Thái; Sáng hỗ trợ đánh giá kỹ thuật |
+| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Cơ sở dự toán cũ cần ước lượng lại: người sở hữu tính năng làm UX/tự kiểm thử, Vg chốt nghiệp vụ và review, Thái cung cấp dữ liệu/bộ chạy; không tính QA/UX như công suất riêng ngoài ba người. | Vg, Sáng, Thái theo phần sở hữu |
 | AS-003 | Tích hợp nền tảng media có sẵn cho thoại/video và chia sẻ màn hình. | Đánh giá tính phù hợp, khả năng tích hợp, chi phí và vận hành. | Tech Lead, kỹ sư media |
 | AS-004 | Quy mô dự trù 1.000 tài khoản. | Xác định nhóm người dùng ban đầu và nhu cầu lưu trữ. | Khách hàng, BA |
 | AS-005 | Có khoảng 100 người trực tuyến đồng thời trên toàn hệ thống. | Xác định nhu cầu tải dự kiến; kiểm chứng khả năng đáp ứng bằng kiểm thử tải. | Khách hàng, Tech Lead, QA |
-| AS-006 | Dự trù ban đầu 20 người gọi đồng thời; ngày 2026-10-04 thành giới hạn MVP theo DEC-079. | Đã chốt quy tắc 10/phòng, 20/toàn hệ thống, 2 share/phòng; khả năng đáp ứng vẫn cần kiểm thử. | Khách hàng, kỹ sư media, QA |
+| AS-006 | Dự trù ban đầu 20 người gọi đồng thời; ngày 2026-10-04 thành giới hạn v1 theo DEC-079. | Đã chốt quy tắc 10/phòng, 20/toàn hệ thống, 2 share/phòng; khả năng đáp ứng vẫn cần kiểm thử. | Khách hàng, kỹ sư media, QA |
 | AS-007 | Hạ tầng và công cụ cần khoảng 20.000.000 VNĐ trong thời gian dự án. | Lập mô hình chi phí theo cấu hình, mức sử dụng và báo giá. | Phụ trách vận hành |
 | AS-008 | Phạm vi có thể hoàn thành trong khoảng 3 tháng. | Ước lượng công việc, phụ thuộc và lịch nguồn lực sau phân tích, thiết kế. | Quản lý dự án, nhóm kỹ thuật |
 
@@ -335,7 +343,7 @@ kết quả đánh giá kỹ thuật.
 - Marketing và thu hút người dùng.
 - Thuế và phí phát sinh theo điều kiện hợp đồng.
 - Vận hành, hỗ trợ và bảo trì dài hạn sau thời gian dự án.
-- Tính năng và nền tảng ngoài phạm vi phiên bản đầu.
+- Tính năng và nền tảng ngoài phạm vi bản hoàn thiện v1.
 
 ### Rủi ro
 
@@ -343,9 +351,9 @@ kết quả đánh giá kỹ thuật.
 |---|---|---|---|---|
 | RSK-001 | Phòng thoại trong server và gọi riêng hai người có video/chia sẻ màn hình; yêu cầu chất lượng chưa đầy đủ. | Tăng công sức tích hợp, kiểm thử và kéo dài tiến độ. | Làm rõ ma trận chức năng, giới hạn và điều kiện nghiệm thu trước khi ước lượng chi tiết. | Tech Lead, QA |
 | RSK-002 | Giới hạn phòng/media đã chốt DEC-079; lượng sử dụng, bitrate thực tế và giá hạ tầng còn thiếu. | Chi phí hạ tầng vượt dự trù. | Tính chi phí theo thời lượng, dữ liệu truyền tải và theo dõi mức sử dụng. | Phụ trách vận hành |
-| RSK-003 | Ranh giới module, tích hợp MVP và việc tách microservices ở đợt sau có thể làm tăng công sức. | Tăng công sức triển khai, kiểm thử tích hợp và vận hành. | Xác định ranh giới module, trách nhiệm dữ liệu và công việc vận hành MVP; ước lượng tách dịch vụ ở kế hoạch riêng. | Tech Lead |
-| RSK-004 | Khối lượng kiêm nhiệm frontend, UX/UI và kiểm thử chưa được ước lượng; trình duyệt đã chốt DEC-082 nhưng cấu hình nghiệm thu và trách nhiệm quản trị nền tảng công khai còn thiếu. | Phải điều chỉnh tiến độ hoặc phạm vi bàn giao. | Ước lượng công sức theo phân công hiện có; khóa cấu hình nghiệm thu và trách nhiệm quản trị trước phát hành. | Vg, Sáng, Thái |
-| RSK-005 | Thời gian đào tạo, hướng dẫn và rà soát của thành viên mới chưa được lượng hóa. | Giảm thời gian dành cho các công việc khác và tăng độ bất định của tiến độ. | Chia công việc nhỏ, bố trí thời gian hướng dẫn và đánh giá công sức theo kết quả thực hiện. | Vg, Sáng |
+| RSK-003 | Chuyển source một host của MVP sang microservice ở v1 theo DEC-116 có thể vượt ước lượng. | Tăng công sức triển khai, kiểm thử tích hợp và vận hành. | Chốt ranh giới/dữ liệu và cách thay transaction/guard; dành giai đoạn V1-0 riêng, chia phần hiện thực cho cả ba và giữ hồi quy MVP. | Vg chủ trì; Sáng/Thái phối hợp |
+| RSK-004 | Gói fullstack, review/hướng dẫn và công cụ/provider có công sức khác nhau; tỷ lệ kế hoạch chưa chứng minh tải thực tế. | Một người quá tải hoặc chờ việc, tiến độ bàn giao bị lệch. | Theo dõi ngày công/kết quả/chờ việc hằng tuần, tối đa một gói chính, giữ 20% dự phòng và điều chuyển đầu ra rõ; khóa cấu hình nghiệm thu/người trực trước phát hành v1. | Vg, Sáng, Thái |
+| RSK-005 | Thời gian học, hướng dẫn, sửa lại và rà soát của Thái chưa được lượng hóa. | Giảm thời gian dành cho các công việc khác và tăng độ bất định của tiến độ. | Giao gói có contract/AC rõ, tính học/review trong công suất người làm/người hướng dẫn, đánh giá bằng đầu ra chạy được và giải thích kết quả. | Vg, Sáng, Thái |
 
 ### Điều kiện cập nhật dự toán
 
@@ -379,22 +387,22 @@ Bảng này đánh giá nội dung đã viết và quyết định còn cần, k
 
 | Phần | Nội dung đã hoàn thiện trong đợt này | Còn cần để khóa tài liệu |
 |---|---|---|
-| Mục tiêu/phạm vi | REQ/SCP/SUC, luồng ưu tiên và ranh giới MVP nhất quán | Nhóm sử dụng đầu tiên/ngôn ngữ và cách đánh giá nội bộ đang được hỏi |
+| Mục tiêu/phạm vi | REQ/SCP/SUC, luồng ưu tiên và ranh giới v1 nhất quán | Nhóm sử dụng đầu tiên/ngôn ngữ và cách đánh giá nội bộ đang được hỏi |
 | Tài khoản | Quy tắc, UX, [12 use case và đối chiếu source/test](features/accounts.md#use-cases), AC/TC; hành vi mật khẩu trùng DEC-113; thiết kế chi tiết token/consume/EmailDelivery, recovery OpenAPI 4 thao tác | Limiter bổ sung hoãn DEC-089; provider/key store và kiểm chứng ACC-GAP/API/UI thuộc triển khai |
 | DM | Quy tắc/UX, OpenAPI 7 thao tác, schema SignalR, HMAC/mapping SQL/guard/cursor-resume; validation/draft và fixture; account lock/restore placeholder DEC-104/108 | Review/mock, migration/projection/sổ bảo vệ và proof concurrency/thu hồi/restore khi triển khai |
 | Cộng đồng/quyền | Quy tắc DEC-092–098; role/ACL/epoch, OpenAPI 45 thao tác, realtime 9 loại, fingerprint/fixture, AC/TC; room retention/restore DEC-105/108 | Review/mock, migration/guards và proof concurrency/thu hồi/restore; metadata nghiệp vụ khác chưa đặt TTL riêng |
 | Vòng đời dữ liệu | Policy/matrix DEC-103–109, schema sổ bảo vệ, placeholder/availability, 49 vector +10 schema cases +6 kịch bản, AC/TC và DATA-GAP-01–06 | Review/migration/worker, kho sổ/key/checkpoint và proof hai kho/restore; scope quyền/thẩm quyền vận hành còn mở |
 | Media | Quy tắc DEC-099–102, OpenAPI 19 thao tác, realtime 8 loại, room/call/participation/capacity/source/lease, 30 vector +8 transition +4 HMAC, AC/TC và MEDIA-GAP-01–07; TTL terminal DEC-107 | Review/migration, chọn/pin SDK/server và đánh giá extension/fork, proof quota/admission/cutoff/load/cleanup; host/key store và vận hành còn mở |
-| Kế hoạch/dự toán | Ngày đầu 05/10/2026, công suất 3–4 ngày/tuần; phương án 16 tuần/148 ngày công, dự phòng 20 ngày; ngân sách tượng trưng 250 triệu | Chọn lịch; nhóm rà soát ngày công/lịch nghỉ và số liệu sử dụng thực tế |
+| Kế hoạch/dự toán | Ngày đầu 05/10/2026, công suất 3–4 ngày/tuần; phân công/giai đoạn theo DEC-117, 80% phân bổ + 20% dự phòng; giữ ngân sách tượng trưng 250 triệu từ phương án cũ | Ước lượng lịch MVP/v1 theo gói; đo ngày công/lịch nghỉ và kết quả thực tế để cân lại tải |
 | Nghiệm thu/vận hành | Quy trình/lỗi tồn DEC-110, 10 gate/12 smoke; [runbook](operations-runbook.md) 8 tình huống, lịch/bàn giao; mẫu phát hành/sự cố; quản trị kỹ thuật DEC-112 | Người duyệt chưa chọn DEC-111; người trực/thay thế/lịch, provider/domain/key store/tool và lệnh production còn mở; kết quả diễn tập thuộc triển khai |
 
-Các đầu vào sản phẩm còn mở: lịch 16 tuần, đối tượng/ngôn ngữ, người duyệt và phân công/lịch trực. Phạm vi quản trị kỹ thuật/no admin UI đã chốt DEC-112, không còn gộp với việc chọn tên người phụ trách. Các gói technical evidence/PREP/RLS-GAP vẫn cần thực thi trong kế hoạch phát triển, không phải ca đã chạy trong lần hoàn thiện tài liệu.
+Các đầu vào sản phẩm còn mở: lịch MVP/v1, đối tượng/ngôn ngữ, người duyệt và phân công/lịch trực vận hành. Phân công phát triển theo DEC-117; phạm vi quản trị kỹ thuật/no admin UI theo DEC-112. Các gói technical evidence/PREP/RLS-GAP vẫn cần thực thi trong kế hoạch phát triển, không phải ca đã chạy trong lần hoàn thiện tài liệu.
 
 <a id="documentation-remaining"></a>
 
 ### Phần tài liệu còn cần hoàn thiện
 
-Rà soát ngày 2026-10-04. Các mục dưới đây tách công việc viết/rà soát thiết kế khỏi quyết định sản phẩm và bằng chứng cần tạo khi triển khai. Không mở lại các quy tắc đã chốt tới DEC-112; DEC-089 hoãn lựa chọn limiter, DEC-111 giữ người duyệt chưa được chọn.
+Rà soát ngày 2026-10-04; cập nhật mốc kiến trúc và phân công ngày 2026-10-06 theo DEC-116/117. Các mục dưới đây tách công việc viết/rà soát thiết kế khỏi quyết định sản phẩm và bằng chứng cần tạo khi triển khai. DEC-089 hoãn lựa chọn limiter, DEC-111 giữ người duyệt chưa được chọn; quy tắc nghiệp vụ đã chốt được giữ.
 
 | Nhóm | Nội dung tài liệu còn thiếu hoặc chưa khóa | Việc có thể tiếp tục soạn | Quyết định/đầu vào còn cần |
 |---|---|---|---|
@@ -402,9 +410,9 @@ Rà soát ngày 2026-10-04. Các mục dưới đây tách công việc viết/r
 | UX/UI | Có wireframe văn bản; chưa có hồ sơ tương tác/prototype được rà soát, tiêu chí tiếp cận và cấu hình thiết bị cụ thể | Chi tiết trạng thái màn hình, thao tác bàn phím/focus, lỗi/mất mạng/mất quyền, bố cục cuộc gọi và checklist rà soát | Nhóm dùng/ngôn ngữ; ghi browser/OS/thiết bị thực tế khi có build, giữ ma trận DEC-082 |
 | Tài khoản | Có thiết kế chi tiết/request-response/consume/schema email; provider/key store và limiter còn mở | Rà soát contract recovery + schema migration/policy/delivery; ACC-GAP theo gói triển khai | Ngưỡng limiter được hoãn DEC-089; email provider/domain/key store; OQ-002/OQ-008 |
 | DM | Validation/bản nháp đã chốt; HMAC/SQL/Hub/cursor-resume và fixture đã chi tiết hóa, chưa có mock/proof | Review đồng bộ OpenAPI/schema và UI, migration legacy/transaction guard; mock/proof thuộc triển khai | DEC-103/104/108 chốt no self-delete/account lock/restore placeholder; projection/guard/schema và DATA-GAP proof còn triển khai |
-| Cộng đồng và quyền | Có thiết kế chi tiết role/ACL/epoch, OpenAPI/realtime/fixture và mapping migration; chưa có review/mock/proof | Rà soát contract/UX, migration Unicode và guards/outbox/key ring; bằng chứng transaction/thu hồi thuộc triển khai | Vai trò/search/tên/private switch/issuer/quản lý phòng đã chốt DEC-092–098; limiter bổ sung còn mở, không xóa server MVP; retention chính DEC-105–109 đã chốt, còn proof/migration |
+| Cộng đồng và quyền | Có thiết kế chi tiết role/ACL/epoch, OpenAPI/realtime/fixture và mapping migration; chưa có review/mock/proof | Rà soát contract/UX, migration Unicode và guards/outbox/key ring; bằng chứng transaction/thu hồi thuộc triển khai | Vai trò/search/tên/private switch/issuer/quản lý phòng đã chốt DEC-092–098; limiter bổ sung còn mở, không xóa server v1; retention chính DEC-105–109 đã chốt, còn proof/migration |
 | Media | Có thiết kế chi tiết/OpenAPI/realtime/fixture/coordinator/lease/quota gate; chưa có implementation hoặc proof | Review schema/UX/fingerprint, migration/shared guards; thử quota gate và fail-close trên build LiveKit tự host được pin | Quy tắc bổ sung đã chốt DEC-099–102; limiter media, host/domain/key store, extension/server/SDK và kho sổ/worker còn OQ-006/007/008/010/011; retention DEC-106/107 đã chốt |
-| Kế hoạch và dự toán | Có phương án 16 tuần/148 ngày công, dự phòng 20 ngày và ngân sách tượng trưng 250 triệu; lịch chưa được chọn | Phân rã gói việc, đầu ra/người rà soát/phụ thuộc, cập nhật tác động khi chọn lịch | Chọn 16 tuần hay giữ mục tiêu 3 tháng; nhóm rà soát ngày công/lịch nghỉ; OQ-009 |
+| Kế hoạch và dự toán | Có phân công/công suất theo giai đoạn tại DEC-117, 20% dự phòng; ngân sách tượng trưng 250 triệu giữ cơ sở cũ, lịch chưa được chọn | Ước lượng từng gói và lịch MVP/v1; dùng ngày công/kết quả thực tế để cân lại tải | Nhóm rà soát ngày công/lịch nghỉ, thử nghiệm service/media và cập nhật dự toán; OQ-009 |
 | Nghiệm thu và vận hành | Có [quy trình/10 gate/12 smoke](release-operations.md), [runbook 8 tình huống](operations-runbook.md), [mẫu phát hành](templates/release-record.md)/[sự cố](templates/incident-record.md); DEC-110/112 chốt lỗi tồn/quản trị | Review và bổ sung manifest/lệnh thật khi chọn công cụ, khóa ma trận đo/thiết bị, diễn tập và điền hồ sơ theo RLS-GAP-01–08 | Người duyệt chưa chọn DEC-111; người trực/thay thế/lịch, provider/domain/key store/tool; OQ-007/008/010/011 |
 | Vòng đời dữ liệu | Có [policy/matrix/thiết kế](data-lifecycle.md), DEC-103–109, schema sổ bảo vệ, contentState/availability, fixture và AC-DATA/TC-DATA | Review/migration/guard/worker, chọn kho sổ/key/tool và proof hai kho/restore/retention | Phạm vi/TTL/restore đã chốt; người vận hành/thẩm quyền và công cụ còn OQ-008/011 |
 
@@ -416,98 +424,57 @@ Tài khoản/DM, cộng đồng/quyền, media và vòng đời dữ liệu đã
 
 ## 8. Kế hoạch bàn giao và ước lượng
 
-### Cơ sở và nguyên tắc lập lịch
-
-Ba người Vg, Sáng và Thái dự kiến mỗi người 3–4 ngày/tuần, đủ ngày làm việc, từ 2026-10-05 theo DEC-088. Vg kiêm điều
-phối, đại diện sản phẩm, kiến trúc, UX/UI, lập trình và hướng dẫn Thái;
-Sáng phụ trách backend và tích hợp; Thái phụ trách frontend và kiểm thử.
-Thời gian kiêm nhiệm phải lấy từ quỹ thời gian của chính từng người,
-không tính như một vị trí bổ sung.
-
-Ngày bắt đầu dự kiến 2026-10-05; công suất 3–4 ngày/tuần theo DEC-088. Mục tiêu ba tháng cũ cần đánh giá lại; đề xuất 16 tuần và mô hình 250 triệu chỉ để lập kế hoạch, chưa phải cam kết/chi phí thật. Giới hạn media đã chốt DEC-079; năng suất và đơn giá thực tế còn thiếu. Các đợt dưới đây
-có thứ tự phụ thuộc, có thể chồng lấp ở phần việc đã đủ đầu vào.
+Theo [DEC-116](decisions.md#dec-116), MVP dùng một host Modular Monolith để nhóm bắt đầu làm; chuyển microservice thuộc v1. Phân công theo DEC-117 và [nhân sự](#team). Mục tiêu ba tháng, mô hình 16 tuần/250 triệu là cơ sở minh họa cũ; chưa có lịch riêng MVP/v1 hoặc số liệu năng suất để cam kết. Không bắt đầu lại toàn bộ kế hoạch sau MVP.
 
 ### Đợt bàn giao và điều kiện chuyển tiếp
 
-| Đợt | Kết quả cần có | Chủ trì dự kiến | Phụ thuộc và điều kiện chuyển |
-|---|---|---|---|
-| 0. Chốt nền | Quy tắc tài khoản tối thiểu, ngoại lệ DM, ma trận quyền cốt lõi; wireframe hai hành trình; hợp đồng API và kiểm thử thử nghiệm lưu/nhận tin. | Vg chủ trì sản phẩm/kiến trúc/UX; Sáng đánh giá backend; Thái rà soát giao diện/kiểm thử. | OQ-002, OQ-004, OQ-005; chưa bắt đầu phát triển tính năng phụ thuộc vào quy tắc còn mở. |
-| 1. Nhắn tin riêng | Đăng nhập đủ dùng, tìm người, hội thoại riêng, gửi/nhận/lịch sử, sửa/xóa, lỗi và thử lại; kiểm thử tích hợp và tiêu chí AC-DM. | Sáng và Vg phát triển; Thái frontend/kiểm thử. | Đợt 0 đủ thiết kế; kiểm tra tin đã lưu khi người nhận mở lại, quyền sửa/xóa và gửi lại không trùng. |
-| 2. Cộng đồng và phòng | Tạo/tham gia cộng đồng, tìm kiếm/lời mời/chờ duyệt, phòng theo chủ đề, quyền và nhắn tin phòng; tiêu chí AC-COM. | Vg chốt quy tắc/quyền; Sáng backend; Thái frontend/kiểm thử. | Đợt 1 ổn định phần nhắn tin dùng chung; OQ-003/OQ-004 được chốt cho các luồng triển khai. |
-| 3. Thoại/video/chia sẻ màn hình | Gọi riêng, phòng thoại, camera và chia sẻ màn hình theo phạm vi SCP-006/007; kiểm thử chất lượng và chi phí. | Vg chủ trì giải pháp; Sáng tích hợp; Thái giao diện/kiểm thử. | OQ-006/OQ-008 và thử nghiệm media; chốt giới hạn/thiết bị trước khi cam kết công sức. |
-| 4. Ổn định và phát hành | Kiểm thử hệ thống, phân quyền, tải, sao lưu/khôi phục, xử lý lỗi, tài liệu vận hành và nghiệm thu. | Thái điều phối kiểm thử với Vg; Vg quyết định kỹ thuật/sản phẩm; Sáng sửa lỗi/vận hành. | Đạt điều kiện ở [kế hoạch kiểm thử](release-operations.md#testing); có người trực vận hành và quyết định mở công khai. |
+| Đợt | Đầu ra | Vg | Sáng | Thái | Điều kiện chuyển |
+|---|---|---|---|---|---|
+| MVP-0. Chốt gói đầu | Luồng Identity đủ dùng, hợp đồng module/job email, gói triển khai và môi trường thử | Hoàn thiện phần Identity trực tiếp cần; chốt quyền và hợp đồng | Chốt gói DM/nền tin và ca thử | Dựng Compose/CI/dataset hiện có; bắt đầu worker theo job contract | Phụ thuộc trực tiếp đủ rõ; không chờ toàn bộ media/kiến trúc v1 |
+| MVP-1. Làm song song | Community, DM, email và bộ chạy hoạt động từ DB tới UI | Community trọn luồng | DM trọn luồng; nền tin phòng | Email Worker và bộ chạy/kiểm tra hệ thống | Ba tính năng nền tích hợp thật, quyền và dữ liệu được kiểm chứng |
+| MVP-2. Bàn giao | Chạy lại trên bản checkout/dataset được ghi rõ, lỗi chính được sửa | Review quyền/Identity/Community và điều phối | Sửa/kiểm tra Messaging và luồng liên thông | Smoke/hồi quy, dữ liệu demo và hồ sơ build/kết quả | Đạt [điều kiện MVP](releases/mvp.md#acceptance); chưa yêu cầu microservice/media |
+| V1-0. Chuyển microservice | Ranh giới được chốt, API/dữ liệu/triển khai độc lập, sửa các giả định transaction xuyên service | Thiết kế ranh giới/chính sách; chuyển Identity và phần Community liên quan | Chuyển Messaging, hợp đồng/dữ liệu và kiểm thử tích hợp | Compose nhiều service, cấu hình/định tuyến/CI và bộ chạy hồi quy | Đạt gói kiến trúc v1; luồng MVP tiếp tục hoạt động |
+| V1-1. Hoàn thiện và media | Đủ Community/Messaging; gọi riêng/phòng thoại, camera và share theo scope | Community/Identity còn lại; quyền/admission/quota/thu hồi media | Nhắn tin còn lại; lifecycle và UI điều khiển cuộc gọi | Provider/SDK, thiết bị/nguồn media; worker và công cụ chạy | Các gói theo [v1](releases/v1.md) có bằng chứng; chức năng lớn không xếp chồng ngoài công suất |
+| V1-2. Ổn định/phát hành | Kiểm thử đầy đủ, dữ liệu, rollback/restore và bàn giao | Review phần rủi ro cao, sửa gói sở hữu | Kiểm thử đồng thời/chất lượng và sửa gói sở hữu | Bộ chạy, diễn tập theo runbook, tổng hợp evidence và sửa gói sở hữu | Đạt gate v1; người duyệt/người vận hành còn phải được chọn theo DEC-111/OQ-011 |
 
-Đợt 1 và 2 là ưu tiên trải nghiệm; đợt 3 vẫn nằm trong phạm vi phiên bản
-đầu. Nếu ước lượng vượt mốc ba tháng hoặc ngân sách, Vg phải trình phương
-án điều chỉnh thời gian, nguồn lực hoặc phạm vi cho đại diện khách hàng
-xác nhận theo quy trình thay đổi. Không tự loại media khỏi phiên bản đầu.
+V1-1 có nhiều gói; hoàn thiện nhắn tin/Community và làm media được xếp theo phụ thuộc và công suất, không mặc định cùng lúc. Gói nào chưa đủ kỹ thuật/quyền/provider thì người đó tiếp tục một gói độc lập trong scope; không thêm tính năng ngoài scope chỉ để lấp thời gian.
 
-Tình trạng từng đầu ra Đợt 0, gói việc chuẩn bị và bằng chứng còn thiếu
-được theo dõi tại [SCDC-READY-001](project.md#readiness). Ngày
-2026-10-03 đã bổ sung quyết định sản phẩm, ma trận quyền, wireframe văn
-bản, hợp đồng DM và ca kiểm thử; chưa có kết quả thử nghiệm hoặc xác
-nhận hoàn tất Đợt 0.
+<a id="capacity"></a>
 
-### Phương án 16 tuần để xem xét
+### Phân bổ công suất để cân tải
 
-Ngày đầu 05/10/2026; kết thúc mục tiêu 24/01/2027 nếu đủ công suất và các điều kiện chuyển đợt. Baseline 3,5 ngày/tuần × 16 tuần = 56 ngày/người, tổng 168 ngày; dải 3–4 ngày là 144–192 ngày. Các ngày dưới đây là ước lượng agent dựa trên scope/source hiện tại, gồm hướng dẫn/review/kiểm thử, chưa có dữ liệu năng suất để cam kết.
+Tỷ lệ dưới đây là baseline lập kế hoạch, không phải đo năng lực hoặc ước lượng thời gian hoàn thành. Mỗi hàng là quỹ của **một người trong một giai đoạn**, tổng 100%; các giai đoạn không cộng cùng một tuần. Với 3–4 ngày/tuần, 80% công việc tương ứng 2,4–3,2 ngày và 20% dự phòng là 0,6–0,8 ngày. Baseline 3,5 ngày là 2,8 ngày công việc + 0,7 ngày dự phòng.
 
-| Đợt | Khoảng lịch đề xuất | Vg (ngày) | Sáng (ngày) | Thái (ngày) |
-|---|---|---:|---:|---:|
-| 0. Chốt nền | Tuần 1–2, 05/10/2026–18/10/2026 | 6 | 6 | 5 |
-| 1. DM | Tuần 3–6, 19/10/2026–15/11/2026 | 11 | 13 | 12 |
-| 2. Cộng đồng/phòng | Tuần 7–10, 16/11/2026–13/12/2026 | 11 | 12 | 11 |
-| 3. Media | Tuần 9–13, 30/11/2026–03/01/2027 | 12 | 12 | 11 |
-| 4. Ổn định/nghiệm thu | Tuần 14–16, 04/01/2027–24/01/2027 | 8 | 8 | 10 |
-| **Tổng công việc baseline** | Gồm kiêm nhiệm và đào tạo | **48** | **51** | **49** |
-| **Quỹ còn lại ở 3,5 ngày/tuần** | Dự phòng trong công suất 56 ngày/người | **8** | **5** | **7** |
+| Giai đoạn | Người | Công việc chính | Phần phối hợp đã tính trong quỹ | Dự phòng |
+|---|---|---|---|---|
+| MVP | Vg | 50% Community + 15% Identity còn lại | 15% quyết định/hợp đồng/review/hướng dẫn | 20% |
+| MVP | Sáng | 55% DM + 15% nền tin phòng dùng chung | 10% kiểm tra tích hợp và review gói liên quan | 20% |
+| MVP | Thái | 40% Email Worker + 25% môi trường/CI | 15% dataset/smoke, học và tổng hợp kết quả | 20% |
+| V1-0 — chuyển service | Vg | 60% thiết kế/chuyển Identity/Community và chính sách xuyên service | 20% review/điều phối/hướng dẫn | 20% |
+| V1-0 — chuyển service | Sáng | 60% chuyển Messaging, hợp đồng và dữ liệu | 20% hồi quy/kiểm tra tích hợp | 20% |
+| V1-0 — chuyển service | Thái | 60% môi trường nhiều service/định tuyến/CI | 20% bộ chạy hồi quy, dataset và học | 20% |
+| V1-1 — hoàn thiện/media | Vg | 45% Community/Identity còn lại + 15% chính sách/admission/quota/thu hồi media | 20% review/điều phối/hướng dẫn | 20% |
+| V1-1 — hoàn thiện/media | Sáng | 50% lifecycle/UI điều khiển cuộc gọi + 20% nhắn tin còn lại | 10% kiểm tra liên thông/đồng thời | 20% |
+| V1-1 — hoàn thiện/media | Thái | 50% provider/SDK/thiết bị/hiển thị nguồn + 25% worker/công cụ vận hành | 5% tổng hợp smoke/chẩn đoán; tự kiểm thử/học tính trong gói chính | 20% |
+| V1-2 — ổn định | Mỗi người | 60% kiểm chứng/sửa lỗi phần sở hữu | 20% kiểm tra chéo, hồ sơ và diễn tập được phân công | 20% |
 
-Cộng đồng/media chồng tuần 9–10 nhưng không cộng quá quỹ thời gian: tuần 7–8 ưu tiên cộng đồng (7 ngày/người); tuần 9–10 phân bổ phần cộng đồng còn lại Vg 4/Sáng 5/Thái 4 ngày và media Vg 3/Sáng 2/Thái 3 ngày. Tuần 11–13 media còn Vg 9/Sáng 10/Thái 8 ngày, trong 10,5 ngày/người baseline. Không giả định Thái tự làm phần media backend.
+Mỗi người giữ tối đa một gói chính đang thực hiện và một gói hỗ trợ nhỏ. Khi Vg đang chốt chuyển service, không đồng thời cam kết phát triển toàn bộ Community/media; khi Sáng làm lifecycle cuộc gọi, phần nhắn tin còn lại được xếp theo quỹ 20%, không coi là một việc toàn thời gian thứ hai. Công cụ của Thái bắt đầu ở MVP và tiếp tục mở rộng ở v1, không chờ hai người khác làm xong mới có việc.
 
-Ở mức 3 ngày/tuần, Sáng cần 51 ngày trong khi chỉ có 48 ngày, Thái 49; phải kéo lịch hoặc điều chỉnh phân công/công sức. Lịch chưa trừ ngày nghỉ/lễ; nếu giữ mốc ba tháng cần giảm công sức bằng bằng chứng, tăng công suất hoặc được duyệt thay đổi. Đánh giá lại sau đợt 0 và thử nghiệm self-host media; không tự giảm scope. Phương án này cần người dùng chọn trước khi ghi thành lịch đã xác nhận.
+### Điều chỉnh theo kết quả thực tế
 
-### Bảng công việc để ước lượng
+- Cuối mỗi tuần làm việc, ghi ngày công đã dùng, gói chạy được, lỗi/việc phải làm lại, thời gian review/hướng dẫn và phần bị chặn.
+- Nếu gói được ước lượng vượt quỹ 80%, giảm phần xếp trong kỳ, kéo lịch hoặc chuyển một đầu ra triển khai đã có thiết kế và cách thử rõ cho người còn công suất. Vg giữ quyết định nghiệp vụ/kiến trúc, không phải tự code mọi phần.
+- Khi Vg quá tải Community hoặc Thái hoàn tất worker/bộ chạy sớm, ưu tiên chuyển cho Thái một gói từ DB tới UI đã chốt contract/AC, chẳng hạn tạo phòng text trong [UC-COM-16](features/community/channels.md#uc-com-16). Vg giữ chính sách/quyền và review; chỉ giao Sáng khi gói DM/lifecycle hiện tại đã bàn giao. Gói chuyển chủ thay thế một phần quỹ công việc hiện có, không cộng thêm nhiệm vụ hoặc tự mở rộng scope MVP.
+- Nếu người hoàn thành sớm, lấy gói kế tiếp trong scope của mình; nếu chuyển gói từ người khác, ghi người sở hữu mới, phụ thuộc, người review và phần việc cũ được giảm tương ứng.
+- Nếu review/hướng dẫn hoặc thử nghiệm media vượt phần đã dành, cập nhật phân bổ/lịch trước khi nhận thêm gói. Dùng dữ liệu sau 1–2 tuần để hiệu chỉnh baseline; chưa tuyên bố công việc đã cân bằng chỉ từ các tỷ lệ.
 
-Ước lượng mỗi dòng bằng ngày công còn lại, tách thiết kế, thực hiện, rà
-soát, kiểm thử và sửa lỗi. Ghi người làm, người rà soát và phụ thuộc; cập
-nhật sau mỗi đợt. Baseline minh họa ở phương án trên; bảng gói cần được nhóm rà soát thành ước lượng thực tế.
+### Ước lượng và khóa lịch/chi phí
 
-| Nhóm việc | Đầu ra cần ước lượng | Người dự kiến | Dữ liệu còn thiếu |
-|---|---|---|---|
-| Sản phẩm/UX | Chốt quy tắc, luồng, wireframe và đánh giá nội bộ. | Vg, Thái hỗ trợ | OQ-002 đến OQ-007 |
-| Tài khoản | Đăng ký, đăng nhập, hồ sơ, phiên, bảo vệ tài khoản và kiểm thử. | Sáng, Vg, Thái | OQ-002 |
-| Nhắn tin | Dữ liệu, API, cập nhật thời gian thực, UI, xử lý lỗi và kiểm thử. | Sáng, Vg, Thái | OQ-005 |
-| Cộng đồng/quyền | Thành viên, mời/duyệt, phòng, phân quyền và kiểm thử. | Sáng, Vg, Thái | OQ-003, OQ-004 |
-| Media | Thử nghiệm, tích hợp, UI và kiểm thử chất lượng. | Vg, Sáng, Thái | OQ-006, OQ-008, OQ-010 |
-| Nền tảng/vận hành | Môi trường, triển khai, giám sát, sao lưu và khôi phục. | Vg, Sáng | OQ-007, OQ-010, OQ-011 |
-| Chất lượng/phát hành | Bộ kiểm thử, sửa lỗi, nghiệm thu và bàn giao. | Thái, Vg, Sáng | Tiêu chí chất lượng và ma trận trình duyệt |
-| Hướng dẫn/đào tạo | Hướng dẫn Thái, rà soát code và tài liệu bàn giao. | Vg, Sáng, Thái | Năng lực hiện tại và số vòng rà soát |
+Ước lượng **ngày công còn lại** cho từng gói, gồm thiết kế, code, học/hướng dẫn, review, test, tích hợp và sửa lỗi. Identity gần xong nên chỉ tính phần còn lại. AI là công cụ của cả nhóm; không tự gán hệ số tăng năng suất hay coi viết code xong là gói đã hoàn tất.
 
-### Cách khóa lịch và chi phí
+Phương án 16 tuần cũ chỉ giữ làm cơ sở ngân sách minh họa ở [dự toán](#budget); bảng ngày công theo vai trò frontend/backend cũ không tiếp tục dùng để phân công sau DEC-117. Lịch mới cần kết quả MVP, thử nghiệm chuyển service/media, ngày nghỉ và công suất thực tế. Chi phí nhân sự/hạ tầng vẫn thay theo đơn giá và cấu hình được xác nhận; không dùng ngân sách tượng trưng làm bằng chứng đủ công sức.
 
-1. Chốt ngày bắt đầu, số ngày làm việc/tháng, thời gian nghỉ và tỷ lệ
-   phân bổ thực tế cho từng người. Tổng tỷ lệ công việc của mỗi người
-   không vượt quá 100% trong cùng kỳ.
-2. Ước lượng từng nhóm việc sau khi có quy tắc/thiết kế đủ rõ. Ghi khoảng
-   ước lượng và rủi ro; giữ riêng công sức hướng dẫn, tích hợp, sửa lỗi,
-   kiểm thử và chuẩn bị vận hành.
-3. Xếp phụ thuộc thành lịch, xác định đường găng; so với mốc khoảng ba
-   tháng và công suất ba người. Xem xét riêng rủi ro media.
-4. Tính chi phí nhân sự từ ngày công và đơn giá đã xác nhận, chi phí hạ
-   tầng từ cấu hình/mức dùng dự kiến, cộng dự phòng minh bạch. Đối chiếu
-   với mốc 500 triệu đồng tại [SCDC-EST-001](project.md#budget).
-5. Khi có đủ số liệu, lập lịch ngày cụ thể, dự toán điều chỉnh, người
-   duyệt và ngưỡng xử lý sai lệch. Cho đến lúc đó, tài liệu này là khung
-   triển khai, không phải cam kết ngày phát hành.
-
-### Theo dõi và điều chỉnh
-
-Mỗi đợt ghi phần đã hoàn thành theo tiêu chí chấp nhận, lỗi còn mở, ngày
-công thực tế, công việc còn lại và thay đổi phạm vi. Vg tổng hợp tác động
-đến mốc bàn giao; các thay đổi ảnh hưởng phạm vi, thời gian hoặc ngân
-sách theo [SCDC-PRC-001](project.md#process).
-
-MVP không có điều kiện bắt buộc tách microservices. Quyết định về thời điểm tách, YARP/gRPC/broker và các cổng dịch vụ dành cho đợt sau; chưa có lịch xác nhận. Lộ trình 5 tuần ở hướng dẫn kỹ thuật cũ đã được thay bằng kế hoạch theo đợt này.
+Microservice là gói v1 theo DEC-116. Ranh giới cụ thể, Gateway/broker và công cụ triển khai còn cần chọn; chúng không cản trở gói MVP đang chạy trên một host.
 
 <a id="readiness"></a>
 
@@ -519,19 +486,19 @@ Trạng thái của bảng này là mức sẵn sàng đặc tả và bằng ch�
 
 | Mã | Điều kiện/đầu ra | Tình trạng và bằng chứng | Việc còn lại/đầu mối dự kiến |
 |---|---|---|---|
-| READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 (DEC-063–068) và mật khẩu trùng DEC-113; có thiết kế token/email/consume, OpenAPI recovery 4 thao tác, AC-ACC-01–22 và [12 use case/coverage source-test](features/accounts.md#use-case-coverage); chưa chạy kiểm thử trong bước tài liệu | Rà soát provider/key store; limiter bổ sung được hoãn DEC-089; giải quyết ACC-GAP/API/UI và ghi bằng chứng khi triển khai; Vg/Sáng |
+| READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 (DEC-063–068) và mật khẩu trùng DEC-113; có thiết kế token/email/consume, OpenAPI recovery 4 thao tác, AC-ACC-01–22 và [12 use case/coverage source-test](features/accounts.md#use-case-coverage); chưa chạy kiểm thử trong bước tài liệu | Vg hoàn thiện Identity/job contract; Thái làm delivery/provider theo contract và ghi proof; Sáng kiểm tra phần DM sử dụng. Limiter bổ sung hoãn DEC-089 |
 | READY-02 | DM và ngoại lệ | Đã chốt 2.000 UTF-16, tìm người, không tự hết hạn, cách gửi, validation và bản nháp (DEC-068–071/090/091); có AC-DM và ngoại lệ tại [đặc tả](features/direct-messaging.md#requirements) | Validation/bản nháp đã chốt DEC-090/091; có Unicode fixture, HMAC/mapping SQL/Hub/resume; còn review/mock, kiểm chứng đồng thời và no self-delete/account lock/restore đã chốt DEC-103/104/108, còn DATA-GAP proof; Vg/Sáng, Thái đối chiếu |
 | READY-03 | Ma trận quyền và thiết kế Community | [5 thành phần và 25 UC](features/community.md#organization), [Permissions](features/community/permissions.md#detailed-design) và [tích hợp](features/community/integration.md#contracts) có role/ACL/epoch/45 REST/9 realtime/fixture, AC-COM-01–42; [gói đầu tiên](features/community.md#use-case-delivery) đã xác định | Review/mock và migration/guard/thu hồi cần proof; media deadline DEC-099 và retention chính DEC-105–109 đã chốt, còn worker/restore proof; DM vẫn độc lập role cộng đồng |
-| READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg rà soát, Thái dựng prototype; ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
+| READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg làm UI Identity/Community, Sáng làm UI DM theo gói; Thái cung cấp dataset/bộ chạy. Ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
 | READY-05 | API/dữ liệu DM | Có [hợp đồng đề xuất](features/direct-messaging.md#contracts) với schema logic, lỗi, chống trùng, lịch sử và cập nhật | REST/SignalR, ID/cursor đã chọn DEC-081; Vg/Sáng rà soát schema/lỗi cùng Thái; Identity có OpenAPI từ code; DM có [OpenAPI dự thảo](contracts/direct-messaging.openapi.json), có schema realtime/fixture/thiết kế chi tiết; chưa có mock hoặc proof chạy được |
-| READY-06 | Thử nghiệm kỹ thuật | Có kịch bản cần chứng minh tại [bằng chứng thử nghiệm](#technical-evidence); chưa chạy | Chốt thiết kế DM trên nền Modular Monolith và môi trường, chạy và ghi bằng chứng; Vg/Sáng |
-| READY-07 | Kiểm thử | Có [ca kiểm thử](features/direct-messaging.md#tests) và dữ liệu dự kiến; tất cả chưa chạy | Thái chuẩn bị fixture, Vg/Sáng rà soát; ngưỡng chat đã chốt DEC-083; khóa fixture/môi trường, đo cả ngưỡng media đã chốt DEC-085 và ghi kết quả |
-| READY-08 | Công việc/nguồn lực | Có các gói cụ thể tại [gói chuẩn bị](#preparation); có baseline ngày công/lịch 16 tuần đề xuất; chưa xác nhận | Vg/Sáng/Thái ước lượng trong quỹ thời gian thật, gồm hướng dẫn và kiểm thử |
+| READY-06 | Thử nghiệm kỹ thuật | Có kịch bản cần chứng minh tại [bằng chứng thử nghiệm](#technical-evidence); chưa chạy | MVP kiểm chứng luồng trên một host; v1 chuyển microservice theo DEC-116. Vg thiết kế/Identity/Community, Sáng Messaging, Thái môi trường/bộ chạy theo gói V1-ARCH |
+| READY-07 | Kiểm thử | Có [ca kiểm thử](features/direct-messaging.md#tests) và dữ liệu dự kiến; tất cả chưa chạy | Mỗi người thử phần sở hữu, người khác kiểm tra lại; Vg/Sáng giữ kỳ vọng quyền/đồng thời, Thái dataset/bộ chạy/kết quả. Ngưỡng chat DEC-083 và media DEC-085 áp dụng theo hồ sơ mốc |
+| READY-08 | Công việc/nguồn lực | Có gói chuẩn bị, [phân công](#team) và [công suất](#capacity) theo DEC-117; lịch từng mốc chưa khóa | Vg/Sáng/Thái ước lượng trong quỹ thời gian thật, tính học/hướng dẫn/review/tự kiểm thử và 20% dự phòng; đo lại sau 1–2 tuần |
 
 Không tính phần trăm từ số dòng hoàn tất. Mỗi gói chỉ sẵn sàng khi có
 yêu cầu, thiết kế, kiểm chứng và người phụ trách tương ứng. Quyết định
 media, chi phí toàn dự án và vận hành vẫn phải hoàn thành ở các đợt
-liên quan; không tự loại chúng khỏi phiên bản đầu để đánh dấu Đợt 0 xong.
+liên quan; không tự loại chúng khỏi bản hoàn thiện v1 để đánh dấu Đợt 0 xong.
 
 <a id="preparation"></a>
 
@@ -539,20 +506,21 @@ liên quan; không tự loại chúng khỏi phiên bản đầu để đánh d�
 
 | Gói | Đầu ra | Phụ thuộc | Thực hiện / rà soát dự kiến | Điều kiện hoàn tất |
 |---|---|---|---|---|
-| PREP-01 | Hoàn thiện thiết kế tài khoản và fixture sau chính sách đã chốt | ACC-GAP-01–07, OQ-002 | Vg, Sáng / Thái đối chiếu kiểm thử | Quy tắc không còn chỗ diễn giải khác nhau ở luồng bàn giao; AC cập nhật |
-| PREP-02 | Prototype tài khoản/DM và cộng đồng theo mã màn hình | Wireframe, quyết định liên quan | Vg thiết kế, Thái dựng / Sáng rà soát phản hồi API | Có trạng thái rỗng/lỗi/mất mạng/mất quyền; ghi kết quả rà soát |
-| PREP-03 | Hợp đồng API có schema máy đọc được và mock | SCDC-API-DM-001, PREP-01 | Sáng, Vg / Thái dùng mock | Request/response/lỗi thống nhất; không trả dữ liệu ngoài quyền |
-| PREP-04 | Thử nghiệm DM lưu bền/chống trùng/phân trang | PREP-03, lựa chọn công nghệ | Sáng / Vg, Thái quan sát | Các [kịch bản thử nghiệm](#technical-evidence) có bằng chứng, rủi ro được ghi nhận |
-| PREP-05 | Thử nghiệm cập nhật, reconnect và thu hồi phiên | PREP-04, thiết kế phiên | Sáng, Vg / Thái | Không trùng/sót dữ liệu; kết nối bị thu hồi đúng ngưỡng đã chốt |
-| PREP-06 | Ma trận thiết bị và fixture kiểm thử | DEC-059, AC và ca kiểm thử | Thái / Vg, Sáng | Danh sách trình duyệt/phiên bản, kích thước, dữ liệu và kết quả mong đợi rõ |
+| PREP-01 | Hoàn thiện thiết kế tài khoản/job email và fixture cho luồng đã chọn | ACC-GAP-01–07, OQ-002 | Vg giữ contract; Thái proof delivery / Sáng kiểm tra phần DM dùng | Quy tắc/token/job không còn chỗ diễn giải khác nhau; AC của luồng được cập nhật |
+| PREP-02 | UI tài khoản/DM và cộng đồng theo mã màn hình | Wireframe, quyết định liên quan | Vg: Identity/Community; Sáng: DM / kiểm tra chéo; Thái dataset/bộ chạy | Có trạng thái rỗng/lỗi/mất mạng/mất quyền; ghi kết quả rà soát |
+| PREP-03 | Hợp đồng API có schema máy đọc được và mock | SCDC-API-DM-001, PREP-01 | Sáng sở hữu DM; Vg review quyền / Thái dùng mock cho bộ chạy | Request/response/lỗi thống nhất; không trả dữ liệu ngoài quyền |
+| PREP-04 | Thử nghiệm DM lưu bền/chống trùng/phân trang | PREP-03, lựa chọn công nghệ | Sáng / Vg review quyền/dữ liệu; Thái hỗ trợ bộ chạy | Các [kịch bản thử nghiệm](#technical-evidence) có bằng chứng theo scope; rủi ro được ghi nhận |
+| PREP-05 | Thử nghiệm cập nhật, reconnect và thu hồi phiên | PREP-04, thiết kế phiên | Sáng: realtime; Vg: session/revoke / Thái bộ chạy lỗi mạng | Không trùng/sót dữ liệu; kết nối bị thu hồi đúng ngưỡng áp dụng |
+| PREP-06 | Ma trận thiết bị và fixture kiểm thử | DEC-059, AC và ca kiểm thử | Thái: matrix/dataset/bộ chạy; Vg/Sáng: kỳ vọng và thực thi phần sở hữu | Danh sách trình duyệt/phiên bản, kích thước, dữ liệu và kết quả mong đợi rõ |
 | PREP-07 | Ước lượng và lịch đợt tài khoản/DM | PREP-01–06 đủ rõ | Vg, Sáng, Thái | Ngày công, người làm/rà soát, thời gian hướng dẫn và phụ thuộc không trùng quỹ thời gian |
 
-Đây là phân công dự kiến theo vai trò hiện có, chưa phải xác nhận các
-thành viên đã nhận việc. Ngày công/lịch baseline ở phương án 16 tuần; từng gói vẫn cần nhóm rà soát và xác nhận trước cam kết. Gói cộng đồng chi tiết và media tiếp tục theo kế hoạch đợt 2/3.
+Đây là phân công kế hoạch theo DEC-117; không ghi các gói đã hoàn tất hoặc lịch đã được cam kết. PREP nằm trong quỹ của gói tính năng/công cụ tương ứng, không cộng thành việc toàn thời gian bổ sung. Chọn PREP theo luồng MVP trước; phần hoàn thiện Community, chuyển service và media tiếp tục ở v1.
 
 <a id="technical-evidence"></a>
 
 ### Bằng chứng thử nghiệm kỹ thuật cần có
+
+Đây là mục tiêu của bản đầy đủ v1; MVP chọn bằng chứng theo luồng tại [hồ sơ MVP](releases/mvp.md#acceptance). Thiết kế transaction/row lock xuyên Identity–Messaging trong một host phải được rà soát lại khi chuyển service ở v1 theo DEC-116; không coi việc đổi tên mốc là đã chuyển thiết kế monolith thành microservice.
 
 1. Hai người xác thực được, mở cùng một DM khi tạo đồng thời; người thứ
    ba không truy cập được API hoặc kênh cập nhật.
@@ -569,7 +537,7 @@ chế và người rà soát. Viết kế hoạch hoặc sơ đồ không thay t
 
 ### Thứ tự xử lý tiếp theo
 
-Ngày 2026-10-04 đã bổ sung thiết kế chi tiết Accounts/DM, Community/quyền/tin phòng, Media/LiveKit tự host, [vòng đời dữ liệu](data-lifecycle.md) và [nghiệm thu/vận hành](release-operations.md) với gate/smoke/runbook/mẫu hồ sơ. Ngày 2026-10-05 bổ sung use case Identity và DEC-113 về mật khẩu trùng; chưa sửa mã hoặc chạy kiểm thử sản phẩm. Quyết định cập nhật tới DEC-113; limiter tài khoản hoãn DEC-089, người duyệt chưa chọn DEC-111. Các bản thiết kế còn cần rà soát; provider/key store/kho sổ, phân công và bằng chứng triển khai ở [phần còn cần hoàn thiện](#documentation-remaining). UX/UI là phần có thể soạn tiếp. Chỉ xác nhận gói phát triển khi các phụ thuộc trực tiếp được giải quyết; không cần chờ toàn bộ media để rà soát Accounts/DM/Community.
+Ngày 2026-10-04 đã bổ sung thiết kế chi tiết Accounts/DM, Community/quyền/tin phòng, Media/LiveKit tự host, [vòng đời dữ liệu](data-lifecycle.md) và [nghiệm thu/vận hành](release-operations.md) với gate/smoke/runbook/mẫu hồ sơ. Ngày 2026-10-05 bổ sung use case Identity và DEC-113 về mật khẩu trùng. Ngày 2026-10-06 tách MVP/v1, chốt MVP một host/microservice ở v1 và cập nhật phân công/công suất theo DEC-114/116/117; chưa sửa mã hoặc chạy kiểm thử sản phẩm. Limiter tài khoản hoãn DEC-089, người duyệt chưa chọn DEC-111. Các bản thiết kế còn cần rà soát; provider/key store/kho sổ, lịch và bằng chứng triển khai ở [phần còn cần hoàn thiện](#documentation-remaining). UX/UI tiếp tục theo chủ gói. Chỉ xác nhận gói phát triển khi các phụ thuộc trực tiếp được giải quyết; không cần chờ toàn bộ media để rà soát Accounts/DM/Community.
 
 Các nội dung còn mở được tập trung tại OQ-002–OQ-011; bảng này dẫn chiếu
 và theo dõi đầu ra, không tạo một nguồn quyết định sản phẩm khác.
@@ -619,7 +587,7 @@ người chịu trách nhiệm và thẩm quyền xác nhận cho từng đầu 
 | 2. Làm rõ nhu cầu | BA, UX | Mô tả người dùng dự kiến, vấn đề cần giải quyết, giá trị mong muốn, hành trình ưu tiên, giả định và mức độ kiểm chứng. | Có đầu vào để xác định nhu cầu ưu tiên và nội dung cần phân tích; giả định chưa kiểm chứng và cách đánh giá giá trị được ghi rõ. |
 | 3. Đặc tả yêu cầu | BA, phối hợp khách hàng và QA | Quy tắc nghiệp vụ, luồng chính/ngoại lệ, ma trận quyền, yêu cầu chất lượng và tiêu chí chấp nhận. | Các yêu cầu có phạm vi rõ, kiểm chứng được và được khách hàng xác nhận. |
 | 4. Thiết kế UX/UI | UX/UI, phối hợp BA và kỹ sư | Sơ đồ màn hình, luồng thao tác, bản thiết kế tương tác và đặc tả giao diện. | Luồng sử dụng và trạng thái giao diện đáp ứng yêu cầu; các vấn đề qua đánh giá được xử lý. |
-| 5. Thiết kế kỹ thuật | Tech Lead, kỹ sư, vận hành | Kiến trúc Modular Monolith cho MVP, dữ liệu, hợp đồng API/sự kiện, thiết kế chi tiết và phương án vận hành. | Giải pháp được rà soát về khả thi, tích hợp, hiệu năng và chi phí. |
+| 5. Thiết kế kỹ thuật | Vg chủ trì; Sáng/Thái theo gói, vận hành khi được chọn | Ranh giới module cho MVP một host; chuyển microservice, dữ liệu/hợp đồng mạng và phương án vận hành ở v1 theo DEC-116/117. | Giải pháp được rà soát về khả thi, tích hợp, hiệu năng và chi phí. |
 | 6. Hoàn thiện kế hoạch thực hiện | Quản lý dự án, toàn nhóm | Danh sách công việc theo ưu tiên, phân công, phụ thuộc, lịch bàn giao, dự toán cập nhật và kế hoạch kiểm thử. | Kế hoạch ban đầu được chi tiết hóa theo yêu cầu và thiết kế; có nguồn lực thực hiện và các điều chỉnh cần thiết được xác nhận. |
 | 7. Phát triển và tích hợp | Kỹ sư, Tech Lead | Chức năng đã triển khai, mã nguồn được rà soát, kết quả kiểm thử kỹ thuật và bản tích hợp. | Đáp ứng tiêu chí chấp nhận của phần công việc và sẵn sàng kiểm thử hệ thống. |
 | 8. Kiểm thử và nghiệm thu | QA, khách hàng | Kết quả kiểm thử chức năng, tích hợp, phân quyền, hiệu năng; danh sách lỗi và kết quả nghiệm thu. | Đạt điều kiện nghiệm thu; lỗi còn tồn tại được đánh giá và thống nhất cách xử lý. |

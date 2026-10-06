@@ -26,7 +26,7 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 | <a id="com-008"></a> COM-008 | Thành viên chỉ thấy phòng mình được cấp quyền xem. | DEC-027 |
 | <a id="com-012"></a> COM-012 | Phòng mới mặc định cho mọi thành viên xem được, trừ khi giới hạn quyền. | DEC-033 |
 | <a id="com-015"></a> COM-015 | Thành viên mới vào cộng đồng được xem lịch sử cũ của phòng mình được phép xem. | DEC-038 |
-| <a id="com-034"></a> COM-034 | Tên phòng 1–100, chủ đề tối đa 1.000; owner/người có quyền quản lý phòng tạo/sửa/xóa; xóa ngừng truy cập tin/media, chưa khôi phục trong MVP. | DEC-077 |
+| <a id="com-034"></a> COM-034 | Tên phòng 1–100, chủ đề tối đa 1.000; owner/người có quyền quản lý phòng tạo/sửa/xóa; xóa ngừng truy cập tin/media, chưa khôi phục trong v1. | DEC-077 |
 
 <a id="use-cases"></a>
 
@@ -52,7 +52,7 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 
 **Ngoại lệ:** Tên sai/trùng hoặc actor mất quyền không tạo phòng dở dang. Retry cùng khóa/payload không tạo thêm space/phòng. Phụ thuộc lifecycle không đáp ứng phải rollback; tạo metadata voice chưa chứng minh gọi/media hoạt động.
 
-**Kết quả sau cùng:** Có một phòng active đúng kind; text có thể dùng [UC-COM-17](#uc-com-17), [UC-COM-23](integration.md#uc-com-23). Phòng read-only và text bên trong voice nằm ngoài hợp đồng MVP.
+**Kết quả sau cùng:** Có một phòng active đúng kind; text có thể dùng [UC-COM-17](#uc-com-17), [UC-COM-23](integration.md#uc-com-23). Phòng read-only và text bên trong voice nằm ngoài hợp đồng v1.
 
 <a id="uc-com-17"></a>
 
@@ -90,7 +90,7 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 2. Hệ thống kiểm tra quyền quản lý cùng view, dữ liệu/version và tên unique rồi cập nhật metadata.
 3. Sau commit, trả phòng hiện hành và thông báo tải lại thông tin cho các client đủ quyền.
 
-**Ngoại lệ:** Hidden/deleted channel không lộ metadata; thiếu manage_channels trong phòng được biết từ chối. Tên trùng/version cũ không ghi đè, lỗi giữ form để người dùng sửa. Kind không thay đổi qua PATCH trong MVP; ACL dùng [UC-COM-22](permissions.md#uc-com-22).
+**Ngoại lệ:** Hidden/deleted channel không lộ metadata; thiếu manage_channels trong phòng được biết từ chối. Tên trùng/version cũ không ghi đè, lỗi giữ form để người dùng sửa. Kind không thay đổi qua PATCH trong v1; ACL dùng [UC-COM-22](permissions.md#uc-com-22).
 
 **Kết quả sau cùng:** Metadata phòng được cập nhật; lịch sử/kind không bị đổi bởi thao tác sửa tên/chủ đề.
 
@@ -112,7 +112,7 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 
 **Ngoại lệ:** Quyền/version cũ hoặc deleted không biến thành phòng mới. Delete tranh send/media admission tuân guard và thứ tự commit; nội dung đã commit trước vẫn giữ theo retention. Lỗi lifecycle rollback toàn bộ; proof cutoff media cần thực hiện riêng.
 
-**Kết quả sau cùng:** Phòng không truy cập/khôi phục trong MVP, giữ ID và nội dung theo DEC-105. Thao tác này không xóa toàn server hoặc purge backup.
+**Kết quả sau cùng:** Phòng không truy cập/khôi phục trong v1, giữ ID và nội dung theo DEC-105. Thao tác này không xóa toàn server hoặc purge backup.
 
 <a id="ux"></a>
 
@@ -180,7 +180,7 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md
 | <a id="ac-com-07"></a> AC-COM-07 | Thành viên không có quyền tạo phòng thử tạo phòng. | Hệ thống từ chối thao tác; chủ sở hữu hoặc người được cấp quyền thực hiện được. |
 | <a id="ac-com-14"></a> AC-COM-14 | Tin được lưu trong phòng khi thành viên đang vắng mặt; thành viên mở lại phòng sau đó và vẫn có quyền xem. | Thành viên thấy tin trong lịch sử phòng. |
 | <a id="ac-com-15"></a> AC-COM-15 | Thành viên mới tham gia mở phòng có tin từ trước và mình được phép xem. | Thành viên thấy lịch sử cũ của phòng. |
-| <a id="ac-com-34"></a> AC-COM-34 | Người đúng/sai quyền sửa/xóa phòng đang có tin/cuộc gọi | Deleted không đọc/gửi/nhận/tiếp tục gọi được; chặn race writer; không có khôi phục MVP |
+| <a id="ac-com-34"></a> AC-COM-34 | Người đúng/sai quyền sửa/xóa phòng đang có tin/cuộc gọi | Deleted không đọc/gửi/nhận/tiếp tục gọi được; chặn race writer; không có khôi phục v1 |
 
 
 Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](../community.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Chưa có kết quả chạy AC-COM.

@@ -1,6 +1,8 @@
 # SCDC — Nhắn tin riêng giữa hai người
 
-Cập nhật: 2026-10-04. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
+Cập nhật: 2026-10-06. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
+
+Đặc tả đầy đủ cho [v1](../releases/v1.md); [MVP](../releases/mvp.md) chọn luồng nhắn tin nền để bắt đầu trong một API host. Các quy tắc áp dụng của luồng được chọn vẫn giữ; transaction/guard xuyên Identity–Messaging được rà soát khi chuyển sang [microservice ở v1](../architecture.md#target) theo DEC-116.
 
 Quy tắc cốt lõi đã xác nhận. UX và hợp đồng dưới đây còn đề xuất; Messaging mới ở nền module, chưa có DM API/Hub. Các ca TC chưa có kết quả chạy được ghi nhận.
 
@@ -29,7 +31,7 @@ và SUC-003 trong [Project Brief](../project.md#scope).
 Đợt đầu ưu tiên tin nhắn văn bản. Hình ảnh, file tài liệu và cách xử lý
 khi người nhận không muốn nhận tin từ một tài khoản cụ thể được xếp vào
 đợt sau theo DEC-017 và DEC-018. Việc chọn đợt triển khai không thay đổi
-phạm vi phiên bản đầu trong Project Brief.
+phạm vi bản hoàn thiện v1 trong Project Brief.
 
 ### Hành trình chính
 
@@ -67,7 +69,7 @@ phạm vi phiên bản đầu trong Project Brief.
 | DM-011 | Chỉ giữ nội dung mới nhất sau khi sửa, không cung cấp lịch sử phiên bản cũ; vẫn hiện dấu “Đã sửa”. | DEC-052 |
 | DM-012 | Mỗi tin tối đa 2.000 đơn vị UTF-16; cho xuống dòng/emoji; từ chối tin rỗng/chỉ có khoảng trắng. | DEC-053, DEC-068 |
 | DM-013 | Từ khóa tìm người 2–64 UTF-16, một phần username/displayName; không phân biệt hoa/thường, giữ dấu; ưu tiên username khớp đúng; trang mặc định 20, tối đa 50. | DEC-069 |
-| DM-014 | Tin không tự hết hạn trong MVP; sửa/xóa theo quy tắc đã chốt. Account chưa có self-delete, khóa không xóa lịch sử; backup/restore theo chính sách vòng đời. | DEC-070/103/104/108/109 |
+| DM-014 | Tin không tự hết hạn trong v1; sửa/xóa theo quy tắc đã chốt. Account chưa có self-delete, khóa không xóa lịch sử; backup/restore theo chính sách vòng đời. | DEC-070/103/104/108/109 |
 | DM-015 | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng, nút Gửi gửi tin. | DEC-071 |
 | DM-016 | Chuẩn hóa CRLF/CR thành LF trước đếm; từ chối UTF-16 lỗi và tin chỉ khoảng trắng/vô hình; giữ Unicode/ZWJ trong tin có nội dung. | DEC-090 |
 | DM-017 | Bản nháp chưa Gửi chỉ ở bộ nhớ tab, giữ khi chuyển hội thoại; reload/đóng tab/logout mất bản nháp; không lưu nội dung xuống localStorage/IndexedDB. | DEC-091 |
@@ -85,7 +87,7 @@ Các quyết định DEC-* được ghi tại
 | Trùng tên hiển thị | Hiển thị thêm tên tài khoản duy nhất; chọn bằng ID; không đưa email vào kết quả |
 | Chọn chính mình | Không tạo DM một người; trả lỗi dữ liệu; tính năng ghi chú cá nhân không thuộc yêu cầu hiện tại |
 | Mở DM đã có | Trả cùng hội thoại của cặp hai người, kể cả khi hai bên mở đồng thời |
-| Người nhận bị khóa | Chặn gửi/gọi mới; actor active vẫn đọc lịch sử và sửa/xóa tin của mình theo quyền. Không self-delete MVP; DEC-103/104 và [vòng đời dữ liệu](../data-lifecycle.md#account-state) |
+| Người nhận bị khóa | Chặn gửi/gọi mới; actor active vẫn đọc lịch sử và sửa/xóa tin của mình theo quyền. Không self-delete v1; DEC-103/104 và [vòng đời dữ liệu](../data-lifecycle.md#account-state) |
 | Mất phản hồi gửi | Giữ tin tạm; người gửi bấm thử lại cùng mã thao tác; chỉ một tin được lưu |
 | Chủ ý gửi cùng nội dung lần nữa | Là thao tác mới với mã mới; được tạo tin mới, không chống trùng bằng nội dung đơn thuần |
 | Thử lại tin đã sửa/xóa sau lần gửi đầu | Trả cùng ID với trạng thái hiện hành, không tạo lại nội dung gửi ban đầu |
@@ -201,9 +203,7 @@ cuộc gọi vào wireframe của đợt DM văn bản.
 
 ### Bàn giao và nội dung còn cần rà soát
 
-Vg rà soát bố cục và trạng thái; Thái dựng prototype theo mã màn hình,
-Sáng đối chiếu các phản hồi với hợp đồng API. Chưa có kết quả rà soát
-hoặc kiểm thử khả dụng được ghi nhận trong tài liệu này.
+Sáng sở hữu UI DM và phản hồi API theo gói fullstack; Vg rà soát bố cục, trạng thái và quyền. Thái cung cấp dataset/bộ chạy kiểm tra theo [DEC-117](../project.md#team). Chưa có kết quả rà soát hoặc kiểm thử khả dụng được ghi nhận trong tài liệu này.
 
 Trước khi giao frontend cần xác nhận ma trận trình duyệt/kích thước,
 thiết kế liên kết email, fixture UTF-16, hành vi bàn phím/IME và cách xử lý
@@ -431,7 +431,7 @@ Interface phiên/thu hồi theo session là phần mở rộng cần thiết k�
 | DM-SQL-02 | `messages.sequence_no` là identity toàn cục, cấp trước commit và có thể có khoảng trống | Thiết kế khóa/counter theo hội thoại bảo đảm thứ tự commit; identity hiện tại không chứng minh bù tin không sót |
 | DM-SQL-03 | Unique `(space_id,author_user_id,client_message_id)` đã có | Bổ sung SendOperation/fingerprint còn tồn tại sau xóa; unique tin đơn thuần chưa giải quyết payload khác hoặc thử lại sau sửa/xóa |
 | DM-SQL-04 | Constraint văn bản dùng `char_length` tối đa 10.000; text message yêu cầu content khác null | Ràng buộc 2.000 UTF-16 ở service; điều chỉnh constraint để tombstone có content null; không dùng char_length thay phép đếm đã chốt |
-| DM-SQL-05 | Có `message_edits.previous_content` trong schema/seed | Writer MVP không ghi nội dung cũ theo DEC-052; chọn migration/cleanup phù hợp trước dùng dữ liệu thật |
+| DM-SQL-05 | Có `message_edits.previous_content` trong schema/seed | Writer v1 không ghi nội dung cũ theo DEC-052; chọn migration/cleanup phù hợp trước dùng dữ liệu thật |
 | DM-SQL-06 | Có outbox chung nhưng chưa có dispatcher Messaging | Transaction tin/khóa/outbox; sự kiện chỉ tham chiếu; dispatcher đọc bản hiện hành, merge ID/version, kiểm tra quyền/phiên |
 
 Nguồn: [schema.sql](../../database/postgres/schema.sql). Các trường/schema cho nhóm chat, file, reactions/read state trong seed không tự mở rộng scope DM văn bản.

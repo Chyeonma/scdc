@@ -1,8 +1,8 @@
 # SCDC — Kiến trúc và quy ước tích hợp
 
-Cập nhật: 2026-10-06 (tổ chức nội bộ Community). MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
+Cập nhật: 2026-10-06. MVP giữ một API host Modular Monolith; chuyển microservice thuộc v1 theo DEC-116. Source hiện tại chưa chuyển đổi. Các quyết định sản phẩm được quản lý ở decisions.md; phạm vi từng mốc ở [MVP](releases/mvp.md) và [v1](releases/v1.md).
 
-Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền/media còn thiết kế cần kiểm chứng; microservices thuộc đợt sau.
+Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền/media còn thiết kế cần kiểm chứng; microservice được chuyển ở giai đoạn V1-0 sau MVP.
 
 ## Mục lục
 
@@ -10,7 +10,7 @@ Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. 
 - [Ranh giới module và dữ liệu](#boundaries)
 - [Hợp đồng và lỗi chung](#contracts)
 - [Hành trình xuyên tính năng](#journeys)
-- [Định hướng đợt sau](#future)
+- [Mục tiêu microservice và định hướng](#target)
 - [Điều kiện rà soát](#review)
 
 <a id="current"></a>
@@ -43,6 +43,8 @@ Health endpoint `/api/v1/health` trả trạng thái module và thời điểm; 
 
 ## 2. Ranh giới module và dữ liệu
 
+Các interface và transaction/guard bên dưới mô tả source hoặc thiết kế trên một host, phù hợp nền MVP theo DEC-116. Khi tách service ở v1, phải rà soát hợp đồng mạng, quyền sở hữu DB, lỗi giao tiếp và tính nhất quán; chưa coi các lời gọi giữ row lock xuyên module là thiết kế chạy được xuyên service. [Mục tiêu microservice](#target) ghi phần cần chuyển đổi.
+
 | Thành phần | Trách nhiệm | Dữ liệu / hợp đồng | Tình trạng |
 |---|---|---|---|
 | Identity | Tài khoản, mật khẩu, xác minh, phiên, hồ sơ | `identity`; `IUserDirectory` | Có implementation và test tự động |
@@ -61,7 +63,7 @@ Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa c
 
 ### Thiết kế tích hợp tài khoản/DM bổ sung
 
-[Accounts](features/accounts.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [DM](features/direct-messaging.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế tương lai của cùng Modular Monolith, không là các module/service đang chạy.
+[Accounts](features/accounts.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [DM](features/direct-messaging.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế trên nền Modular Monolith cho các phần chưa triển khai; khi chuyển sang microservice ở v1 phải điều chỉnh các giả định một host theo [mục tiêu](#target).
 
 Hợp đồng đề xuất cần thêm `IAccountAccessGuard`, `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi theo session. Để chặn race revoke/send, Identity giữ kiểm tra/row lock của user qua transaction scope dùng chung tới commit Messaging; BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module. Mỗi module vẫn chỉ đọc dữ liệu mình sở hữu. Proof guard/lock order và session revocation còn phải chạy; không suy IUserDirectory summary khác null thành đủ quyền gửi.
 
@@ -154,16 +156,35 @@ Sơ đồ thể hiện phạm vi sản phẩm, gồm các tính năng chưa tri�
 Gửi tin phải lưu bền trước khi hiển thị “Đã gửi”. Realtime bổ sung thông báo cho người đang online; lịch sử đã lưu là nguồn khôi phục khi mở lại. Ràng buộc transaction, idempotency, commit order và reconnect được quản lý tập trung trong [đặc tả DM](features/direct-messaging.md#contracts).
 
 <a id="future"></a>
+<a id="target"></a>
 
-## 5. Định hướng đợt sau
+## 5. Mục tiêu microservice và định hướng
 
-Theo DEC-060, MVP không bắt buộc có Gateway hoặc dịch vụ độc lập. Việc tách module thành microservices cần quyết định riêng về thời điểm, tải, công sức và vận hành.
+DEC-116 chốt MVP một API host và chuyển microservice ở v1; DEC-115 giữ lịch sử thời điểm đã thay thế. Môn học không bắt buộc số service, Gateway, broker hoặc Kubernetes. Ranh giới dưới đây là **đề xuất cho v1 để rà soát**, chưa phải kiến trúc đã được Vg chọn hoặc code đã triển khai. MVP giữ module/dữ liệu/hợp đồng rõ để giảm công sức chuyển đổi, không cần tách API hoặc DB trước bàn giao.
+
+| Thành phần đề xuất | Phạm vi | Dữ liệu/triển khai |
+|---|---|---|
+| Identity API | Tài khoản, xác thực, phiên, thông tin user | Sở hữu Identity DB; API ở tiến trình và artefact riêng |
+| Chat API | Hai module Community và Messaging | Sở hữu Chat DB; API ở tiến trình và artefact riêng; giữ giao dịch Community–Messaging trong cùng ranh giới |
+| Email Worker | Gửi email theo job/policy của Identity | Tiến trình backend thuộc ranh giới Identity, không tự tính thành microservice nghiệp vụ thứ ba |
+| WebClient và lớp định tuyến | Frontend dùng chung; HTTP và realtime tới API tương ứng | Có thể tận dụng Nginx và Docker Compose hiện có |
+
+Đề xuất dùng một PostgreSQL instance với hai database/tài khoản DB riêng cho hai API. Service khác dùng API/hợp đồng, không đọc trực tiếp DB. Chưa tạo database, host hoặc sửa compose trong lần tổ chức tài liệu này.
+
+Trước khi chọn và triển khai, cần:
+
+- Tách bootstrap/controllers/build/config của Identity khỏi Chat; chốt xác thực giữa service và thông tin user cần trao đổi.
+- Rà soát FK/JOIN giữa Identity với Community/Messaging trong SQL hiện tại; chốt dữ liệu tham chiếu và migration cho từng service.
+- Thay thiết kế shared transaction/row lock xuyên Identity với Chat bằng chính sách/hợp đồng phù hợp, gồm thu hồi phiên/quyền và hành vi khi service không liên lạc được. Một lần kiểm tra HTTP không tự bảo đảm quyền còn đúng tới commit.
+- Kiểm chứng chạy/build/restart API độc lập, luồng người dùng, lỗi mạng, dữ liệu và scope quyền trên bản tích hợp.
+
+v1 chuyển nền một host của MVP theo ranh giới được chọn, giữ hồi quy Identity/Community/DM, rồi hoàn thiện tính năng và media. [Các gói V1-ARCH](releases/v1.md) chia Vg thiết kế/Identity/Community, Sáng Messaging, Thái môi trường/định tuyến/CI; không dồn toàn bộ chuyển đổi cho trưởng nhóm. Việc tách thêm service cần quyết định và công sức riêng.
 
 | Phương án từng được nêu | Tình trạng |
 |---|---|
 | YARP Gateway, gRPC/HTTP và RabbitMQ | Định hướng tách dịch vụ; chưa có triển khai hoặc lịch được xác nhận |
 | SignalR | Đã chọn cho DM/tin phòng theo DEC-081; chưa có Hub trong backend hiện tại |
-| Redis Backplane | Dành cho scale-out khi có quyết định; không cần tự đưa Redis vào MVP một API instance |
+| Redis Backplane | Dành cho scale-out realtime khi có quyết định; tách Identity và Chat không tự yêu cầu nhiều instance Hub hoặc Redis |
 | MinIO / presigned upload | Phương án file ở đợt sau; chưa có lựa chọn triển khai được duyệt |
 | LiveKit SFU tự host | Đã chọn DEC-084; có Media contract/lease/quota-gate design, còn extension/proof/build pin; chưa có service/manifest |
 | Kubernetes và k6 | Công cụ từng được đề xuất; chưa có manifest hoặc kịch bản tải trong repo |
@@ -174,6 +195,6 @@ Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đ�
 
 ## 6. Điều kiện rà soát kỹ thuật
 
-Vg/Sáng rà soát ranh giới module, quyền sở hữu dữ liệu, hợp đồng, giao dịch, thu hồi phiên/quyền và cách quan sát. Thái đối chiếu trạng thái UI với lỗi API và ca kiểm thử. Những lựa chọn chưa chốt tiếp tục thuộc OQ-008.
+Vg chủ trì quyết định ranh giới, quyền sở hữu dữ liệu, hợp đồng, giao dịch và thu hồi phiên/quyền; Sáng rà soát phần Messaging/lifecycle. Thái hiện thực và kiểm chứng worker, môi trường/config/CI và adapter provider theo hợp đồng được chốt. Mỗi người tự kiểm thử phần sở hữu, người khác kiểm tra lại theo [phân công DEC-117](project.md#team). Những lựa chọn chưa chốt tiếp tục thuộc OQ-008.
 
 Một gói được bàn giao khi có hành vi rõ, thiết kế thống nhất, người phụ trách và phương pháp kiểm chứng. Các bằng chứng cần có được quản lý tại [bảng sẵn sàng](project.md#readiness). Thiết kế DM có thể tiến hành độc lập với việc thử nghiệm tích hợp media còn thiếu.

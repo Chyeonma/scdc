@@ -2,6 +2,8 @@
 
 Cập nhật: 2026-10-04. Phạm vi SCP-008; DEC-110/111/112. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [release-operations.md](release-operations.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](data-lifecycle.md#policy).
 
+Runbook thuộc bản hoàn thiện [v1](releases/v1.md), kế thừa bộ tài liệu đầy đủ trước đây được gọi là MVP. Mốc [MVP mới](releases/mvp.md) bắt đầu từ ba tính năng nền và bộ chạy/kiểm tra theo scope; không phải mọi tình huống media/restore trong file này đều là điều kiện cho gói đầu.
+
 ## Mục lục
 
 - [Đầu vào và hiện trạng](#inputs)

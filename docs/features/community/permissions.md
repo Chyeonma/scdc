@@ -77,7 +77,7 @@ kiện tài khoản/phiên. Vai trò được quản lý riêng theo [ACL-19](#a
 6. Đợt đầu, có quyền xem và đã xác minh email thì được gửi tin; không
    thêm quyền chỉ đọc độc lập (DEC-040/041).
 
-Thiết kế dữ liệu dùng ba trạng thái “kế thừa/cho phép/từ chối” cho cấu hình quyền xem. @everyone và giới hạn vai trò đã chốt DEC-092; cách lưu được mô tả ở [thiết kế chi tiết](#detailed-design). Quyền quản lý là hợp các quyền cho phép từ vai trò tự tạo; không có DENY quản lý hoặc ngoại lệ quản lý cá nhân trong MVP. DEC-057 quyết định xung đột **quyền xem phòng**.
+Thiết kế dữ liệu dùng ba trạng thái “kế thừa/cho phép/từ chối” cho cấu hình quyền xem. @everyone và giới hạn vai trò đã chốt DEC-092; cách lưu được mô tả ở [thiết kế chi tiết](#detailed-design). Quyền quản lý là hợp các quyền cho phép từ vai trò tự tạo; không có DENY quản lý hoặc ngoại lệ quản lý cá nhân trong v1. DEC-057 quyết định xung đột **quyền xem phòng**.
 
 | Mặc định/va chạm | Ngoại lệ cá nhân | Kết quả xem (thành viên thường) |
 |---|---|---|
@@ -318,7 +318,7 @@ Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../community.
 |---|---|---|---|
 | ACL-O1 | DEC-092 đã chốt @everyone/20 role/union; có API/catalog/fixture, còn review/migration/proof | Tạo phòng, mời, duyệt, đổi cấu hình/quyền xem; quản lý role theo DEC-058 | Vg; Sáng đánh giá thiết kế |
 | ACL-O2 | Có snapshot/accessVersion/epoch và nguyên tử; cần prototype/guard proof, giữ DEC-057/098 | Danh sách phòng, lịch sử, gửi, thời gian thực | Vg, Sáng |
-| ACL-O3 | Chuyển ngay DEC-076 có lock order/transaction; còn proof transfer/leave | Một owner, quyền chủ cũ/target, không xóa server MVP | Vg |
+| ACL-O3 | Chuyển ngay DEC-076 có lock order/transaction; còn proof transfer/leave | Một owner, quyền chủ cũ/target, không xóa server v1 | Vg |
 | ACL-O4 | Có schema/inbox/expiry/issuer theo DEC-074/087/097; còn review và concurrency proof | Cộng đồng riêng tư | Vg |
 | ACL-O5 | Có registry/guard/outbox/epoch; cần đo chat ≤5 giây, media deadline DEC-099 cần proof SFU | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
 

@@ -1,6 +1,8 @@
 # SCDC — Vòng đời dữ liệu
 
-Cập nhật: 2026-10-04. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
+Cập nhật: 2026-10-06. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
+
+Đây là phạm vi dữ liệu đầy đủ của [v1](releases/v1.md). [MVP](releases/mvp.md#acceptance) chọn gói và tiêu chí áp dụng; không cần triển khai mọi worker/restore/media trước gói đầu. Các quy tắc quyền, lưu tin và nội dung được luồng MVP sử dụng vẫn giữ theo nguồn chuẩn; thiết kế transaction/guard cần rà soát khi chuyển sang microservice ở v1 theo DEC-116.
 
 ## Mục lục
 
@@ -21,8 +23,8 @@ Cập nhật: 2026-10-04. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. 
 | Nội dung | Quy tắc/nguồn chuẩn |
 |---|---|
 | Tin đang lưu | Không tự hết hạn DM/tin phòng (DEC-070); chỉ bản nội dung mới nhất, xóa thay bằng tombstone (DEC-020/034/052) |
-| Tài khoản | Chưa có tự xóa tài khoản MVP (DEC-103); khóa không xóa tin, chặn sử dụng/tương tác mới và mở khóa cần đăng nhập mới (DEC-104) |
-| Phòng đã xóa | Không truy cập/khôi phục (DEC-077); giữ nội dung online chưa đặt hạn purge (DEC-105); không có xóa server MVP (DEC-094) |
+| Tài khoản | Chưa có tự xóa tài khoản v1 (DEC-103); khóa không xóa tin, chặn sử dụng/tương tác mới và mở khóa cần đăng nhập mới (DEC-104) |
+| Phòng đã xóa | Không truy cập/khôi phục (DEC-077); giữ nội dung online chưa đặt hạn purge (DEC-105); không có xóa server v1 (DEC-094) |
 | Backup | RPO ≤15 phút/RTO ≤4 giờ (DEC-086); tuổi tối đa mỗi backup/WAL 30 ngày DEC-109, không hứa PITR đủ mọi thời điểm tròn 30 ngày |
 | Bộ nhớ tab | Bản nháp DM chỉ RAM (DEC-091); đóng tab/reload/đăng xuất mất bản nháp; token phiên vẫn theo thiết kế Accounts hiện tại |
 | Log/audit | Log kỹ thuật 14 ngày, audit 90 ngày, IP/user-agent audit 7 ngày theo DEC-106; policy online, backup riêng |
@@ -31,7 +33,7 @@ Cập nhật: 2026-10-04. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. 
 
 Các mốc giữ log/dọn dữ liệu không tự thay thời hạn hiệu lực của token hoặc ngưỡng thu hồi chat/media. “Giữ dữ liệu” không cấp quyền đọc cho người đã rời/mất quyền hoặc cho người vận hành. “Xóa nội dung online” trong tài liệu là bỏ nội dung khỏi các bảng/đường phục vụ của ứng dụng; không hứa ghi đè mọi byte cũ trên đĩa, WAL hoặc backup ngay cùng thời điểm.
 
-Không bổ sung tự xóa tài khoản, tự xóa tài khoản chưa xác minh, xóa cộng đồng hoặc công cụ xuất toàn bộ dữ liệu vào MVP trong đợt này. DEC-112 bổ sung phạm vi quản trị kỹ thuật có phân quyền/audit, chưa có UI riêng. Thẩm quyền/người khóa/mở khóa hoặc người trực vận hành vẫn chưa được chọn tại OQ-011; xem [RB-ACCOUNT](operations-runbook.md#account-support).
+Không bổ sung tự xóa tài khoản, tự xóa tài khoản chưa xác minh, xóa cộng đồng hoặc công cụ xuất toàn bộ dữ liệu vào v1 trong đợt này. DEC-112 bổ sung phạm vi quản trị kỹ thuật có phân quyền/audit, chưa có UI riêng. Thẩm quyền/người khóa/mở khóa hoặc người trực vận hành vẫn chưa được chọn tại OQ-011; xem [RB-ACCOUNT](operations-runbook.md#account-support).
 
 <a id="inventory"></a>
 
@@ -47,7 +49,7 @@ Các thời hạn gắn **loại dữ liệu và sự kiện bắt đầu tính*
 | Email delivery/envelope | Worker Identity; không trả envelope ra API/log | Envelope không còn khả năng dùng phải xóa khi terminal; metadata terminal 7 ngày DEC-107 | Restore không gửi lại email cũ; expiry vẫn tính UTC ban đầu |
 | DM/tin phòng live | Actor active có quyền đọc scope; gồm tin tác giả bị khóa | Không tự hết hạn; chỉ nội dung hiện hành | Backup có thể có nội dung trước sửa/xóa; sổ bảo vệ chỉ ID/version/action |
 | Tin tác giả chủ động xóa | Hai bên/member đúng quyền chỉ thấy tombstone | Content=null từ commit; giữ message ID/sequence/version và send-operation | Không tự mất tombstone/dedup vì dọn payload hoặc restore |
-| Phòng deleted và các tin trong phòng | Không có API/UI đọc lại trong MVP | Giữ nội dung, chưa có hạn purge DEC-105 | Giữ ID/deleted epoch; backup 30 ngày không tự purge online |
+| Phòng deleted và các tin trong phòng | Không có API/UI đọc lại trong v1 | Giữ nội dung, chưa có hạn purge DEC-105 | Giữ ID/deleted epoch; backup 30 ngày không tự purge online |
 | Membership/role/ACL/invite | Actor/member đúng quyền ở thời điểm thao tác | Rời mất quyền ngay, role/override của epoch cũ được dọn theo Community; metadata lịch sử chưa đặt hạn riêng | Dấu revoke/epoch cần giữ để chặn replay/restore; link issuer đã mất quyền không tự vô hiệu theo DEC-097 |
 | DM/Community/Media operation key | Module thực thi dedup; không endpoint đọc nội dung fingerprint | Giữ ID/hash/key version/kết quả tối thiểu trong khi tài nguyên hoặc retry cũ còn cần chặn | Không dọn theo TTL log 14/audit 90 ngày |
 | Call/participation/source terminal | Binding/room theo quyền; không tạo lịch sử missed call trong DM | Chi tiết 7 ngày từ terminal/quiesced DEC-107; giữ marker invalidation/dedup | Restore kết thúc trạng thái media cũ, fence SFU rồi mới cấp mới |
@@ -95,9 +97,9 @@ Không tự chuyển ownership, xóa server, thu hồi mọi lời mời do ngư
 
 ## 4. Xóa tin, xóa phòng và dữ liệu tạm
 
-Xóa tin của tác giả kiểm tra phiên/quyền, giữ khóa space/message/operation, đổi content=null và tăng version đúng một lần. Message ID/sequence/author/timestamps/tombstone và send fingerprint còn; payload outbox chỉ ID/version. Không dọn send-operation khiến retry cùng clientMessageId tạo tin mới. Legacy `message_edits.previous_content` không được writer MVP ghi; migration/seed/import phải loại bản cũ khỏi DB phục vụ trước dùng dữ liệu thật theo DEC-052.
+Xóa tin của tác giả kiểm tra phiên/quyền, giữ khóa space/message/operation, đổi content=null và tăng version đúng một lần. Message ID/sequence/author/timestamps/tombstone và send fingerprint còn; payload outbox chỉ ID/version. Không dọn send-operation khiến retry cùng clientMessageId tạo tin mới. Legacy `message_edits.previous_content` không được writer v1 ghi; migration/seed/import phải loại bản cũ khỏi DB phục vụ trước dùng dữ liệu thật theo DEC-052.
 
-Xóa phòng đánh dấu deleted/epoch mới trong transaction Community/Messaging/Media lifecycle đề xuất, chặn API/realtime/join/resume bằng guard hiện hành. Content trong room giữ theo DEC-105, không có đường “khôi phục phòng” hoặc “đọc kho lưu trữ” MVP. Job dọn token/log không đi qua cascade để xóa `spaces/messages` của phòng này. Rời server/mất view chỉ thu hồi quyền và dọn role/override epoch cũ; không xóa tin mà người đó từng viết.
+Xóa phòng đánh dấu deleted/epoch mới trong transaction Community/Messaging/Media lifecycle đề xuất, chặn API/realtime/join/resume bằng guard hiện hành. Content trong room giữ theo DEC-105, không có đường “khôi phục phòng” hoặc “đọc kho lưu trữ” v1. Job dọn token/log không đi qua cascade để xóa `spaces/messages` của phòng này. Rời server/mất view chỉ thu hồi quyền và dọn role/override epoch cũ; không xóa tin mà người đó từng viết.
 
 Chat/media receipt ngừng phục vụ sau cutoff không chứng minh byte cũ trong client đã biến mất. WebClient dọn draft/tin tạm/grant/local capture thuộc scope khi nhận thu hồi hoặc HTTP xác nhận mất quyền; server ngừng gửi nội dung mới độc lập dù client không hợp tác. Không hứa thu hồi ảnh chụp, clipboard hoặc dữ liệu người dùng đã tự sao chép. Token auth localStorage hiện tại không được chuyển thành lưu DM bền trong đợt này.
 

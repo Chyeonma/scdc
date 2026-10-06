@@ -1,6 +1,8 @@
 # SCDC — Tài khoản
 
-Cập nhật: 2026-10-05. Phạm vi: REQ-010, SCP-002. Quy tắc ACC, use case UC-ACC, tiêu chí AC-ACC, màn hình ACC-S, ca TC-ACC và ACL-01/02.
+Cập nhật: 2026-10-06. Phạm vi: REQ-010, SCP-002. Quy tắc ACC, use case UC-ACC, tiêu chí AC-ACC, màn hình ACC-S, ca TC-ACC và ACL-01/02.
+
+Đặc tả đầy đủ cho [v1](../releases/v1.md). [MVP](../releases/mvp.md) chọn các luồng nền để làm trước, tận dụng implementation hiện có; không yêu cầu hoàn tất toàn bộ UC ngay ở gói đầu. MVP chạy trong một API host; shared transaction/guard liên module được rà soát khi chuyển sang [microservice ở v1](../architecture.md#target) theo DEC-116.
 
 Nghiệp vụ cốt lõi và chính sách tài khoản đã xác nhận theo DEC-063–067; phép đếm UTF-16 theo DEC-068. Identity có implementation và test tự động; gửi lại xác minh, giao email và một số hành vi còn thiếu hoặc khác yêu cầu. Đối chiếu source ngày 2026-10-04 ở mục implementation-review. Các ca TC chưa có kết quả thực thi được ghi nhận trong hồ sơ này.
 
@@ -32,7 +34,7 @@ hiển thị được đổi; email không công khai.
 
 Tên hiển thị là trường hồ sơ dùng để tìm người theo DEC-019. Định danh
 duy nhất của tài khoản phải tách khỏi tên hiển thị để chọn đúng người
-khi nhiều người có cùng tên. MVP chưa cho đổi email theo DEC-063. Trước xác minh,
+khi nhiều người có cùng tên. v1 chưa cho đổi email theo DEC-063. Trước xác minh,
 tài khoản chỉ dùng xác minh email hoặc khôi phục mật khẩu, chưa được
 vào các chức năng ứng dụng (DEC-051). Đặt lại mật khẩu không tự xác minh
 email; sau đó vẫn phải hoàn tất xác minh trước khi đăng nhập ứng dụng.
@@ -49,17 +51,17 @@ email; sau đó vẫn phải hoàn tất xác minh trước khi đăng nhập �
 | ACC-006 | Đợt đầu có luồng yêu cầu và thực hiện đặt lại mật khẩu qua email. | DEC-042 |
 | ACC-007 | Tài khoản chưa xác minh chỉ dùng xác minh/khôi phục, không được vào ứng dụng; đặt lại mật khẩu không thay thế xác minh email. | DEC-051; hệ quả của việc tách hai mục đích |
 | ACC-008 | Tên tài khoản 3–32 ký tự ASCII chữ/số/`_`/`.`; duy nhất không phân biệt hoa/thường, chưa cho đổi. Tên hiển thị Unicode dài 1–64 đơn vị UTF-16 sau trim, không chỉ khoảng trắng; không bắt buộc duy nhất. | DEC-054, DEC-063, DEC-068 |
-| ACC-009 | Email được bỏ khoảng trắng đầu/cuối, chuẩn hóa chữ thường để kiểm tra duy nhất; chưa cho đổi trong MVP. Không tự bỏ dấu chấm hoặc phần `+tag` trong email. | DEC-063; không áp dụng quy tắc riêng của một nhà cung cấp email |
+| ACC-009 | Email được bỏ khoảng trắng đầu/cuối, chuẩn hóa chữ thường để kiểm tra duy nhất; chưa cho đổi trong v1. Không tự bỏ dấu chấm hoặc phần `+tag` trong email. | DEC-063; không áp dụng quy tắc riêng của một nhà cung cấp email |
 | ACC-010 | Mật khẩu 8–128 theo `.Length` của .NET, có ít nhất một chữ và một số theo `char.IsLetter`/`char.IsDigit`; không tự trim hoặc đổi nội dung mật khẩu. Sai 5 lần khóa đăng nhập 15 phút. | DEC-064; giữ chính sách hiện tại |
 | ACC-011 | Access token 15 phút; phiên tối đa 30 ngày từ lúc đăng nhập, refresh không kéo dài thời hạn phiên. Có đăng xuất phiên hiện tại, thu hồi từng phiên và đăng xuất mọi thiết bị; đổi/đặt lại mật khẩu thu hồi mọi phiên. | DEC-065 |
 | ACC-012 | Liên kết xác minh/reset dùng một lần, hạn 30 phút. Yêu cầu gửi lại cùng mục đích cách nhau ít nhất 60 giây; cấp liên kết mới vô hiệu liên kết cũ cùng mục đích. Không tự xác minh email khi reset mật khẩu. | DEC-065, DEC-051 |
-| ACC-013 | Hồ sơ cho sửa `displayName`, `bio`, `locale`, `timezone`; bio tối đa 500 theo phép đếm hiện tại, locale 1–16 và timezone 1–64. MVP chưa thêm tải ảnh đại diện. | DEC-066; các giới hạn giữ theo API hiện tại |
-| ACC-014 | Khôi phục chỉ qua email đã đăng ký, gồm tài khoản chưa xác minh theo DEC-051. Mất quyền truy cập email chưa có kênh khôi phục khác hoặc quy trình thủ công trong MVP. | DEC-067; không thay đổi điều kiện xác minh trước khi vào ứng dụng |
-| ACC-015 | MVP chưa có tự xóa account; khóa chặn ứng dụng/thu hồi phiên nhưng giữ lịch sử, mở khóa cần phiên đăng nhập mới. Khóa không thay lockout 15 phút. | DEC-103/104; công cụ/thẩm quyền khóa còn OQ-011 |
+| ACC-013 | Hồ sơ cho sửa `displayName`, `bio`, `locale`, `timezone`; bio tối đa 500 theo phép đếm hiện tại, locale 1–16 và timezone 1–64. v1 chưa thêm tải ảnh đại diện. | DEC-066; các giới hạn giữ theo API hiện tại |
+| ACC-014 | Khôi phục chỉ qua email đã đăng ký, gồm tài khoản chưa xác minh theo DEC-051. Mất quyền truy cập email chưa có kênh khôi phục khác hoặc quy trình thủ công trong v1. | DEC-067; không thay đổi điều kiện xác minh trước khi vào ứng dụng |
+| ACC-015 | v1 chưa có tự xóa account; khóa chặn ứng dụng/thu hồi phiên nhưng giữ lịch sử, mở khóa cần phiên đăng nhập mới. Khóa không thay lockout 15 phút. | DEC-103/104; công cụ/thẩm quyền khóa còn OQ-011 |
 | ACC-016 | Đổi mật khẩu khi đã đăng nhập từ chối mật khẩu mới trùng mật khẩu hiện tại; đặt lại qua liên kết cho phép trùng nếu vẫn đúng policy. Reset thành công vẫn dùng token một lần, đổi security stamp và thu hồi mọi phiên dù mật khẩu trùng. | DEC-113; giữ hành vi hiện tại, không yêu cầu kiểm tra lịch sử mật khẩu |
 
 
-[Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal và restore DEC-106–109; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Self-delete chưa thuộc MVP; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
+[Vòng đời dữ liệu](../data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal và restore DEC-106–109; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Self-delete chưa thuộc v1; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
 
 Đợt tài khoản bao gồm đăng ký/xác minh, đăng nhập, khôi phục mật khẩu và hồ sơ. Code hiện còn có đổi mật khẩu và quản lý phiên/thiết bị. MFA, recovery code và external identity để Identity v2; chưa có API cho các phần này. Gửi lại xác minh và giao email thật là phần chưa hoàn thiện.
 
@@ -80,7 +82,7 @@ Tài khoản chưa xác minh chỉ dùng xác minh/khôi phục, không có phi�
 
 ## 3. Use case Identity
 
-Các UC mô tả hành vi mục tiêu của tài khoản trong MVP, áp dụng quy tắc ACC ở [phạm vi](#requirements). UC-ACC-01–11 phục vụ người dùng; trình duyệt thực hiện refresh thay người dùng và hệ thống email hỗ trợ giao liên kết. UC-ACC-12 phục vụ quy trình kỹ thuật khóa/mở khóa đã chốt, không có trang quản trị riêng. Chỉ người sở hữu phiên được xem/sửa hồ sơ riêng và quản lý phiên của tài khoản đó; quyền thao tác kỹ thuật được xét riêng theo ACL-02.
+Các UC mô tả hành vi mục tiêu của tài khoản trong v1, áp dụng quy tắc ACC ở [phạm vi](#requirements). UC-ACC-01–11 phục vụ người dùng; trình duyệt thực hiện refresh thay người dùng và hệ thống email hỗ trợ giao liên kết. UC-ACC-12 phục vụ quy trình kỹ thuật khóa/mở khóa đã chốt, không có trang quản trị riêng. Chỉ người sở hữu phiên được xem/sửa hồ sơ riêng và quản lý phiên của tài khoản đó; quyền thao tác kỹ thuật được xét riêng theo ACL-02.
 
 Luồng thành công dưới đây giả định dữ liệu hợp lệ và dịch vụ sẵn sàng. Ngoại lệ lỗi dịch vụ phải báo rõ, giữ dữ liệu không nhạy cảm đang nhập và không báo thành công khi chưa biết kết quả. Luồng verify/reset không tự thử lại thao tác dùng token khi mất response. Việc có endpoint hoặc assertion được ghi ở [ma trận đối chiếu](#use-case-coverage), tách khỏi kết quả chạy test.
 
@@ -119,9 +121,9 @@ Bảng này xác định UC thực hiện từng quy tắc và ranh giới cần
 | ACC-010 | UC-ACC-01/04/06/08 | Policy mật khẩu không trim; lockout áp dụng đăng nhập, tách khóa quản trị |
 | ACC-011 | UC-ACC-04/06/08/09/10/11 | Hạn token/phiên, rotation và đúng phạm vi thu hồi; realtime có kiểm chứng riêng |
 | ACC-012 | UC-ACC-01/02/03/05/06 | Token đúng purpose, một lần, 30 phút; cấp lại/cooldown 60 giây và độc lập verify/reset |
-| ACC-013 | UC-ACC-07 | Chỉ sửa displayName/bio/locale/timezone theo giới hạn; không tải avatar MVP |
+| ACC-013 | UC-ACC-07 | Chỉ sửa displayName/bio/locale/timezone theo giới hạn; không tải avatar v1 |
 | ACC-014 | UC-ACC-05/06 | Khôi phục cả pending qua email; không hứa kênh thủ công khi mất email |
-| ACC-015 | UC-ACC-12 | Khóa chặn ứng dụng/thu hồi phiên, giữ lịch sử; mở khóa cần login mới; self-delete ngoài MVP |
+| ACC-015 | UC-ACC-12 | Khóa chặn ứng dụng/thu hồi phiên, giữ lịch sử; mở khóa cần login mới; self-delete ngoài v1 |
 | ACC-016 | UC-ACC-06/08 | Đổi từ chối trùng, reset cho phép trùng; reset vẫn thu hồi phiên theo DEC-113 |
 
 <a id="uc-acc-01"></a>
@@ -210,7 +212,7 @@ Bảng này xác định UC thực hiện từng quy tắc và ranh giới cần
 2. Với tài khoản đủ điều kiện và ngoài cooldown 60 giây, hệ thống vô hiệu token reset cũ cùng mục đích, cấp token reset mới hạn 30 phút và tiếp nhận yêu cầu email.
 3. Hệ thống trả phản hồi accepted; giao diện hướng dẫn kiểm tra email, không tiết lộ trạng thái tài khoản hoặc hứa email đã giao.
 
-**Ngoại lệ:** Unknown/unavailable/cooldown có cùng phản hồi công khai; trong cooldown không cấp thêm token hoặc làm mất link hiện tại. Hai request đồng thời chỉ cấp tối đa một token mới. Dữ liệu sai trả lỗi validation. Mất quyền truy cập email chưa có khôi phục thủ công hoặc kênh khác trong MVP.
+**Ngoại lệ:** Unknown/unavailable/cooldown có cùng phản hồi công khai; trong cooldown không cấp thêm token hoặc làm mất link hiện tại. Hai request đồng thời chỉ cấp tối đa một token mới. Dữ liệu sai trả lỗi validation. Mất quyền truy cập email chưa có khôi phục thủ công hoặc kênh khác trong v1.
 
 **Kết quả sau cùng:** Khi cấp mới, token reset cũ không dùng được; token verify độc lập. Mật khẩu, trạng thái xác minh và phiên hiện tại chưa thay đổi chỉ vì gửi yêu cầu. Limiter bổ sung vẫn hoãn DEC-089.
 
@@ -248,7 +250,7 @@ Bảng này xác định UC thực hiện từng quy tắc và ranh giới cần
 
 **Ngoại lệ:** Dữ liệu sai trả lỗi trường; lưu lỗi giữ bản đang sửa. Phiên không hợp lệ yêu cầu đăng nhập; không lấy user ID do người gọi cung cấp để sửa hồ sơ người khác. Các tên hiển thị trùng nhau được phép; việc chọn người trong DM dùng ID/username ổn định. Quy tắc chuẩn hóa và UTF-16 phải nhất quán HTTP–service–DB.
 
-**Kết quả sau cùng:** Các trường hợp lệ được lưu; username/email giữ nguyên. Hồ sơ công khai chỉ có ID/username/tên hiển thị, không có email. MVP chưa có thao tác tải avatar; chưa áp dụng allowlist locale/timezone hoặc kiểm soát version mới khi chưa chốt contract.
+**Kết quả sau cùng:** Các trường hợp lệ được lưu; username/email giữ nguyên. Hồ sơ công khai chỉ có ID/username/tên hiển thị, không có email. v1 chưa có thao tác tải avatar; chưa áp dụng allowlist locale/timezone hoặc kiểm soát version mới khi chưa chốt contract.
 
 <a id="uc-acc-08"></a>
 
@@ -339,7 +341,7 @@ Bảng này xác định UC thực hiện từng quy tắc và ranh giới cần
 
 **Ngoại lệ:** Thiếu quyền/quyết định, sai user ID hoặc trạng thái/version không còn phù hợp thì từ chối thao tác và đối chiếu lại; không thay đổi tài khoản. Lỗi transaction không để lại thay đổi từng phần. Mất response sau commit phải đối soát trạng thái/audit trước thử lại; chưa kiểm chứng cutoff thì chưa ghi đạt. Không dùng reset/verify để mở khóa; mất email không tạo kênh khôi phục thủ công.
 
-**Kết quả sau cùng:** Tài khoản bị khóa không truy cập ứng dụng hoặc gửi/gọi; các phiên cũ bị từ chối và kết nối chat/media dừng trong ≤5 giây từ commit theo DEC-083/099. Người khác còn quyền vẫn đọc lịch sử và sửa/xóa tin của chính mình; không gửi DM/gọi mới tới peer bị khóa. Hồ sơ, tin, membership và ownership không bị xóa/chuyển vì thao tác khóa. Mở khóa không làm sống lại phiên hoặc tự xác minh email. Quyền kỹ thuật không cho đọc DM, sửa/xóa thay tác giả; MVP không có self-delete hoặc trang quản trị riêng.
+**Kết quả sau cùng:** Tài khoản bị khóa không truy cập ứng dụng hoặc gửi/gọi; các phiên cũ bị từ chối và kết nối chat/media dừng trong ≤5 giây từ commit theo DEC-083/099. Người khác còn quyền vẫn đọc lịch sử và sửa/xóa tin của chính mình; không gửi DM/gọi mới tới peer bị khóa. Hồ sơ, tin, membership và ownership không bị xóa/chuyển vì thao tác khóa. Mở khóa không làm sống lại phiên hoặc tự xác minh email. Quyền kỹ thuật không cho đọc DM, sửa/xóa thay tác giả; v1 không có self-delete hoặc trang quản trị riêng.
 
 <a id="use-case-coverage"></a>
 
@@ -496,7 +498,7 @@ Nguồn: [controllers](../../services/SCDC.Api/Controllers/Identity/AuthControll
 
 ### Trạng thái tài khoản và phiên
 
-Bảng tài khoản mô tả yêu cầu đã chốt. `Suspended`, `Disabled`, `Deleted` có trong enum/SQL; DEC-104/112 đã chốt hành vi khóa/mở khóa qua quy trình kỹ thuật có phân quyền/audit và chưa có UI quản trị riêng. [RB-ACCOUNT](../operations-runbook.md#account-support) là thiết kế mục tiêu; chưa có công cụ chuyển trạng thái được triển khai. Không tự suy Deleted thành tính năng xóa tài khoản MVP DEC-103.
+Bảng tài khoản mô tả yêu cầu đã chốt. `Suspended`, `Disabled`, `Deleted` có trong enum/SQL; DEC-104/112 đã chốt hành vi khóa/mở khóa qua quy trình kỹ thuật có phân quyền/audit và chưa có UI quản trị riêng. [RB-ACCOUNT](../operations-runbook.md#account-support) là thiết kế mục tiêu; chưa có công cụ chuyển trạng thái được triển khai. Không tự suy Deleted thành tính năng xóa tài khoản v1 DEC-103.
 
 | Trạng thái đầu | Thao tác/điều kiện | Kết quả cần có |
 |---|---|---|
@@ -674,8 +676,8 @@ Chốt pipeline normalize → validate → transaction → constraint; validatio
 | AC-ACC-14 | Gửi lại verify/reset trước/sau 60 giây và dùng link cũ/mới. | Không cấp thêm token trong cooldown; sau khi cấp mới link cũ cùng mục đích không dùng được; mục đích verify/reset độc lập. |
 | AC-ACC-15 | Hai request đồng thời dùng một link verify hoặc reset. | Chỉ một thao tác consume thành công; request còn lại không thực hiện thay đổi; liên kết dùng lại bị từ chối. |
 | AC-ACC-16 | Thu hồi phiên khác, phiên hiện tại, logout-all và đổi/reset mật khẩu. | Từ chối request mới từ đúng các phiên bị thu hồi; đổi/reset thu hồi tất cả; phiên khác còn sống khi chỉ thu hồi một phiên. |
-| AC-ACC-17 | Sửa các trường hồ sơ đã chốt; thử sửa username/email hoặc tải avatar. | Tên hiển thị/bio/locale/timezone cập nhật hợp lệ; MVP không cung cấp thao tác đổi định danh hoặc tải avatar; không tuyên bố tính năng chỉ từ cột SQL. |
-| AC-ACC-18 | Tài khoản mất quyền truy cập email tìm cách khôi phục. | Chỉ có luồng qua email đã đăng ký; thông tin trợ giúp không hứa có khôi phục thủ công hoặc qua kênh khác trong MVP. |
+| AC-ACC-17 | Sửa các trường hồ sơ đã chốt; thử sửa username/email hoặc tải avatar. | Tên hiển thị/bio/locale/timezone cập nhật hợp lệ; v1 không cung cấp thao tác đổi định danh hoặc tải avatar; không tuyên bố tính năng chỉ từ cột SQL. |
+| AC-ACC-18 | Tài khoản mất quyền truy cập email tìm cách khôi phục. | Chỉ có luồng qua email đã đăng ký; thông tin trợ giúp không hứa có khôi phục thủ công hoặc qua kênh khác trong v1. |
 | AC-ACC-19 | Đăng ký/quên mật khẩu ngoài Development và nhận email thật. | Response không có token sử dụng được; nhận link đúng domain/mục đích/hạn, hoàn tất luồng; tiếp nhận outbox không được ghi thành email đã giao. |
 | AC-ACC-20 | Mở link qua GET, gửi lại/consume/reset đồng thời và reset mật khẩu sai policy | GET không consume; một token dùng một lần; token verify/reset độc lập; reset sai không mất token |
 | AC-ACC-21 | Email unknown/verified/unavailable/cooldown gọi resend/forgot | Production cùng 202/body accepted; không trả trạng thái tài khoản/token hoặc retry time riêng |
