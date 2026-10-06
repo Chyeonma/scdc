@@ -1,6 +1,6 @@
 # SCDC — Thiết kế gói tạo và xem cộng đồng
 
-Cập nhật: 2026-10-07. Đầu ra bước 3 của [gói đầu tiên](../community.md#first-package), dựa trên [rà soát nghiệp vụ](servers.md#first-package-business). Các lựa chọn dưới đây là thiết kế để triển khai và kiểm chứng ở bước 4/5; source Community vẫn Foundation, chưa có migration, API hoặc kết quả chạy gói này.
+Cập nhật: 2026-10-07. Đầu ra bước 3 của [gói đầu tiên](../community.md#first-package), dựa trên [rà soát nghiệp vụ](servers.md#first-package-business). Các lựa chọn dưới đây là thiết kế để triển khai và kiểm chứng ở bước 4/5; source `main` vẫn Foundation. [Kết quả bước 4](create-view-backend.md) ghi implementation và kiểm thử trên nhánh `feat/community-create-view`; các mục đối chiếu source dưới đây phản ánh thời điểm chốt thiết kế bước 3.
 
 Phạm vi: UC-COM-01 và phần list/detail/tư cách của UC-COM-03. Quy tắc sản phẩm giữ ở [Servers](servers.md#requirements), [Permissions](permissions.md#permissions) và [điều kiện chung](integration.md#use-case-conditions). Tài liệu này chốt cách thực hiện gói; thuật toán dùng chung dẫn chiếu [thiết kế tích hợp](integration.md#detailed-design), không thay phạm vi các gói sau.
 

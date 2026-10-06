@@ -8,7 +8,7 @@ Tài liệu này tổ chức theo **hành trình sử dụng cộng đồng**: t
 
 Quy tắc tham gia/quyền cốt lõi đã xác nhận; các luồng DEC-072–077/087 và bổ sung vai trò/tìm kiếm/tên/phạm vi/visibility/lời mời/quản lý phòng DEC-092–098 được cụ thể hóa bên dưới. Thiết kế dữ liệu/API là bản dự thảo để rà soát. Community/Messaging mới có nền module; wireframe và ca kiểm thử chưa phải kết quả triển khai hoặc nghiệm thu.
 
-Đã thống nhất tổ chức ngày 2026-10-06: năm thành phần nghiệp vụ nội bộ trong cùng SCDC.Community. Tài liệu chi tiết được chuyển về từng thành phần; trang này giữ scope, điều hướng, truy vết và kế hoạch. CommunityModule hiện chỉ đăng ký descriptor Foundation, chưa có model/DTO, DbContext, service/controller hoặc kết quả kiểm thử Community.
+Đã thống nhất tổ chức ngày 2026-10-06: năm thành phần nghiệp vụ nội bộ trong cùng SCDC.Community. Tài liệu chi tiết được chuyển về từng thành phần; trang này giữ scope, điều hướng, truy vết và kế hoạch. CommunityModule trên `main` vẫn đăng ký descriptor Foundation. Backend tạo/xem đã được triển khai riêng trên `feat/community-create-view`; [kết quả bước 4](community/create-view-backend.md) ghi phạm vi, bằng chứng và tình trạng Git.
 
 ## Mục lục
 
@@ -79,7 +79,7 @@ Các quy tắc COM giữ nguyên mã và nội dung, nguồn chuẩn ở từng 
 
 ### Cấu trúc code mục tiêu
 
-Source hiện mới có nền project và CommunityModule đăng ký descriptor Foundation; chưa có các feature hoặc CommunityDbContext. Cây dưới đây là bố cục mục tiêu đã thống nhất. Nghiệp vụ đặt theo feature, Domain/Application ở trong từng phần; các phần cùng một assembly, schema community và CommunityDbContext.
+Source `main` hiện mới có nền project và CommunityModule đăng ký descriptor Foundation; chưa có các feature hoặc CommunityDbContext. Cây dưới đây là bố cục mục tiêu đã thống nhất. Nghiệp vụ đặt theo feature, Domain/Application ở trong từng phần; các phần cùng một assembly, schema community và CommunityDbContext.
 
 ```text
 services/Modules/Community/
@@ -120,7 +120,7 @@ Controllers đặt tại services/SCDC.Api/Controllers/Community theo từng nh�
 
 ## Use case theo hành trình cộng đồng và module phụ trách
 
-Bổ sung ngày 2026-10-06. Các UC tổng hợp hành vi mục tiêu từ [quy tắc COM](#requirements), [ma trận ACL](community/permissions.md#permissions) và các quyết định đã dẫn chiếu; phần use case là bản dự thảo để rà soát trước triển khai. Community/Messaging vẫn ở Foundation, toàn bộ UC-COM chưa có implementation hoặc kết quả kiểm thử sản phẩm. Thuật toán, lỗi, giao dịch và schema kỹ thuật tiếp tục được quản lý tại [thiết kế chi tiết](community/integration.md#detailed-design).
+Bổ sung ngày 2026-10-06. Các UC tổng hợp hành vi mục tiêu từ [quy tắc COM](#requirements), [ma trận ACL](community/permissions.md#permissions) và các quyết định đã dẫn chiếu; phần use case là bản dự thảo để rà soát trước triển khai. Community/Messaging trên `main` vẫn ở Foundation. [Backend gói đầu](community/create-view-backend.md) đã có implementation và kiểm thử riêng trên nhánh feature; phần UC còn lại và UI chưa được nghiệm thu. Thuật toán, lỗi, giao dịch và schema kỹ thuật tiếp tục được quản lý tại [thiết kế chi tiết](community/integration.md#detailed-design).
 
 Community thực hiện quản lý server, membership, phòng, lời mời và quyền. [UC-COM-17](community/channels.md#uc-com-17) đọc lịch sử qua Messaging; [UC-COM-23](community/integration.md#uc-com-23), [UC-COM-24](community/integration.md#uc-com-24) do Messaging thực hiện trên quyền Community; [UC-COM-25](community/integration.md#uc-com-25) phối hợp Identity/Community/Messaging và WebClient. Chức năng vào phòng thoại/gọi/video thuộc [đặc tả media](voice-video.md), không được coi đã triển khai khi tạo được metadata phòng voice.
 
@@ -259,7 +259,7 @@ Hai artefact tổng hợp hợp đồng của hành trình cộng đồng, gồm
 
 <a id="detailed-design"></a>
 
-[Thiết kế tích hợp](community/integration.md#contracts) quản lý ID/version, transaction/guard, operation retry, danh sách, lỗi và COM-SQL-01–10. [Permissions](community/permissions.md#detailed-design) giữ role/ACL snapshot; [Invitations](community/invitations.md#invite-secret) giữ token/link secret; [Servers](community/servers.md#search) giữ thiết kế search. Các artefact vẫn là mục tiêu, chưa có runtime API/Hub Community.
+[Thiết kế tích hợp](community/integration.md#contracts) quản lý ID/version, transaction/guard, operation retry, danh sách, lỗi và COM-SQL-01–10. [Permissions](community/permissions.md#detailed-design) giữ role/ACL snapshot; [Invitations](community/invitations.md#invite-secret) giữ token/link secret; [Servers](community/servers.md#search) giữ thiết kế search. Các artefact vẫn là mục tiêu cho toàn phạm vi; [backend gói đầu](community/create-view-backend.md) triển khai bốn route trên nhánh feature. Hub Community chưa có runtime.
 
 <a id="acceptance"></a>
 
@@ -412,8 +412,8 @@ Dữ liệu kiểm chứng cần có: một tài khoản đủ điều kiện l�
 | 1. Chốt phạm vi và thứ tự | Gói đầu UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03; tiêu chí hoàn thành, phần để sau và thứ tự phụ thuộc | Đã xác định phạm vi trong tài liệu ngày 2026-10-07 |
 | 2. Rà soát nghiệp vụ gói đầu | [Kết quả rà soát](community/servers.md#first-package-business): điều kiện tạo, trạng thái ban đầu, ownership/membership/@everyone, dữ liệu hợp lệ, luồng lỗi và ngoại lệ; ghi riêng đầu vào kỹ thuật còn cần chốt | Đã rà soát theo các quyết định hiện có ngày 2026-10-07; chưa có kết quả chạy |
 | 3. Chốt thiết kế kỹ thuật | [Thiết kế gói tạo/xem](community/create-view-design.md): model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử | Đã đối chiếu source và xác định thiết kế ngày 2026-10-07; chưa có kết quả runtime |
-| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Chờ người dùng duyệt bắt đầu |
-| 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Chưa bắt đầu |
+| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Đã triển khai trên `feat/community-create-view`; [bằng chứng backend](community/create-view-backend.md): 63 kiểm thử Release đạt, chưa merge/push |
+| 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Chờ người dùng duyệt; backend đã có trên nhánh feature |
 | 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. | Chưa bắt đầu |
 | 7. Tích hợp Messaging và realtime | Messaging lưu/đọc/gửi tin phòng trên quyền Community; sau đó kiểm chứng Hub, reconnect và xử lý mất quyền | Chưa bắt đầu |
 
