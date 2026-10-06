@@ -2,11 +2,13 @@
 
 SCDC phát triển ứng dụng giao tiếp cho nhóm bạn và cộng đồng. [MVP](docs/releases/mvp.md) bàn giao trước với Identity, Community và Direct Messaging; [v1](docs/releases/v1.md) là bản hoàn thiện kế thừa phạm vi đầy đủ, gồm thoại/video và chia sẻ màn hình. [Lộ trình](docs/roadmap.md) giải thích cách đọc và quản lý tài liệu theo hai mốc.
 
-MVP giữ một API host Modular Monolith; **microservice thuộc v1** theo [DEC-116](docs/decisions.md#dec-116) để đáp ứng môn học. Ranh giới service cụ thể còn cần chốt. Source hiện tại có implementation Identity, Community và Messaging ở nền module, giao diện chat/cộng đồng còn dùng dữ liệu mẫu. Media chưa triển khai và thuộc v1. [Kiến trúc](docs/architecture.md) ghi riêng hiện trạng và phương án mục tiêu; [phân công](docs/project.md#team) và [công suất](docs/project.md#capacity) ghi gói việc của ba thành viên.
+MVP giữ một API host Modular Monolith; **microservice thuộc v1** theo [DEC-116](docs/decisions.md#dec-116) để đáp ứng môn học. Ranh giới service cụ thể còn cần chốt. Nhánh `feat/community-create-view` có Identity và API tạo/xem Community; Messaging còn ở nền module, giao diện cộng đồng chưa nối API. Media thuộc v1. [Kiến trúc](docs/architecture.md) ghi riêng hiện trạng main và phương án mục tiêu; [phân công](docs/project.md#team) và [công suất](docs/project.md#capacity) ghi gói việc của ba thành viên.
 
 ## Khởi chạy nhanh
 
 Chuẩn bị Docker hoặc Podman với Compose, chạy từ root repo:
+
+Trước lần chạy đầu, tạo một khóa bằng `openssl rand -base64 32`, lưu giá trị vào `COMMUNITY_OPERATION_KEY` trong `.env` local (Git bỏ qua file này). Giữ khóa qua các lần chạy; Compose dùng volume `scdc-community-keys` để giữ khóa cursor. Với DB cũ, áp [migration explicit](services/Modules/Community/README.md#migration) trước khi gọi API Community.
 
 ```bash
 docker compose up -d --build
