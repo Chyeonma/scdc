@@ -48,6 +48,7 @@ public static class IdentityModule
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
