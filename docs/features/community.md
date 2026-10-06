@@ -22,6 +22,7 @@ Quy tắc tham gia/quyền cốt lõi đã xác nhận; các luồng DEC-072–0
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Kế hoạch và gói đầu tiên](#use-case-delivery)
+- [Thiết kế kỹ thuật gói tạo/xem](community/create-view-design.md)
 - [Việc còn lại](#gaps)
 
 <a id="requirements"></a>
@@ -385,7 +386,7 @@ Luồng cần bàn giao: **đăng nhập bằng tài khoản đủ điều kiệ
 
 UC-COM-03 là phạm vi bàn giao từng phần: tải phòng/lịch sử qua [UC-COM-17](community/channels.md#uc-com-17), đối soát sau leave/rejoin và thay đổi membership đồng thời được kiểm chứng khi triển khai các luồng tương ứng. Các nhánh này vẫn giữ nguyên trong đặc tả nguồn; hoàn thành gói đầu chưa đủ để đánh dấu toàn bộ UC-COM-03 đạt.
 
-Phần để sau gói đầu: tìm kiếm/summary công khai (UC-COM-02), sửa thông tin/chế độ tham gia (UC-COM-04/05), tham gia/rời và lời mời (UC-COM-06–15), phòng/vai trò/ACL (UC-COM-16–22), tin phòng và realtime (UC-COM-23–25). Ownership và @everyone cần cho việc tạo vẫn nằm trong gói đầu; giao diện quản lý vai trò nằm ở gói sau. Media thuộc v1 theo [phạm vi MVP](../releases/mvp.md). Việc để sau gói đầu không tự loại use case khỏi toàn bộ MVP.
+Phần để sau gói đầu: tìm kiếm/trải nghiệm khám phá công khai (UC-COM-02), sửa thông tin/chế độ tham gia (UC-COM-04/05), tham gia/rời và lời mời (UC-COM-06–15), phòng/vai trò/ACL (UC-COM-16–22), tin phòng và realtime (UC-COM-23–25). Route detail dùng chung vẫn kiểm chứng projection summary public theo [thiết kế gói](community/create-view-design.md#api), không coi toàn bộ UC-COM-02 đã triển khai. Ownership và @everyone cần cho việc tạo vẫn nằm trong gói đầu; giao diện quản lý vai trò nằm ở gói sau. Media thuộc v1 theo [phạm vi MVP](../releases/mvp.md). Việc để sau gói đầu không tự loại use case khỏi toàn bộ MVP.
 
 ### Tiêu chí hoàn thành gói đầu
 
@@ -410,8 +411,8 @@ Dữ liệu kiểm chứng cần có: một tài khoản đủ điều kiện l�
 |---|---|---|
 | 1. Chốt phạm vi và thứ tự | Gói đầu UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03; tiêu chí hoàn thành, phần để sau và thứ tự phụ thuộc | Đã xác định phạm vi trong tài liệu ngày 2026-10-07 |
 | 2. Rà soát nghiệp vụ gói đầu | [Kết quả rà soát](community/servers.md#first-package-business): điều kiện tạo, trạng thái ban đầu, ownership/membership/@everyone, dữ liệu hợp lệ, luồng lỗi và ngoại lệ; ghi riêng đầu vào kỹ thuật còn cần chốt | Đã rà soát theo các quyết định hiện có ngày 2026-10-07; chưa có kết quả chạy |
-| 3. Chốt thiết kế kỹ thuật | Model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử cho gói đầu | Chờ người dùng duyệt bắt đầu |
-| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Chưa bắt đầu |
+| 3. Chốt thiết kế kỹ thuật | [Thiết kế gói tạo/xem](community/create-view-design.md): model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử | Đã đối chiếu source và xác định thiết kế ngày 2026-10-07; chưa có kết quả runtime |
+| 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu | Chờ người dùng duyệt bắt đầu |
 | 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói | Chưa bắt đầu |
 | 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. | Chưa bắt đầu |
 | 7. Tích hợp Messaging và realtime | Messaging lưu/đọc/gửi tin phòng trên quyền Community; sau đó kiểm chứng Hub, reconnect và xử lý mất quyền | Chưa bắt đầu |

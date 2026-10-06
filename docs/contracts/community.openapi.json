@@ -20,7 +20,7 @@
       "get": {
         "operationId": "listMyServers",
         "summary": "Danh sách cộng đồng đang tham gia",
-        "description": "Danh sách cộng đồng đang tham gia",
+        "description": "Selected create/view package: active, nondeleted servers with an active membership of the authenticated actor. Limit 1–50, default 20; descending server ID keyset with an actor/limit-bound protected cursor. One authorized SQL projection per page; no immutable collection snapshot is promised.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -64,12 +64,13 @@
           {
             "$ref": "#/components/parameters/Limit"
           }
-        ]
+        ],
+        "x-scdc-design-document": "../features/community/create-view-design.md"
       },
       "post": {
         "operationId": "createServer",
         "summary": "Tạo cộng đồng",
-        "description": "Tạo cộng đồng",
+        "description": "Selected create/view package: atomically commit server, owner membership, @everyone, operation and outbox before success. Actor comes from validated claims. New create returns 201; manual retry with the same clientOperationId and normalized payload returns 200 for the same authorized resource. Different payload conflicts; no automatic mutation replay.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -93,21 +94,39 @@
             "$ref": "#/components/responses/503"
           },
           "201": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "New server and initial membership committed; includes Location. Target design, endpoint not implemented.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerDetail"
                 }
               }
+            },
+            "headers": {
+              "Location": {
+                "description": "Detail URL of the created server under /api/v1/servers/{serverId}.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
+                }
+              }
             }
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Existing operation replay returns the current authorized detail of the same resource and Location without new writes. Target design, endpoint not implemented.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerDetail"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "description": "Detail URL of the created server under /api/v1/servers/{serverId}.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
                 }
               }
             }
@@ -125,7 +144,8 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-design-document": "../features/community/create-view-design.md"
       }
     },
     "/servers/search": {
@@ -186,7 +206,7 @@
       "get": {
         "operationId": "getServer",
         "summary": "Summary công khai hoặc detail của thành viên",
-        "description": "Summary công khai hoặc detail của thành viên",
+        "description": "Selected create/view package: active members receive ServerDetail; eligible nonmembers receive only ServerSummary for a public server. Unknown, inactive/deleted or private nonmember resources return 404 without hidden metadata. This shared projection does not implement search or the complete discovery use case.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -227,7 +247,8 @@
           {
             "$ref": "#/components/parameters/serverId"
           }
-        ]
+        ],
+        "x-scdc-design-document": "../features/community/create-view-design.md"
       },
       "patch": {
         "operationId": "updateServer",
@@ -290,7 +311,7 @@
       "get": {
         "operationId": "getMyMembership",
         "summary": "Trạng thái lần tham gia của chính mình",
-        "description": "Trạng thái lần tham gia của chính mình",
+        "description": "Selected create/view package: read only the authenticated actor membership. Return active/left status when its record exists, including own left status for a private server; absent membership returns 404. Reading status never restores membership or grants member detail.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -331,7 +352,8 @@
           {
             "$ref": "#/components/parameters/serverId"
           }
-        ]
+        ],
+        "x-scdc-design-document": "../features/community/create-view-design.md"
       }
     },
     "/servers/{serverId}/join": {
@@ -2846,7 +2868,7 @@
               "min": 2,
               "max": 100
             },
-            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]+$"
           },
           "description": {
             "type": [
@@ -2949,7 +2971,7 @@
               "min": 2,
               "max": 100
             },
-            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]+$"
           },
           "description": {
             "type": [
@@ -3034,14 +3056,14 @@
               "min": 2,
               "max": 100
             },
-            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]+$"
           },
           "description": {
             "type": [
               "string",
               "null"
             ],
-            "description": "Plain text; optional empty value becomes null; no NUL or unpaired surrogate.",
+            "description": "Optional plain text; normalize CRLF/CR to LF before the 1,000 UTF-16 limit. Omitted/null/empty becomes null. Preserve other whitespace and do not normalize NFC; reject NUL or unpaired surrogate.",
             "x-scdc-utf16-length": {
               "min": 0,
               "max": 1000

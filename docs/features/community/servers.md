@@ -114,7 +114,7 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 ### Rà soát nghiệp vụ gói tạo/xem — 2026-10-07
 
-Đây là đầu ra bước 2 của [gói đầu tiên](../community.md#first-package): đối chiếu UC-COM-01 và phần đọc được chọn của UC-COM-03 với các quyết định đã xác nhận. Các bảng dưới đây cụ thể hóa quy tắc hiện có và tình huống cần kiểm chứng; không ghi nhận kết quả chạy hoặc quyết định sản phẩm mới. API/schema, cách chuẩn hóa dữ liệu và cơ chế giao dịch được rà soát ở bước 3.
+Đây là đầu ra bước 2 của [gói đầu tiên](../community.md#first-package): đối chiếu UC-COM-01 và phần đọc được chọn của UC-COM-03 với các quyết định đã xác nhận. Các bảng dưới đây cụ thể hóa quy tắc hiện có và tình huống cần kiểm chứng; không ghi nhận kết quả chạy hoặc quyết định sản phẩm mới. API/schema, cách chuẩn hóa dữ liệu và cơ chế giao dịch đã được xác định tại [thiết kế gói bước 3](create-view-design.md), chờ triển khai/kiểm chứng ở bước 4/5.
 
 | Nội dung | Quy tắc áp dụng trong gói đầu | Nguồn chuẩn |
 |---|---|---|
@@ -132,7 +132,7 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 #### Tình huống cần kiểm chứng cho gói
 
-Các dòng này bổ sung tình huống cụ thể cho [tiêu chí gói đầu](../community.md#first-package) và phần được chọn của AC/TC hiện có. Chúng chưa chạy; cách dựng dữ liệu, assertion, HTTP/lỗi và bằng chứng sẽ được chốt ở bước 3 rồi thực thi ở bước 4/5.
+Các dòng này bổ sung tình huống cụ thể cho [tiêu chí gói đầu](../community.md#first-package) và phần được chọn của AC/TC hiện có. Chúng chưa chạy; HTTP/lỗi, dữ liệu và cách kiểm chứng theo [thiết kế gói](create-view-design.md#verification), thực thi ở bước 4/5.
 
 | Tình huống | Kết quả cần quan sát | Dẫn chiếu |
 |---|---|---|
@@ -146,11 +146,13 @@ Các dòng này bổ sung tình huống cụ thể cho [tiêu chí gói đầu](
 | Người tạo mở list/detail/status, tài khoản khác gọi cùng API; danh sách rỗng và nhiều trang | Người tạo đọc đúng tư cách và quyền; tài khoản khác không nhận member detail/status của người tạo, private bị che. Đọc/list không tạo hoặc phục hồi membership. | [UC-COM-03](#uc-com-03), [collection](integration.md#collections) |
 | Tải lại UI hoặc restart API sau tạo | Cộng đồng vẫn được đọc từ dữ liệu đã lưu; chỉ báo thành công sau xác nhận commit, lỗi giữ dữ liệu form để người dùng xử lý. | [UX](#ux), [điều kiện bàn giao MVP](../../releases/mvp.md#acceptance) |
 
-#### Đầu vào còn lại cho bước thiết kế kỹ thuật
+#### Đầu vào kỹ thuật từ rà soát nghiệp vụ
+
+Các đầu vào dưới đây đã được cụ thể hóa tại [thiết kế gói bước 3](create-view-design.md); các lựa chọn chưa có runtime proof.
 
 - Đối chiếu contract tạo/list/detail và `GET /servers/{serverId}/membership/me` với các tình huống trên; phân biệt quyền đọc public summary, member detail và status của chính mình. Phần tìm kiếm và trải nghiệm khám phá UC-COM-02 vẫn ở gói sau.
 - Chuẩn hóa và lỗi trường: tên một dòng/control, thứ tự trim/kiểm tra Unicode, mô tả rỗng thành null, giới hạn UTF-16 và cách biểu diễn lỗi đang là thiết kế mục tiêu, chưa phải lựa chọn kỹ thuật đã nghiệm thu.
-- Public mới mặc định `immediate` đã có căn cứ nghiệp vụ. Giá trị `joinMode` lưu cho private không mở đường tham gia trực tiếp; bước 3 phải chọn biểu diễn nhất quán với OpenAPI và luồng chuyển visibility sau này.
+- Public mới mặc định `immediate` đã có căn cứ nghiệp vụ. Giá trị `joinMode` lưu cho private được chọn tại [thiết kế API gói](create-view-design.md#api); giá trị này không mở đường tham gia trực tiếp vào private.
 - Chốt model/schema, migration trên dữ liệu legacy, version ban đầu, cursor, Identity guard, transaction, dedup/khóa và dữ liệu operation/outbox cần cho việc tạo. Gói đầu chưa có Hub/realtime; việc ghi outbox và phát sự kiện cần được xác định riêng.
 - Bổ sung assertion riêng cho phần đọc của UC-COM-03, các biên dữ liệu và race tạo/account; không suy rằng chạy TC-COM-02/19/23 là đã bao phủ các nhánh sửa metadata/role/channel hoặc toàn bộ UC-COM-03.
 
@@ -262,6 +264,8 @@ Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích h�
 ## Thiết kế dữ liệu/API
 
 HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
+
+[Thiết kế gói tạo/xem](create-view-design.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. Phần này vẫn chưa có implementation/runtime proof; search/chỉnh sửa/transfer tiếp tục theo các gói sau.
 
 | Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
 |---|---|---|

@@ -6,6 +6,8 @@ Nguồn chuẩn cho điều kiện dùng chung của hành trình cộng đồng
 
 [Tổng quan và truy vết Community](../community.md#use-cases) · [Kế hoạch triển khai](../community.md#use-case-delivery).
 
+[Thiết kế gói tạo/xem](create-view-design.md) chốt phần kỹ thuật bước 3 ngày 2026-10-07 cho UC-COM-01 và phần đọc UC-COM-03. Các lựa chọn chung bên dưới tiếp tục là mục tiêu cho các gói khác; chỉ áp dụng phần đã chọn, chưa có writer/migration/runtime proof.
+
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
