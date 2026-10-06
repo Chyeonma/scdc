@@ -10,7 +10,7 @@ Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng
 | Tra cứu quyết định, căn cứ hoặc vấn đề chưa chốt | [Quyết định](decisions.md) |
 | Thiết kế/tích hợp xuyên module | [Kiến trúc](architecture.md) |
 | Chạy repo, chuẩn bị dữ liệu hoặc kiểm thử kỹ thuật | [Phát triển](development.md) |
-| Triển khai một tính năng | Mở đặc tả tương ứng bên dưới; trong cùng file có nghiệp vụ, UX, hợp đồng, AC và test |
+| Triển khai một tính năng | Mở đặc tả tương ứng bên dưới; Community có trang tổng quan dẫn tới đặc tả từng thành phần, gồm nghiệp vụ, UX, hợp đồng, AC và test |
 | Tra cứu vòng đời dữ liệu, cleanup và bảo vệ sau restore | [Vòng đời dữ liệu](data-lifecycle.md) |
 | Nghiệm thu, phát hành, vận hành | [Phát hành và vận hành](release-operations.md) |
 | Làm theo hướng dẫn deploy/rollback/sự cố/restore | [Runbook vận hành](operations-runbook.md) |
@@ -22,7 +22,7 @@ Bộ tài liệu hiện hành được tổ chức theo dự án và tính năng
 |---|---|---|
 | [Tài khoản](features/accounts.md) | SCP-002 | Đăng ký/xác minh, đăng nhập, hồ sơ, mật khẩu, phiên; [12 use case và đối chiếu source/test](features/accounts.md#use-cases), API hiện tại |
 | [Nhắn tin riêng](features/direct-messaging.md) | Phần DM của SCP-005 | Tìm người, hội thoại hai người, tin văn bản, thử lại, đồng thời và reconnect |
-| [Cộng đồng](features/community.md) | SCP-003/004 và phần tin phòng của SCP-005 | Tham gia, phòng, lời mời, vai trò, quyền và thu hồi; [25 use case và đối chiếu API/AC/TC](features/community.md#use-cases) |
+| [Cộng đồng](features/community.md) | SCP-003/004 và phần tin phòng của SCP-005 | [5 thành phần nghiệp vụ](features/community.md#organization), tích hợp dùng chung; [25 use case và đối chiếu API/AC/TC](features/community.md#use-cases), [gói triển khai đầu tiên](features/community.md#use-case-delivery) |
 | [Thoại/video](features/voice-video.md) | SCP-006/007 | Gọi riêng, phòng thoại, giới hạn, LiveKit tự host, chất lượng và kiểm thử |
 
 Tình trạng sẵn sàng theo scope được quản lý tại [project.md](project.md#coverage); mã quyết định ở [decisions.md](decisions.md#decisions). Bảng [tiến độ hoàn thiện tài liệu](project.md#coverage) ghi phần đã viết; [phần còn cần hoàn thiện](project.md#documentation-remaining) tách việc soạn tiếp, quyết định còn cần và bằng chứng thuộc triển khai. Không duy trì bảng tiến độ độc lập tại mục lục.
@@ -51,6 +51,7 @@ docs/
 │   ├── accounts.md
 │   ├── direct-messaging.md
 │   ├── community.md
+│   ├── community/             # Servers, Memberships, Invitations, Channels, Permissions và tích hợp
 │   └── voice-video.md
 ├── contracts/                 # Schema API; có nhãn draft khi chưa khóa thiết kế
 ├── fixtures/                  # Dữ liệu biên dùng chung; không phải kết quả test

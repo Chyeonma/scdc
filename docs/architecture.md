@@ -1,6 +1,6 @@
 # SCDC — Kiến trúc và quy ước tích hợp
 
-Cập nhật: 2026-10-04. MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
+Cập nhật: 2026-10-06 (tổ chức nội bộ Community). MVP dùng Modular Monolith theo DEC-060. Các quyết định sản phẩm được quản lý ở decisions.md.
 
 Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền/media còn thiết kế cần kiểm chứng; microservices thuộc đợt sau.
 
@@ -55,7 +55,7 @@ Mỗi module sở hữu dữ liệu của mình; giao tiếp qua interfaces tron
 
 Identity có `IdentityDbContext`; không mô tả Community/Messaging như đã có DbContext hoặc implementation chưa tồn tại. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
-Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [đặc tả Community](features/community.md#permissions).
+Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/permissions.md#permissions).
 
 Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
 
@@ -67,9 +67,23 @@ Hợp đồng đề xuất cần thêm `IAccountAccessGuard`, `IAuthenticatedSes
 
 DM wire `sequence` ánh xạ field per-space mới `conversation_sequence`, giữ identity global legacy riêng; schema/migration hiện chưa thay. OpenAPI HTTP và JSON Schema realtime có nhãn design-draft; API Swagger vẫn được sinh từ source.
 
+### Tổ chức nội bộ Community
+
+Ngày 2026-10-06 thống nhất năm phần nghiệp vụ trong cùng module/project: Servers,
+Memberships, Invitations, Channels và Permissions. Nghiệp vụ đặt theo feature với
+Domain/Application riêng; Permissions có Infrastructure cho checker/guard.
+Persistence, idempotency và outbox dùng chung. Cấu trúc code, ranh giới và gói đầu tiên tại
+[tổng quan Community](features/community.md#organization); thiết kế transaction dùng chung tại
+[tích hợp](features/community/integration.md#transactions).
+
+Các phần dùng chung schema `community` và một CommunityDbContext khi triển khai;
+mutation xuyên phần giữ một transaction nghiệp vụ. `CommunityModule.cs` là điểm ghép DI.
+Hiện source vẫn Foundation, chưa có các feature/DbContext/guard tương ứng. Đây là
+cấu trúc mục tiêu đã thống nhất; các thành phần sẽ được tạo khi triển khai.
+
 ### Thiết kế tích hợp Community và tin phòng bổ sung
 
-[Community](features/community.md#detailed-design) đã có role/ACL snapshot, membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration. `IChannelAccessGuard` đề xuất giữ Community server/channel share lock tới commit Messaging; `IChatSpaceLifecycle` tạo/xóa space cùng transaction với channel, mỗi module vẫn chỉ sở hữu schema của mình. Mutation Community khóa server theo thứ tự sau Identity, trước Messaging để tuần tự hóa thay đổi quyền và join/leave/transfer.
+[Tích hợp Community](features/community/integration.md#contracts) đã có membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration; [Permissions](features/community/permissions.md#detailed-design) giữ role/ACL snapshot. `IChannelAccessGuard` đề xuất giữ Community server/channel share lock tới commit Messaging; `IChatSpaceLifecycle` tạo/xóa space cùng transaction với channel, mỗi module vẫn chỉ sở hữu schema của mình. Mutation Community khóa server theo thứ tự sau Identity, trước Messaging để tuần tự hóa thay đổi quyền và join/leave/transfer.
 
 Server accessVersion, channel accessVersion và membershipId được dùng cho registry/cache; thu hồi chat phải đo ≤5 giây từ commit, media kiểm chứng riêng. @everyone/20 custom role, quản lý cần view, private switch và issuer lifetime đã chốt DEC-092–098. Interface/source/SQL chưa thay; shared transaction, Unicode migration, token key ring, outbox và proof thuộc triển khai. Không cấp management permission để tự đọc phòng bị ẩn hoặc sửa/xóa tin người khác.
 

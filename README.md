@@ -43,7 +43,7 @@ Docker Desktop và Docker Engine dùng mặc định `ENGINE=docker`; Podman dù
 
 ## Tài liệu
 
-Điểm bắt đầu là [mục lục docs](docs/README.md). Mỗi tính năng có một đặc tả chứa phạm vi, requirements, UX, hợp đồng, ngoại lệ, tiêu chí chấp nhận và kiểm thử.
+Điểm bắt đầu là [mục lục docs](docs/README.md). Đặc tả tính năng chứa phạm vi, requirements, UX, hợp đồng, ngoại lệ, tiêu chí chấp nhận và kiểm thử. [Community](docs/features/community.md#organization) có trang tổng quan và đặc tả theo năm thành phần nghiệp vụ, cùng tài liệu tích hợp dùng chung.
 
 - [Dự án: requirements, scope, nguồn lực và kế hoạch](docs/project.md)
 - [Quyết định và vấn đề còn mở](docs/decisions.md)
