@@ -1,0 +1,49 @@
+# Runtime source contract: Identity/Health only. No DM endpoint in P0.
+# Get the manifest and login using dm-acceptance.ps1; keep tokens in memory.
+# An editor's REST Client may display tokens locally; never export its history into Git.
+@api = http://localhost:15026/api/v1
+@webApi = http://localhost:15300/api/v1
+@accessToken = replace-with-your-current-A-token-locally
+@refreshToken = replace-with-your-current-A-refresh-token-locally
+
+### Health, expected 200; Messaging stage Foundation
+GET {{api}}/health
+
+### Same health through the frontend proxy, expected 200
+GET {{webApi}}/health
+
+### No token, expected 401 Common.Unauthorized
+GET {{api}}/users/me
+
+### Login A, expected 200; raw token output is local only
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"login":"dm_demo_an","password":"DmDemo2026!Local","deviceName":"DM-manual-A"}
+
+### Current A, expected 200 / username dm_demo_an
+GET {{api}}/users/me
+Authorization: Bearer {{accessToken}}
+
+### Save profile, expected 200; read GET me again and compare bio
+PATCH {{api}}/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"displayName":"An Demo","bio":"Kiểm tra hồ sơ DM-P0-T01-C01","locale":"vi-VN","timezone":"Asia/Ho_Chi_Minh"}
+
+### Pending U, expected 403 Identity.EmailNotVerified, no auth tokens
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"login":"dm_demo_pending","password":"DmDemo2026!Local","deviceName":"DM-manual-U"}
+
+### Logout this A session, expected 204; GET me with same accessToken now401
+POST {{api}}/auth/logout
+Content-Type: application/json
+
+{"refreshToken":"{{refreshToken}}"}
+
+### Token from the revoked A session, expected 401
+GET {{api}}/users/me
+Authorization: Bearer {{accessToken}}

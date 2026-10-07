@@ -54,6 +54,7 @@ Thumbs.db
 compose.override.yaml
 docker-compose.override.yml
 .docker-data/
+.dm-acceptance/
 # Documentation
 # Allow all documentation under docs/
 !/docs/**

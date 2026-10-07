@@ -1,0 +1,60 @@
+{
+  "status": "planned-fixture-not-created-in-database",
+  "scope": "local-direct-messaging-acceptance-only",
+  "database": "scdc_dm_acceptance_test",
+  "ports": { "web": 15300, "api": 15026, "postgres": 15432 },
+  "localDemoPassword": "DmDemo2026!Local",
+  "accounts": [
+    { "alias": "A", "username": "dm_demo_an", "email": "dm-an@example.test", "displayName": "An Demo", "initialState": "active_verified" },
+    { "alias": "B", "username": "dm_demo_bao", "email": "dm-bao@example.test", "displayName": "Bảo Demo", "initialState": "active_verified" },
+    { "alias": "C", "username": "dm_demo_chi", "email": "dm-chi@example.test", "displayName": "Bảo Demo", "initialState": "active_verified", "roleInScenario": "outsider_of_A_B" },
+    { "alias": "U", "username": "dm_demo_pending", "email": "dm-pending@example.test", "displayName": "Chưa xác minh Demo", "initialState": "pending_unverified" },
+    { "alias": "K", "username": "dm_demo_khoa", "email": "dm-khoa@example.test", "displayName": "Khóa Demo", "initialState": "active_verified", "testTransition": "disable_and_revoke_only_through_isolated_test_helper" }
+  ],
+  "searchAccountGenerator": {
+    "count": 23,
+    "indexStart": 1,
+    "indexDigits": 2,
+    "aliasPattern": "S{index}",
+    "usernamePattern": "dm_demo_search{index}",
+    "emailPattern": "dm-search{index}@example.test",
+    "displayNamePattern": "Người tìm {index}",
+    "initialState": "active_verified"
+  },
+  "conversations": [
+    { "alias": "D-AB", "actors": ["A", "B"] },
+    { "alias": "D-AC", "actors": ["A", "C"] },
+    { "alias": "D-AK", "actors": ["A", "K"], "createBeforeDisablingPeer": true },
+    { "alias": "D-HIST", "actors": ["A", "S01"], "purpose": "isolated_H121_history_case" }
+  ],
+  "messages": [
+    { "alias": "M01", "content": "Chào Bảo, đây là tin thử M01." },
+    { "alias": "M02", "content": "Dòng 1\r\nDòng 2 👩‍💻", "normalizedContent": "Dòng 1\nDòng 2 👩‍💻" },
+    { "alias": "M03", "content": "  Giữ khoảng trắng có chủ ý  " },
+    { "alias": "M04", "content": "<script>alert('DM test')</script>", "expectedRendering": "literal_text" },
+    { "alias": "L2000", "repeat": { "unit": "a", "count": 2000 }, "expectedUtf16Length": 2000, "expectedValid": true },
+    { "alias": "L2001", "repeat": { "unit": "a", "count": 2001 }, "expectedUtf16Length": 2001, "expectedValid": false },
+    { "alias": "E2000", "repeat": { "unit": "😀", "count": 1000 }, "expectedUtf16Length": 2000, "expectedValid": true },
+    { "alias": "E2002", "repeat": { "unit": "😀", "count": 1001 }, "expectedUtf16Length": 2002, "expectedValid": false },
+    { "alias": "EMPTY", "content": "", "expectedValid": false },
+    { "alias": "WHITESPACE", "content": " \t\n ", "expectedValid": false },
+    { "alias": "INVISIBLE", "content": "\u200b", "expectedValid": false }
+  ],
+  "rawInvalidInputsSource": "text-validation.json",
+  "messageBatchGenerators": [
+    { "alias": "H121", "conversationAlias": "D-HIST", "requiresEmptyConversation": true, "prefix": "HIST-", "count": 121, "indexDigits": 3, "purpose": "initial_history_three_pages_at_limit_50" },
+    { "alias": "R101", "conversationAlias": "D-AB", "requiresCapturedBaselineAndResumeCursor": true, "prefix": "RECONNECT-", "count": 101, "indexDigits": 3, "purpose": "offline_catchup_three_pages_at_limit_50" }
+  ],
+  "retryOperations": {
+    "O1": "7c8e7c59-b35a-4d12-b22f-965b96ff4e44",
+    "O2": "7c8e7c59-b35a-4d12-b22f-965b96ff4e45",
+    "rule": "Fixed IDs are reused only inside intentional retry scenarios; use new UUIDv4 values for independent sends and runs."
+  },
+  "setupRules": [
+    "Use real Identity registration and local Development verification only in the isolated test environment.",
+    "Resolve all user, conversation and message IDs from API responses; never hardcode server UUIDs.",
+    "Keep tokens, keys and runtime manifests outside Git; print no raw tokens in acceptance records.",
+    "Do not overwrite existing non-fixture users or use the application database.",
+    "All fixture setup scripts and commands are deliverables of DM-P0-T01, not available from this JSON alone."
+  ]
+}

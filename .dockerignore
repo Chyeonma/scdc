@@ -15,6 +15,9 @@ coverage
 
 .env
 .env.*
+.dm-acceptance
+**/node_modules
+**/dist
 **/appsettings.Development.json
 **/appsettings.Local.json
 **/appsettings.*.Local.json
