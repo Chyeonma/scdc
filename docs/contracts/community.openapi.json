@@ -152,7 +152,7 @@
       "get": {
         "operationId": "searchPublicServers",
         "summary": "Tìm cộng đồng công khai theo tên",
-        "description": "DEC-093. Recheck current public/active status on every page, exact-name rank then normalized name/UUID; case-insensitive/accent-sensitive.",
+        "description": "DEC-093. Implemented on feat/community-search: literal contains search on trim/NFC/ToLowerInvariant key, exact-name rank then C-collated key/UUID; case-insensitive/accent-sensitive. Every page rechecks public/active/nondeleted. Always ServerSummary, including for members; no membership or event creation.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -176,7 +176,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Public ServerSummary page with an actor/query/limit-bound cursor, valid for 24 hours; empty results are successful reads.",
             "content": {
               "application/json": {
                 "schema": {
@@ -186,9 +186,9 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
-        "x-scdc-access": "valid account/session",
-        "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
+        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-access": "active verified account and valid session",
+        "x-scdc-retry": "GET may retry after refresh; invalid cursor requires starting from the first page.",
         "parameters": [
           {
             "$ref": "#/components/parameters/SearchQuery"
@@ -199,7 +199,9 @@
           {
             "$ref": "#/components/parameters/Limit"
           }
-        ]
+        ],
+        "x-scdc-runtime-branch": "feat/community-search",
+        "x-scdc-design-document": "../features/community/design/search.md"
       }
     },
     "/servers/{serverId}": {

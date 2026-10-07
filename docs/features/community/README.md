@@ -16,7 +16,7 @@ Community sở hữu cộng đồng, membership, phòng và quyền. Messaging s
 | Thiết kế gói tạo/xem | [Thiết kế](design/create-view.md) |
 | Kết quả kiểm chứng gói tạo/xem | [Nghiệm thu](delivery/create-view/acceptance.md) |
 | Gói tham gia trực tiếp public/immediate | [Kế hoạch](delivery/direct-join/plan.md), [thiết kế](design/direct-join.md), [nghiệm thu](delivery/direct-join/acceptance.md) |
-| Gói tìm kiếm cộng đồng công khai | [Kế hoạch](delivery/search/plan.md), [thiết kế](design/search.md) |
+| Gói tìm kiếm cộng đồng công khai | [Kế hoạch](delivery/search/plan.md), [thiết kế](design/search.md), [nghiệm thu](delivery/search/acceptance.md) |
 
 <a id="requirements"></a>
 
