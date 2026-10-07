@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { getServer, getOwnMembership } from './api.js';
+import React, { useEffect, useRef, useState } from 'react';
+import { getServer, getOwnMembership, joinServer } from './api.js';
 
 export const permissionLabels = {
   manage_channels: 'Quản lý phòng',
@@ -45,9 +45,12 @@ export function CommunityList({ list, onSelect, onCreate }) {
   </main>;
 }
 
-export function CommunityDetail({ actorId, serverId, onBack }) {
+export function CommunityDetail({ actorId, serverId, onBack, onJoined }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState({ loading: true });
+  const [join, setJoin] = useState({ busy: false, uncertain: false, error: null });
+  const mutation = useRef(null);
+  const reconciling = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
     setState({ loading: true });
@@ -60,13 +63,24 @@ export function CommunityDetail({ actorId, serverId, onBack }) {
           try { membership = await getOwnMembership(actorId, serverId, controller.signal); }
           catch (error) { if (error.status !== 404) throw error; }
         }
-        if (!controller.signal.aborted) setState({ server, membership, loading: false });
+        if (!controller.signal.aborted) {
+          setState({ server, membership, loading: false });
+          if (reconciling.current) {
+            reconciling.current = false;
+            setJoin({ busy: false, uncertain: false, error: null });
+            if (membership?.status === 'active') onJoined?.();
+          }
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
         if (error.status === 404) {
           try {
             const membership = await getOwnMembership(actorId, serverId, controller.signal);
-            if (!controller.signal.aborted) setState({ membership, unavailable: true, loading: false });
+            if (!controller.signal.aborted) {
+              setState({ membership, unavailable: true, loading: false });
+              reconciling.current = false;
+              setJoin({ busy: false, uncertain: false, error: null });
+            }
             return;
           } catch (membershipError) {
             if (controller.signal.aborted) return;
@@ -77,14 +91,43 @@ export function CommunityDetail({ actorId, serverId, onBack }) {
       }
     }
     load();
-    return () => controller.abort();
-  }, [actorId, serverId, attempt]);
+    return () => { controller.abort(); mutation.current?.abort(); };
+  }, [actorId, serverId, attempt, onJoined]);
   const { server, membership, loading, error } = state;
   const isDetail = server?.myMembership != null;
+  const canJoin = !loading && !error && server?.visibility === 'public' && server.joinMode === 'immediate' && membership?.status !== 'active';
+  function reload() {
+    setState({ loading: true });
+    setAttempt((value) => value + 1);
+  }
+  async function participate() {
+    if (!canJoin || join.busy || join.uncertain || mutation.current && !mutation.current.signal.aborted) return;
+    const controller = new AbortController();
+    mutation.current = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15000);
+    setJoin({ busy: true, uncertain: false, error: null });
+    try {
+      await joinServer(actorId, serverId, controller.signal);
+      if (controller.signal.aborted) return;
+      reconciling.current = true;
+      setJoin({ busy: false, uncertain: true, error: null });
+      reload();
+    } catch (failure) {
+      if (controller.signal.aborted && !timedOut) return;
+      reconciling.current = true;
+      setJoin({ busy: false, uncertain: true, error: failure });
+      // A known state conflict reloads only reads; an unclear result waits for explicit reconciliation.
+      if (failure.status === 404 || failure.status === 409) reload();
+    } finally {
+      clearTimeout(timeout);
+      if (mutation.current === controller) mutation.current = null;
+    }
+  }
   return <main className="community-stage" aria-busy={loading}>
     <div className="community-actions">
       <button className="btn btn--secondary" onClick={onBack}>← Cộng đồng của tôi</button>
-      <button className="btn btn--secondary" onClick={() => { setState({ loading: true }); setAttempt((value) => value + 1); }} disabled={loading}>Tải lại chi tiết</button>
+      <button className="btn btn--secondary" onClick={reload} disabled={loading || join.busy}>Tải lại chi tiết</button>
     </div>
     {loading && <p role="status">Đang tải chi tiết…</p>}
     {error && <div className="community-notice" role="alert">
@@ -92,6 +135,10 @@ export function CommunityDetail({ actorId, serverId, onBack }) {
       <p>{error.status === 404 ? 'Cộng đồng không tồn tại hoặc bạn không có quyền xem.' : error.message}</p>
     </div>}
     {state.unavailable && <div className="community-notice"><h1>Không thể xem cộng đồng này</h1><p>Bạn không có quyền xem thông tin cộng đồng.</p></div>}
+    {join.uncertain && !loading && <div className="community-notice" role="alert">
+      <p>Chưa xác nhận được kết quả tham gia. Hãy kiểm tra tư cách hiện tại trước khi thử lại.</p>
+      <button className="btn btn--secondary" onClick={reload}>Kiểm tra kết quả</button>
+    </div>}
     {server && <>
       <header className="community-heading"><div><Badges server={server} /><h1>{server.name}</h1></div></header>
       <section className="community-section"><h2>Giới thiệu</h2><p className="community-description">{server.description || 'Chưa có mô tả.'}</p></section>
@@ -99,6 +146,11 @@ export function CommunityDetail({ actorId, serverId, onBack }) {
     {!loading && !error && <section className="community-section">
       <h2>Tư cách của bạn</h2>
       <p>{membership?.status === 'active' ? 'Đang tham gia' : membership?.status === 'left' ? 'Đã rời cộng đồng' : 'Bạn chưa tham gia cộng đồng này.'}</p>
+      {canJoin && !join.uncertain && <button className="btn btn--primary" onClick={participate} disabled={join.busy}>
+        {join.busy ? 'Đang tham gia…' : 'Tham gia cộng đồng'}
+      </button>}
+      {server?.visibility === 'public' && server.joinMode === 'approval' && membership?.status !== 'active' &&
+        <p>Cộng đồng này cần duyệt yêu cầu trước khi bạn trở thành thành viên.</p>}
       {membership && <p>Tham gia từ {new Date(membership.joinedAt).toLocaleDateString('vi-VN')}</p>}
       {isDetail && <>
         <p>{server.ownerUserId === actorId ? 'Bạn là chủ sở hữu.' : 'Bạn là thành viên.'}</p>

@@ -33,5 +33,6 @@ export function useCommunityList(actorId) {
     return () => { generation.current++; request.current?.abort(); };
   }, [load]);
 
-  return { ...state, reload: () => load(), loadMore: () => load(state.nextCursor) };
+  const reload = useCallback(() => load(), [load]);
+  return { ...state, reload, loadMore: () => load(state.nextCursor) };
 }

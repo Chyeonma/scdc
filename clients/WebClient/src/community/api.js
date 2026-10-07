@@ -15,3 +15,6 @@ export function createServer(actorId, body, signal) {
   // A mutation is retried only by an explicit user action with its original key and body.
   return api('/servers', { method: 'POST', body, actorId, signal, retry: false });
 }
+export function joinServer(actorId, serverId, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/join`, { method: 'POST', actorId, signal, retry: false });
+}

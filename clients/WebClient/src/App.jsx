@@ -343,7 +343,7 @@ function Application({ session }) {
           <button className="btn btn--secondary" onClick={() => setShowCreateServer(true)}>Tiếp tục yêu cầu</button>
         </div>}
         {activeServerId
-          ? <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId} onBack={() => setIsHomeActive(false)} />
+          ? <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId} onBack={() => setIsHomeActive(false)} onJoined={list.reload} />
           : <CommunityList list={list} onSelect={selectServer} onCreate={() => setShowCreateServer(true)} />}
       </div>}
 
