@@ -19,7 +19,7 @@ using SCDC.Modules.Community.Infrastructure.Persistence;
 namespace SCDC.Modules.Community.Features.Servers.Application;
 
 internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountAccessGuard guard,
-    IOptionsMonitor<CommunityOptions> options, ServerReader reader, ServerCursorCodec cursors,
+    IOptionsMonitor<CommunityOptions> options, ServerReader reader, ServerCursorCodec cursors, SearchCursorCodec searchCursors,
     TransactionalOutbox outbox, TimeProvider clock, ILogger<ServerService> logger) : IServerService
 {
     private sealed class RequestFailure(Error error) : Exception
@@ -75,6 +75,7 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
             Id = id,
             OwnerUserId = actor.UserId,
             Name = data.Name,
+            SearchName = UnicodeTextPolicy.NormalizeNameKey(data.Name),
             Slug = id.ToString("N"),
             Description = data.Description,
             Visibility = data.Visibility,
@@ -152,6 +153,28 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
         scope => reader.GetAsync(scope, actor.UserId, id, ct), ct);
     public Task<Result<MembershipView>> GetMembershipAsync(AccountActor actor, Guid id, CancellationToken ct) => ReadAsync(actor,
         scope => reader.MembershipAsync(scope, actor.UserId, id, ct), ct);
+    public Task<Result<ServerPage>> SearchAsync(AccountActor actor, string? query, int limit, string? cursor, CancellationToken ct) => ExecuteAsync(async () =>
+    {
+        var errors = new Dictionary<string, string[]>();
+        var text = query is null ? "" : UnicodeTextPolicy.TrimWhitespace(query);
+        if (!UnicodeTextPolicy.IsValidName(text, 2, 100)) errors["q"] = ["Query must contain 2–100 UTF-16 units of single-line text."];
+        if (limit is < 1 or > 50) errors["limit"] = ["Limit must be between 1 and 50."];
+        if (errors.Count > 0) throw new RequestFailure(new ValidationError("VALIDATION_FAILED", "Invalid search query.", errors));
+        var key = UnicodeTextPolicy.NormalizeNameKey(text);
+        var position = cursor is null ? null : searchCursors.Decode(cursor, actor.UserId, key, limit);
+        await using var scope = await scopes.OpenAsync(ct);
+        var lease = await CheckAsync(actor, scope, ct);
+        var matches = await reader.SearchAsync(scope, key, limit, position, ct);
+        string? next = null;
+        if (matches.Count > limit)
+        {
+            matches.RemoveAt(matches.Count - 1);
+            next = searchCursors.Encode(actor.UserId, key, limit, matches[^1].Position);
+        }
+        EnsureLease(lease);
+        await scope.CommitAsync(ct);
+        return new ServerPage(matches.Select(row => row.Server).ToArray(), next);
+    });
     private Task<Result<T>> ReadAsync<T>(AccountActor actor, Func<RelationalWorkScope, Task<T?>> read, CancellationToken ct) where T : class => ExecuteAsync(async () =>
     {
         await using var scope = await scopes.OpenAsync(ct);

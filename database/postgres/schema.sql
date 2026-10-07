@@ -1188,4 +1188,24 @@ CREATE CONSTRAINT TRIGGER ct_role_permission_invariants AFTER INSERT OR UPDATE O
 
 CREATE TABLE common.schema_migrations (module varchar(50) NOT NULL, version integer NOT NULL, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(module,version));
 INSERT INTO common.schema_migrations(module,version,checksum) VALUES ('community',1,'b434be5e002497ef204a39c38d7cb4d0783f869804824e130779e74d8f8adab4');
+
+-- Community search baseline 002 (empty bootstrap; upgrades use the .NET runner).
+CREATE TEMP TABLE community_search_migration_map(id uuid PRIMARY KEY,search_name text NOT NULL) ON COMMIT DROP;
+-- Search key format 1: text-policy trim -> .NET NFC -> ToLowerInvariant.
+-- The runner supplies community_search_migration_map in the same transaction.
+ALTER TABLE community.servers ADD COLUMN search_name text COLLATE "C";
+ALTER TABLE community.servers DISABLE TRIGGER tr_servers_touch;
+UPDATE community.servers s SET search_name=m.search_name
+FROM community_search_migration_map m WHERE m.id=s.id;
+-- Check queued invariants before further ALTER TABLE; leave constraints enabled.
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE community.servers ENABLE TRIGGER tr_servers_touch;
+ALTER TABLE community.servers ALTER COLUMN search_name SET NOT NULL;
+ALTER TABLE community.servers ADD CONSTRAINT ck_servers_search_name CHECK (search_name <> '');
+CREATE INDEX ix_servers_public_search ON community.servers(search_name,id)
+    WHERE visibility=1 AND status=1 AND deleted_at IS NULL;
+COMMENT ON COLUMN community.servers.search_name IS 'Format 1: text-policy trim/NFC/ToLowerInvariant in .NET; update atomically with display name.';
+SET CONSTRAINTS ALL DEFERRED;
+DROP TABLE community_search_migration_map;
+INSERT INTO common.schema_migrations(module,version,checksum) VALUES ('community',2,'fe07dcc516bfce7eedf257c8fb42d7baa615c716aba9034de9f4e9cebe40ccff');
 COMMIT;

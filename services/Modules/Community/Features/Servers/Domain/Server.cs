@@ -14,6 +14,7 @@ internal sealed class Server
     {
         get; init;
     }
+    public required string SearchName { get; init; }
     public required string Slug
     {
         get; init;

@@ -10,12 +10,18 @@ try
 {
     var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Database")
         ?? throw new InvalidOperationException("ConnectionStrings__Database must be configured.");
+    var search = Path.GetFileName(args[0]) == "002-community-search.sql";
+    if (search && args.Length != 1)
+        throw new MigrationPreflightException("Migration 002 computes search keys; a visibility map is only used by migration 001.");
     var map = args.Length == 2
         ? JsonSerializer.Deserialize<Dictionary<Guid, LegacyServerSettings>>(await File.ReadAllTextAsync(args[1]),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!
         : new Dictionary<Guid, LegacyServerSettings>();
-    var applied = await CommunityMigration.ApplyAsync(connection, await File.ReadAllTextAsync(args[0]), map);
-    Console.WriteLine(applied ? "Community migration 001 applied." : "Community migration 001 already applied with matching checksum.");
+    var sql = await File.ReadAllTextAsync(args[0]);
+    var applied = search ? await CommunitySearchMigration.ApplyAsync(connection, sql)
+        : await CommunityMigration.ApplyAsync(connection, sql, map);
+    var version = search ? "002" : "001";
+    Console.WriteLine(applied ? $"Community migration {version} applied." : $"Community migration {version} already applied with matching checksum.");
     return 0;
 }
 catch (Exception error)

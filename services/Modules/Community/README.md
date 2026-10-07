@@ -38,6 +38,7 @@ Các route yêu cầu JWT từ Identity và tài khoản active có primary emai
 |---|---|
 | `POST /api/v1/servers` | UUIDv4 `clientOperationId`, `name`, `description?`, `visibility?`; 201 khi tạo, 200 khi retry cùng dữ liệu chuẩn hóa, 409 nếu đổi dữ liệu |
 | `GET /api/v1/servers` | Danh sách membership active của mình; `limit` 1–50, mặc định 20; `cursor` bảo vệ, hạn 24 giờ |
+| `GET /api/v1/servers/search` | `q` 2–100 UTF-16; tìm một phần tên công khai/active, literal/case-insensitive/accent-sensitive; summary, exact-first, keyset `limit` 1–50, mặc định 20 |
 | `GET /api/v1/servers/{id}` | Detail cho member active; summary cho người ngoài public; private/inactive/unknown trả 404 |
 | `GET /api/v1/servers/{id}/membership/me` | Record active/left của chính actor, kể cả own-left trong private; không phục hồi membership |
 | `POST /api/v1/servers/{id}/join` | Không body; public/immediate tạo hoặc kích hoạt membership mặc định; join lặp active trả cùng epoch; approval với người chưa active nhận 409 |
@@ -45,6 +46,8 @@ Các route yêu cầu JWT từ Identity và tài khoản active có primary emai
 Create commit server, owner membership, @everyone, operation và một event `Community.ServerCreated.v1` cùng transaction. Event giữ `published_at=NULL`; gói chưa có dispatcher hoặc Hub. Chi tiết lỗi và DTO trong [thiết kế gói](../../../docs/features/community/design/create-view.md).
 
 Nhánh `feat/community-join` kế thừa tạo/xem và bổ sung [tham gia trực tiếp](../../../docs/features/community/design/direct-join.md). Join giữ Identity guard và server write lock tới commit, tăng accessVersion và ghi một `Community.MembershipJoined.v1`. Rejoin từ record left tạo epoch mới và dọn role/override cũ; chưa có endpoint leave hoặc requests chờ duyệt. Không thêm migration ngoài baseline 001; không tự phát lại mutation sau lỗi.
+
+Nhánh `feat/community-search` kế thừa join và bổ sung [tìm kiếm](../../../docs/features/community/design/search.md). Mỗi trang lọc lại public/active/nondeleted; member cũng chỉ nhận summary. Cursor purpose riêng, gắn actor/query đã chuẩn hóa/limit và hạn 24 giờ. Chỉ tìm/xem không tạo membership hoặc event.
 
 ## Cấu hình
 
@@ -81,6 +84,15 @@ Mapping JSON theo ID server, ví dụ:
 ```
 
 DB không có server thì bỏ argument mapping. Preflight từ chối dữ liệu legacy chưa hợp lệ (owner membership, tên, trạng thái, system/default role hoặc quyền); cần rà soát và sửa riêng trước khi chạy lại. Runner không tự đổi quyền, tên hay visibility. Ledger `common.schema_migrations` lưu checksum; chạy lại cùng bản là no-op. Giữ migration đã áp nguyên vẹn, giữ backup DB/keys khi nâng cấp.
+
+Sau baseline 001, dừng/drain writer cũ trước khi áp 002 rồi deploy writer mới:
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/002-community-search.sql
+```
+
+002 thêm `search_name` bắt buộc, backfill theo batch 500 bằng cùng policy trim/NFC/ToLowerInvariant của create/search; giữ tên hiển thị, version và membership. Dữ liệu invalid hoặc lỗi giữa migration rollback toàn bộ. Bootstrap mới đã gồm 001/002; writer tạo server cũ không tương thích với cột mới. Writer sửa tên tương lai phải ghi key cùng transaction với tên.
 
 ## Kiểm thử
 

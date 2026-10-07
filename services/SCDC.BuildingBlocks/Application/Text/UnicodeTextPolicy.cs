@@ -54,6 +54,8 @@ public static class UnicodeTextPolicy
         return value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
     }
 
+    public static string NormalizeNameKey(string value) => TrimWhitespace(value).Normalize(NormalizationForm.FormC).ToLowerInvariant();
+
     private static bool InRanges(int scalar, (int Start, int End)[] ranges) => ranges.Any(range => scalar >= range.Start && scalar <= range.End);
 
     private static (int, int)[] ReadRanges(JsonElement ranges) => ranges.EnumerateArray().Select(entry =>

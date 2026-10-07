@@ -38,6 +38,7 @@ public static class CommunityModule
         services.AddSingleton<TransactionalOutbox>();
         services.AddSingleton<ServerReader>();
         services.AddSingleton<ServerCursorCodec>();
+        services.AddSingleton<SearchCursorCodec>();
         services.AddScoped<IServerService, ServerService>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddSingleton<IModuleDescriptor, CommunityModuleDescriptor>();

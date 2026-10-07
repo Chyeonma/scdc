@@ -36,6 +36,10 @@ public sealed class ServersController(IServerService servers) : ApiControllerBas
     [HttpGet]
     public async Task<ActionResult<MyServerPage>> List([FromQuery] int limit = 20, [FromQuery] string? cursor = null, CancellationToken ct = default)
         => FromResult(await servers.ListAsync(Actor, limit, cursor, ct));
+    [HttpGet("search")]
+    public async Task<ActionResult<ServerPage>> Search([FromQuery] string? q = null, [FromQuery] int limit = 20,
+        [FromQuery] string? cursor = null, CancellationToken ct = default)
+        => FromResult(await servers.SearchAsync(Actor, q, limit, cursor, ct));
     [HttpGet("{serverId:guid}")]
     [ProducesResponseType(typeof(ServerDetail), 200)]
     public async Task<ActionResult<ServerSummary>> Get(Guid serverId, CancellationToken ct)

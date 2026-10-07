@@ -149,9 +149,9 @@ VALUES
     ('01990000-0000-7300-8000-000000000002', '01990000-0000-7000-8000-000000000003', 1, 1, now() - interval '14 days');
 
 INSERT INTO community.servers
-    (id, owner_user_id, name, slug, description, status, created_at, updated_at, visibility, join_mode)
+    (id, owner_user_id, name, slug, description, status, created_at, updated_at, visibility, join_mode, search_name)
 VALUES
-    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000001', 'SCDC Community', 'scdc-community', 'Server mẫu mô tả luồng dữ liệu thực tế của SCDC.', 1, now() - interval '30 days', now() - interval '30 days', 1, 1);
+    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000001', 'SCDC Community', 'scdc-community', 'Server mẫu mô tả luồng dữ liệu thực tế của SCDC.', 1, now() - interval '30 days', now() - interval '30 days', 1, 1, 'scdc community');
 
 INSERT INTO community.server_members
     (server_id, user_id, nickname, status, joined_at, invited_by_user_id)

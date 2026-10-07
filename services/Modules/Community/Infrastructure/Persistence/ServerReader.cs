@@ -2,11 +2,13 @@ using System.Text.Json;
 using NpgsqlTypes;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Modules.Community.Features.Servers.Application;
+using SCDC.Modules.Community.Infrastructure.Paging;
 
 namespace SCDC.Modules.Community.Infrastructure.Persistence;
 
 internal sealed class ServerReader
 {
+    internal sealed record SearchMatch(ServerSummary Server, SearchPosition Position);
     private const string MembershipJson = """
         jsonb_build_object('serverId',m.server_id,'userId',m.user_id,'membershipId',m.membership_id,
           'status',CASE m.status WHEN 1 THEN 'active' ELSE 'left' END,'joinedAt',m.joined_at,'leftAt',m.left_at,'version',m.version::text)
@@ -80,5 +82,32 @@ internal sealed class ServerReader
         query.Parameters.AddWithValue("id", id);
         var json = await query.ExecuteScalarAsync(ct) as string;
         return json is null ? null : JsonSerializer.Deserialize<MembershipView>(json, JsonSerializerOptions.Web);
+    }
+
+    public async Task<List<SearchMatch>> SearchAsync(RelationalWorkScope scope, string key, int limit, SearchPosition? last, CancellationToken ct)
+    {
+        var pattern = "%" + key.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
+        await using var query = scope.CreateCommand($"""
+            SELECT {SummaryJson},s.search_name,match.rank FROM community.servers s
+            CROSS JOIN LATERAL (SELECT CASE WHEN s.search_name=@key THEN 0 ELSE 1 END AS rank) match
+            WHERE s.visibility=1 AND s.status=1 AND s.deleted_at IS NULL AND s.search_name LIKE @pattern ESCAPE '\'
+              AND (@lastId IS NULL OR match.rank>@lastRank OR
+                (match.rank=@lastRank AND (s.search_name>@lastName OR (s.search_name=@lastName AND s.id>@lastId))))
+            ORDER BY match.rank,s.search_name,s.id LIMIT @take
+            """);
+        query.Parameters.AddWithValue("key", key);
+        query.Parameters.AddWithValue("pattern", pattern);
+        query.Parameters.AddWithValue("lastId", NpgsqlDbType.Uuid, (object?)last?.Id ?? DBNull.Value);
+        query.Parameters.AddWithValue("lastRank", last?.Rank ?? 0);
+        query.Parameters.AddWithValue("lastName", last?.Name ?? "");
+        query.Parameters.AddWithValue("take", limit + 1);
+        var items = new List<SearchMatch>();
+        await using var rows = await query.ExecuteReaderAsync(ct);
+        while (await rows.ReadAsync(ct))
+        {
+            var server = JsonSerializer.Deserialize<ServerSummary>(rows.GetString(0), JsonSerializerOptions.Web)!;
+            items.Add(new(server, new(rows.GetInt32(2), rows.GetString(1), server.Id)));
+        }
+        return items;
     }
 }

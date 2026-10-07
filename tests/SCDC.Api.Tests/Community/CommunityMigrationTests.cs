@@ -6,7 +6,7 @@ using SCDC.DbMigrator;
 
 namespace SCDC.Api.Tests.Community;
 
-public sealed class CommunityMigrationTests : IAsyncLifetime
+public sealed partial class CommunityMigrationTests : IAsyncLifetime
 {
     private readonly string _database = $"scdc_migration_{Guid.NewGuid():N}_test";
     private string _admin = null!;
@@ -119,7 +119,7 @@ public sealed class CommunityMigrationTests : IAsyncLifetime
         var id=Guid.CreateVersion7();
         var failure=await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync($"""
             BEGIN;
-            INSERT INTO community.servers(id,owner_user_id,name,slug) SELECT '{id}',id,'😀','{id:N}' FROM identity.users LIMIT 1;
+            INSERT INTO community.servers(id,owner_user_id,name,slug,search_name) SELECT '{id}',id,'😀','{id:N}','😀' FROM identity.users LIMIT 1;
             INSERT INTO community.server_members(server_id,user_id) SELECT id,owner_user_id FROM community.servers WHERE id='{id}';
             COMMIT;
             """));
