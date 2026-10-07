@@ -1,6 +1,6 @@
 # SCDC — Hướng dẫn phát triển
 
-Cập nhật: 2026-10-05. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại project.md.
+Cập nhật: 2026-10-05. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại [kế hoạch dự án](project/planning.md).
 
 Các lệnh dưới đây chạy từ root repo trừ khi có ghi thư mục khác. Cấu hình và dữ liệu mẫu dành cho local Development.
 
@@ -169,7 +169,7 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `Modules:Identity:ExposeDevelopmentTokens` | `true` trong Development, dùng token trả về để thử xác minh/reset; giá trị mặc định `false` |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
-Các thời hạn token/phiên và lockout hiện tại nằm trong [đặc tả Accounts](features/accounts.md#api-current). Khi override bằng environment variable, dùng `__` thay dấu `:`, ví dụ `ConnectionStrings__Database`.
+Các thời hạn token/phiên và lockout hiện tại nằm trong [đặc tả Accounts](features/accounts/design/README.md#api-current). Khi override bằng environment variable, dùng `__` thay dấu `:`, ví dụ `ConnectionStrings__Database`.
 
 Nguồn: [appsettings.json](../services/SCDC.Api/appsettings.json), [cấu hình Development](../services/SCDC.Api/appsettings.Development.json), [Vite config](../clients/WebClient/vite.config.js).
 
@@ -182,7 +182,7 @@ Nguồn: [appsettings.json](../services/SCDC.Api/appsettings.json), [cấu hình
 3. Đăng nhập bằng email hoặc username. Dùng `accessToken` làm Bearer token khi gọi endpoint yêu cầu xác thực.
 4. Quên mật khẩu dùng `POST /api/v1/auth/forgot-password`; response Development có thể chứa `developmentResetToken`. Dùng token đó cùng `newPassword` ở endpoint reset.
 
-Token Development chỉ phục vụ kiểm thử local; chúng không thuộc trải nghiệm sản phẩm. Hiện chưa có endpoint gửi lại xác minh và chưa có worker gửi email. Quy trình gửi email thật cần hoàn thiện trước phát hành; xem [Accounts](features/accounts.md#gaps).
+Token Development chỉ phục vụ kiểm thử local; chúng không thuộc trải nghiệm sản phẩm. Hiện chưa có endpoint gửi lại xác minh và chưa có worker gửi email. Quy trình gửi email thật cần hoàn thiện trước phát hành; xem [Accounts](features/accounts/design/README.md#gaps).
 
 Frontend quản lý phiên ở [api.js](../clients/WebClient/src/api.js). Khi có Web Locks, nó đồng bộ phiên giữa tab và khóa refresh; khi thiếu Web Locks, token giữ trong tab. Wrapper hiện có thử lại sau 401; khi tích hợp gửi tin phải xử lý rõ theo DEC-021 để không tự gửi lại mutation ngoài thao tác người dùng.
 

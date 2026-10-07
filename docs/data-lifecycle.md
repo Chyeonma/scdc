@@ -173,7 +173,7 @@ Tác giả active còn quyền được chủ động sửa tin unavailable bằ
 | Account/session/refresh tables có expiry/revoke và FK | Chưa có retention worker/family cleanup, index/terminal marker và proof reuse/cooldown sau purge |
 | `message_edits.previous_content` trong SQL/seed | Migration dữ liệu serving theo DEC-052; không tự xóa backup hoặc dùng SQL comment làm bằng chứng đã dọn |
 | Outbox/inbox trong schema | Chưa có dispatcher/retention/receipt độc lập để chống replay sau purge/restore |
-| Media vẫn chưa có module/provider | Terminal/draining và fencing theo [Media](features/voice-video.md#detailed-design), không dọn theo TTL trước quiescence |
+| Media vẫn chưa có module/provider | Terminal/draining và fencing theo [Media](features/voice-video/design/README.md#detailed-design), không dọn theo TTL trước quiescence |
 
 Nguồn: [schema.sql](../database/postgres/schema.sql), [IdentityEnums](../services/Modules/Identity/Domain/IdentityEnums.cs), [IdentityData](../services/Modules/Identity/Infrastructure/IdentityData.cs), [UserDirectory](../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs).
 

@@ -21,7 +21,7 @@ Community sở hữu cộng đồng, membership, phòng và quyền. Messaging s
 
 ## Phạm vi và hành trình
 
-Đặc tả đầy đủ cho [v1](../../releases/v1.md). [MVP](../../releases/mvp.md) chọn các gói tạo/tham gia/phòng text trước trong một API host. Gửi file trong phòng để sang đợt sau theo DEC-023; thoại/video và chia sẻ màn hình có [đặc tả riêng](../voice-video.md). Phạm vi theo mốc được quản lý ở hồ sơ release, không tạo bản sao quy tắc cho từng mốc.
+Đặc tả đầy đủ cho [v1](../../releases/v1.md). [MVP](../../releases/mvp.md) chọn các gói tạo/tham gia/phòng text trước trong một API host. Gửi file trong phòng để sang đợt sau theo DEC-023; thoại/video và chia sẻ màn hình có [đặc tả riêng](../voice-video/README.md). Phạm vi theo mốc được quản lý ở hồ sơ release, không tạo bản sao quy tắc cho từng mốc.
 
 1. Tìm cộng đồng công khai hoặc mở liên kết mời.
 2. Tham gia ngay, gửi yêu cầu chờ duyệt hoặc dùng lời mời hợp lệ theo cấu hình.
@@ -48,4 +48,4 @@ Community sở hữu cộng đồng, membership, phòng và quyền. Messaging s
 - `delivery/<gói>/plan.md` giữ scope, phụ thuộc và tiêu chí; `acceptance.md` giữ bằng chứng gắn commit đã thử. Kết quả lịch sử không được diễn giải thành kết quả của mọi revision sau này.
 - Hợp đồng máy đọc ở `docs/contracts/`, fixture ở `docs/fixtures/`; fixture không thay bằng chứng chạy. Archive giữ lịch sử đã thay thế; Git giữ lịch sử chỉnh sửa.
 
-Các tính năng Accounts, Direct Messaging và Media vẫn dùng bố cục hiện có; Community là phần áp dụng bố cục mới đầu tiên.
+Accounts, Direct Messaging và Media cùng dùng bố cục README/status/specs/design/delivery. Community giữ đặc tả theo thành phần; [Messaging dùng chung](../../shared/messaging/README.md) giữ cơ chế xử lý tin, còn quyền và hành trình tin phòng nằm ở phần tích hợp Community.

@@ -28,7 +28,7 @@ Lỗi đề xuất: validation 400; thiếu phiên 401; trái quyền quản lý
 
 Mỗi endpoint/sự kiện cần schema request/response, actor/quyền, lỗi theo [ProblemDetails](../../../architecture.md#contracts), giao dịch, version và retry. Community sở hữu metadata/thành viên/quyền; Messaging sở hữu tin. Messaging kiểm tra quyền qua `IChannelAccessChecker`, không đọc/JOIN schema Community.
 
-Cơ chế tin dùng chung được thiết kế tại [DM](../../direct-messaging.md#contracts). Dữ liệu biên TC-TEXT áp dụng cả gửi/sửa tin phòng; không chép một phiên bản quy tắc ký tự hoặc chống trùng khác ở đây.
+Cơ chế tin dùng chung được thiết kế tại [Messaging](../../../shared/messaging/README.md). Dữ liệu biên TC-TEXT áp dụng cả gửi/sửa tin phòng; không chép một phiên bản quy tắc ký tự hoặc chống trùng khác ở đây.
 
 Phương án ngày 2026-10-04; chưa sửa source/SQL hoặc có mock/proof. [OpenAPI](../../../contracts/community.openapi.json), [schema realtime](../../../contracts/community-realtime.schema.json), [fixture quyền](../../../fixtures/community-permissions.json) và [fixture fingerprint](../../../fixtures/community-operations.json) là artefact bàn giao thiết kế. Các lựa chọn sản phẩm đã xác nhận dẫn tới DEC; những thuật toán/interface/migration dưới đây còn cần rà soát kỹ thuật.
 
@@ -96,7 +96,7 @@ Hub vẫn `/hubs/chat`; schema riêng [community-realtime.schema.json](../../../
 
 Thông báo `CommunityChanged` chỉ chứa eventId/serverId/accessVersion và yêu cầu UI tải lại metadata/quyền; không mang tên phòng bị ẩn, danh sách thành viên/role hay nội dung tin. `MembershipChanged`, `JoinRequestChanged`, `MemberInvitationChanged` định tuyến đến đúng người và manager còn quyền theo user/session, không cần người ngoài subscribe server. Server tự gỡ subscription khi mất quyền, không trông chờ client xử lý thông báo. Client merge version theo từng resource; sự kiện thu hồi có membershipId cũ không được xóa cache của epoch rejoin mới. Reconnect subscribe lại rồi REST bù trang/tải lại tin cũ để nhận edit/delete.
 
-Mất quyền/rời/xóa phòng xóa cache/tin tạm của scope tương ứng và đóng composer; không ảnh hưởng DM. Draft tin phòng đề xuất dùng RAM tab cùng cơ chế DM, không lưu nội dung xuống browser storage; chưa có quyết định riêng nếu muốn lưu bền. Media nhận revocation từ cùng commit, thu hồi ≤5 giây/fail-close theo DEC-099; admission/lease/quota gate nằm trong [thiết kế media](../../voice-video.md#detailed-design), không tự coi chat proof là media proof. Voice channel đề xuất gọi IMediaRoomLifecycle tạo room DB rỗng cùng transaction, đánh dấu closing khi xóa; interface/migration chưa có, SFU provision/dừng sau commit.
+Mất quyền/rời/xóa phòng xóa cache/tin tạm của scope tương ứng và đóng composer; không ảnh hưởng DM. Draft tin phòng đề xuất dùng RAM tab cùng cơ chế DM, không lưu nội dung xuống browser storage; chưa có quyết định riêng nếu muốn lưu bền. Media nhận revocation từ cùng commit, thu hồi ≤5 giây/fail-close theo DEC-099; admission/lease/quota gate nằm trong [thiết kế media](../../voice-video/design/README.md#detailed-design), không tự coi chat proof là media proof. Voice channel đề xuất gọi IMediaRoomLifecycle tạo room DB rỗng cùng transaction, đánh dấu closing khi xóa; interface/migration chưa có, SFU provision/dừng sau commit.
 
 <a id="schema-migration"></a>
 
