@@ -38,7 +38,7 @@ Code Community trên `main` vẫn ở nền module. Chuỗi gói kế thừa: `f
 
 ## Việc còn lại
 
-- Gói role/assignment đã có bằng chứng quản lý HTTP/UI và evaluator; UC-COM-20/21 còn phụ thuộc UC-COM-25 để đối soát view/subscription sau mutation. Bước đề xuất tiếp theo là chốt gói phòng text và ACL (UC-COM-16/18/22, phần danh sách của UC-COM-17), cùng checker/guard hiện hành và hợp đồng Messaging lifecycle. Cần người dùng duyệt phạm vi trước khi triển khai.
+- Gói role/assignment đã có bằng chứng quản lý HTTP/UI và evaluator; UC-COM-20/21 còn phụ thuộc UC-COM-25 để đối soát view/subscription sau mutation. Người dùng duyệt tiếp gói phòng text và ACL (UC-COM-16/18/22, metadata/list UC-COM-17); đang triển khai trên feat/community-channels theo [kế hoạch](delivery/channels-access/plan.md) và [thiết kế](design/channels-access.md), chưa có nghiệm thu. Gói sau cần duyệt riêng.
 - UC-COM-03 còn phòng/lịch sử và đối soát theo mutation leave/rejoin; UC-COM-02 còn đường gửi request approval của UC-COM-07. Không dùng kết quả search/join để đóng các phụ thuộc còn lại.
 - UC-COM-06 còn đường chuyển approval/pending và mở phòng; join hiện tại trả conflict với approval. Rejoin chỉ kiểm chứng bằng record left fixture; chưa có leave API. Gói role đã chứng minh FK/CAS epoch cho assignment/user override; lifecycle leave và ACL API vẫn cần kiểm chứng riêng.
 - Các OQ/ACL-O giữ tại nguồn chủ trì: [Servers](specs/servers.md#gaps), [Memberships](specs/memberships.md#gaps), [Invitations](specs/invitations.md#gaps), [Channels](specs/channels.md#gaps), [Permissions](specs/permissions.md#gaps), [tích hợp](specs/integration.md#gaps). Giữ nguyên quyết định và yêu cầu proof.
