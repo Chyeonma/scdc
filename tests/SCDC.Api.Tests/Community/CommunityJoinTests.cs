@@ -92,13 +92,13 @@ public sealed partial class CommunityApiTests
         await SqlAsync("""
             INSERT INTO community.server_members(server_id,user_id,membership_id,status,version,joined_at,left_at,nickname,timeout_until,invited_by_user_id)
               VALUES(@id,@actor,@epoch,2,4,clock_timestamp()-interval '1 day',clock_timestamp(),'old nickname',clock_timestamp()+interval '1 day',@owner);
-            INSERT INTO community.roles(id,server_id,name) VALUES(@role,@id,'Old grant');
+            INSERT INTO community.roles(id,server_id,name,name_key) VALUES(@role,@id,'Old grant','old grant');
             INSERT INTO community.permissions(code,description) VALUES('manage_invites','test'),('channel_view','test') ON CONFLICT DO NOTHING;
             INSERT INTO community.role_permissions(role_id,permission_code) VALUES(@role,'manage_invites');
-            INSERT INTO community.member_roles(server_id,user_id,role_id) VALUES(@id,@actor,@role);
+            INSERT INTO community.member_roles(server_id,user_id,role_id,membership_id) VALUES(@id,@actor,@role,@epoch);
             INSERT INTO messaging.spaces(id,space_type) VALUES(@channel,3);
             INSERT INTO community.channels(space_id,server_id,name) VALUES(@channel,@id,'old-room');
-            INSERT INTO community.channel_user_overrides(space_id,server_id,user_id,permission_code,effect) VALUES(@channel,@id,@actor,'channel_view',1);
+            INSERT INTO community.channel_user_overrides(space_id,server_id,user_id,permission_code,effect,membership_id) VALUES(@channel,@id,@actor,'channel_view',1,@epoch);
             """, ("id", id), ("actor", _other.UserId), ("epoch", epoch), ("owner", _owner.UserId), ("role", Guid.CreateVersion7()), ("channel", Guid.CreateVersion7()));
         return epoch;
     }

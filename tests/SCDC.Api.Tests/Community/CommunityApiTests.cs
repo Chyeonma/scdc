@@ -206,10 +206,10 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         await SqlAsync("""
             BEGIN;
             INSERT INTO community.server_members(server_id,user_id) VALUES(@id,@actor);
-            INSERT INTO community.roles(id,server_id,name) VALUES(@role,@id,'Moderators');
+            INSERT INTO community.roles(id,server_id,name,name_key) VALUES(@role,@id,'Moderators','moderators');
             INSERT INTO community.permissions(code,description) VALUES('manage_invites','test') ON CONFLICT DO NOTHING;
             INSERT INTO community.role_permissions(role_id,permission_code) VALUES(@role,'manage_invites');
-            INSERT INTO community.member_roles(server_id,user_id,role_id) VALUES(@id,@actor,@role);
+            INSERT INTO community.member_roles(server_id,user_id,role_id,membership_id) SELECT @id,@actor,@role,membership_id FROM community.server_members WHERE server_id=@id AND user_id=@actor;
             COMMIT;
             """, ("id", id), ("actor", _other.UserId), ("role", role));
         var detail = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/servers/{id}", _other));

@@ -9,7 +9,7 @@ namespace SCDC.Modules.Community.Infrastructure.Persistence;
 internal sealed class ServerReader
 {
     internal sealed record SearchMatch(ServerSummary Server, SearchPosition Position);
-    private const string MembershipJson = """
+    internal const string MembershipJson = """
         jsonb_build_object('serverId',m.server_id,'userId',m.user_id,'membershipId',m.membership_id,
           'status',CASE m.status WHEN 1 THEN 'active' ELSE 'left' END,'joinedAt',m.joined_at,'leftAt',m.left_at,'version',m.version::text)
         """;
@@ -25,7 +25,7 @@ internal sealed class ServerReader
           (SELECT DISTINCT rp.permission_code AS code FROM community.member_roles mr
             JOIN community.roles r ON r.id=mr.role_id AND r.server_id=mr.server_id
             JOIN community.role_permissions rp ON rp.role_id=r.id
-            WHERE mr.server_id=s.id AND mr.user_id=@actor AND NOT r.is_default AND NOT r.is_system
+            WHERE mr.server_id=s.id AND mr.user_id=@actor AND mr.membership_id=m.membership_id AND NOT r.is_default AND NOT r.is_system
               AND rp.permission_code IN ('manage_channels','manage_invites','review_join_requests','manage_join_mode','manage_channel_access')) p), '[]'::jsonb) END
         """;
     private static readonly string DetailJson = $"{SummaryJson} || jsonb_build_object('ownerUserId',s.owner_user_id,'accessVersion',s.access_version::text,'myMembership',{MembershipJson},'effectivePermissions',{PermissionsJson})";

@@ -49,6 +49,26 @@ Nhánh `feat/community-join` kế thừa tạo/xem và bổ sung [tham gia trự
 
 Nhánh `feat/community-search` kế thừa join và bổ sung [tìm kiếm](../../../docs/features/community/design/search.md). Mỗi trang lọc lại public/active/nondeleted; member cũng chỉ nhận summary. Cursor purpose riêng, gắn actor/query đã chuẩn hóa/limit và hạn 24 giờ. Chỉ tìm/xem không tạo membership hoặc event.
 
+## Vai trò và quyền quản lý
+
+Nhánh `feat/community-permissions` kế thừa search và bổ sung [role/assignment](../../../docs/features/community/design/roles.md):
+
+| Route | Quyền và kết quả |
+|---|---|
+| `GET /api/v1/servers/{id}/roles` | Owner hoặc `manage_channel_access`; catalog có @everyone, keyset `limit` 1–50, mặc định 20 |
+| `POST /api/v1/servers/{id}/roles` | Owner; operation UUIDv4, tên và tập management permissions; 201 tạo, 200 replay cùng dữ liệu |
+| `PATCH /api/v1/servers/{id}/roles/{roleId}` | Owner; tên/quyền và `expectedVersion`; no-op giữ version |
+| `DELETE /api/v1/servers/{id}/roles/{roleId}?expectedVersion=…` | Owner; CAS, cascade grant/role override; legacy invite còn tham chiếu trả 409 |
+| `GET /api/v1/servers/{id}/members` | Owner hoặc `manage_channel_access`; roster active phân trang, UserSummary qua Identity, không email |
+| `GET /api/v1/servers/{id}/members/{userId}/roles` | Owner; custom role IDs cùng membership epoch/version |
+| `PUT /api/v1/servers/{id}/members/{userId}/roles` | Owner; `membershipId`, `expectedVersion`, toàn bộ tập `roleIds` |
+
+@everyone tự áp và được bảo vệ; tối đa 20 custom role. Tên 1–64 UTF-16, unique theo trim/NFC/ToLowerInvariant, phân biệt dấu. Catalog gồm `manage_channels`, `manage_invites`, `review_join_requests`, `manage_join_mode`, `manage_channel_access`; quyền quản lý là hợp của các grant custom hiện hành, không có hierarchy hoặc management DENY.
+
+Guard giữ Identity lease và server lock tới commit, kiểm tra owner/quyền hiện hành. Mutation tăng accessVersion và ghi `Community.AccessChanged.v1` cùng transaction; no-op không bump/event. Assignment và user override gắn epoch bằng FK; delete role tăng version membership bị ảnh hưởng. Event chưa được dispatcher phát. Evaluator domain có 18 fixture; chưa có endpoint ACL/phòng, checker phòng hoặc bằng chứng thu hồi realtime ≤5 giây.
+
+WebClient owner vào quản lý từ detail. Tạo role lưu operation/body trước POST để phục hồi sau reload; sửa/xóa/gán không tự replay và cần đọc lại hiện trạng sau lỗi không rõ kết quả hoặc conflict.
+
 ## Cấu hình
 
 Startup yêu cầu cấu hình explicit; source không chứa HMAC key mặc định:
@@ -92,7 +112,16 @@ dotnet run --project tools/SCDC.DbMigrator -- \
   database/postgres/migrations/002-community-search.sql
 ```
 
-002 thêm `search_name` bắt buộc, backfill theo batch 500 bằng cùng policy trim/NFC/ToLowerInvariant của create/search; giữ tên hiển thị, version và membership. Dữ liệu invalid hoặc lỗi giữa migration rollback toàn bộ. Bootstrap mới đã gồm 001/002; writer tạo server cũ không tương thích với cột mới. Writer sửa tên tương lai phải ghi key cùng transaction với tên.
+002 thêm `search_name` bắt buộc, backfill theo batch 500 bằng cùng policy trim/NFC/ToLowerInvariant của create/search; giữ tên hiển thị, version và membership. Dữ liệu invalid hoặc lỗi giữa migration rollback toàn bộ. Writer tạo server cũ không tương thích với cột mới. Writer sửa tên tương lai phải ghi key cùng transaction với tên.
+
+Sau 001/002, dừng/drain writer cũ trước khi áp 003 rồi deploy writer mới:
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/003-community-roles.sql
+```
+
+003 backfill role key theo batch 500, thêm role version/FK epoch/catalog và operation `create_role`. Preflight chặn collision, tên chưa hợp lệ, quá 20 custom role hoặc quyền/override ngoài catalog; giữ dữ liệu để sửa có review, không tự đổi quyền. Bootstrap mới đã gồm 001/002/003; writer role/grant/override cũ không tương thích. Chỉ runner được áp trên DB cần giữ dữ liệu; `schema.sql` có DROP SCHEMA.
 
 ## Kiểm thử
 
@@ -102,4 +131,4 @@ Integration tests Community cần PostgreSQL 18 riêng, đã bootstrap/migrate, 
 dotnet test tests/SCDC.Api.Tests --configuration Release
 ```
 
-Factory dùng khóa tổng hợp và key ring tạm riêng. Kiểm thử bao gồm migration legacy/bootstrap, race qua hai transaction, fault sau insert, điều kiện Identity/expiry, fingerprint fixture, privacy, cursor và retry qua restart/rotation. Đây là kiểm chứng backend; UI và tải thực tế được nghiệm thu ở bước tiếp theo.
+Factory dùng khóa tổng hợp và key ring tạm riêng. Kiểm thử bao gồm migration legacy/bootstrap, batch vượt 500, race qua hai transaction, rollback outbox, điều kiện Identity/expiry, fingerprint/evaluator fixtures, privacy, cursor, epoch/CAS và retry qua restart/rotation. Kết quả backend/UI theo từng gói ở [hồ sơ giao hàng](../../../docs/features/community/delivery/README.md); tải và thu hồi realtime cần kiểm chứng riêng khi có runtime tương ứng.
