@@ -8,8 +8,9 @@ Trạng thái: **Chờ người dùng test FE/BE**. Chỉ thực hiện P1-T01. 
 |---|---|
 | Branch / base | `feat/dm-p1-t01-user-search` / `message` tại `170d95933190d71df74de6ebcc537a5a8c41ce56` |
 | Worktree thực thi | `E:\Project\SCDC\dm-message-integration`; repository gốc `E:\Project\SCDC\scdc` giữ nguyên thay đổi người dùng |
-| Commit / build | Đọc `git rev-parse HEAD` trong worktree; metadata `.dm-acceptance/runs/baseline/p1-build.json` có commit, image IDs, test counts và schema hash |
-| Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Push và kiểm tra SHA sau commit; chưa tạo PR, chưa merge P1 |
+| Commit implementation đã kiểm thử | `ca75a0d3ed96b14249d1794f91340808638d33c2` |
+| Commit bàn giao / build | Bao gồm commit docs bằng chứng tiếp theo; đọc `git rev-parse HEAD` trong worktree hoặc `.dm-acceptance/runs/baseline/p1-build.json`. Metadata ghi implementation commit, handoff commit, image IDs, test counts và schema hash; docs tiếp theo không đổi source/config/schema |
+| Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Đã push implementation `ca75a0d`; remote SHA hiện hành được kiểm tra trùng handoff commit trong metadata. Chưa tạo PR, chưa merge P1 |
 | Frontend | http://localhost:15300 |
 | API / Swagger | http://localhost:15026/api/v1 / http://localhost:15026/swagger |
 | Proxy Swagger | http://localhost:15300/swagger |
@@ -245,7 +246,7 @@ Agent: **Đạt**. Người dùng: **Chưa xác nhận**. Sau test phải tắt 
 | Backend toàn bộ | .NET10/container + PostgreSQL thật, `.dm-acceptance/backend-artifacts/test-results/dm-acceptance.trx` | 31/31 | Chưa xác nhận |
 | Frontend unit | `npm.cmd test`, API encode/cursor/abort và503 không retry/mock | 8/8 | Chưa xác nhận |
 | FE production build / API publish | Vite build + Docker .NET publish | Đạt | Chưa xác nhận |
-| C01/C02/C03/C04 browser | Edge, 5 Playwright tests, `.dm-acceptance/e2e-p1/results.json` | 5/5 | Chưa xác nhận |
+| C01/C02/C03/C04 browser | Edge154.0.4258.53, 5 Playwright tests, `.dm-acceptance/e2e-p1/results.json`; `browser-metadata.json` và ảnh modal `recipient-selection.png` không token | 5/5 | Chưa xác nhận |
 | HTTP/DB smoke C01–C04 | `.dm-acceptance/runs/baseline/p1-search-smoke.json` | Đạt, counts0/0/0 không đổi | Chưa xác nhận |
 | Cursor restart | Cùng actor/session/cursor qua restart API thật; `p1-search-persistence.json` | Đạt, trang2 vẫn3 IDs | Chưa xác nhận |
 | Disabled/deleted/unverified-active | Dedicated integration fixture, SQL trạng thái đúng enum/constraint; API search không trả recipient không hợp lệ | Đạt | Chưa xác nhận; manual K disabled thuộc P6-T02 |
