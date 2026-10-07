@@ -7,7 +7,7 @@ Trạng thái task: **Chờ người dùng test FE/BE và review baseline**. Ph�
 | Trường | Giá trị |
 |---|---|
 | Branch / base | `chore/dm-p0-t01-acceptance-baseline` / `fe3c54a` |
-| Commit bàn giao | Đọc `git rev-parse HEAD` sau commit P0; runtime metadata ở `.dm-acceptance/runs/baseline/build.json` |
+| Commit implementation đã kiểm thử | `62fd137ee084eeaf1540131b12f2bb132063dba8`; runtime metadata ở `.dm-acceptance/runs/baseline/build.json`. Commit tài liệu Git-flow tiếp theo không đổi source/config/schema/bản chạy |
 | Web | http://localhost:15300 |
 | API | http://localhost:15026/api/v1 |
 | Swagger Identity/Health | http://localhost:15026/swagger |
@@ -19,7 +19,9 @@ Trạng thái task: **Chờ người dùng test FE/BE và review baseline**. Ph�
 | Fixture | 28 user thật: A/B/C/K/S01–23 active/verified (27), U pending/unverified (1) |
 | DM rows | direct_conversations/messages/message_edits đều0 trong DB thử P0 |
 | Key/config | `.env.dm-test`, `.dm-acceptance/keyrings/hmac`, cursor dir riêng; P0 Foundation chưa tiêu thụ cursor/HMAC config |
-| PR/push/merge | Chưa thực hiện; chỉ branch/commit local trong phạm vi P0 |
+| Nhánh tích hợp / PR target | `message`, đã push từ main remote tại `2096e0bc493ff128467c836e63edacdd8027d590` |
+| Push task | Đã push `origin/chore/dm-p0-t01-acceptance-baseline`; commit implementation `62fd137` và commit cập nhật Git-flow sau đó. Kiểm tra SHA hiện hành bằng `git ls-remote --heads origin chore/dm-p0-t01-acceptance-baseline`; đối chiếu `git rev-parse HEAD` |
+| PR / merge | Chưa tạo PR; chưa merge. Quyền push/merge vào `message` đã cấp ngày 07/10/2026; merge chỉ sau người dùng PASS FE/BE và review baseline trên build bàn giao |
 
 Mật khẩu chung của **tài khoản fixture local**: `DmDemo2026!Local`. Email example.test không nhận thư thật. A/B/C/K/S được verify bằng Development token qua API thật; đây không phải bằng chứng gửi email sản phẩm.
 
@@ -230,4 +232,4 @@ Thao tác: ... | Mong đợi: ... | Thực tế: ...
 Sửa cùng task rồi bàn giao lại; chưa thực hiện DM-P1-T01.
 ```
 
-Người dùng FE/BE: **Chưa xác nhận**. Baseline review: **Chưa xác nhận**. Merge/publish: chưa thực hiện. Task dừng ở **Chờ người dùng test**.
+Người dùng FE/BE: **Chưa xác nhận**. Baseline review: **Chưa xác nhận**. Push task và `message`: đã thực hiện. Merge vào `message`: chờ PASS FE/BE và baseline review. Publish: chưa thực hiện. Task dừng ở **Chờ người dùng test**.

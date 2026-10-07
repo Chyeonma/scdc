@@ -1,6 +1,6 @@
 # Kế hoạch triển khai nhắn tin riêng SCDC
 
-Cập nhật: **07/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. Kế hoạch này chưa triển khai tính năng, tạo dữ liệu DB hoặc thay đổi Git.
+Cập nhật: **07/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, đang chờ người dùng test theo [biên bản P0](../acceptance/direct-messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 vẫn trên baseline đã kiểm thử, chưa merge vào `message`.
 
 Mục tiêu là bàn giao từng task có thể kiểm tra qua **frontend và backend thật**. Sau mỗi task, người dùng tự test với bộ dữ liệu được cung cấp, xác nhận kết quả rồi mới thực hiện task tiếp theo. Agent tự chạy test kỹ thuật trước bàn giao; kết quả tự động không thay xác nhận của người dùng.
 
@@ -38,13 +38,13 @@ Nếu người dùng giao thực hiện toàn kế hoạch theo chế độ dừ
 4. Chuẩn bị bản chạy được, dữ liệu mẫu và hướng dẫn cụ thể: URL, tài khoản, ID trả về, request, từng thao tác UI, kết quả mong đợi, cách thử lỗi và câu lệnh kiểm tra DB chỉ đọc.
 5. Ghi biên bản theo [mẫu nghiệm thu task](../templates/dm-task-acceptance.md), trạng thái **Chờ người dùng test**. Chỉ ghi ca agent đã chạy; phần người dùng còn trống.
 6. **Dừng task và chờ phản hồi.** Không tự merge, tạo task kế hoặc tiếp tục phase. Không xem im lặng, câu hỏi hoặc “đang test” là PASS.
-7. Sau PASS, chỉ merge nếu được phép merge. Trước task kế, tích hợp baseline và chạy smoke; thay đổi build ảnh hưởng bằng chứng phải ghi và kiểm tra lại phần liên quan.
+7. Quyền push nhánh task và merge vào `message` đã được cấp trong phiên. Sau PASS FE/BE, kiểm tra nhánh task đã push thành công và remote SHA đúng build được duyệt, merge vào `message`, chạy smoke rồi push và kiểm tra remote. Trước task kế, baseline phải chứa task trước; thay đổi build ảnh hưởng bằng chứng phải ghi và kiểm tra lại phần liên quan.
 
 Mẫu phản hồi người dùng:
 
 ```text
 PASS DM-P1-T01 | FE: đạt | BE: đạt | Build: <commit>
-Cho phép merge và thực hiện DM-P1-T02.
+Merge vào message theo quyền đã cấp. Giao thực hiện DM-P1-T02.
 ```
 
 ```text
@@ -63,7 +63,7 @@ Các đường dẫn dự kiến sau khi P0 bàn giao: Web `http://localhost:153
 
 ### Tài khoản
 
-Fixture máy đọc: [dm-demo-plan.json](../fixtures/dm-demo-plan.json). **Đây là dữ liệu dự kiến, chưa tồn tại trong DB.** Mật khẩu mẫu dùng riêng môi trường local: `DmDemo2026!Local`.
+Fixture máy đọc: [dm-demo-plan.json](../fixtures/dm-demo-plan.json). **Fixture này là kế hoạch; P0 đã tạo 28 user trong DB thử, ID thật nằm trong biên bản P0 và manifest local.** Mật khẩu mẫu dùng riêng môi trường local: `DmDemo2026!Local`.
 
 | Alias | Username | Email thử | Display name | Trạng thái và mục đích |
 |---|---|---|---|---|
@@ -132,34 +132,49 @@ Mỗi task một branch, một PR và một biên bản. Không commit tất c�
 
 | Việc | Quy tắc |
 |---|---|
-| Base | Task đầu từ baseline `main` đã kiểm tra. Task sau từ `main` đã chứa task trước được duyệt; không tự dựa vào tip nhánh Messaging cũ |
+| Nhánh tích hợp | `message`, đã push từ `origin/main` tại `2096e0b`; giữ thay đổi tài liệu mới trên nhánh này khi tích hợp P0 |
+| Base | Task mới từ `origin/message` đã kiểm tra và chứa predecessor đã PASS. P0 đã tồn tại từ `main` tại `fe3c54a`, giữ baseline đã test; chưa rebase/merge khi đang chờ test. Không tự dựa vào tip nhánh Messaging cũ |
 | Branch | Tên chính xác ở từng task bên dưới; nhánh đang tồn tại thì kiểm tra commit/PR và tiếp tục đúng task |
 | Commit | `feat(messaging): DM-Px-Tyy <kết quả>`; hạ tầng dùng `chore`, kiểm thử dùng `test`, docs dùng `docs`, sửa lỗi dùng `fix` |
 | Subtask | Các subtask cùng task dùng chung branch/PR; commit có thể ghi mã như `DM-P1-T01.2`, không tạo branch riêng cho mỗi checkbox |
 | Tái sử dụng | Đọc diff/contract của nhánh cũ; lấy phần tương thích có chọn lọc và ghi provenance. Không merge cả chuỗi nhánh P1–P9 chỉ vì cùng chủ đề |
-| PR | Base `main`; tiêu đề có task ID; mô tả phạm vi, migration, FE/BE test, dataset, hướng dẫn người dùng và status Chờ test. Chỉ push/tạo PR khi task được giao cho phép hoặc quyền đã được cấp; thiếu auth giữ kết quả local và báo rõ |
+| Push / PR | Push nhánh task được giao lên `origin`, kiểm tra remote SHA trùng HEAD và ghi biên bản. PR nếu tạo có base `message`, tiêu đề có task ID, phạm vi/migration/FE/BE/dataset/hướng dẫn và status Chờ test. Thiếu auth hoặc push lỗi: giữ local, báo rõ, chưa merge |
 | Người dùng FAIL | Sửa trên branch task; commit `fix(messaging): DM-Px-Tyy ...`, cập nhật build/recipe, chạy regression liên quan và dừng chờ test lại |
-| Người dùng PASS | Ghi xác nhận và build. Merge khi đã được phép; ưu tiên squash để một task một thay đổi dễ review. Smoke baseline sau merge |
+| Người dùng PASS | Ghi xác nhận FE/BE và build; fetch/kiểm tra remote SHA đúng build đã duyệt, merge riêng task vào `message` với `--no-ff` để giữ lịch sử task. Chạy smoke/kiểm tra liên quan, push `message`, xác minh remote SHA và ancestry. Conflict làm đổi hành vi/config/schema phải bàn giao lại trước khi coi là đạt |
+| Đồng bộ / main | Không force push. Nếu remote `message` đổi đồng thời, fetch và kiểm tra lại trước push. Việc tích hợp `message` vào `main` hoặc phát hành cần yêu cầu riêng |
 | Task kế | Chỉ bắt đầu khi có quyền đi tiếp; base phải chứa predecessor. Không lấy PASS của build cũ làm PASS cho thay đổi hành vi mới |
 | Task mới khi predecessor chưa merge | Dừng phần phụ thuộc; chỉ dùng stacked branch nếu người dùng cho phép rõ. Ghi base/PR dependency và chạy lại sau rebase |
 
 Ví dụ lệnh tham chiếu, chỉ chạy lúc được giao task và working tree đã xử lý an toàn:
 
 ```powershell
-git switch main
-git switch -c feat/dm-p1-t01-user-search
+git fetch origin message
+# Chỉ tạo task khi predecessor đã PASS và nằm trong origin/message.
+git switch -c feat/dm-p1-t01-user-search origin/message
 # Triển khai, test, stage danh sách file thuộc task rồi commit.
 git commit -m "feat(messaging): DM-P1-T01 search verified recipients"
-# Nếu đã được phép push/PR:
 git push -u origin feat/dm-p1-t01-user-search
-# Draft PR -> người dùng test -> PASS và cho phép merge -> tích hợp.
+git rev-parse HEAD
+git ls-remote --heads origin feat/dm-p1-t01-user-search
+# Hai SHA phải trùng; bàn giao, DỪNG chờ người dùng PASS FE/BE.
+# Chỉ chạy đoạn sau khi PASS đúng build và working tree an toàn.
+git fetch origin message feat/dm-p1-t01-user-search
+git switch message
+git merge --ff-only origin/message
+git merge --no-ff origin/feat/dm-p1-t01-user-search -m "merge(dm): DM-P1-T01 into message"
+# Chạy smoke/kiểm tra liên quan; nếu đổi hành vi phải bàn giao test lại.
+git push origin message
+git rev-parse message
+git ls-remote --heads origin message
+git merge-base --is-ancestor origin/feat/dm-p1-t01-user-search origin/message
+# SHA message phải trùng remote, ancestry exit 0; sau đó mới xét task kế.
 ```
 
 Chi tiết lệnh chạy, setup và response phải được agent kiểm chứng lúc triển khai. Các lệnh trong kế hoạch không phải bằng chứng đã chạy.
 
 ## Tổng hợp phase và task
 
-Tất cả **20 task đang Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đang Chờ người dùng test; 19 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|

@@ -9,7 +9,9 @@ Từng prompt có bốn ví dụ C01–C04 trong [prompt DM](../plans/direct-mes
 | Trường | Giá trị cần điền |
 |---|---|
 | Task / phase / scope | ... |
-| Branch / base / PR | ... |
+| Branch task / base commit / PR | ...; PR base `message` |
+| Remote task SHA / bằng chứng push thành công | ...; trùng commit bàn giao |
+| Nhánh tích hợp / remote SHA trước merge | `message` / ... |
 | Commit/build đang chạy | ... |
 | Schema/migration/config version | ... |
 | Web/API/Swagger URL thực tế | ... |
@@ -89,7 +91,9 @@ Chỉ điền sau khi người dùng phản hồi rõ, gắn build đã test.
 
 - Người dùng PASS/FAIL, nội dung phản hồi và thời điểm: Chưa có.
 - Build và phạm vi FE/BE người dùng đã kiểm tra: Chưa có.
-- Quyền merge đã cấp trong phiên hay phản hồi này: Chưa ghi nhận.
+- Quyền push nhánh task và merge vào `message`: đã cấp trong phiên ngày 07/10/2026; điều kiện vẫn là người dùng PASS FE/BE trên build bàn giao.
+- Commit merge vào `message` / smoke sau merge / SHA remote đã xác minh / ancestry task: Chưa thực hiện.
+- Conflict hoặc thay đổi hành vi/config/schema khi tích hợp và kết quả kiểm tra lại: ...
 - Quyền task kế / ID task kế: Chưa ghi nhận.
 - Kết luận: **Chờ người dùng test** sau khi agent bàn giao bản chạy đạt; không tự đi bước kế.
 - Gate phát hành/v1 còn mở và lỗi tồn: ...

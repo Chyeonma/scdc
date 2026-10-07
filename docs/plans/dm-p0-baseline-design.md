@@ -2,7 +2,7 @@
 
 Trạng thái: **agent đã chọn thiết kế cho gói; chờ người dùng review/test P0**. Đây là contract mục tiêu, chưa có API/Hub/writer DM trên branch này. Nguồn nghiệp vụ vẫn là [DM](../features/direct-messaging.md), [Accounts](../features/accounts.md), [kiến trúc](../architecture.md), [lifecycle](../data-lifecycle.md). Không đổi scope hoặc policy sản phẩm.
 
-Base source `fe3c54a`; branch `chore/dm-p0-t01-acceptance-baseline`. Không cherry-pick/merge code DM cũ ở P0. Các ref dưới đây là commit local đã đọc, không suy thành bằng chứng runtime của gói mới.
+Base source `fe3c54a`; branch `chore/dm-p0-t01-acceptance-baseline`. Nhánh tích hợp/PR target là `message`, tạo từ `origin/main` tại `2096e0b` và đã push. P0 đã push nhưng chưa merge: chờ người dùng PASS FE/BE và review baseline. Chênh lệch main mới là tài liệu/README; khi tích hợp phải giữ cấu trúc/docs mới và xử lý conflict có đối chiếu, không tự rebase bản đang test. Không cherry-pick/merge code DM cũ ở P0. Các ref dưới đây là commit local đã đọc, không suy thành bằng chứng runtime của gói mới.
 
 ## Reuse, replace và defer
 
