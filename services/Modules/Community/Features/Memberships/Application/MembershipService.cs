@@ -78,7 +78,9 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
         var membershipId = Guid.CreateVersion7();
         if (existing is not null)
         {
-            // Assignments in the current schema are user-bound. Clear them before changing the epoch.
+            if (!await ChannelAccessMaintenance.BumpAsync(scope, serverId, actor.UserId, false, ct))
+                throw new RequestFailure(Error.Conflict("VERSION_LIMIT_REACHED", "A channel access version limit has been reached."));
+            // Remove grants/overrides of the departing epoch before changing it.
             await using var clear = scope.CreateCommand("""
                 DELETE FROM community.member_roles WHERE server_id=@id AND user_id=@actor;
                 DELETE FROM community.channel_user_overrides WHERE server_id=@id AND user_id=@actor;

@@ -7,10 +7,12 @@ using Npgsql;
 
 namespace SCDC.Modules.Community.Features.Permissions.Infrastructure;
 
-internal sealed record ManagementLease(AccountAccessCheck Account, int ServerVersion, int AccessVersion);
+internal sealed record ManagementLease(AccountAccessCheck Account, int ServerVersion, int AccessVersion,
+    Guid MembershipId, bool IsOwner, IReadOnlyList<string> Permissions);
 internal sealed class CommunityManagementGuard(IAccountAccessGuard accounts, TimeProvider clock)
 {
-    public async Task<ManagementLease> AcquireAsync(RelationalWorkScope scope, AccountActor actor, Guid server, bool write, bool ownerOnly, CancellationToken ct)
+    public async Task<ManagementLease> AcquireAsync(RelationalWorkScope scope, AccountActor actor, Guid server, bool write, bool ownerOnly, CancellationToken ct,
+        string? requiredPermission = "manage_channel_access")
     {
         AccountAccessCheck account;
         try { account=await accounts.AcquireAsync(actor,scope.Transaction,ct); }
@@ -25,11 +27,14 @@ internal sealed class CommunityManagementGuard(IAccountAccessGuard accounts, Tim
             if(!await rows.ReadAsync(ct)||rows.GetInt16(3)!=1||rows.GetBoolean(4))throw PermissionFailure.Missing();
             owner=rows.GetGuid(0);version=rows.GetInt32(1);access=rows.GetInt32(2);
         }
+        Guid membershipId;
         await using(var member=scope.CreateCommand("SELECT membership_id FROM community.server_members WHERE server_id=@server AND user_id=@actor AND status=1"))
         {
             member.Parameters.AddWithValue("server",server);member.Parameters.AddWithValue("actor",actor.UserId);
-            if(await member.ExecuteScalarAsync(ct) is not Guid)throw PermissionFailure.Missing();
+            if(await member.ExecuteScalarAsync(ct) is not Guid epoch)throw PermissionFailure.Missing();
+            membershipId = epoch;
         }
+        IReadOnlyList<string> permissions = ManagementPermissions.Codes.Order(StringComparer.Ordinal).ToArray();
         if(owner!=actor.UserId)
         {
             if(ownerOnly)throw new PermissionFailure(Error.Forbidden("PERMISSION_DENIED","Only the current owner can manage roles."));
@@ -44,10 +49,11 @@ internal sealed class CommunityManagementGuard(IAccountAccessGuard accounts, Tim
             query.Parameters.AddWithValue("server",server);query.Parameters.AddWithValue("actor",actor.UserId);
             await using var rows=await query.ExecuteReaderAsync(ct);
             while(await rows.ReadAsync(ct))grants.Add(new(ViewEffect.Inherit,[rows.GetString(0)]));
-            if(!PermissionEvaluator.Management(true,false,grants).Contains("manage_channel_access"))
-                throw new PermissionFailure(Error.Forbidden("PERMISSION_DENIED","Role catalog access requires manage_channel_access."));
+            permissions = PermissionEvaluator.Management(true,false,grants);
+            if(requiredPermission is not null && !permissions.Contains(requiredPermission))
+                throw new PermissionFailure(Error.Forbidden("PERMISSION_DENIED","The required management permission is missing."));
         }
-        return new(account,version,access);
+        return new(account,version,access,membershipId,owner==actor.UserId,permissions);
     }
     public void EnsureLease(AccountAccessCheck account)
     {

@@ -144,10 +144,10 @@ VALUES
     ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000003', 'Charlie', 1, now() - interval '28 days', '01990000-0000-7000-8000-000000000001');
 
 INSERT INTO community.channels
-    (space_id, server_id, name, topic, visibility, position, created_at, updated_at)
+    (space_id, server_id, name, topic, default_view, position, created_at, updated_at, name_key)
 VALUES
-    ('01990000-0000-7300-8000-000000000003', '01990000-0000-7400-8000-000000000001', 'general', 'Trao đổi chung của dự án', 1, 0, now() - interval '30 days', now() - interval '30 days'),
-    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', 'backend', 'Thảo luận API và database', 1, 1, now() - interval '30 days', now() - interval '30 days');
+    ('01990000-0000-7300-8000-000000000003', '01990000-0000-7400-8000-000000000001', 'general', 'Trao đổi chung của dự án', 1, 0, now() - interval '30 days', now() - interval '30 days', 'general'),
+    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', 'backend', 'Thảo luận API và database', 1, 1, now() - interval '30 days', now() - interval '30 days', 'backend');
 
 INSERT INTO community.roles
     (id, server_id, name, color, position, is_default, is_system, created_at, updated_at, name_key)

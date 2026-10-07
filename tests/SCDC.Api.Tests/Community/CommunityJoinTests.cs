@@ -97,7 +97,7 @@ public sealed partial class CommunityApiTests
             INSERT INTO community.role_permissions(role_id,permission_code) VALUES(@role,'manage_invites');
             INSERT INTO community.member_roles(server_id,user_id,role_id,membership_id) VALUES(@id,@actor,@role,@epoch);
             INSERT INTO messaging.spaces(id,space_type) VALUES(@channel,3);
-            INSERT INTO community.channels(space_id,server_id,name) VALUES(@channel,@id,'old-room');
+            INSERT INTO community.channels(space_id,server_id,name,name_key) VALUES(@channel,@id,'old-room','old-room');
             INSERT INTO community.channel_user_overrides(space_id,server_id,user_id,permission_code,effect,membership_id) VALUES(@channel,@id,@actor,'channel_view',1,@epoch);
             """, ("id", id), ("actor", _other.UserId), ("epoch", epoch), ("owner", _owner.UserId), ("role", Guid.CreateVersion7()), ("channel", Guid.CreateVersion7()));
         return epoch;
@@ -115,6 +115,12 @@ public sealed partial class CommunityApiTests
         Assert.True(result.GetProperty("joinedAt").GetDateTimeOffset() > DateTimeOffset.UtcNow.AddMinutes(-1));
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.member_roles WHERE server_id=@id AND user_id=@actor", ("id", id), ("actor", _other.UserId)));
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.channel_user_overrides WHERE server_id=@id AND user_id=@actor", ("id", id), ("actor", _other.UserId)));
+        Assert.Equal(2, await SqlAsync("SELECT access_version FROM community.channels WHERE server_id=@id", ("id", id)));
+        var channel = ChannelIds(await JsonAsync(await ChannelListAsync(id))).Single();
+        await AssertErrorAsync(await AclPutAsync(id, channel), HttpStatusCode.Conflict, "VERSION_CONFLICT");
+        await AssertErrorAsync(await AclPutAsync(id, channel, version: "2", members:
+            [new { userId = _other.UserId, membershipId = previous, effect = "allow" }]),
+            HttpStatusCode.Conflict, "MEMBERSHIP_CHANGED");
         Assert.Equal(true, await SqlAsync("SELECT nickname IS NULL AND timeout_until IS NULL AND invited_by_user_id IS NULL AND left_at IS NULL FROM community.server_members WHERE server_id=@id AND user_id=@actor", ("id", id), ("actor", _other.UserId)));
         var detail = await JsonAsync(await SendAsync(HttpMethod.Get, $"/api/v1/servers/{id}", _other));
         Assert.Empty(detail.GetProperty("effectivePermissions").EnumerateArray());
@@ -234,6 +240,7 @@ public sealed partial class CommunityApiTests
             Assert.Equal("4", membership.GetProperty("version").GetString());
             Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.member_roles WHERE server_id=@id AND user_id=@actor", ("id", id), ("actor", _other.UserId)));
             Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.channel_user_overrides WHERE server_id=@id AND user_id=@actor", ("id", id), ("actor", _other.UserId)));
+            Assert.Equal(1, await SqlAsync("SELECT access_version FROM community.channels WHERE server_id=@id", ("id", id)));
             Assert.Equal(true, await SqlAsync("SELECT version=1 AND access_version=1 FROM community.servers WHERE id=@id", ("id", id)));
             Assert.Equal(0L, await JoinedEventsAsync(id));
         }

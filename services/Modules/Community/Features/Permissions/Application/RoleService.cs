@@ -123,6 +123,8 @@ internal sealed class RoleService(RelationalWorkScopeFactory scopes, CommunityMa
                 throw PermissionFailure.Conflict("VERSION_LIMIT_REACHED","A membership version limit has been reached.");
             if(await Scalar(scope,"SELECT EXISTS(SELECT 1 FROM community.invites WHERE server_id=@server AND default_role_id=@role)",ct,("server",server),("role",role)) is true)
                 throw PermissionFailure.Conflict("ROLE_IN_USE","A legacy invitation still references this role.");
+            if(!await ChannelAccessMaintenance.BumpAsync(scope,server,role,true,ct))
+                throw PermissionFailure.Conflict("VERSION_LIMIT_REACHED","A channel access version limit has been reached.");
             await Write(scope,"UPDATE community.server_members m SET version=version+1 WHERE m.server_id=@server AND EXISTS(SELECT 1 FROM community.member_roles mr WHERE mr.server_id=m.server_id AND mr.user_id=m.user_id AND mr.membership_id=m.membership_id AND mr.role_id=@role)",ct,("server",server),("role",role));
             await Write(scope,"DELETE FROM community.roles WHERE id=@role AND server_id=@server",ct,("role",role),("server",server));
             await Changed(scope,server,lease,"role_deleted",role,null,null,ct);

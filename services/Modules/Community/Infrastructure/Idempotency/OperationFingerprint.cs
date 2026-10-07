@@ -7,6 +7,21 @@ namespace SCDC.Modules.Community.Infrastructure.Idempotency;
 
 internal static class OperationFingerprint
 {
+    public static byte[] ComputeChannel(byte[] key, Guid actor, Guid server, Guid operation, string name,
+        string? topic, short kind, short version = 1)
+    {
+        if (version != 1) throw new FingerprintKeyUnavailableException();
+        using var body = new MemoryStream();
+        WriteString(body, name);
+        body.WriteByte(topic is null ? (byte)0 : (byte)1);
+        if (topic is not null) WriteString(body, topic);
+        body.WriteByte((byte)kind);
+        using var input = new MemoryStream();
+        input.Write(Encoding.ASCII.GetBytes("SCDC.Community.Write.v1\0create_channel\0"));
+        WriteGuid(input, actor); WriteGuid(input, server); WriteGuid(input, operation);
+        WriteInt(input, checked((int)body.Length)); input.Write(body.ToArray());
+        return HMACSHA256.HashData(key, input.ToArray());
+    }
     public static byte[] ComputeRole(byte[] key, Guid actor, Guid server, Guid operation, string name,
         IReadOnlyList<string> permissions, short version = 1)
     {

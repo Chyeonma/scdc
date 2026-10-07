@@ -7,6 +7,18 @@ namespace SCDC.Api.Tests.Community;
 
 public sealed class CommunityPermissionPolicyTests
 {
+    [Fact]
+    public void Channel_fingerprint_matches_published_unicode_and_nullable_topic_fixture()
+    {
+        using var data = JsonDocument.Parse(File.ReadAllText(Path.Combine(CommunityMigrationTests.RepoRoot, "docs/fixtures/community-operations.json")));
+        var root = data.RootElement;
+        var item = root.GetProperty("cases").EnumerateArray().Single(c => c.GetProperty("operationKind").GetString() == "create_channel");
+        var body = item.GetProperty("normalizedBody");
+        var key = Convert.FromHexString(root.GetProperty("syntheticKeyHex").GetString()!);
+        var hash = OperationFingerprint.ComputeChannel(key, root.GetProperty("actorId").GetGuid(), item.GetProperty("scopeId").GetGuid(),
+            root.GetProperty("clientOperationId").GetGuid(), body.GetProperty("name").GetString()!, null, 1);
+        Assert.Equal(item.GetProperty("expectedFingerprintHex").GetString(), Convert.ToHexStringLower(hash));
+    }
     public static IEnumerable<object[]> Fixtures()
     {
         using var data=JsonDocument.Parse(File.ReadAllText(Path.Combine(CommunityMigrationTests.RepoRoot,"docs/fixtures/community-permissions.json")));

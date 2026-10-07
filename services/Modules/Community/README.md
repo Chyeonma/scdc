@@ -65,9 +65,28 @@ Nhánh `feat/community-permissions` kế thừa search và bổ sung [role/assig
 
 @everyone tự áp và được bảo vệ; tối đa 20 custom role. Tên 1–64 UTF-16, unique theo trim/NFC/ToLowerInvariant, phân biệt dấu. Catalog gồm `manage_channels`, `manage_invites`, `review_join_requests`, `manage_join_mode`, `manage_channel_access`; quyền quản lý là hợp của các grant custom hiện hành, không có hierarchy hoặc management DENY.
 
-Guard giữ Identity lease và server lock tới commit, kiểm tra owner/quyền hiện hành. Mutation tăng accessVersion và ghi `Community.AccessChanged.v1` cùng transaction; no-op không bump/event. Assignment và user override gắn epoch bằng FK; delete role tăng version membership bị ảnh hưởng. Event chưa được dispatcher phát. Evaluator domain có 18 fixture; chưa có endpoint ACL/phòng, checker phòng hoặc bằng chứng thu hồi realtime ≤5 giây.
+Guard giữ Identity lease và server lock tới commit, kiểm tra owner/quyền hiện hành. Mutation tăng accessVersion và ghi `Community.AccessChanged.v1` cùng transaction; no-op không bump/event. Assignment và user override gắn epoch bằng FK; delete role tăng version membership bị ảnh hưởng. Event chưa được dispatcher phát. Evaluator domain có 18 fixture; gói phòng dưới đây kiểm chứng policy qua API, còn thu hồi realtime ≤5 giây cần runtime riêng.
 
 WebClient owner vào quản lý từ detail. Tạo role lưu operation/body trước POST để phục hồi sau reload; sửa/xóa/gán không tự replay và cần đọc lại hiện trạng sau lỗi không rõ kết quả hoặc conflict.
+
+## Phòng văn bản và ACL
+
+Nhánh `feat/community-channels` kế thừa permissions và bổ sung [gói phòng/ACL](../../../docs/features/community/design/channels-access.md):
+
+| Route | Quyền và kết quả |
+|---|---|
+| `GET /api/v1/servers/{id}/channels` | Member active; chỉ phòng hiện hành được xem, lọc quyền trước phân trang; limit 1–50, mặc định 20 |
+| `POST /api/v1/servers/{id}/channels` | Owner hoặc `manage_channels`; UUIDv4 operation, name/topic, kind text; 201 tạo, 200 replay hiện trạng |
+| `GET /api/v1/servers/{id}/channels/{channelId}` | Phải còn view; chỉ metadata, hidden/deleted/cross-server trả 404 |
+| `PATCH /api/v1/servers/{id}/channels/{channelId}` | View và owner/`manage_channels`; name/topic, `expectedVersion`; kind bất biến |
+| `GET /api/v1/servers/{id}/channels/{channelId}/access` | View và owner/`manage_channel_access`; snapshot toàn bộ ACL |
+| `PUT /api/v1/servers/{id}/channels/{channelId}/access` | Cùng điều kiện; `expectedAccessVersion`, defaultView, role/member overrides đầy đủ; member đúng epoch active |
+
+Create gọi `IChatSpaceLifecycle` để Messaging tạo space cùng transaction với channel/operation/outbox. Policy gồm default, role deny-wins (cả @everyone), personal override đúng epoch và owner sau điều kiện nền. Role delete/rejoin dọn override cũng tăng channel accessVersion để snapshot cũ không ghi đè. No-op không bump version/event.
+
+`IChannelAccessGuard` giữ Identity/server/channel share locks trong transaction do caller sở hữu, trả membership epoch, access versions và hạn phiên. Caller phải kiểm tra hạn lease ngay trước commit cùng trạng thái space/tác giả trong Messaging. Guard đã kiểm chứng race với role/ACL; chưa có writer tin hoặc Hub sử dụng nó.
+
+WebClient vào phòng từ server detail, tạo/sửa metadata và ACL qua API thật. Pending create gắn actor/server và giữ nguyên operation/body qua reload; conflict hoặc kết quả sửa không rõ cần GET đối soát. Chưa có xóa phòng, voice lifecycle, lịch sử/gửi tin hoặc realtime.
 
 ## Cấu hình
 
@@ -121,7 +140,28 @@ dotnet run --project tools/SCDC.DbMigrator -- \
   database/postgres/migrations/003-community-roles.sql
 ```
 
-003 backfill role key theo batch 500, thêm role version/FK epoch/catalog và operation `create_role`. Preflight chặn collision, tên chưa hợp lệ, quá 20 custom role hoặc quyền/override ngoài catalog; giữ dữ liệu để sửa có review, không tự đổi quyền. Bootstrap mới đã gồm 001/002/003; writer role/grant/override cũ không tương thích. Chỉ runner được áp trên DB cần giữ dữ liệu; `schema.sql` có DROP SCHEMA.
+003 backfill role key theo batch 500, thêm role version/FK epoch/catalog và operation `create_role`. Preflight chặn collision, tên chưa hợp lệ, quá 20 custom role hoặc quyền/override ngoài catalog; giữ dữ liệu để sửa có review, không tự đổi quyền. Writer role/grant/override cũ không tương thích.
+
+Sau 001/002/003, dừng/drain writer cũ rồi áp 004 với mapping đã review cho **mọi channel legacy** trước khi deploy writer phòng mới:
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/004-community-channels-access.sql \
+  /absolute/path/reviewed-channel-map.json
+```
+
+```json
+{
+  "01990000-0000-7200-8000-000000000002": {
+    "kind": "text",
+    "defaultView": "allow"
+  }
+}
+```
+
+Kind nhận text/voice, defaultView nhận allow/deny; không suy từ visibility cũ. DB không có channel thì bỏ mapping. Runner backfill theo batch 500, giữ tên/timestamp/ACL/epoch và trạng thái space active/deleted. Mapping thiếu/thừa, collision, legacy read-only, space archived hoặc deleted thiếu timestamp bị chặn để repair có review. Lỗi rollback cả DDL/backfill/ledger; chạy lại cùng checksum là no-op.
+
+Bootstrap mới đã gồm 001–004; chỉ runner được áp trên DB cần giữ dữ liệu, vì `schema.sql` có DROP SCHEMA. Giữ nguyên migration 001–003 đã áp và backup DB/keys khi nâng cấp.
 
 ## Kiểm thử
 
