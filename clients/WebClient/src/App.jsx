@@ -35,6 +35,7 @@ import { AuthScreen } from './components/AuthScreen.jsx';
 import { useCommunityList } from './community/useCommunityList.js';
 import { CommunityList, CommunityDetail } from './community/CommunityViews.jsx';
 import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
+import { CommunityRoles } from './community/CommunityRoles.jsx';
 import { readPending } from './community/pendingCreate.js';
 
 export default function App() {
@@ -47,7 +48,9 @@ function Application({ session }) {
   const actorId = session?.user?.id;
   const list = useCommunityList(actorId);
   const [route, setRoute] = useState(window.location.hash);
-  const activeServerId = route.startsWith('#community/') ? route.slice(11) : null;
+  const communityRoute = /^#community\/([^/]+)(\/roles)?$/.exec(route);
+  const activeServerId = communityRoute?.[1] || null;
+  const isRoleManagement = Boolean(communityRoute?.[2]);
   const isDiscovery = route === '#discover' || route.startsWith('#discover?');
   const discoveryQuery = isDiscovery ? new URLSearchParams(route.split('?')[1] || '').get('q') || '' : '';
   const [communityReturnTo, setCommunityReturnTo] = useState('#communities');
@@ -350,8 +353,12 @@ function Application({ session }) {
           <button className="btn btn--secondary" onClick={() => setShowCreateServer(true)}>Tiếp tục yêu cầu</button>
         </div>}
         {activeServerId
-          ? <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
+          ? isRoleManagement
+            ? <CommunityRoles key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
+              onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
+            : <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
             onBack={() => { window.location.hash = communityReturnTo; }} onJoined={list.reload}
+            onManage={() => { window.location.hash = `community/${activeServerId}/roles`; }}
             backLabel={communityReturnTo.startsWith('#discover') ? '← Kết quả tìm kiếm' : undefined} />
           : isDiscovery
             ? <CommunityDiscovery key={`${actorId}:${discoveryQuery}`} actorId={actorId} query={discoveryQuery} onSelect={selectServer}

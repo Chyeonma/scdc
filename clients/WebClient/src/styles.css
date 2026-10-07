@@ -2581,3 +2581,16 @@ button:disabled {
 .community-search-controls input:focus-visible { outline: 2px solid #8490ff; outline-offset: 2px; }
 .community-search [aria-invalid="true"] { border-color: #ff8d8d; }
 #community-search-error { color: #ffb4b4; }
+/* Community role management */
+.community-management { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; align-items: start; }
+.community-role-panel, .community-member-panel { min-width: 0; }
+.community-role, .community-member { padding: 14px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.community-role h3, .community-member p { margin-bottom: 10px; }
+.community-role-editor, .community-member-editor { margin-top: 24px; }
+.community-role-editor > label { display: block; margin-bottom: 8px; }
+.community-role-editor > input { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid #56585f; border-radius: 6px; background: #202225; }
+.community-role-editor > input:focus-visible { outline: 2px solid #8490ff; outline-offset: 2px; }
+.community-role-editor fieldset, .community-member-editor fieldset { margin: 16px 0; padding: 12px; border: 1px solid var(--line-strong); border-radius: 6px; min-width: 0; }
+.community-choice { display: flex; align-items: start; gap: 10px; margin: 10px 0; overflow-wrap: anywhere; }
+.community-choice input { margin-top: 4px; accent-color: var(--accent); flex-shrink: 0; }
+#community-role-name-error { color: #ffb4b4; }

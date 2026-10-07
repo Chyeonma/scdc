@@ -23,3 +23,27 @@ export function createServer(actorId, body, signal) {
 export function joinServer(actorId, serverId, signal) {
   return api(`/servers/${encodeURIComponent(serverId)}/join`, { method: 'POST', actorId, signal, retry: false });
 }
+export function getRoles(actorId, serverId, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/roles?limit=50`, { actorId, signal });
+}
+export function getMembers(actorId, serverId, { cursor = null, signal } = {}) {
+  const query = new URLSearchParams({ limit: '20' });
+  if (cursor) query.set('cursor', cursor);
+  return api(`/servers/${encodeURIComponent(serverId)}/members?${query}`, { actorId, signal });
+}
+export function getMemberRoles(actorId, serverId, userId, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/members/${encodeURIComponent(userId)}/roles`, { actorId, signal });
+}
+export function createRole(actorId, serverId, body, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/roles`, { actorId, method: 'POST', body, signal, retry: false });
+}
+export function updateRole(actorId, serverId, roleId, body, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/roles/${encodeURIComponent(roleId)}`, { actorId, method: 'PATCH', body, signal, retry: false });
+}
+export function deleteRole(actorId, serverId, roleId, version, signal) {
+  const query = new URLSearchParams({ expectedVersion: version });
+  return api(`/servers/${encodeURIComponent(serverId)}/roles/${encodeURIComponent(roleId)}?${query}`, { actorId, method: 'DELETE', signal, retry: false });
+}
+export function replaceMemberRoles(actorId, serverId, userId, body, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/members/${encodeURIComponent(userId)}/roles`, { actorId, method: 'PUT', body, signal, retry: false });
+}

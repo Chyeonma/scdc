@@ -1,13 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getServer, getOwnMembership, joinServer } from './api.js';
+import { permissionLabels } from './permissionConfig.js';
 
-export const permissionLabels = {
-  manage_channels: 'Quản lý phòng',
-  manage_invites: 'Quản lý lời mời',
-  review_join_requests: 'Duyệt yêu cầu tham gia',
-  manage_join_mode: 'Quản lý chế độ tham gia',
-  manage_channel_access: 'Quản lý quyền xem phòng',
-};
+export { permissionLabels } from './permissionConfig.js';
 function Badges({ server }) {
   return <div className="community-badges">
     <span>{server.visibility === 'private' ? 'Riêng tư' : 'Công khai'}</span>
@@ -46,7 +41,7 @@ export function CommunityList({ list, onSelect, onCreate, onDiscover }) {
   </main>;
 }
 
-export function CommunityDetail({ actorId, serverId, onBack, onJoined, backLabel = '← Cộng đồng của tôi' }) {
+export function CommunityDetail({ actorId, serverId, onBack, onJoined, onManage, backLabel = '← Cộng đồng của tôi' }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState({ loading: true });
   const [join, setJoin] = useState({ busy: false, uncertain: false, error: null });
@@ -155,6 +150,7 @@ export function CommunityDetail({ actorId, serverId, onBack, onJoined, backLabel
       {membership && <p>Tham gia từ {new Date(membership.joinedAt).toLocaleDateString('vi-VN')}</p>}
       {isDetail && <>
         <p>{server.ownerUserId === actorId ? 'Bạn là chủ sở hữu.' : 'Bạn là thành viên.'}</p>
+        {server.ownerUserId === actorId && <button className="btn btn--secondary" onClick={onManage}>Quản lý vai trò và thành viên</button>}
         <h3>Quyền quản lý hiện tại</h3>
         {server.effectivePermissions.length ? <ul>{server.effectivePermissions.map((code) =>
           <li key={code}>{permissionLabels[code] || 'Quyền quản lý khác'}</li>)}</ul> : <p>Bạn chưa được cấp quyền quản lý.</p>}

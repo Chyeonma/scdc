@@ -1,4 +1,5 @@
 import { whitespaceRanges, ignorableRanges } from './textPolicy.js';
+import { permissionLabels } from './permissionConfig.js';
 
 const parseRanges = (values) => values.map((value) => {
   const [start, end = start] = value.split('-').map((part) => Number.parseInt(part, 16));
@@ -45,4 +46,20 @@ export function validateSearchQuery(input) {
     || scalars.every((value) => control(value) || inRanges(value, whitespace) || inRanges(value, ignorable))
     || scalars.some((value) => control(value) || value === 0x2028 || value === 0x2029);
   return { query, error: invalid ? 'Từ khóa cần 2–100 ký tự, có nội dung và nằm trên một dòng.' : null };
+}
+export function validateRoleInput(input) {
+  const name = typeof input.name === 'string' ? trimWhitespace(input.name) : '';
+  const scalars = [...name].map((character) => character.codePointAt(0));
+  const errors = {};
+  if (!isValidUnicode(name) || name.length < 1 || name.length > 64
+      || scalars.every((value) => control(value) || inRanges(value, whitespace) || inRanges(value, ignorable))
+      || scalars.some((value) => control(value) || value === 0x2028 || value === 0x2029)) {
+    errors.name = ['Tên vai trò cần 1–64 ký tự, có nội dung và nằm trên một dòng.'];
+  }
+  const permissions = input.permissions ?? [];
+  if (!Array.isArray(permissions) || permissions.length > 5 || new Set(permissions).size !== permissions.length
+      || permissions.some((code) => !Object.hasOwn(permissionLabels, code))) {
+    errors.permissions = ['Chọn các quyền quản lý hợp lệ, không trùng nhau.'];
+  }
+  return { data: { name, permissions: Array.isArray(permissions) ? [...permissions].sort() : [] }, errors };
 }
