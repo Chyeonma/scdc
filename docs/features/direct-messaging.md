@@ -6,7 +6,7 @@ Cập nhật: 2026-10-06. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-
 
 Quy tắc cốt lõi đã xác nhận. UX và hợp đồng dưới đây còn đề xuất; Messaging mới ở nền module, chưa có DM API/Hub. Các ca TC chưa có kết quả chạy được ghi nhận.
 
-Module thực hiện DM là **Messaging**. [Hợp đồng](#contracts), [thiết kế chi tiết](#detailed-design) và [ca TC-TEXT](#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](community/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
+Module thực hiện DM là **Messaging**. [Hợp đồng](#contracts), [thiết kế chi tiết](#detailed-design) và [ca TC-TEXT](#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](community/specs/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
 
 ## Mục lục
 
@@ -98,7 +98,7 @@ Các quyết định DEC-* được ghi tại
 | Phiên hết hạn/mất mạng | Không gửi tin tự động; xác thực lại, đồng bộ lịch sử và để người gửi chủ động thử lại tin lỗi |
 
 Các cơ chế ID thao tác, lưu giữ khóa chống trùng, phiên bản sửa/xóa và
-phân trang được mô tả tại [hợp đồng DM](direct-messaging.md#contracts).
+phân trang được mô tả tại [hợp đồng DM](#contracts).
 Đây là thiết kế đề xuất để kiểm chứng hành vi đã chốt, không chọn ngầm
 công nghệ triển khai. Không lưu nội dung cũ trong lịch sử sửa, sự kiện
 hoặc log; backup/restore theo [vòng đời dữ liệu](../data-lifecycle.md#restore), còn proof DATA-GAP.
@@ -210,7 +210,7 @@ Sáng sở hữu UI DM và phản hồi API theo gói fullstack; Vg rà soát b�
 Trước khi giao frontend cần xác nhận ma trận trình duyệt/kích thước,
 thiết kế liên kết email, fixture UTF-16, hành vi bàn phím/IME và cách xử lý
 xung đột. Chính sách đếm/tìm kiếm và phím gửi đã chốt tại DEC-068/069/071. Wireframe cộng đồng là đầu ra riêng tại
-[SCDC-UX-COM-001](community.md#ux).
+[SCDC-UX-COM-001](community/specs/integration.md#ux).
 
 <a id="contracts"></a>
 
@@ -443,8 +443,8 @@ Nguồn: [schema.sql](../../database/postgres/schema.sql). Các trường/schema
 ### Hợp đồng 10 — Điều kiện chốt hợp đồng
 
 Vg/Sáng rà soát các thuật toán ID/fingerprint/cursor/transaction guard và schema chi tiết bên dưới; chính sách UTF-16/bản nháp đã chốt DEC-068/090/091. Thái đối
-chiếu mỗi lỗi/trạng thái với [wireframe](direct-messaging.md#ux)
-và [bộ ca kiểm thử](direct-messaging.md#tests).
+chiếu mỗi lỗi/trạng thái với [wireframe](#ux)
+và [bộ ca kiểm thử](#tests).
 Thay đổi đường dẫn/trường sau khi chốt phải cập nhật đồng thời mock,
 frontend, backend và dữ liệu thử; không coi tài liệu này là bằng chứng
 đã có API hoặc đã chạy thử nghiệm.

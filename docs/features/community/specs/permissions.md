@@ -1,17 +1,18 @@
 # SCDC — Permissions — Vai trò, ACL và kiểm tra quyền
 
-Cập nhật: 2026-10-06. Thành phần nội bộ của module Community. Quy tắc nghiệp vụ đã xác nhận theo các DEC dẫn chiếu; use case và thiết kế kỹ thuật là bản dự thảo để rà soát. Source còn Foundation, chưa có kết quả chạy UC-COM.
+Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu role, role assignment, ACL và policy tính quyền. Evaluator tính trên snapshot, kiểm thử độc lập; checker/guard đọc trạng thái hiện hành và giữ quyền đến commit. Điều kiện tài khoản/phiên do Identity cung cấp qua Contracts.
 
-[Tổng quan và truy vết Community](../community.md#use-cases) · [Kế hoạch triển khai](../community.md#use-case-delivery).
+[Tổng quan Community](../README.md) · [Truy vết UC/COM/AC/TC](README.md#use-cases) · [Kế hoạch triển khai](../delivery/README.md#use-case-delivery).
+
+Thiết kế kỹ thuật của phần này: [dữ liệu/API và giao dịch](../design/permissions.md#contracts).
 
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
 - [Use case](#use-cases)
 - [UX và trạng thái](#ux)
-- [Thiết kế dữ liệu/API](#contracts)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Việc còn lại](#gaps)
@@ -77,7 +78,7 @@ kiện tài khoản/phiên. Vai trò được quản lý riêng theo [ACL-19](#a
 6. Đợt đầu, có quyền xem và đã xác minh email thì được gửi tin; không
    thêm quyền chỉ đọc độc lập (DEC-040/041).
 
-Thiết kế dữ liệu dùng ba trạng thái “kế thừa/cho phép/từ chối” cho cấu hình quyền xem. @everyone và giới hạn vai trò đã chốt DEC-092; cách lưu được mô tả ở [thiết kế chi tiết](#detailed-design). Quyền quản lý là hợp các quyền cho phép từ vai trò tự tạo; không có DENY quản lý hoặc ngoại lệ quản lý cá nhân trong v1. DEC-057 quyết định xung đột **quyền xem phòng**.
+Thiết kế dữ liệu dùng ba trạng thái “kế thừa/cho phép/từ chối” cho cấu hình quyền xem. @everyone và giới hạn vai trò đã chốt DEC-092; cách lưu được mô tả ở [thiết kế chi tiết](../design/permissions.md#detailed-design). Quyền quản lý là hợp các quyền cho phép từ vai trò tự tạo; không có DENY quản lý hoặc ngoại lệ quản lý cá nhân trong v1. DEC-057 quyết định xung đột **quyền xem phòng**.
 
 | Mặc định/va chạm | Ngoại lệ cá nhân | Kết quả xem (thành viên thường) |
 |---|---|---|
@@ -110,7 +111,7 @@ Quy tắc có thẩm quyền là DEC-055–058: giữa vai trò có DENY thì DE
 
 ## Use case
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](../community.md#use-case-coverage).
+Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](README.md#use-case-coverage).
 
 <a id="uc-com-20"></a>
 
@@ -218,58 +219,6 @@ và phản hồi sau lưu cần kiểm thử trong prototype.
 
 Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích hợp UX](integration.md#ux).
 
-<a id="contracts"></a>
-
-## Thiết kế dữ liệu/API
-
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
-
-<a id="detailed-design"></a>
-
-### Vai trò và cấu hình quyền
-
-| Mã quyền kỹ thuật | Thao tác được cấp | Không tự cấp |
-|---|---|---|
-| `manage_channels` | Tạo/sửa/xóa phòng | Quyền xem tin của mọi phòng, đổi ACL hoặc quản lý role |
-| `manage_invites` | Tạo/thu hồi link và gửi/hủy mời đích danh | Duyệt yêu cầu hoặc gán role |
-| `review_join_requests` | Xem danh sách pending, duyệt/từ chối | Tạo mời hoặc quản lý role |
-| `manage_join_mode` | Đổi vào ngay/chờ duyệt | Đổi visibility/name/description |
-| `manage_channel_access` | Đọc/sửa cấu hình xem phòng và chọn thành viên cho ngoại lệ | Quyền đọc tin bị giới hạn hoặc quản lý role |
-
-Owner có các quyền quản lý trên và các thao tác riêng [ACL-19](#acl-19), [ACL-20](#acl-20)/chuyển ownership sau kiểm tra nền; không có quyền sửa/xóa tin người khác. @everyone là role hệ thống duy nhất của server, tự áp cho mọi membership active, không cần insert member_roles cho từng người. Không đổi tên/xóa/gán tay role này hoặc cấp management permission. Role tự tạo có tập permission cho phép; effective management là hợp tập này, không phụ thuộc role position và không có hierarchy vượt owner. Giới hạn 20 role tự tạo kiểm tra dưới khóa server, không tính @everyone.
-
-API đề xuất:
-
-| Route bổ sung | Quyền và kết quả |
-|---|---|
-| `GET /servers/{id}/roles` | Owner/manage_channel_access đọc danh mục để chọn role; chỉ owner được thay role/assignment |
-| `POST /servers/{id}/roles` | Owner; `{clientOperationId,name,permissions}`; 201 role |
-| `PATCH /servers/{id}/roles/{roleId}` | Owner; `{name?,permissions?,expectedVersion}`; 200 role; system role không sửa |
-| `DELETE /servers/{id}/roles/{roleId}?expectedVersion=...` | Owner; xóa custom role và assignment/override cùng transaction; 204 |
-| `GET /servers/{id}/members` | Owner hoặc manage_channel_access; trang user summary/membership để chọn role/ngoại lệ, không có email |
-| `GET /servers/{id}/members/{userId}/roles` | Owner; danh sách custom role, membershipId/version |
-| `PUT /servers/{id}/members/{userId}/roles` | Owner; `{membershipId,expectedVersion,roleIds}` thay tập custom role đầy đủ, không gán role server khác |
-| `GET /servers/{id}/channels/{channelId}/access` | Owner/manage_channel_access và còn quyền xem phòng; base + override/accessVersion, không trả tin |
-| `PUT /servers/{id}/channels/{channelId}/access` | Cùng điều kiện; thay cấu hình xem có expectedAccessVersion; một lần cập nhật nguyên tử |
-
-ACL snapshot có `defaultView: allow|deny`, `roleOverrides:[{roleId,effect:allow|deny}]`, `memberOverrides:[{userId,membershipId,effect:allow|deny}]`. Không có entry nghĩa inherit; không dùng số bit mask trên wire. @everyone tham gia bước role như mọi role khác; role/user duplicate hoặc thuộc server khác nhận 400. Snapshot chỉ nhận membership active đúng epoch. Owner luôn xem được theo DEC-056; UI không diễn giải override deny owner thành thu hồi quyền owner.
-
-Xóa custom role bỏ role assignment/role override và tăng accessVersion; kết quả có thể mở hoặc đóng quyền xem tùy role đã allow/deny, phải tính lại thay vì giả mọi xóa role là thu hồi. Rời server xóa assignment/ngoại lệ của epoch hiện tại; rejoin chỉ @everyone theo DEC-087. Chuyển owner không tự gán role quản lý cho chủ cũ; quyền chủ cũ trở lại theo role hiện có.
-
-<a id="implementation-boundary"></a>
-
-### Evaluator, quản lý quyền và guard
-
-Phân chia kỹ thuật đã thống nhất ngày 2026-10-06:
-
-- Domain chứa permission catalog, role/ACL models và evaluator tính trên snapshot; evaluator không gọi Application service hoặc DB.
-- Application chứa các use case quản lý role/assignment/ACL và phối hợp transaction, version/epoch.
-- Infrastructure đọc snapshot hiện hành và triển khai checker/guard; guard giữ row lock theo [thiết kế transaction](integration.md#transactions), không thay bằng kết quả bool hoặc cache chưa xác nhận.
-
-Các phần khác dùng kết quả policy/guard; điều kiện Identity qua Contracts. Đổi role/assignment/ACL cập nhật accessVersion và outbox cùng transaction với mutation. Cấu trúc này còn là thiết kế, chưa có implementation.
-
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
-
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận
@@ -288,13 +237,13 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md
 | <a id="ac-com-42"></a> AC-COM-42 | Manager có manage_channels/manage_channel_access nhưng không view phòng | Không thấy metadata/phòng/tin hoặc sửa/xóa/ACL phòng đó; owner vẫn quản lý, tạo mới theo management permission theo DEC-098 |
 
 
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](../community.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Chưa có kết quả chạy AC-COM.
+Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](README.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="tests"></a>
 
 ## Ca kiểm thử
 
-Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới đều chưa chạy; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
+Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới là đặc tả kiểm chứng; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
 
 | Mã ca | Tình huống | Kết quả | Dẫn chiếu |
 |---|---|---|---|
@@ -305,7 +254,7 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence).
 | <a id="tc-acl-05"></a> TC-ACL-05 | O mở phòng giới hạn, gồm cả cấu hình từ chối theo vai trò/cá nhân | O vẫn xem được trong cộng đồng của mình; không vượt điều kiện phiên/tài khoản | DEC-056 |
 | <a id="tc-acl-06"></a> TC-ACL-06 | M được quyền tạo phòng nhưng thử tạo/sửa/gán/thu hồi vai trò | Máy chủ từ chối; O thực hiện được | DEC-058 |
 | <a id="tc-acl-07"></a> TC-ACL-07 | N đang mở phòng; O thu hồi quyền hoặc N rời cộng đồng | API từ chối; ngừng nhận nội dung phòng theo ngưỡng thu hồi; DM độc lập vẫn hoạt động | [AC-COM-11](#ac-com-11), [AC-COM-21](memberships.md#ac-com-21) |
-| <a id="tc-acl-08"></a> TC-ACL-08 | Chạy 18 fixture nền/owner/role/cá nhân/quyền quản lý/kind | Khớp [community-permissions.json](../../fixtures/community-permissions.json); không coi fixture đã khớp là API đã đạt | [AC-COM-06](#ac-com-06), [AC-COM-17](#ac-com-17), [AC-COM-36](#ac-com-36), [AC-COM-42](#ac-com-42) |
+| <a id="tc-acl-08"></a> TC-ACL-08 | Chạy 18 fixture nền/owner/role/cá nhân/quyền quản lý/kind | Khớp [community-permissions.json](../../../fixtures/community-permissions.json); không coi fixture đã khớp là API đã đạt | [AC-COM-06](#ac-com-06), [AC-COM-17](#ac-com-17), [AC-COM-36](#ac-com-36), [AC-COM-42](#ac-com-42) |
 | <a id="tc-acl-09"></a> TC-ACL-09 | O tạo hai custom role tranh slot thứ 20; gọi sửa/xóa/gán @everyone | Một role mới, role còn lại ROLE_LIMIT_REACHED; system role bị bảo vệ | [AC-COM-36](#ac-com-36) |
 | <a id="tc-acl-10"></a> TC-ACL-10 | PUT ACL với role/member khác server, duplicate, epoch cũ; actor làm mất view của mình | Cấu hình sai rollback toàn bộ; cấu hình hợp lệ commit, request/subscription tiếp theo bị chặn | [AC-COM-16](#ac-com-16), [AC-COM-42](#ac-com-42) |
 | <a id="tc-acl-11"></a> TC-ACL-11 | Xóa role deny hoặc allow khi user đang xem phòng | Tính lại kết quả thực, không suy mọi xóa là deny; view mất thì thu hồi ≤5 giây | DEC-057/083 |
@@ -318,7 +267,7 @@ Các race guard/outbox còn được kiểm chứng tại [TC-COM-22](membership
 
 ## Việc còn lại
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../community.md#use-case-delivery), [migration](integration.md#schema-migration) và [vòng đời dữ liệu](../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|

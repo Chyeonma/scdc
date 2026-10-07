@@ -40,7 +40,7 @@ năng nhắn tin cơ bản là nền tảng để phát triển thêm tính năn
 riêng giữa hai người được ưu tiên trước; cộng đồng được tổ chức bằng nhiều
 phòng theo chủ đề trước. Các quyết định về cách tìm người để nhắn riêng,
 tin nhắn văn bản và cách tham gia cộng đồng được ghi tại
-[SCDC-DIS-001](project.md#needs). Đặc tả hành vi
+[SCDC-DIS-001](#needs). Đặc tả hành vi
 nhắn tin riêng đợt đầu được quản lý tại
 [SCDC-FR-DM-001](features/direct-messaging.md#requirements).
 
@@ -67,7 +67,7 @@ cộng đồng. Danh sách yêu cầu dưới đây xác định phạm vi cần
 | Tin nhắn riêng (DM) | Hội thoại riêng giữa hai người. |
 | Phòng thoại | Phòng trong server mà thành viên có thể vào và rời để giao tiếp trực tiếp. |
 
-Phạm vi bàn giao được tổng hợp tại [Project Brief](project.md#scope).
+Phạm vi bàn giao được tổng hợp tại [Project Brief](#scope).
 Những quy tắc nghiệp vụ và giới hạn cần xác định được theo dõi tại
 [sổ vấn đề cần làm rõ](decisions.md#decisions).
 
@@ -141,8 +141,8 @@ Các chức năng bổ sung được đánh giá theo quy trình quản lý thay
 
 1.000 tài khoản và 100 người online là giả định tải phục vụ dự toán/kiểm thử; 20 người gọi đồng thời là giới hạn sản phẩm đã chốt DEC-079. Cơ cấu nhân sự hiện có khác với giả
 định ba kỹ sư có kinh nghiệm ban đầu; cần tính công sức kiêm nhiệm và hướng
-dẫn khi đánh giá tiến độ, chi phí. Xem [nhân sự và phương án làm rõ nhu cầu](project.md#team)
-và [dự toán và giả định](project.md#budget).
+dẫn khi đánh giá tiến độ, chi phí. Xem [nhân sự và phương án làm rõ nhu cầu](#team)
+và [dự toán và giả định](#budget).
 
 Ảnh hưởng của việc thu hẹp phạm vi nhắn tin và cuộc gọi đến công sức, chi
 phí và tiến độ cần được lượng hóa khi cập nhật kế hoạch chi tiết.
@@ -235,7 +235,7 @@ OQ-012 vẫn mở về người dùng đại diện và cách đánh giá giá t
 - Chỉ phân bổ 80% công suất theo giai đoạn; giữ 20% dự phòng, tính cả
   review/hướng dẫn của Vg và thời gian học/sửa lại của Thái.
 - Đánh giá lại mốc ba tháng và dự toán; chi tiết tại
-  [SCDC-EST-001](project.md#budget).
+  [SCDC-EST-001](#budget).
 
 <a id="budget"></a>
 
@@ -370,15 +370,15 @@ ngân sách hoặc thay đổi phạm vi bàn giao.
 |---|---|---|---|
 | SCP-001 Web | DEC-059; [wireframe tài khoản/DM](features/direct-messaging.md#ux) | Đã chốt ma trận trình duyệt cho Accounts/DM/Community và media desktop (DEC-082), ngưỡng chat/thu hồi (DEC-083); còn OS/thiết bị/build, tiếp cận và kết quả đo (OQ-007). | Phạm vi/ngưỡng đã chốt; cần kiểm chứng |
 | SCP-002 Tài khoản | [SCDC-FR-ACC-001](features/accounts.md#requirements) | Chốt định danh, mật khẩu/lockout, phiên/thời hạn, gửi lại, hồ sơ và kênh khôi phục tại DEC-063–068; có trạng thái/dữ liệu và ACC-GAP-01–07. Email/resend/limiter đã có phương án; còn khóa schema/ngưỡng/provider/key store và kiểm chứng các chênh lệch source (OQ-002/OQ-008). | Nghiệp vụ đã chi tiết hóa; kỹ thuật còn mở |
-| SCP-003 Cộng đồng | [đặc tả](features/community.md#requirements), [5 thành phần và UC](features/community.md#organization), [thiết kế tích hợp](features/community/integration.md#contracts) | Luồng DEC-072–077/087 và search/tên/phạm vi/private switch/issuer DEC-093–097 đã chốt; có OpenAPI/realtime/transaction/migration, còn review/mock/proof (OQ-003/OQ-008). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
-| SCP-004 Phân quyền | [ma trận](features/community/permissions.md#permissions), [thiết kế Permissions](features/community/permissions.md#detailed-design) | @everyone/20 custom role/union DEC-092 và quản lý cần view DEC-098 đã chốt; có role/ACL API, epoch/accessVersion/guard/fixture; còn review/migration/đo thu hồi (OQ-004/OQ-007). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
-| SCP-005 Nhắn tin | [DM](features/direct-messaging.md#requirements), [cộng đồng](features/community.md#requirements), [hợp đồng DM](features/direct-messaging.md#contracts), [vòng đời](data-lifecycle.md) | DEC-068–071/081/090/091 chốt nội dung/tìm/transport/draft; DEC-103–109 chốt phạm vi account/retention/restore. Có HMAC/SQL/Hub/cursor-resume/placeholder/fixture; còn review/migration/shared guard, kho sổ/worker và proof (OQ-005/008/011). | Đã chi tiết hóa; còn rà soát và thử nghiệm |
+| SCP-003 Cộng đồng | [đặc tả](features/community/README.md#requirements), [5 thành phần và UC](features/community/design/README.md#organization), [thiết kế tích hợp](features/community/design/integration.md#contracts) | Luồng DEC-072–077/087 và search/tên/phạm vi/private switch/issuer DEC-093–097 đã chốt; có OpenAPI/realtime/transaction/migration, còn review/mock/proof (OQ-003/OQ-008). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
+| SCP-004 Phân quyền | [ma trận](features/community/specs/permissions.md#permissions), [thiết kế Permissions](features/community/design/permissions.md#detailed-design) | @everyone/20 custom role/union DEC-092 và quản lý cần view DEC-098 đã chốt; có role/ACL API, epoch/accessVersion/guard/fixture; còn review/migration/đo thu hồi (OQ-004/OQ-007). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
+| SCP-005 Nhắn tin | [DM](features/direct-messaging.md#requirements), [cộng đồng](features/community/README.md#requirements), [hợp đồng DM](features/direct-messaging.md#contracts), [vòng đời](data-lifecycle.md) | DEC-068–071/081/090/091 chốt nội dung/tìm/transport/draft; DEC-103–109 chốt phạm vi account/retention/restore. Có HMAC/SQL/Hub/cursor-resume/placeholder/fixture; còn review/migration/shared guard, kho sổ/worker và proof (OQ-005/008/011). | Đã chi tiết hóa; còn rà soát và thử nghiệm |
 | SCP-006 Thoại | [Đặc tả](features/voice-video.md#requirements), [thiết kế media](features/voice-video.md#detailed-design) | DEC-078–085/099–102 chốt điều kiện, 10/20/2, ring/reconnect, desktop/chất lượng/cutoff/multi-device/thiết bị. Có OpenAPI 16 công khai +3 nội bộ, realtime/fixture/coordinator/lease; còn review và proof SFU/migration (OQ-006/007/008). | Có thiết kế chi tiết; chưa triển khai/kiểm chứng |
 | SCP-007 Video/chia sẻ màn hình | [Thiết kế media](features/voice-video.md#detailed-design) | DEC-079/101/102 chốt nguồn/người, 2 share/phòng, ban đầu tắt, screen chỉ hình. Có source permit/quota gate/layout/AC/TC; SDK/extension/build và capture matrix thực tế còn cần review/proof. | Có thiết kế chi tiết; chưa tích hợp/kiểm chứng |
 | SCP-008 Phát hành | [nghiệm thu/gate](release-operations.md#release-gates), [runbook](operations-runbook.md), [mẫu hồ sơ](templates/release-record.md) | DEC-110 chốt lỗi tồn, DEC-112 chốt quản trị kỹ thuật/no admin UI; người duyệt DEC-111 chưa chọn. Còn người trực/topology/tool và bằng chứng RLS-GAP-01–08. | Đã soạn gate/smoke/runbook/mẫu; chưa triển khai/diễn tập |
 
 Đầu ra chuẩn bị và điều kiện còn thiếu theo gói tài khoản/DM được theo
-dõi tại [SCDC-READY-001](project.md#readiness).
+dõi tại [SCDC-READY-001](#readiness).
 Repo có bộ test tự động cho Identity/response; lần chỉnh docs này chưa chạy hoặc nghiệm thu sản phẩm. Không đánh dấu yêu cầu đạt chỉ vì có test.
 
 ### Tiến độ hoàn thiện tài liệu ngày 2026-10-04
@@ -464,7 +464,7 @@ Mỗi người giữ tối đa một gói chính đang thực hiện và một g
 
 - Cuối mỗi tuần làm việc, ghi ngày công đã dùng, gói chạy được, lỗi/việc phải làm lại, thời gian review/hướng dẫn và phần bị chặn.
 - Nếu gói được ước lượng vượt quỹ 80%, giảm phần xếp trong kỳ, kéo lịch hoặc chuyển một đầu ra triển khai đã có thiết kế và cách thử rõ cho người còn công suất. Vg giữ quyết định nghiệp vụ/kiến trúc, không phải tự code mọi phần.
-- Khi Vg quá tải Community hoặc Thái hoàn tất worker/bộ chạy sớm, ưu tiên chuyển cho Thái một gói từ DB tới UI đã chốt contract/AC, chẳng hạn tạo phòng text trong [UC-COM-16](features/community/channels.md#uc-com-16). Vg giữ chính sách/quyền và review; chỉ giao Sáng khi gói DM/lifecycle hiện tại đã bàn giao. Gói chuyển chủ thay thế một phần quỹ công việc hiện có, không cộng thêm nhiệm vụ hoặc tự mở rộng scope MVP.
+- Khi Vg quá tải Community hoặc Thái hoàn tất worker/bộ chạy sớm, ưu tiên chuyển cho Thái một gói từ DB tới UI đã chốt contract/AC, chẳng hạn tạo phòng text trong [UC-COM-16](features/community/specs/channels.md#uc-com-16). Vg giữ chính sách/quyền và review; chỉ giao Sáng khi gói DM/lifecycle hiện tại đã bàn giao. Gói chuyển chủ thay thế một phần quỹ công việc hiện có, không cộng thêm nhiệm vụ hoặc tự mở rộng scope MVP.
 - Nếu người hoàn thành sớm, lấy gói kế tiếp trong scope của mình; nếu chuyển gói từ người khác, ghi người sở hữu mới, phụ thuộc, người review và phần việc cũ được giảm tương ứng.
 - Nếu review/hướng dẫn hoặc thử nghiệm media vượt phần đã dành, cập nhật phân bổ/lịch trước khi nhận thêm gói. Dùng dữ liệu sau 1–2 tuần để hiệu chỉnh baseline; chưa tuyên bố công việc đã cân bằng chỉ từ các tỷ lệ.
 
@@ -488,8 +488,8 @@ Trạng thái của bảng này là mức sẵn sàng đặc tả và bằng ch�
 |---|---|---|---|
 | READY-01 | Tài khoản tối thiểu | Đã chốt ACC-P01–05 (DEC-063–068) và mật khẩu trùng DEC-113; có thiết kế token/email/consume, OpenAPI recovery 4 thao tác, AC-ACC-01–22 và [12 use case/coverage source-test](features/accounts.md#use-case-coverage); chưa chạy kiểm thử trong bước tài liệu | Vg hoàn thiện Identity/job contract; Thái làm delivery/provider theo contract và ghi proof; Sáng kiểm tra phần DM sử dụng. Limiter bổ sung hoãn DEC-089 |
 | READY-02 | DM và ngoại lệ | Đã chốt 2.000 UTF-16, tìm người, không tự hết hạn, cách gửi, validation và bản nháp (DEC-068–071/090/091); có AC-DM và ngoại lệ tại [đặc tả](features/direct-messaging.md#requirements) | Validation/bản nháp đã chốt DEC-090/091; có Unicode fixture, HMAC/mapping SQL/Hub/resume; còn review/mock, kiểm chứng đồng thời và no self-delete/account lock/restore đã chốt DEC-103/104/108, còn DATA-GAP proof; Vg/Sáng, Thái đối chiếu |
-| READY-03 | Ma trận quyền và thiết kế Community | [5 thành phần và 25 UC](features/community.md#organization), [Permissions](features/community/permissions.md#detailed-design) và [tích hợp](features/community/integration.md#contracts) có role/ACL/epoch/45 REST/9 realtime/fixture, AC-COM-01–42; [gói đầu tiên](features/community.md#use-case-delivery) đã xác định | Review/mock và migration/guard/thu hồi cần proof; media deadline DEC-099 và retention chính DEC-105–109 đã chốt, còn worker/restore proof; DM vẫn độc lập role cộng đồng |
-| READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community.md#ux) | Vg làm UI Identity/Community, Sáng làm UI DM theo gói; Thái cung cấp dataset/bộ chạy. Ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
+| READY-03 | Ma trận quyền và thiết kế Community | [5 thành phần và 25 UC](features/community/design/README.md#organization), [Permissions](features/community/design/permissions.md#detailed-design) và [tích hợp](features/community/design/integration.md#contracts) có role/ACL/epoch/45 REST/9 realtime/fixture, AC-COM-01–42; [gói đầu tiên](features/community/delivery/README.md#use-case-delivery) đã xác định | [Tiến độ Community](features/community/status.md) quản lý implementation/bằng chứng theo gói; thu hồi/phòng/role và các nhánh còn lại cần proof. Media deadline DEC-099 và retention chính DEC-105–109 đã chốt, còn worker/restore proof; DM vẫn độc lập role cộng đồng |
+| READY-04 | UX hai hành trình | Có wireframe văn bản [tài khoản/DM](features/direct-messaging.md#ux) và [cộng đồng](features/community/specs/integration.md#ux) | Vg làm UI Identity/Community, Sáng làm UI DM theo gói; Thái cung cấp dataset/bộ chạy. Ma trận trình duyệt đã chốt DEC-082; khóa OS/thiết bị/build và trạng thái còn mở |
 | READY-05 | API/dữ liệu DM | Có [hợp đồng đề xuất](features/direct-messaging.md#contracts) với schema logic, lỗi, chống trùng, lịch sử và cập nhật | REST/SignalR, ID/cursor đã chọn DEC-081; Vg/Sáng rà soát schema/lỗi cùng Thái; Identity có OpenAPI từ code; DM có [OpenAPI dự thảo](contracts/direct-messaging.openapi.json), có schema realtime/fixture/thiết kế chi tiết; chưa có mock hoặc proof chạy được |
 | READY-06 | Thử nghiệm kỹ thuật | Có kịch bản cần chứng minh tại [bằng chứng thử nghiệm](#technical-evidence); chưa chạy | MVP kiểm chứng luồng trên một host; v1 chuyển microservice theo DEC-116. Vg thiết kế/Identity/Community, Sáng Messaging, Thái môi trường/bộ chạy theo gói V1-ARCH |
 | READY-07 | Kiểm thử | Có [ca kiểm thử](features/direct-messaging.md#tests) và dữ liệu dự kiến; tất cả chưa chạy | Mỗi người thử phần sở hữu, người khác kiểm tra lại; Vg/Sáng giữ kỳ vọng quyền/đồng thời, Thái dataset/bộ chạy/kết quả. Ngưỡng chat DEC-083 và media DEC-085 áp dụng theo hồ sơ mốc |
@@ -553,7 +553,7 @@ Khung vòng đời và trách nhiệm dưới đây là đề xuất hợp nhấ
 
 Quy trình xác định trách nhiệm, đầu ra và điều kiện bàn giao từ tiếp nhận
 nhu cầu đến phát hành, vận hành và cải tiến SCDC. Phạm vi sản phẩm được quản
-lý tại [Project Brief](project.md#scope).
+lý tại [Project Brief](#scope).
 
 Công việc được triển khai theo từng nhóm chức năng. Phân tích, thiết kế và
 kiểm thử có thể diễn ra song song khi đủ đầu vào; kết quả đánh giá được phản

@@ -65,7 +65,7 @@
             "$ref": "#/components/parameters/Limit"
           }
         ],
-        "x-scdc-design-document": "../features/community/create-view-design.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md"
       },
       "post": {
         "operationId": "createServer",
@@ -145,7 +145,7 @@
             }
           }
         },
-        "x-scdc-design-document": "../features/community/create-view-design.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md"
       }
     },
     "/servers/search": {
@@ -248,7 +248,7 @@
             "$ref": "#/components/parameters/serverId"
           }
         ],
-        "x-scdc-design-document": "../features/community/create-view-design.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md"
       },
       "patch": {
         "operationId": "updateServer",
@@ -353,7 +353,7 @@
             "$ref": "#/components/parameters/serverId"
           }
         ],
-        "x-scdc-design-document": "../features/community/create-view-design.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md"
       }
     },
     "/servers/{serverId}/join": {

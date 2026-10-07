@@ -181,7 +181,7 @@ thu của đại diện khách hàng.
 | Xác nhận | Người thực hiện và người xác nhận theo cấp kiểm thử. |
 
 
-Ca chi tiết được quản lý tại [Accounts](features/accounts.md#tests), [DM](features/direct-messaging.md#tests), [Community](features/community.md#tests) và [Media](features/voice-video.md#acceptance). Một ca phụ thuộc quy tắc chưa chốt phải ghi “Chờ chốt quy tắc”. Các trạng thái Đạt/Chưa đạt/Chưa chạy gắn với build và lần thực thi, không chỉ với sự tồn tại của file test.
+Ca chi tiết được quản lý tại [Accounts](features/accounts.md#tests), [DM](features/direct-messaging.md#tests), [Community](features/community/specs/README.md#tests) và [Media](features/voice-video.md#acceptance). Một ca phụ thuộc quy tắc chưa chốt phải ghi “Chờ chốt quy tắc”. Các trạng thái Đạt/Chưa đạt/Chưa chạy gắn với build và lần thực thi, không chỉ với sự tồn tại của file test.
 
 [Vòng đời dữ liệu](data-lifecycle.md#acceptance) bổ sung AC-DATA/TC-DATA. [Mẫu hồ sơ đầy đủ](templates/release-record.md) có lần chạy/coverage/đo chất lượng/lỗi tồn/gate/restore/deploy/bàn giao và quyết định; [mẫu sự cố](templates/incident-record.md) dùng sau phát hành hoặc trong diễn tập. Nơi lưu hồ sơ thực tế sẽ được chọn khi triển khai, không đưa secrets/dữ liệu người dùng thật vào Git.
 
