@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Community, permissions and channel text — target design",
     "version": "0.1.0-draft",
-    "description": "Community/Messaging Foundation only; all operations not implemented. Product decisions DEC-092–098 confirmed; algorithms/schema/errors are draft review artefacts. No server deletion endpoint in v1."
+    "description": "Target Community/Messaging contract. Create/view, public immediate join, public search and role/assignment management are implemented on feature branches; per-operation metadata and docs/features/community/status.md identify the selected scope. Channel/ACL APIs, pending requests, invitations, Messaging and realtime remain target design. No server deletion endpoint in v1."
   },
   "servers": [
     {
@@ -44,7 +44,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result; implemented on feat/community-create-view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -54,7 +54,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "valid account/session",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -65,7 +65,8 @@
             "$ref": "#/components/parameters/Limit"
           }
         ],
-        "x-scdc-design-document": "../features/community/design/create-view.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-feature-branch": "feat/community-create-view"
       },
       "post": {
         "operationId": "createServer",
@@ -94,7 +95,7 @@
             "$ref": "#/components/responses/503"
           },
           "201": {
-            "description": "New server and initial membership committed; includes Location. Target design, endpoint not implemented.",
+            "description": "New server and initial membership committed; includes Location. Implemented on feat/community-create-view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -113,7 +114,7 @@
             }
           },
           "200": {
-            "description": "Existing operation replay returns the current authorized detail of the same resource and Location without new writes. Target design, endpoint not implemented.",
+            "description": "Existing operation replay returns the current authorized detail of the same resource and Location without new writes. Implemented on feat/community-create-view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -132,7 +133,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "active verified account",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "requestBody": {
@@ -145,7 +146,8 @@
             }
           }
         },
-        "x-scdc-design-document": "../features/community/design/create-view.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-feature-branch": "feat/community-create-view"
       }
     },
     "/servers/search": {
@@ -232,7 +234,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result; implemented on feat/community-create-view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -242,7 +244,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "public summary or active membership; hidden private -> 404",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -250,7 +252,8 @@
             "$ref": "#/components/parameters/serverId"
           }
         ],
-        "x-scdc-design-document": "../features/community/design/create-view.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-feature-branch": "feat/community-create-view"
       },
       "patch": {
         "operationId": "updateServer",
@@ -337,7 +340,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result; implemented on feat/community-create-view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -347,7 +350,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "own existing membership row, including left",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -355,7 +358,8 @@
             "$ref": "#/components/parameters/serverId"
           }
         ],
-        "x-scdc-design-document": "../features/community/design/create-view.md"
+        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-feature-branch": "feat/community-create-view"
       }
     },
     "/servers/{serverId}/join": {
@@ -1909,7 +1913,7 @@
       "get": {
         "operationId": "listRoles",
         "summary": "Danh mục vai trò cho quản lý/ACL",
-        "description": "Danh mục vai trò cho quản lý/ACL",
+        "description": "Implemented on feat/community-permissions: owner or manage_channel_access may read the current role catalog, including protected @everyone. UUID ascending keyset; default 20/max 50. Cursor binds actor/server/limit/position/purpose for 24 hours.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1933,7 +1937,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Authorized current-state read on feat/community-permissions.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1943,7 +1947,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner OR manage_channel_access",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1956,12 +1960,14 @@
           {
             "$ref": "#/components/parameters/Limit"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       },
       "post": {
         "operationId": "createRole",
         "summary": "Tạo vai trò tự tạo",
-        "description": "Tạo vai trò tự tạo",
+        "description": "Implemented on feat/community-permissions: current owner only, maximum 20 custom roles, name 1–64 UTF-16 after trim with NFC/case-insensitive/accent-sensitive unique key. Validated management catalog. New scoped create operation returns 201, identical manual replay returns the current authorized role with 200; deleted resource conflicts. AccessVersion/outbox commit atomically; no automatic replay.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1985,7 +1991,7 @@
             "$ref": "#/components/responses/503"
           },
           "201": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1995,7 +2001,7 @@
             }
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2005,7 +2011,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2022,14 +2028,16 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       }
     },
     "/servers/{serverId}/roles/{roleId}": {
       "patch": {
         "operationId": "updateRole",
         "summary": "Sửa vai trò tự tạo",
-        "description": "Sửa vai trò tự tạo",
+        "description": "Implemented on feat/community-permissions: current owner and custom role only. Partial name/permissions change with current expectedVersion; stale version conflicts, valid no-op preserves version. Role/server access versions and outbox commit atomically. Reconcile unclear results through GET before explicit save.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2053,7 +2061,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2063,7 +2071,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner; custom role only",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2083,12 +2091,14 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       },
       "delete": {
         "operationId": "deleteRole",
         "summary": "Xóa vai trò tự tạo",
-        "description": "Xóa vai trò tự tạo",
+        "description": "Implemented on feat/community-permissions: owner/custom role with expectedVersion. Cascade assignments/role overrides and advance affected membership versions/accessVersion with outbox in one transaction. Legacy invite referencing this role returns 409 ROLE_IN_USE. Missing resource returns 404; no automatic replay.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2112,10 +2122,10 @@
             "$ref": "#/components/responses/503"
           },
           "204": {
-            "description": "Committed result; target design, endpoint not implemented."
+            "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented."
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner; custom role only",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2128,14 +2138,16 @@
           {
             "$ref": "#/components/parameters/ExpectedVersion"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       }
     },
     "/servers/{serverId}/members": {
       "get": {
         "operationId": "listMembersForConfiguration",
         "summary": "Chọn thành viên cho role/ngoại lệ",
-        "description": "Chọn thành viên cho role/ngoại lệ",
+        "description": "Implemented on feat/community-permissions: owner or manage_channel_access reads active membership and nullable Identity UserSummary without email. UUID ascending keyset, default 20/max 50, cursor actor/server/limit/position/purpose-bound for 24 hours.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2159,7 +2171,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Authorized current-state read on feat/community-permissions.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2169,7 +2181,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner OR manage_channel_access",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2182,14 +2194,16 @@
           {
             "$ref": "#/components/parameters/Limit"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       }
     },
     "/servers/{serverId}/members/{userId}/roles": {
       "get": {
         "operationId": "getMemberRoles",
         "summary": "Tập vai trò của đúng lần tham gia",
-        "description": "Tập vai trò của đúng lần tham gia",
+        "description": "Implemented on feat/community-permissions: current owner only, active target membership. Returns custom role IDs with current membershipId/version; @everyone is implicit.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2213,7 +2227,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Authorized current-state read on feat/community-permissions.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2223,7 +2237,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner; active target membership",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2233,12 +2247,14 @@
           {
             "$ref": "#/components/parameters/userId"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       },
       "put": {
         "operationId": "replaceMemberRoles",
         "summary": "Thay tập vai trò thành viên",
-        "description": "Thay tập vai trò thành viên",
+        "description": "Implemented on feat/community-permissions: current owner only. Atomically replace the full set of 0–20 distinct custom roles from this server, guarded by current membershipId/expectedVersion. Stale epoch/version conflicts; no-op preserves version/event. No automatic replay; reconcile unclear results through GET.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2262,7 +2278,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2272,7 +2288,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "owner; active target/current membershipId",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2292,7 +2308,9 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-feature-branch": "feat/community-permissions",
+        "x-scdc-design-document": "../features/community/design/roles.md"
       }
     },
     "/servers/{serverId}/channels/{channelId}/messages": {

@@ -6,7 +6,7 @@ Thiết kế kỹ thuật của thành phần; quy tắc, use case và AC/TC ở
 
 ## Thiết kế dữ liệu/API
 
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
+HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) giữ schema mục tiêu và đánh dấu từng route đã có trên feature branch. [Gói role/assignment](roles.md) chọn các route quản lý vai trò và roster; endpoint ACL/phòng vẫn là thiết kế mục tiêu. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
 <a id="detailed-design"></a>
 
@@ -50,6 +50,6 @@ Phân chia kỹ thuật đã thống nhất ngày 2026-10-06:
 - Application chứa các use case quản lý role/assignment/ACL và phối hợp transaction, version/epoch.
 - Infrastructure đọc snapshot hiện hành và triển khai checker/guard; guard giữ row lock theo [thiết kế transaction](integration.md#transactions), không thay bằng kết quả bool hoặc cache chưa xác nhận.
 
-Các phần khác dùng kết quả policy/guard; điều kiện Identity qua Contracts. Đổi role/assignment/ACL cập nhật accessVersion và outbox cùng transaction với mutation. Cấu trúc này còn là thiết kế, chưa có implementation.
+Các phần khác dùng kết quả policy/guard; điều kiện Identity qua Contracts. Đổi role/assignment/ACL cập nhật accessVersion và outbox cùng transaction với mutation. [Gói role/assignment](../delivery/roles/acceptance.md) có evaluator domain, management guard và writer role/assignment. Snapshot checker/guard phòng, ACL API và thu hồi realtime còn cần triển khai; không suy fixture evaluator thành API đã đạt.
 
 Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.

@@ -51,7 +51,7 @@ Controllers đặt tại services/SCDC.Api/Controllers/Community theo từng nh�
 
 ## Hợp đồng và thiết kế
 
-Thiết kế theo gói: [tạo/xem](create-view.md), [tham gia trực tiếp public/immediate](direct-join.md), [tìm kiếm công khai](search.md). Tiến độ và phạm vi được kiểm chứng tại [status.md](../status.md).
+Thiết kế theo gói: [tạo/xem](create-view.md), [tham gia trực tiếp public/immediate](direct-join.md), [tìm kiếm công khai](search.md), [vai trò và quyền quản lý](roles.md). Tiến độ và phạm vi được kiểm chứng tại [status.md](../status.md).
 
 [OpenAPI Community](../../../contracts/community.openapi.json) giữ schema máy đọc được; [schema realtime](../../../contracts/community-realtime.schema.json) giữ catalogue Hub chat. Các route/mutation theo từng thành phần trong đặc tả của phần đó.
 
