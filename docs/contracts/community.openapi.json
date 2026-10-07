@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Community, permissions and channel text — target design",
     "version": "0.1.0-draft",
-    "description": "Target Community/Messaging contract. Create/view, public immediate join, public search and role/assignment management are implemented on feature branches; per-operation metadata and docs/features/community/status.md identify the selected scope. Channel/ACL APIs, pending requests, invitations, Messaging and realtime remain target design. No server deletion endpoint in v1."
+    "description": "Target Community/Messaging contract. Create/view, public immediate join, public search, role/assignment management and the text-channel metadata/ACL package are implemented on feature branches; per-operation metadata and docs/features/community/status.md identify the selected scope. Voice creation, channel deletion, pending requests, invitations, message history/writers and realtime remain target design. No server deletion endpoint in v1."
   },
   "servers": [
     {
@@ -1528,7 +1528,7 @@
       "get": {
         "operationId": "listVisibleChannels",
         "summary": "Danh sách phòng được xem",
-        "description": "Danh sách phòng được xem",
+        "description": "Implemented on feat/community-channels: active members receive only currently viewable active/nondeleted channels, with SQL filtering before LIMIT. Keyset cursor is bound to actor/server/limit/purpose and expires after 24 hours; every page checks current access.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1552,7 +1552,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1562,7 +1562,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "member; filter channel view on every page",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1575,12 +1575,14 @@
           {
             "$ref": "#/components/parameters/Limit"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-channels",
+        "x-scdc-design-document": "../features/community/design/channels-access.md"
       },
       "post": {
         "operationId": "createChannel",
         "summary": "Tạo phòng text/voice",
-        "description": "Tạo phòng text/voice",
+        "description": "Target includes text/voice; feat/community-channels implements text only (omitted kind defaults to text, voice is rejected). Owner/manage_channels creates metadata, Messaging space, operation and outbox in one transaction. Same actor/server/operation and canonical body replay returns the current viewable channel with 200; changed body conflicts. Deleted resource is not recreated. No dispatcher or Hub.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1604,7 +1606,7 @@
             "$ref": "#/components/responses/503"
           },
           "201": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1614,7 +1616,7 @@
             }
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1624,7 +1626,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "partial-on-feature-branch",
         "x-scdc-access": "manage_channels",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1641,14 +1643,16 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-feature-branch": "feat/community-channels",
+        "x-scdc-design-document": "../features/community/design/channels-access.md"
       }
     },
     "/servers/{serverId}/channels/{channelId}": {
       "get": {
         "operationId": "getVisibleChannel",
         "summary": "Metadata phòng được xem",
-        "description": "Metadata phòng được xem",
+        "description": "Implemented metadata only on feat/community-channels: Identity/session, active server/membership and current channel view are checked under transaction locks. Hidden/deleted/cross-server channels return 404; message history is outside this package.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1672,7 +1676,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1682,7 +1686,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1692,12 +1696,14 @@
           {
             "$ref": "#/components/parameters/channelId"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-channels",
+        "x-scdc-design-document": "../features/community/design/channels-access.md"
       },
       "patch": {
         "operationId": "updateChannel",
         "summary": "Sửa tên/chủ đề phòng",
-        "description": "DEC-098; kind immutable in v1.",
+        "description": "Implemented on feat/community-channels: current channel view and owner/manage_channels, name/topic with expectedVersion. Kind is immutable; topic null clears it. No-op preserves versions/event. Mutation writes access-change outbox; dispatcher/realtime remain target design.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1721,7 +1727,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1731,7 +1737,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "manage_channels AND channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1751,7 +1757,9 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-feature-branch": "feat/community-channels",
+        "x-scdc-design-document": "../features/community/design/channels-access.md"
       },
       "delete": {
         "operationId": "deleteChannel",
@@ -1803,7 +1811,7 @@
       "get": {
         "operationId": "getChannelAccess",
         "summary": "Đọc cấu hình xem phòng",
-        "description": "Đọc cấu hình xem phòng",
+        "description": "Implemented on feat/community-channels: current channel view and owner/manage_channel_access. Returns the complete default/role/member snapshot with accessVersion; no messages.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1827,7 +1835,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1837,7 +1845,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-on-feature-branch",
         "x-scdc-access": "manage_channel_access AND channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1847,12 +1855,14 @@
           {
             "$ref": "#/components/parameters/channelId"
           }
-        ]
+        ],
+        "x-scdc-feature-branch": "feat/community-channels",
+        "x-scdc-design-document": "../features/community/design/channels-access.md"
       },
       "put": {
         "operationId": "replaceChannelAccess",
         "summary": "Thay nguyên tử cấu hình xem phòng",
-        "description": "DEC-098 evaluated before mutation under locks; self-removing view can commit but later requests/subscriptions denied.",
+        "description": "Implemented HTTP configuration on feat/community-channels: view and owner/manage_channel_access are checked under locks before mutation; full snapshot with expectedAccessVersion, same-server roles and active membership epochs. Role DENY wins, personal override applies last, owner follows foundation. A self-removing view can commit; later GET returns 404. No-op preserves versions/event. Subscription revocation and dispatcher remain target design.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1876,7 +1886,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Committed result on feat/community-channels in the selected text metadata/ACL scope; voice/history/realtime remain target design.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1886,7 +1896,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "partial-on-feature-branch",
         "x-scdc-access": "manage_channel_access AND channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1906,7 +1916,9 @@
               }
             }
           }
-        }
+        },
+        "x-scdc-feature-branch": "feat/community-channels",
+        "x-scdc-design-document": "../features/community/design/channels-access.md"
       }
     },
     "/servers/{serverId}/roles": {

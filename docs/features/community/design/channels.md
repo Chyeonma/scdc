@@ -6,7 +6,7 @@ Thiết kế kỹ thuật của thành phần; quy tắc, use case và AC/TC ở
 
 ## Thiết kế dữ liệu/API
 
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
+HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) đánh dấu phạm vi triển khai từng route. [Gói phòng text/ACL](channels-access.md) chọn create/list/detail/metadata và ACL trên feat/community-channels; xóa và voice lifecycle còn là thiết kế mục tiêu. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
 | Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
 |---|---|---|
@@ -19,4 +19,4 @@ HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts
 
 - Xóa phòng: Community chuyển deleted/version/accessVersion, Messaging đánh dấu space deleted qua hợp đồng lifecycle, outbox thu hồi cùng transaction. Không có hai commit độc lập khiến phòng đã deleted vẫn nhận tin; không purge tin/backup ở đây.
 
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
+Đối chiếu baseline/mapping mục tiêu ở [COM-SQL-01–10](integration.md#schema-migration); migration 004 và proof của writer/guard nằm trong [gói phòng/ACL](channels-access.md). Kết quả từng phạm vi theo [status.md](../status.md).

@@ -18,4 +18,4 @@ UC-COM-19 xóa phòng, voice/Media lifecycle, lịch sử/gửi tin và UC-COM-2
 
 Permission matrix API, hidden privacy/owner foundation, Unicode/collision/immutable kind, operation restart/rotation/concurrent create, metadata/ACL no-op/CAS và epoch. Shared lifecycle/outbox fault rollback cả space/channel; guard share lock chặn role/ACL mutation, revoke trước admission bị chặn, lease hết hạn rollback. Migration map/checksum/preflight/batch/rollback/bootstrap/seed; Release, Node, Chromium, production build và docs-check.
 
-[Thiết kế](../../design/channels-access.md) · [Trạng thái](../../status.md).
+[Thiết kế](../../design/channels-access.md) · [Nghiệm thu](acceptance.md) · [Trạng thái](../../status.md).
