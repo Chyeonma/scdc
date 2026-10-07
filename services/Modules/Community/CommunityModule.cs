@@ -10,6 +10,7 @@ using SCDC.BuildingBlocks.Application;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.BuildingBlocks.Infrastructure.Outbox;
 using SCDC.Modules.Community.Features.Servers.Application;
+using SCDC.Modules.Community.Features.Memberships.Application;
 using SCDC.Modules.Community.Infrastructure;
 using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Modules.Community.Infrastructure.Paging;
@@ -38,6 +39,7 @@ public static class CommunityModule
         services.AddSingleton<ServerReader>();
         services.AddSingleton<ServerCursorCodec>();
         services.AddScoped<IServerService, ServerService>();
+        services.AddScoped<IMembershipService, MembershipService>();
         services.AddSingleton<IModuleDescriptor, CommunityModuleDescriptor>();
         return services;
     }

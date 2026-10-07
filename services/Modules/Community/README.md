@@ -40,8 +40,11 @@ Các route yêu cầu JWT từ Identity và tài khoản active có primary emai
 | `GET /api/v1/servers` | Danh sách membership active của mình; `limit` 1–50, mặc định 20; `cursor` bảo vệ, hạn 24 giờ |
 | `GET /api/v1/servers/{id}` | Detail cho member active; summary cho người ngoài public; private/inactive/unknown trả 404 |
 | `GET /api/v1/servers/{id}/membership/me` | Record active/left của chính actor, kể cả own-left trong private; không phục hồi membership |
+| `POST /api/v1/servers/{id}/join` | Không body; public/immediate tạo hoặc kích hoạt membership mặc định; join lặp active trả cùng epoch; approval với người chưa active nhận 409 |
 
 Create commit server, owner membership, @everyone, operation và một event `Community.ServerCreated.v1` cùng transaction. Event giữ `published_at=NULL`; gói chưa có dispatcher hoặc Hub. Chi tiết lỗi và DTO trong [thiết kế gói](../../../docs/features/community/design/create-view.md).
+
+Nhánh `feat/community-join` kế thừa tạo/xem và bổ sung [tham gia trực tiếp](../../../docs/features/community/design/direct-join.md). Join giữ Identity guard và server write lock tới commit, tăng accessVersion và ghi một `Community.MembershipJoined.v1`. Rejoin từ record left tạo epoch mới và dọn role/override cũ; chưa có endpoint leave hoặc requests chờ duyệt. Không thêm migration ngoài baseline 001; không tự phát lại mutation sau lỗi.
 
 ## Cấu hình
 
