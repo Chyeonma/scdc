@@ -6,7 +6,7 @@
 
 004 thêm name_key .NET trim/NFC/ToLowerInvariant so sánh C, unique partial theo server với channel active/nondeleted. Tên 1–100 UTF-16, topic tối đa 1.000, CRLF chuẩn hóa khi writer; giữ normalized_name legacy nhưng bỏ unique cũ. Kind text/voice bất biến; writer mới chỉ tạo text. Status active/deleted, deleted_at, version/access_version int32; một trigger version/timestamp cho mỗi update, kể cả ACL. AccessVersion dùng CAS cấu hình, metadata dùng version tổng thể của resource.
 
-Runner yêu cầu 001/002/003 đúng checksum, mapping JSON đầy đủ cho channel legacy với kind/defaultView; tên/key theo batch 500. Legacy read-only, Messaging space archived hoặc deleted thiếu timestamp yêu cầu repair có review; không tự chọn kind/quyền, đổi tên/epoch hoặc purge nội dung. Space active/deleted giữ trạng thái tương ứng cho channel. Drain writer cũ → runner 004 → deploy mới. Bootstrap mới gồm 001–004; seed ghi key/defaultView/kind explicit.
+Runner yêu cầu 001/002/003 đúng checksum, mapping JSON đầy đủ cho channel legacy với kind/defaultView; tên/key theo batch 500. Legacy read-only, Messaging space archived hoặc deleted thiếu timestamp yêu cầu repair có review; không tự chọn kind/quyền, đổi tên/epoch hoặc purge nội dung. Space active/deleted giữ trạng thái tương ứng cho channel. Drain writer cũ → runner 004 → deploy mới. Bootstrap mới gồm 001–004; seed ghi key/defaultView explicit và kind mặc định text.
 
 ## API và quyền
 
@@ -24,4 +24,4 @@ Detail member vào danh sách phòng theo quyền. Tạo giữ operation/body th
 
 Quyền client chỉ điều khiển UI; máy chủ kiểm tra lại dưới khóa. Role/member catalogs chỉ tải khi actor được sửa ACL; roster phân trang, các member override hiện hữu vẫn giữ ID/epoch khi chưa ở trang hiện tại. Allow/deny/inherit được gửi như snapshot đầy đủ; không tự thay epoch cũ thành epoch mới.
 
-Nghiệm thu API/DB/shared transaction và Chromium độc lập với thuật toán fixture. Không suy HTTP guard hoặc outbox thành proof thu hồi realtime/Media; các phụ thuộc vẫn ghi ở status.
+Nghiệm thu API/DB/shared transaction và Chromium độc lập với thuật toán fixture tại [hồ sơ nghiệm thu](../delivery/channels-access/acceptance.md). Không suy HTTP guard hoặc outbox thành proof thu hồi realtime/Media; các phụ thuộc vẫn ghi ở status.
