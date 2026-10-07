@@ -2594,3 +2594,15 @@ button:disabled {
 .community-choice { display: flex; align-items: start; gap: 10px; margin: 10px 0; overflow-wrap: anywhere; }
 .community-choice input { margin-top: 4px; accent-color: var(--accent); flex-shrink: 0; }
 #community-role-name-error { color: #ffb4b4; }
+/* Community channels and access configuration */
+.community-channel-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 20px; align-items: start; }
+.community-channel-layout > section { min-width: 0; }
+.community-channel { padding: 14px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.community-channel-create, .community-channel-editor, .community-access-editor { display: grid; gap: 12px; margin-top: 24px; min-width: 0; }
+.community-channel-layout input, .community-channel-layout textarea, .community-channel-layout select { width: 100%; min-width: 0; max-width: 100%; padding: 10px 12px; border: 1px solid #56585f; border-radius: 6px; background: #202225; color: #f2f3f5; font: inherit; }
+.community-channel-layout textarea { min-height: 90px; resize: vertical; }
+.community-access-editor fieldset { min-width: 0; border: 1px solid var(--line-strong); padding: 12px; border-radius: 6px; }
+.community-access-choice { display: grid; gap: 8px; margin: 14px 0; overflow-wrap: anywhere; }
+.community-access-choice label { display: grid; gap: 8px; }
+.community-channel-detail { overflow-wrap: anywhere; }
+@media (max-width: 900px) { .community-channel-layout { grid-template-columns: minmax(0, 1fr); } }

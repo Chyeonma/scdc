@@ -41,7 +41,7 @@ export function CommunityList({ list, onSelect, onCreate, onDiscover }) {
   </main>;
 }
 
-export function CommunityDetail({ actorId, serverId, onBack, onJoined, onManage, backLabel = '← Cộng đồng của tôi' }) {
+export function CommunityDetail({ actorId, serverId, onBack, onJoined, onManage, onChannels, backLabel = '← Cộng đồng của tôi' }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState({ loading: true });
   const [join, setJoin] = useState({ busy: false, uncertain: false, error: null });
@@ -150,6 +150,7 @@ export function CommunityDetail({ actorId, serverId, onBack, onJoined, onManage,
       {membership && <p>Tham gia từ {new Date(membership.joinedAt).toLocaleDateString('vi-VN')}</p>}
       {isDetail && <>
         <p>{server.ownerUserId === actorId ? 'Bạn là chủ sở hữu.' : 'Bạn là thành viên.'}</p>
+        <button className="btn btn--secondary" onClick={onChannels}>Xem phòng cộng đồng</button>
         {server.ownerUserId === actorId && <button className="btn btn--secondary" onClick={onManage}>Quản lý vai trò và thành viên</button>}
         <h3>Quyền quản lý hiện tại</h3>
         {server.effectivePermissions.length ? <ul>{server.effectivePermissions.map((code) =>

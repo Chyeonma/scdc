@@ -36,6 +36,7 @@ import { useCommunityList } from './community/useCommunityList.js';
 import { CommunityList, CommunityDetail } from './community/CommunityViews.jsx';
 import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
 import { CommunityRoles } from './community/CommunityRoles.jsx';
+import { CommunityChannels } from './community/CommunityChannels.jsx';
 import { readPending } from './community/pendingCreate.js';
 
 export default function App() {
@@ -48,9 +49,10 @@ function Application({ session }) {
   const actorId = session?.user?.id;
   const list = useCommunityList(actorId);
   const [route, setRoute] = useState(window.location.hash);
-  const communityRoute = /^#community\/([^/]+)(\/roles)?$/.exec(route);
+  const communityRoute = /^#community\/([^/]+)(\/(?:roles|channels))?$/.exec(route);
   const activeServerId = communityRoute?.[1] || null;
-  const isRoleManagement = Boolean(communityRoute?.[2]);
+  const isRoleManagement = communityRoute?.[2] === '/roles';
+  const isChannels = communityRoute?.[2] === '/channels';
   const isDiscovery = route === '#discover' || route.startsWith('#discover?');
   const discoveryQuery = isDiscovery ? new URLSearchParams(route.split('?')[1] || '').get('q') || '' : '';
   const [communityReturnTo, setCommunityReturnTo] = useState('#communities');
@@ -356,9 +358,13 @@ function Application({ session }) {
           ? isRoleManagement
             ? <CommunityRoles key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
               onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
-            : <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
+            : isChannels
+              ? <CommunityChannels key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
+                onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
+              : <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
             onBack={() => { window.location.hash = communityReturnTo; }} onJoined={list.reload}
             onManage={() => { window.location.hash = `community/${activeServerId}/roles`; }}
+            onChannels={() => { window.location.hash = `community/${activeServerId}/channels`; }}
             backLabel={communityReturnTo.startsWith('#discover') ? '← Kết quả tìm kiếm' : undefined} />
           : isDiscovery
             ? <CommunityDiscovery key={`${actorId}:${discoveryQuery}`} actorId={actorId} query={discoveryQuery} onSelect={selectServer}

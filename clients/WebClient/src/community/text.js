@@ -63,3 +63,19 @@ export function validateRoleInput(input) {
   }
   return { data: { name, permissions: Array.isArray(permissions) ? [...permissions].sort() : [] }, errors };
 }
+export function validateChannelInput(input) {
+  const errors = {};
+  const name = typeof input.name === 'string' ? trimWhitespace(input.name) : '';
+  const topic = input.topic == null || input.topic === '' ? null
+    : typeof input.topic === 'string' ? input.topic.replace(/\r\n?/g, '\n') : input.topic;
+  const kind = input.kind ?? 'text';
+  const scalars = [...name].map((character) => character.codePointAt(0));
+  if (!isValidUnicode(name) || name.length < 1 || name.length > 100
+      || scalars.every((value) => control(value) || inRanges(value, whitespace) || inRanges(value, ignorable))
+      || scalars.some((value) => control(value) || value === 0x2028 || value === 0x2029)) {
+    errors.name = ['Tên phòng cần 1–100 ký tự, có nội dung và nằm trên một dòng.'];
+  }
+  if (topic !== null && (!isValidUnicode(topic) || topic.length > 1000)) errors.topic = ['Chủ đề cần văn bản hợp lệ, tối đa 1.000 ký tự.'];
+  if (kind !== 'text') errors.kind = ['Chọn phòng văn bản.'];
+  return { data: { name, topic, kind }, errors };
+}

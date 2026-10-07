@@ -47,3 +47,24 @@ export function deleteRole(actorId, serverId, roleId, version, signal) {
 export function replaceMemberRoles(actorId, serverId, userId, body, signal) {
   return api(`/servers/${encodeURIComponent(serverId)}/members/${encodeURIComponent(userId)}/roles`, { actorId, method: 'PUT', body, signal, retry: false });
 }
+const channelPath = (serverId, channelId = null) => `/servers/${encodeURIComponent(serverId)}/channels${channelId ? `/${encodeURIComponent(channelId)}` : ''}`;
+export function getChannels(actorId, serverId, { cursor = null, signal } = {}) {
+  const query = new URLSearchParams({ limit: '20' });
+  if (cursor) query.set('cursor', cursor);
+  return api(`${channelPath(serverId)}?${query}`, { actorId, signal });
+}
+export function getChannel(actorId, serverId, channelId, signal) {
+  return api(channelPath(serverId, channelId), { actorId, signal });
+}
+export function createChannel(actorId, serverId, body, signal) {
+  return api(channelPath(serverId), { actorId, method: 'POST', body, signal, retry: false });
+}
+export function updateChannel(actorId, serverId, channelId, body, signal) {
+  return api(channelPath(serverId, channelId), { actorId, method: 'PATCH', body, signal, retry: false });
+}
+export function getChannelAccess(actorId, serverId, channelId, signal) {
+  return api(`${channelPath(serverId, channelId)}/access`, { actorId, signal });
+}
+export function replaceChannelAccess(actorId, serverId, channelId, body, signal) {
+  return api(`${channelPath(serverId, channelId)}/access`, { actorId, method: 'PUT', body, signal, retry: false });
+}
