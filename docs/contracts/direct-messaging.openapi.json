@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
-    "version": "0.2.0-draft",
+    "version": "0.3.0-p0-baseline-draft",
     "description": "Hợp đồng DM đề xuất, endpoint chưa triển khai. Chính sách DEC-068–071 và công nghệ DEC-081 đã chốt; schema/lỗi/mapping SQL cần rà soát cùng mock và thử nghiệm. Nguồn nghiệp vụ: docs/features/direct-messaging.md. Thiết kế chi tiết 2026-10-04: DEC-090/091, resumeCursor, fingerprint và mapping SQL; chưa có implementation."
   },
   "servers": [
@@ -131,7 +131,19 @@
             },
             "description": ""
           }
-        ]
+        ],
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed",
+            "CURSOR_INVALID"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE"
+          ]
+        }
       }
     },
     "/direct-conversations": {
@@ -233,6 +245,21 @@
               }
             }
           }
+        },
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed",
+            "INVALID_PEER"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE"
+          ],
+          "404": [
+            "RESOURCE_NOT_FOUND"
+          ]
         }
       },
       "get": {
@@ -335,7 +362,19 @@
             }
           }
         ],
-        "description": "Danh sách đang đổi vị trí theo lastActivityAt; client dedup ID và refresh trang đầu khi có tin mới. Không cam kết snapshot cố định xuyên trang."
+        "description": "Danh sách đang đổi vị trí theo lastActivityAt; client dedup ID và refresh trang đầu khi có tin mới. Không cam kết snapshot cố định xuyên trang.",
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed",
+            "CURSOR_INVALID"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE"
+          ]
+        }
       }
     },
     "/direct-conversations/{id}/messages": {
@@ -473,7 +512,22 @@
             "description": ""
           }
         ],
-        "description": "before/after là cursor protected; after=0 là sentinel bootstrap. Không trộn before+after. through chỉ kiểm tra H đã ký trong after cursor, không nhận frontier tùy ý. Response resumeCursor theo phần detailed-design."
+        "description": "before/after là cursor protected; after=0 là sentinel bootstrap. Không trộn before+after. through chỉ kiểm tra H đã ký trong after cursor, không nhận frontier tùy ý. Response resumeCursor theo phần detailed-design.",
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed",
+            "CURSOR_INVALID"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE"
+          ],
+          "404": [
+            "RESOURCE_NOT_FOUND"
+          ]
+        }
       },
       "post": {
         "operationId": "sendDirectMessage",
@@ -586,6 +640,28 @@
               }
             }
           }
+        },
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed",
+            "CONTENT_INVALID",
+            "CONTENT_EMPTY",
+            "CONTENT_TOO_LONG"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE",
+            "FINGERPRINT_KEY_UNAVAILABLE"
+          ],
+          "404": [
+            "RESOURCE_NOT_FOUND"
+          ],
+          "409": [
+            "OPERATION_CONFLICT",
+            "OPERATION_UNVERIFIABLE"
+          ]
         }
       }
     },
@@ -712,6 +788,30 @@
               }
             }
           }
+        },
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed",
+            "CONTENT_INVALID",
+            "CONTENT_EMPTY",
+            "CONTENT_TOO_LONG"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE"
+          ],
+          "404": [
+            "RESOURCE_NOT_FOUND"
+          ],
+          "403": [
+            "AUTHOR_REQUIRED"
+          ],
+          "409": [
+            "VERSION_CONFLICT",
+            "MESSAGE_DELETED"
+          ]
         }
       },
       "delete": {
@@ -836,7 +936,27 @@
             },
             "description": ""
           }
-        ]
+        ],
+        "x-scdc-target-error-codes": {
+          "400": [
+            "Common.ValidationFailed"
+          ],
+          "401": [
+            "Common.Unauthorized"
+          ],
+          "503": [
+            "AUTHORITY_UNAVAILABLE"
+          ],
+          "404": [
+            "RESOURCE_NOT_FOUND"
+          ],
+          "403": [
+            "AUTHOR_REQUIRED"
+          ],
+          "409": [
+            "VERSION_CONFLICT"
+          ]
+        }
       }
     }
   },
@@ -1280,5 +1400,17 @@
     "DEC-083",
     "DEC-090",
     "DEC-091"
-  ]
+  ],
+  "x-scdc-p0-baseline": {
+    "task": "DM-P0-T01",
+    "reviewStatus": "awaiting-user-review",
+    "implementationStatus": "not-implemented",
+    "design": "docs/plans/dm-p0-baseline-design.md",
+    "errors": {
+      "INVALID_PEER": 400,
+      "RESOURCE_NOT_FOUND": 404,
+      "AUTHOR_REQUIRED": 403,
+      "AUTHORITY_UNAVAILABLE": 503
+    }
+  }
 }

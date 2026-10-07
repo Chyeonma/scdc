@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "test": "node --experimental-vm-modules --test",
+    "test:dm-p0": "playwright test --config playwright.dm-p0.config.js",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -15,6 +16,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@vitejs/plugin-react": "6.1.1",
     "vite": "8.2.2"
   }

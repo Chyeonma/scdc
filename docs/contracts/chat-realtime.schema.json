@@ -238,5 +238,16 @@
   "x-scdc-decisions": [
     "DEC-081",
     "DEC-083"
-  ]
+  ],
+  "x-scdc-p0-baseline": {
+    "task": "DM-P0-T01",
+    "reviewStatus": "awaiting-user-review",
+    "implementationStatus": "not-implemented",
+    "design": "docs/plans/dm-p0-baseline-design.md",
+    "invokeDenialCodes": {
+      "Common.Unauthorized": 401,
+      "RESOURCE_NOT_FOUND": 404,
+      "AUTHORITY_UNAVAILABLE": 503
+    }
+  }
 }

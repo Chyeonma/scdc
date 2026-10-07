@@ -8,6 +8,8 @@ Quy tắc cốt lõi đã xác nhận. UX và hợp đồng dưới đây còn �
 
 Module thực hiện DM là **Messaging**. [Hợp đồng](#contracts), [thiết kế chi tiết](#detailed-design) và [ca TC-TEXT](#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](community/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
 
+[Kế hoạch triển khai DM](../plans/direct-messaging.md) chia phase/task/subtask, Git flow và dữ liệu kiểm tra; [prompt từng task](../plans/direct-messaging-prompts.md) yêu cầu bàn giao frontend/backend để người dùng test trước bước kế. Kế hoạch giữ nguồn quy tắc tại đặc tả này và chưa ghi task nào đã triển khai.
+
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
@@ -219,6 +221,8 @@ xung đột. Chính sách đếm/tìm kiếm và phím gửi đã chốt tại D
 Thiết kế bên dưới cụ thể hóa hành vi đã chốt, chưa phải API đã triển khai hoặc đã duyệt. Tài khoản sở hữu danh tính/phiên; Messaging sở hữu hội thoại/tin/thao tác. Giao tiếp qua `SCDC.Contracts` trong Modular Monolith; DM không đọc bảng tài khoản và không phụ thuộc Community.
 
 [OpenAPI dự thảo](../contracts/direct-messaging.openapi.json) biểu diễn schema HTTP bên dưới; trạng thái `design-draft`, endpoint chưa triển khai. REST/SignalR, UUID và cursor bảo vệ đã chốt DEC-081; mã lỗi/schema vẫn cần rà soát cùng mock/thử nghiệm. Giới hạn UTF-16 được ghi bằng extension, không dùng minLength/maxLength để thay thế validation server.
+
+DM-P0-T01 chọn [baseline contract/thiết kế](../plans/dm-p0-baseline-design.md) gồm taxonomy lỗi cụ thể, reuse/replace, migration theo lát cắt và UoW/guard; OpenAPI/realtime có extension baseline tương ứng. Trạng thái vẫn chờ người dùng review P0 và proof triển khai ở các task sau, không coi là DM API đang hoạt động.
 
 Prefix đề xuất `/api/v1`. API hiện tại của Accounts ở [đặc tả tài khoản](accounts.md#api-current). Lỗi DM dùng [ProblemDetails chung](../architecture.md#contracts) theo DEC-061, validation 400; mã lỗi DM được nêu là đề xuất, chưa phải mã đang hoạt động.
 

@@ -1,0 +1,2529 @@
+{
+  "schemaVersion": 1,
+  "status": "planned-not-executed",
+  "purpose": "Ví dụ test case chi tiết đi kèm từng prompt DM; không phải báo cáo đã chạy.",
+  "taskCount": 20,
+  "caseCount": 80,
+  "baseUrl": "http://localhost:15026/api/v1",
+  "fixtureSource": "docs/fixtures/dm-demo-plan.json",
+  "acceptanceTemplate": "docs/templates/dm-task-acceptance.md",
+  "executionRules": [
+    "Đây là ví dụ nghiệm thu dự kiến: chưa thực thi, chưa seed DB, chưa có helper/fault scripts. Không suy source hoặc file này thành kết quả PASS.",
+    "Mỗi task giữ một khối prompt đầy đủ, 4 case C01–C04 nằm ngay trong khối. Agent phải đọc AC/TC hiện hành và bổ sung biến thể bắt buộc; 80 ví dụ không thay toàn bộ bộ regression.",
+    "Agent cung cấp lệnh PowerShell/REST và SQL chỉ đọc chạy được đúng source/migration; không bàn giao tên script giả hoặc yêu cầu người dùng tự đoán tên bảng/ID. Script setup/fault chỉ cho môi trường thử.",
+    "Từng alias <A.id>/<D-AB.id>/<M.id>/<V>/<O_UI>/<cursor> phải được agent resolve từ response/manifest và đưa vào collection/lệnh thực tế trước người dùng test. Token/key không ghi vào tài liệu hoặc Git.",
+    "Nếu FE và BE đều tạo mutation mới thì chạy hai lane dữ liệu riêng với baseline/delta riêng. Nếu BE replay thao tác FE thì phải dùng cùng UUID/body/actor chính xác, không gửi UUID khác rồi kỳ vọng chỉ một row. Agent phải ghi rõ lane và tổng mutation trước bàn giao.",
+    "Ca revoke/session dùng đúng token/session đã bị thu hồi, không login mới thay thế. A1/A2 là phiên độc lập; không dùng hai tab chia sẻ token để chứng minh hai phiên.",
+    "Mã HTTP/errorCode chưa chốt ở contract phải được agent chốt/cập nhật trước bàn giao và ghi một kỳ vọng xác định cho từng request; không chấp nhận tùy ý 403 hoặc 404 là PASS.",
+    "Payload biên a×2000/a×2001/😀×1000/😀×1001 cần file JSON UTF-8 thật, UUIDv4 mới mỗi send độc lập; raw surrogate sai dùng file fixture, không thay U+FFFD. CRLF/CR→LF trước đếm, không trim/NFC.",
+    "GET hiện trạng message qua trang history hiện có; không bổ sung endpoint GET một message thứ tám chỉ phục vụ ví dụ nghiệm thu.",
+    "Fault/barrier/timeline/clock helper phải có lệnh bật/tắt, scope actor/run, điểm trước/sau commit; ghi rõ fixture/client injection khác proof REST/PostgreSQL/Hub thật. Nếu chưa dựng được ghi Bị chặn.",
+    "Chụp counts/ID/version/counter trước và sau, chỉ count trong scope run/lane. Không drop DB, xóa volume hoặc sửa dữ liệu app chính để lặp test; dùng run cô lập khi cần baseline rỗng.",
+    "Chỉ dùng API đã triển khai trong task và predecessor; fixture của chức năng chưa tới phase phải ghi mô phỏng/Chưa chạy và chạy lại E2E khi phase tương ứng hoàn tất.",
+    "Token/email reset/verification/secret không chụp hoặc lưu ở HAR/ảnh/report; lọc sensitive trước lưu evidence. Metadata ID/version/count/timestamp có thể dùng đối soát.",
+    "PASS khi toàn bộ kỳ vọng FE/BE/DB và bằng chứng bắt buộc đạt trên đúng build, do người dùng xác nhận; thiếu runtime/device/provider/guard proof là Bị chặn, không tự bỏ case để đi task kế.",
+    "Email example.test không nhận thư thật; gate P8 email cần provider và hộp thư người dùng kiểm soát. Dashboard alerts thử dùng receiver local, không tự gửi thông báo ra bên ngoài."
+  ],
+  "tasks": [
+    {
+      "taskId": "DM-P0-T01",
+      "cases": [
+        {
+          "id": "DM-P0-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Login và lưu hồ sơ qua UI/API",
+          "preconditions": [
+            "DB test riêng chạy; A đã setup active/verified",
+            "Browser profile A1 chưa login"
+          ],
+          "data": "A=dm_demo_an; password DmDemo2026!Local; bio mới \"Kiểm tra hồ sơ DM-P0-T01-C01\"; giữ displayName An Demo.",
+          "frontend_steps": [
+            "Mở Web URL của bản test, nhập username/password A và bấm Đăng nhập.",
+            "Mở Cài đặt người dùng/Hồ sơ; điền bio mẫu, lưu rồi reload trang.",
+            "Mở lại Hồ sơ, kiểm tra bio và username A; ghi user ID từ response GET me trong Network."
+          ],
+          "backend_steps": [
+            "POST /api/v1/auth/login {\"login\":\"dm_demo_an\",\"password\":\"DmDemo2026!Local\",\"deviceName\":\"DM-A1\"}; giữ token trong bộ nhớ.",
+            "Bearer A: GET /api/v1/users/me; PATCH cùng route {\"displayName\":\"An Demo\",\"bio\":\"Kiểm tra hồ sơ DM-P0-T01-C01\",\"locale\":\"vi-VN\",\"timezone\":\"Asia/Ho_Chi_Minh\"}; GET lại."
+          ],
+          "expected_frontend": "Login thành công, đúng An Demo; bio sau reload khớp toàn bộ mẫu, không chuyển sang user khác.",
+          "expected_backend": "Login 200; GET/PATCH/GET 200; id và username không đổi, bio mới được đọc lại từ API.",
+          "database_checks": [
+            "Query user/profile theo A.id: đúng một user và bio hiện hành khớp mẫu.",
+            "Không tạo user/phiên của B khi A sửa hồ sơ."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P0-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Pending U không được cấp phiên ứng dụng",
+          "preconditions": [
+            "U còn pending/unverified",
+            "Chưa có phiên ứng dụng của U trong manifest"
+          ],
+          "data": "U=dm_demo_pending; password DmDemo2026!Local.",
+          "frontend_steps": [
+            "Mở profile browser riêng U, vào màn hình Đăng nhập.",
+            "Nhập username/password U đúng rồi bấm Đăng nhập.",
+            "Kiểm tra thông báo chưa xác minh và vẫn ở màn hình auth; không dùng token Development để tự kích hoạt U."
+          ],
+          "backend_steps": [
+            "POST /api/v1/auth/login {\"login\":\"dm_demo_pending\",\"password\":\"DmDemo2026!Local\"}.",
+            "GET /api/v1/users/me không Authorization; thử cả Web proxy và API URL."
+          ],
+          "expected_frontend": "U không vào ứng dụng, không thấy dữ liệu mẫu như thể login thành công.",
+          "expected_backend": "Login U: 403 Identity.EmailNotVerified, không accessToken/refreshToken; GET me không token: 401 ProblemDetails.",
+          "database_checks": [
+            "Đếm auth_sessions của U trước/sau: số phiên active không tăng.",
+            "VerifiedAt của email U vẫn null; user chưa chuyển active."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P0-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Logout A không làm logout B và token A bị chặn",
+          "preconditions": [
+            "A1 và B1 là browser profile độc lập, đã login",
+            "Ghi session ID A1/B1 và token A1 trước logout trong bộ nhớ"
+          ],
+          "data": "A/B password mẫu; hai profile không chia sẻ localStorage.",
+          "frontend_steps": [
+            "Mở A1 và B1, kiểm tra tên account khác nhau.",
+            "Ở A1 bấm Đăng xuất; reload A1 phải về auth.",
+            "Ở B1 reload rồi mở Hồ sơ; B vẫn login và không xuất hiện dữ liệu A."
+          ],
+          "backend_steps": [
+            "Trước logout gọi GET /api/v1/users/me bằng A1 và B1, cả hai 200.",
+            "Sau logout A1, dùng token A1 cũ GET me; dùng token B1 GET me."
+          ],
+          "expected_frontend": "A1 về auth; B1 vẫn đọc hồ sơ B bình thường.",
+          "expected_backend": "Token A1 cũ 401; token B1 còn 200 với username dm_demo_bao; không refresh tự khôi phục A1.",
+          "database_checks": [
+            "Session A1 có dấu revoke; session B1 không bị revoke vì logout A1.",
+            "Không xóa user/profile/history khi logout."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P0-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Fixture chạy lại và restart không tạo user trùng",
+          "preconditions": [
+            "Helper setup P0 đã được agent cung cấp lệnh thật",
+            "Run chứa A/B/C/U/K/S01-S23, manifest và volume riêng"
+          ],
+          "data": "28 user fixture; A/B/C/K/S verified, U pending; ghi IDs trước restart.",
+          "frontend_steps": [
+            "Login A, mở Hồ sơ để ghi A.id qua Network.",
+            "Chạy lại đúng lệnh setup cùng run được bàn giao; restart API/Web bằng lệnh không xóa volume.",
+            "Login lại A và B; kiểm tra username/displayName và IDs vẫn đúng."
+          ],
+          "backend_steps": [
+            "GET /api/v1/health trước/sau restart; GET me bằng phiên còn hợp lệ hoặc login mới khi cần.",
+            "Chạy helper setup cùng run hai lần; đối chiếu manifest IDs và DB connection thực tế."
+          ],
+          "expected_frontend": "Account cũ dùng được sau restart; không tự tạo user mới hoặc đổi password/account ngoài fixture.",
+          "expected_backend": "Health 200 khi sẵn sàng; manifest cùng run giữ IDs; helper không ghi đè user có username trùng mà không khớp fixture.",
+          "database_checks": [
+            "Query normalized usernames trong run: 28 user fixture, mỗi username/email một record; U vẫn pending.",
+            "DB thực tế scdc_dm_acceptance_test, không scdc_chat; không tăng records sau setup lặp."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P1-T01",
+      "cases": [
+        {
+          "id": "DM-P1-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Phân biệt hai người cùng tên hiển thị",
+          "preconditions": [
+            "A đã login; B/C active và cùng displayName Bảo Demo",
+            "Search API/UI thuộc task này đã chạy"
+          ],
+          "data": "q=\"Bảo\"; B username dm_demo_bao; C username dm_demo_chi.",
+          "frontend_steps": [
+            "Mở khu vực Tìm người từ DM, nhập Bảo.",
+            "Đợi response tìm kiếm; đọc từng kết quả, kiểm tra hai username khác nhau.",
+            "Chọn B rồi đổi chọn C; kiểm tra selection theo ID/username, không tự bịa conversation ở task search."
+          ],
+          "backend_steps": [
+            "Bearer A: GET /api/v1/users/search?q=B%E1%BA%A3o&limit=20.",
+            "GET /api/v1/users/search?q=dm_demo_bao&limit=20; so IDs với manifest B/C."
+          ],
+          "expected_frontend": "Tìm Bảo có B và C được phân biệt username; chọn đúng người. Query exact username ưu tiên B.",
+          "expected_backend": "200; items của q Bảo chứa B/C đủ điều kiện; không chứa A/U/email/security state; query exact B xếp B trước.",
+          "database_checks": [
+            "Đối chiếu items IDs với Identity; search không insert conversation/membership.",
+            "Nếu fixture có account ngoài B/C cùng tên, so membership kết quả theo query, không khẳng định tổng items=2 ngoài run cô lập."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Search đủ 23 kết quả qua hai trang",
+          "preconditions": [
+            "S01-S23 active/verified và là toàn bộ kết quả q trong run cô lập",
+            "A không thuộc nhóm kết quả"
+          ],
+          "data": "q=\"dm_demo_search\"; limit=20.",
+          "frontend_steps": [
+            "Nhập dm_demo_search và mở trang kết quả đầu.",
+            "Bấm tải trang tiếp, ghi username/ID xuất hiện mới.",
+            "Quay lại/refesh search từ đầu; không có dòng lặp hay mất item vì response muộn."
+          ],
+          "backend_steps": [
+            "GET /api/v1/users/search?q=dm_demo_search&limit=20 bằng A; lưu nextCursor.",
+            "GET cùng q/limit, cursor URL-encode từ response trước; lấy hợp tập IDs."
+          ],
+          "expected_frontend": "Thấy đủ search01 đến search23, không trùng; loading/load more hết khi hết cursor.",
+          "expected_backend": "Trang 1: 20 items; trang 2: 3; union=23 ID duy nhất; trang cuối nextCursor=null.",
+          "database_checks": [
+            "Đếm query Identity cùng filter: 23 records đúng trạng thái.",
+            "Không dùng q chứa underscore như wildcard; escape LIKE để substring literal."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Biên q và không bỏ dấu",
+          "preconditions": [
+            "A đã login; fixture không có tên không dấu trùng riêng",
+            "Có q Bảo và q Bao để so hai tập"
+          ],
+          "data": "Queries: \"x\", \"dm\", \"a\" x64, \"a\" x65, \"BẢO\", \"Bảo\", \"Bao\".",
+          "frontend_steps": [
+            "Nhập x, kiểm tra hướng dẫn minimum không trả results giả.",
+            "Nhập BẢO rồi Bảo, so B/C; nhập Bao, không tự trả Bảo chỉ vì bỏ dấu.",
+            "Thử paste chuỗi 64/65 a; lỗi rõ và giữ query để sửa."
+          ],
+          "backend_steps": [
+            "GET users/search với các q nêu trên, limit20; dùng generator để tạo 64/65 ASCII a.",
+            "So response BẢO/Bảo theo manifest, q Bao phân biệt dấu; kiểm tra case-insensitive username."
+          ],
+          "expected_frontend": "UI phản ánh query invalid/empty/result thật, không hiện cache của query trước làm kết quả mới.",
+          "expected_backend": "q 1/65 UTF-16: 400 validation; q 2/64 hợp lệ: 200 kể cả items rỗng; BẢO và Bảo cùng tập trên fixture; Bao không tự khớp Bảo.",
+          "database_checks": [
+            "Không ghi gì vào DB khi q invalid hoặc query không có kết quả.",
+            "Record/displayName có dấu không bị normalize mất dấu trong source data."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Cursor đổi query/actor và lỗi mạng không fallback mock",
+          "preconditions": [
+            "Đã có nextCursor từ q dm_demo_search, actor A, limit20",
+            "Browser fault runner có thể trả 503 riêng GET search"
+          ],
+          "data": "Cursor trang 1 của A; B.token riêng; q không kết quả zzz_no_dm_person.",
+          "frontend_steps": [
+            "Tìm zzz_no_dm_person, kiểm tra empty state.",
+            "Bật fault GET search 503, tìm dm_demo_search; đọc lỗi và bấm thử lại sau khi tắt fault.",
+            "Gõ Bảo rồi lập tức dm_demo_bao với response Bảo bị delay; selection/results cuối phải thuộc q cuối."
+          ],
+          "backend_steps": [
+            "GET users/search giữ cursor A nhưng đổi q=Bảo hoặc limit=10.",
+            "Dùng B.token với cursor A; sau đó gọi GET search không cursor để phục hồi."
+          ],
+          "expected_frontend": "Empty và error là hai trạng thái riêng; không hiện người mock; response query cũ không ghi đè.",
+          "expected_backend": "Cursor chéo query/limit/actor: 400 CURSOR_INVALID theo contract; request mới không cursor: 200; injected503 chỉ là fault test, không kết quả search thành công.",
+          "database_checks": [
+            "Search/fault không tạo conversation/message; items phục hồi đúng query cuối.",
+            "Không lộ nội dung cursor đã giải mã hay email trong ProblemDetails."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P1-T02",
+      "cases": [
+        {
+          "id": "DM-P1-T02-C01",
+          "status": "planned-not-executed",
+          "title": "A mở B và B mở A nhận cùng DM",
+          "preconditions": [
+            "A/B active/verified, chưa có pair trong run case",
+            "Source writer/UI đã triển khai, chưa có send/history"
+          ],
+          "data": "peer B.id và A.id lấy từ manifest.",
+          "frontend_steps": [
+            "A tìm exact dm_demo_bao, chọn B để mở conversation.",
+            "B ở profile riêng tìm dm_demo_an, chọn A.",
+            "Reload/chọn lại peer, so conversation ID qua response POST và hai tên; trạng thái history rỗng chỉ là empty state."
+          ],
+          "backend_steps": [
+            "Bearer A: POST /api/v1/direct-conversations {\"peerUserId\":\"<B.id>\"}; lưu id=D-AB.",
+            "Bearer B: POST cùng route {\"peerUserId\":\"<A.id>\"}; A gọi lại POST với B."
+          ],
+          "expected_frontend": "Hai bên mở đúng peer, cùng D-AB; không có tin mẫu để giả lịch sử.",
+          "expected_backend": "Mọi POST 200; cùng id, participants đúng A/B; không user C/email/security state.",
+          "database_checks": [
+            "Unique pair A/B có một record direct_conversations và một space.",
+            "Hai membership đúng A/B, không membership thứ ba hoặc space mồ côi."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Mở đồng thời không tạo pair trùng",
+          "preconditions": [
+            "Dùng pair A/S02 chưa có DM để tách ca C01",
+            "Agent bàn giao runner barrier/start cùng lúc, không dựa vào click ước lượng"
+          ],
+          "data": "20 POST A→S02 và 20 POST S02→A bắt đầu từ cùng barrier.",
+          "frontend_steps": [
+            "Mở A và S02 ở hai profile, cùng chọn peer; ghi POST responses.",
+            "Chạy runner song song do agent bàn giao, không tự sửa IDs/token.",
+            "Mở lại conversation trên UI sau runner, kiểm tra chỉ một lựa chọn pair."
+          ],
+          "backend_steps": [
+            "Runner 40 POST /api/v1/direct-conversations đồng thời, mỗi body peerUserId đúng đối phương.",
+            "Collect status/id rồi gọi lại một POST từ mỗi actor sau khi runner kết thúc."
+          ],
+          "expected_frontend": "Không có conversation trùng cho cùng pair; UI không duplicate sau load/open lại.",
+          "expected_backend": "40 request hợp lệ đều resolve một ID duy nhất; create unique conflict được xử lý thành get, không trả space thiếu dữ liệu.",
+          "database_checks": [
+            "Pair/space đúng một; membership đúng hai; không orphan do request thua unique constraint.",
+            "Đối chiếu low/high UUID byte-order với DB và fixture endian."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Self và peer pending bị từ chối",
+          "preconditions": [
+            "A hợp lệ; U.id known nhưng pending",
+            "Đếm spaces/pairs trước từng request"
+          ],
+          "data": "peerUserId=A.id và U.id; không mint token U để bypass auth.",
+          "frontend_steps": [
+            "A search username của mình, UI không cho mở self.",
+            "Search dm_demo_pending, U không xuất hiện.",
+            "Thử recipe gọi REST self/pending được agent cung cấp, quay lại UI kiểm tra không có conversation giả mới."
+          ],
+          "backend_steps": [
+            "Bearer A: POST direct-conversations {\"peerUserId\":\"<A.id>\"}; rồi {\"peerUserId\":\"<U.id>\"}.",
+            "Đối chiếu status/errorCode chính xác đã chốt P0; không gọi route detail chưa triển khai để giả test quyền."
+          ],
+          "expected_frontend": "Self/U không được mở từ search, lỗi REST không thêm item giả.",
+          "expected_backend": "Cả hai request không 2xx, không participants/conversation mới; status/errorCode theo contract P0 đã chốt và ghi trước test, không chấp nhận 500.",
+          "database_checks": [
+            "Spaces/pairs/member counts không tăng ở hai request bị từ chối.",
+            "User U vẫn pending và không có session được cấp."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Lỗi giữa transaction rollback nguyên tử",
+          "preconditions": [
+            "Pair A/S03 mới; fault deterministic sau insert space và trước commit được agent cung cấp",
+            "Fault riêng DB test, response harness đã chốt"
+          ],
+          "data": "peer S03.id; snapshot pair/space/member trước ca.",
+          "frontend_steps": [
+            "Bật fault rollback cho actor A/peer S03 theo lệnh task.",
+            "A tìm S03 và mở conversation; quan sát lỗi, không empty conversation ID giả.",
+            "Tắt fault, bấm mở lại; UI mở đúng conversation thật."
+          ],
+          "backend_steps": [
+            "POST direct-conversations {\"peerUserId\":\"<S03.id>\"} trong fault; chờ transaction kết thúc.",
+            "Query DB rollback trước retry; sau tắt fault POST lại đúng pair."
+          ],
+          "expected_frontend": "Request lỗi giữ selection/error; mở lại thành công với ID trả từ server.",
+          "expected_backend": "Fault không trả success/ID chưa commit; retry sạch 200. Không coi fault503 của harness là auth rejection.",
+          "database_checks": [
+            "Sau rollback: zero pair/member/space mới cho ca; không orphan.",
+            "Sau retry: đúng một pair/space và hai memberships cho A/S03."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P1-T03",
+      "cases": [
+        {
+          "id": "DM-P1-T03-C01",
+          "status": "planned-not-executed",
+          "title": "Inbox phân biệt A B C theo membership",
+          "preconditions": [
+            "Run inbox chỉ có D-AB và D-AC; chưa tạo DM S trong ca này",
+            "A/B/C profile riêng"
+          ],
+          "data": "D-AB A/B, D-AC A/C, cả hai chưa có messages.",
+          "frontend_steps": [
+            "Login A mở inbox, ghi hai peer B/C và ID.",
+            "Login B mở inbox, chỉ có peer A từ D-AB.",
+            "Login C mở inbox, chỉ có D-AC; không thấy D-AB biết ID."
+          ],
+          "backend_steps": [
+            "GET /api/v1/direct-conversations?limit=20 lần lượt bằng A/B/C.",
+            "So items.id và participants với manifest/membership query."
+          ],
+          "expected_frontend": "A thấy hai DM, B/C mỗi bên một DM đúng của mình; không có INITIAL_DMS.",
+          "expected_backend": "200; A tập {D-AB,D-AC}, B {D-AB}, C {D-AC}; empty conversation có lastSequence hợp lệ, không lastMessage giả.",
+          "database_checks": [
+            "Membership join actor cho đúng tập IDs ở từng response.",
+            "GET list không tạo membership hoặc cấp C quyền D-AB."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T03-C02",
+          "status": "planned-not-executed",
+          "title": "Inbox trên 20 hội thoại tải đủ và không trùng",
+          "preconditions": [
+            "A có D-AB/D-AC và 23 DM A/S01-S23, không D-AK trong run case",
+            "Tất cả tạo qua POST writer"
+          ],
+          "data": "Run cô lập chỉ tạo 25 DM của A: A/B, A/C và A/S01..S23; không tạo A/K trong ca này. limit=20; ghi thứ tự activity/id trước tải.",
+          "frontend_steps": [
+            "Mở inbox A, ghi 20 items trang đầu.",
+            "Bấm tải thêm, ghi 5 items còn lại.",
+            "Reload/mở peer bất kỳ rồi về inbox, kiểm tra 25 ID duy nhất không list mock."
+          ],
+          "backend_steps": [
+            "GET direct-conversations?limit=20; lưu nextCursor.",
+            "GET trang kế cùng limit/cursor; union IDs rồi so memberships A."
+          ],
+          "expected_frontend": "Đủ 25 conversation; không duplicate do render list hoặc refresh.",
+          "expected_backend": "Trang 1=20/trang2=5, nextCursor cuối null; union=25. Nếu activity thay đổi trong ca, refresh/dedup theo contract, không hứa snapshot cố định.",
+          "database_checks": [
+            "Query active memberships A:25; không bỏ DM empty chỉ vì lastActivity null.",
+            "Số DM không tăng vì GET pagination."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T03-C03",
+          "status": "planned-not-executed",
+          "title": "User mới inbox rỗng và API lỗi có retry",
+          "preconditions": [
+            "S23 active/verified nhưng chưa tham gia DM trong run cô lập khác",
+            "Có fault GET list 503 và tài khoản A có DM"
+          ],
+          "data": "S23 empty case; A nonempty recovery case.",
+          "frontend_steps": [
+            "Login S23 mới, mở inbox, thấy hướng dẫn tìm người và không item mẫu.",
+            "Login A profile khác, bật fault GET list503 rồi mở inbox.",
+            "Tắt fault, bấm thử lại, danh sách thật của A trở lại."
+          ],
+          "backend_steps": [
+            "GET direct-conversations bằng S23 nhận empty; lưu response.",
+            "Bearer A GET list trong fault rồi request sạch sau fault."
+          ],
+          "expected_frontend": "Empty khác error; lỗi có retry; không dùng INITIAL_DMS để lấp response empty/error.",
+          "expected_backend": "S23:200 items=[] nextCursor=null; fault:503 theo harness; phục hồi:200 đúng actor.",
+          "database_checks": [
+            "GET không tạo DM/membership S23 khi inbox rỗng.",
+            "Fault không làm mất pairs/memberships/messages của A."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P1-T03-C04",
+          "status": "planned-not-executed",
+          "title": "Actor switch và cursor không rò inbox",
+          "preconditions": [
+            "A có nextCursor và response list A bị delay",
+            "C session riêng, chưa được giao D-AB"
+          ],
+          "data": "Cursor A + C.token, request A trễ sau logout.",
+          "frontend_steps": [
+            "Bật delay GET list A rồi mở inbox A.",
+            "Logout A/login C trong cùng tab trước response A trả về.",
+            "Đợi response cũ rồi reload; inbox chỉ thuộc C, không lóe D-AB hoặc giữ selection A."
+          ],
+          "backend_steps": [
+            "Bearer C GET direct-conversations với cursor của A.",
+            "GET mới không cursor bằng C; so participants và IDs; token A cũ GET list sau logout."
+          ],
+          "expected_frontend": "Response A cũ không ghi vào C; list/selection A bị cleanup.",
+          "expected_backend": "Cursor chéo actor:400 CURSOR_INVALID; C GET sạch200 đúng tập; token A đã revoke401.",
+          "database_checks": [
+            "Membership C không tăng vì actor switch/cursor error.",
+            "Không có server action tạo conversation từ stale response FE."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P2-T01",
+      "cases": [
+        {
+          "id": "DM-P2-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Gửi M01 chỉ báo sent sau commit",
+          "preconditions": [
+            "D-AB hợp lệ, A login; thao tác UI sinh UUIDv4 O_UI mới chưa từng dùng trong pair/run.",
+            "Chụp counts message/operation/outbox và counter N; backend trong ca này chỉ replay thao tác UI."
+          ],
+          "data": "content=\"Chào Bảo, đây là tin thử M01.\"; O_UI lấy chính xác từ body POST do UI gửi, không thay bằng O1.",
+          "frontend_steps": [
+            "A mở D-AB, nhập đúng M01 rồi bấm Gửi một lần.",
+            "Quan sát Đang gửi trong thời gian response bị delay; chưa hiện Đã gửi trước commit/ack.",
+            "Sau response, ghi một dòng sent, ID/version/sequence từ Network; không yêu cầu B realtime/history ở task này."
+          ],
+          "backend_steps": [
+            "Bearer A POST /api/v1/direct-conversations/<D-AB.id>/messages với đúng body đã bắt từ Network: {\"clientMessageId\":\"<O_UI>\",\"content\":\"Chào Bảo, đây là tin thử M01.\"}. Đây là replay, không phải gửi mới.",
+            "Gọi lại đúng body O_UI lần nữa; đối soát writer records theo actor+O_UI và ID của UI."
+          ],
+          "expected_frontend": "Chỉ một dòng M01, sent sau response thành công; không sinh message giả khác ID.",
+          "expected_backend": "200 Message với conversationId D-AB, author.id A, clientMessageId O_UI, version='1', sequence chuỗi số N+1, content đúng M01; mọi replay trả cùng ID.",
+          "database_checks": [
+            "Delta message=1, send_operation=1, create outbox=1, counter=N+1.",
+            "Outbox payload chỉ ID/version/context, không body M01; không row message_edits chứa body cũ."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P2-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Biên UTF16 và chuẩn hóa CRLF giữ khoảng trắng",
+          "preconditions": [
+            "O1 case trước đã tách; mỗi input dùng UUIDv4 mới",
+            "Agent bàn giao file input để paste và generator UTF16"
+          ],
+          "data": "L2000 a×2000; L2001 a×2001; E2000 😀×1000; E2002 😀×1001; M02 CRLF; M03 spaces.",
+          "frontend_steps": [
+            "Paste từng L/E vào composer, ghi counter; bấm Gửi nếu UI cho phép.",
+            "Paste M02 từ fixture rồi gửi; hiển thị hai dòng và 👩‍💻 đúng.",
+            "Gửi M03 giữ hai spaces mỗi đầu; inspect response content để xác nhận không trim, không chỉ dựa mắt."
+          ],
+          "backend_steps": [
+            "POST messages riêng mỗi input, kể cả input UI đã ngăn gửi, bằng helper JSON có UUID mới.",
+            "Compare response.content (không có trường normalizedContent), JavaScript string.length và .NET UTF-16 length của fixture; M02 mong đợi \"Dòng 1\\nDòng 2 👩‍💻\"."
+          ],
+          "expected_frontend": "L2000/E2000 gửi được; L2001/E2002 báo vượt giới hạn và giữ draft để sửa; M02/M03 nguyên nội dung sau LF normalization.",
+          "expected_backend": "Valid:200; invalid length:400 CONTENT_TOO_LONG; M02 CRLF→LF, M03 không trim; invalid không được cắt body rồi lưu.",
+          "database_checks": [
+            "Số rows tăng chỉ bằng số input hợp lệ thực sự commit.",
+            "Không message/operation/outbox cho request vượt limit; DB body M02/M03 khớp normalized value."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P2-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Empty invisible invalid và HTML text an toàn",
+          "preconditions": [
+            "Mỗi raw request có ID mới; helper hỗ trợ raw JSON không tự sanitize surrogate",
+            "Có fault/browser input file cho invisible"
+          ],
+          "data": "Inputs: \"\", \" \\t\\n \", \"\\u200b\", NUL, unpaired surrogate; M04=\"<script>alert('DM test')</script>\".",
+          "frontend_steps": [
+            "Thử Gửi empty/whitespace/invisible và ghi lỗi rõ, không dòng sent.",
+            "Gửi M04 như text, xem nội dung nguyên chữ và không có alert/dialog/script chạy.",
+            "Reload chưa thuộc history ở task này: đối soát bằng response/DB, không giả tin lưu được từ UI local state."
+          ],
+          "backend_steps": [
+            "POST empty/white/zero-width/NUL qua helper; raw JSON body surrogate sai bằng file fixture.",
+            "POST M04 UUID mới; kiểm tra Content-Type JSON/ProblemDetails và lỗi parser không chứa body request."
+          ],
+          "expected_frontend": "Không gửi được empty/invisible; HTML hiện literal text, không chạy code.",
+          "expected_backend": "Empty/invisible400 CONTENT_EMPTY; NUL400 CONTENT_INVALID; malformed surrogate400 CONTENT_INVALID hoặc parser validation đã chốt, không500; M04 valid200.",
+          "database_checks": [
+            "Rows chỉ tăng M04, không invalid input; outbox/log không ghi body lỗi.",
+            "Không sửa nội dung HTML thành markup hoặc replace surrogate thành U+FFFD để lưu."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P2-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Outsider và fault trước commit không tạo tin",
+          "preconditions": [
+            "C không member D-AB; chuẩn bị UUID mới cho từng thử",
+            "Fault writer rollback deterministic trong test, counter/messages snapshot"
+          ],
+          "data": "C attempts content=OUTSIDER-P2; A content=ROLLBACK-P2; fault trả503 theo harness test.",
+          "frontend_steps": [
+            "C mở UI DM list không có D-AB; thử recipe direct request do agent bàn giao.",
+            "Ở A bật fault trước commit, nhập ROLLBACK-P2 rồi Gửi.",
+            "Tắt fault nhưng chưa bấm Retry trong task này; quan sát không báo sent hoặc tự gửi lại."
+          ],
+          "backend_steps": [
+            "Bearer C POST D-AB messages body UUID/content OUTSIDER-P2.",
+            "Bearer A POST body ROLLBACK-P2 trong fault; query DB sau transaction kết thúc; no-token POST cũng thử."
+          ],
+          "expected_frontend": "C không thấy tin/private detail; A giữ error/failed, không sent.",
+          "expected_backend": "C bị deny theo status/errorCode cố định chốt P0, không metadata/body; no token401; rollback fault503 không success.",
+          "database_checks": [
+            "Delta rows/operation/outbox=0 cho C, no-token và rollback A; counter không tăng do rollback.",
+            "Giữ nguyên message đã có trước ca, không dùng lỗi để xóa history."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P2-T02",
+      "cases": [
+        {
+          "id": "DM-P2-T02-C01",
+          "status": "planned-not-executed",
+          "title": "Latest và before trả 50 50 21 tin đúng thứ tự",
+          "preconditions": [
+            "D-HIST riêng chỉ có H121, A là member",
+            "HIST-001...121 được gửi qua writer, ghi IDs/sequences"
+          ],
+          "data": "limit50; latest HIST-072...121, before1 HIST-022...071, before2 HIST-001...021.",
+          "frontend_steps": [
+            "A mở D-HIST, ghi 50 dòng mới nhất.",
+            "Bấm Tải tin cũ hơn hai lần, mỗi lần ghi IDs hiện thêm và vị trí scroll.",
+            "Đến đầu lịch sử thấy HIST-001; không còn tải thêm, tổng121 dòng không trùng."
+          ],
+          "backend_steps": [
+            "GET /api/v1/direct-conversations/<D-HIST.id>/messages?limit=50; lưu nextCursor.",
+            "GET same route before=<cursor trang trước URL-encode>&limit=50 hai lần; đối chiếu union IDs/sequence."
+          ],
+          "expected_frontend": "Scroll ổn định; giữ đủ121 tin; newest/older nhóm đúng label theo fixture.",
+          "expected_backend": "200 từng trang; items luôn tăng sequence trong trang; counts50/50/21; hasMore true/true/false, nextCursor cuối null.",
+          "database_checks": [
+            "Query count space=D-HIST:121, unique ID/sequence=121.",
+            "Union API IDs bằng toàn tập DB; không bỏ tin vì dùng sequence identity toàn cục."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P2-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Tin gửi khi B vắng mặt vẫn thấy sau reload và restart",
+          "preconditions": [
+            "D-AB có baseline N tin; B đã logout/đóng ứng dụng",
+            "A dùng UUID mới và content OFFLINE-HISTORY-C02"
+          ],
+          "data": "Một tin mới khi B không subscribe; key ring/DB volume riêng còn nguyên.",
+          "frontend_steps": [
+            "Đóng B, A gửi OFFLINE-HISTORY-C02 và chờ sent.",
+            "B mở/login lại, vào D-AB, thấy content dù không nhận realtime lúc vắng.",
+            "Reload B rồi restart API không xóa volume, mở lại history; tin vẫn có cùng ID."
+          ],
+          "backend_steps": [
+            "POST messages bằng A UUID mới, ghi message.id/sequence/version.",
+            "B GET messages trước/sau restart; dùng protected cursor còn hạn đã lưu để kiểm tra key ring."
+          ],
+          "expected_frontend": "Tin offline hiện từ API thật, không từ sự kiện đã mất; reload/restart không tạo bản khác.",
+          "expected_backend": "Send200, history200; cùng message ID/content/version; cursor chưa expired vẫn dùng được sau restart.",
+          "database_checks": [
+            "Delta message/operation/create event=1 cho send; reload/restart không tăng.",
+            "Key ring tồn tại qua restart và DB rows không bị recreate từ seed."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P2-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Cursor chéo DM actor và bị sửa bị chặn",
+          "preconditions": [
+            "A có before/resume cursor D-AB",
+            "D-AC tồn tại; C không member D-AB"
+          ],
+          "data": "Original cursor; tampered cursor đổi một ký tự giữa string; actor C.",
+          "frontend_steps": [
+            "A mở history D-AB và dùng load older bình thường.",
+            "Bật fixture response cursor sai trong test browser, bấm load older; thấy lỗi và giữ tin đang xem.",
+            "Chọn tải lại sạch; UI không tự gửi tin hoặc nhảy sang D-AC."
+          ],
+          "backend_steps": [
+            "A GET D-AC history với cursor D-AB; A GET D-AB với tampered cursor hoặc before+after cùng request.",
+            "C GET D-AB bằng token C và cursor A; A GET sạch không cursor để hồi phục."
+          ],
+          "expected_frontend": "Error tải thêm không xóa timeline đã có; recovery tải đúng history actor/resource.",
+          "expected_backend": "Cursor sai scope/tampered/direction400 CURSOR_INVALID; before+after400 validation; C resource deny theo contract P0 không body/participants; GET sạch200.",
+          "database_checks": [
+            "Không insert/update message/operation do cursor rejection.",
+            "Không decrypt cursor vào error/log hoặc trả resource details cho C."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P2-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Lỗi tải thêm và biên sequence lớn không mất tin",
+          "preconditions": [
+            "D-HIST H121; runner fault chỉ request before tiếp theo503",
+            "Fixture biệt lập hỗ trợ sequence lớn hơn 9007199254740991 mà DB giữ đúng string"
+          ],
+          "data": "Technical sequence fixture: 9007199254740992, 9007199254740993; không sửa counter app bằng SQL tay.",
+          "frontend_steps": [
+            "A mở 50 tin latest; bật fault trước lần Load older.",
+            "Bấm tải thêm, ghi lỗi, các dòng đang thấy và scroll không bị xóa.",
+            "Tắt fault rồi Retry; mở fixture bigint riêng, ghi thứ tự hai tin, không merge mất một vì Number rounding."
+          ],
+          "backend_steps": [
+            "GET history before trong fault503 rồi request lại sạch.",
+            "Runner DB test tạo big-sequence fixture qua test setup đã bàn giao; GET history và so literal sequence strings."
+          ],
+          "expected_frontend": "Error chỉ ở phần tải thêm; Retry giữ đủ data; hai sequence lớn có thứ tự khác nhau và hai dòng.",
+          "expected_backend": "Fault503, recovery200; sequence/version là decimal string, FE dùng BigInt hoặc comparator chính xác; không rounding Number.",
+          "database_checks": [
+            "H121 vẫn121; GET không thay rows.",
+            "Fixture bigint giữ unique sequence và counter hợp lệ; đối chiếu bằng bigint SQL, không coi hai giá trị là một."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P3-T01",
+      "cases": [
+        {
+          "id": "DM-P3-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Rollback rồi có mạng không tự gửi lại",
+          "preconditions": [
+            "Fault writer trước commit trả503 chỉ cho request ca; A mở D-AB",
+            "Chụp counts N và Network log; fault auto-retry tắt"
+          ],
+          "data": "content=\"RETRY-ROLLBACK-C01\"; UI clientMessageId lấy từ POST đầu, đặt O_UI.",
+          "frontend_steps": [
+            "A bật fault, nhập content và Gửi; chờ error/failed.",
+            "Tắt fault, chuyển Offline→Online, đợi qua chu kỳ reconnect cấu hình; không bấm Retry, kiểm tra Network không thêm POST.",
+            "Bấm Thử lại một lần, so UUID/content với POST đầu; sau success một dòng sent."
+          ],
+          "backend_steps": [
+            "Capture POST đầu lỗi: body O_UI/content; query DB sau rollback trước khi retry.",
+            "Sau click Retry kiểm tra POST body cùng O_UI; replay REST cùng O_UI nếu muốn đối soát, không dùng UUID mới."
+          ],
+          "expected_frontend": "Failed được giữ, hồi mạng không tự send; manual retry thay tin tạm đúng một dòng.",
+          "expected_backend": "Fault503; no automatic POST; Retry200 cùng operation ID; repeat body200 same message ID.",
+          "database_checks": [
+            "Trước Retry: delta message/operation/outbox/counter=0.",
+            "Sau Retry: mỗi create count+1, counter+1; REST replay không tăng."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P3-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Mất response sau commit retry không tạo trùng",
+          "preconditions": [
+            "Harness commit xong rồi drop response chỉ ca này, không rollback",
+            "B mở D-AB nếu realtime đã có thì ghi đúng trạng thái phase; chưa dùng event proof trước P4"
+          ],
+          "data": "content=\"LOST-RESPONSE-C02\"; O_UI từ request UI; snapshot N.",
+          "frontend_steps": [
+            "Bật drop-response-after-commit, A bấm Gửi một lần.",
+            "UI timeout/unknown, giữ tin và nút Retry; đọc query DB để xác nhận commit dù FE chưa biết.",
+            "Tắt fault rồi Retry hai lần có kiểm soát; timeline chỉ một dòng cùng message ID."
+          ],
+          "backend_steps": [
+            "Capture first POST body O_UI; query operation/message sau commit.",
+            "POST lại cùng O_UI/content, kể cả hai request song song bằng runner; lấy response IDs."
+          ],
+          "expected_frontend": "Không tự đổi UUID; unknown/failed chuyển sent, không hai dòng khi response tới muộn.",
+          "expected_backend": "First response bị mất, không ghi là server rollback; replay200 và mọi response cùng ID.",
+          "database_checks": [
+            "Delta message=1, operation=1, create outbox=1 cho toàn operation.",
+            "Một pair author+clientMessageId; kiểm tra counts không tăng ở retry/late response."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P3-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Đổi body giữ khóa conflict còn khóa mới tạo tin mới",
+          "preconditions": [
+            "O1 đã commit content ORIGINAL-C03 trong run BE; FE có failed O_UI tương đương",
+            "Chụp count sau original"
+          ],
+          "data": "Original=ORIGINAL-C03; altered=ALTERED-C03; O1/O2 từ fixture.",
+          "frontend_steps": [
+            "Trên UI failed tin ORIGINAL-C03, giữ retry body bất biến.",
+            "Nếu muốn nội dung ALTERED-C03, soạn tin mới, không sửa ngầm body gắn failed ID.",
+            "Gửi thêm ORIGINAL-C03 bằng thao tác Gửi mới; ghi ID khác và hai dòng hợp lệ."
+          ],
+          "backend_steps": [
+            "POST D-AB messages O1/content ORIGINAL-C03, rồi O1/content ALTERED-C03.",
+            "POST O2/content ORIGINAL-C03; đọc history IDs và operation records."
+          ],
+          "expected_frontend": "Retry không ghi đè original; cùng text gửi chủ ý lần mới có dòng mới/UUID mới.",
+          "expected_backend": "Original200; altered cùng O1:409 OPERATION_CONFLICT; O2 cùng content200, ID khác O1.",
+          "database_checks": [
+            "Sau ba POST: đúng2 messages/2 operations/2 create outboxes; không ALTERED-C03 row.",
+            "Fingerprint O1 vẫn từ payload gửi ban đầu, không cập nhật bởi conflict."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P3-T01-C04",
+          "status": "planned-not-executed",
+          "title": "401 refresh không tự replay POST",
+          "preconditions": [
+            "A có session sẽ bị revoked hoặc request send nhận injected401 theo ca",
+            "GET có thể refresh; fault chỉ target một mutation"
+          ],
+          "data": "content=\"NO-AUTO-REPLAY-C04\"; O_UI captured; POST retry:false.",
+          "frontend_steps": [
+            "A soạn content; bật 401 cho request gửi ca rồi bấm Gửi.",
+            "Quan sát auth/error UI; cho refresh/đăng nhập lại và mạng online; không bấm Retry, kiểm tra Network chỉ một POST send.",
+            "Sau phục hồi session và xác nhận quyền D-AB, bấm Retry chủ động; kiểm tra body/UUID như trước."
+          ],
+          "backend_steps": [
+            "Record first POST401 và các /auth/refresh/GET nếu có.",
+            "Query trước manual retry; sau click Retry record POST200 với đúng O_UI; không lấy login mới làm chứng minh token cũ còn hợp lệ."
+          ],
+          "expected_frontend": "Không tự chuyển sent vì refresh thành công; người dùng quyết định retry.",
+          "expected_backend": "POST đã nhận401 không tự gọi lại; DB chưa commit ca này; manual retry sau session hợp lệ200.",
+          "database_checks": [
+            "Delta trước manual retry=0; sau thành công=1 create.",
+            "Không có worker/service-worker/API wrapper replay mutation ngoài click người dùng."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P3-T02",
+      "cases": [
+        {
+          "id": "DM-P3-T02-C01",
+          "status": "planned-not-executed",
+          "title": "Giữ transaction để chứng minh sequence theo commit",
+          "preconditions": [
+            "A1/A2 cùng user nhưng session độc lập; D-AB counter N",
+            "Runner barrier giữ writer X dưới lock trước commit; writer Y phải chờ"
+          ],
+          "data": "X=SEQ-X-C01; Y=SEQ-Y-C01; hai UUID mới.",
+          "frontend_steps": [
+            "A1 gửi X qua runner/UI đã gắn barrier; giữ chưa commit.",
+            "A2 gửi Y trong khi X đang chờ; quan sát Y chưa sent dù request bắt đầu.",
+            "Release X, đợi cả hai success; B reload history, X rồi Y đúng sequence."
+          ],
+          "backend_steps": [
+            "Start two POST messages X/Y với barrier deterministic; trước release query committed history.",
+            "Release X commit; thu responses, GET history after cursor baseline và compare."
+          ],
+          "expected_frontend": "Không báo sent cho Y trước lock/commit; history có hai tin sau release, không bỏ X.",
+          "expected_backend": "Trước release không thấy X/Y committed; sau commit X.sequence=N+1,Y=N+2 với schema counter hiện hành, IDs khác nhau.",
+          "database_checks": [
+            "Message/operation/outbox mới đúng2; counter tăng2; không sequence cấp bằng MAX+1 ngoài khóa.",
+            "History union bằng committed writer set."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P3-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Rollback writer đầu giải phóng lock không để orphan",
+          "preconditions": [
+            "Runner barrier như C01 nhưng chủ ý rollback X",
+            "D-AB baseline N, Y payload riêng"
+          ],
+          "data": "X=ROLLBACK-X-C02; Y=COMMIT-Y-C02; UUID mới.",
+          "frontend_steps": [
+            "A1 gửi X và giữ transaction, A2 gửi Y phải chờ.",
+            "Trigger rollback X, quan sát A1 error; Y hoàn tất.",
+            "B reload history, chỉ Y; bấm Retry X mới là quyết định người dùng khác bước ca."
+          ],
+          "backend_steps": [
+            "Two POST barrier; rollback X, commit Y; capture statuses và history.",
+            "Query operation/outbox của X/Y sau transactions kết thúc; không retry X trong runner tự động."
+          ],
+          "expected_frontend": "X failed, Y sent; không dòng sent X hoặc mất Y do khóa bị giữ mãi.",
+          "expected_backend": "X lỗi đúng harness, Y200; Y sequence/counter đúng committed state sau rollback, không history gap làm mất tin.",
+          "database_checks": [
+            "Không row X/message/operation/outbox; một bộ records Y; lock được release.",
+            "Counter bằng baseline+1 cho ca biệt lập; không orphan khi transaction fail."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P3-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Rotation key giữ retry cũ và thiếu key trả503",
+          "preconditions": [
+            "O1 gửi original với HMAC key K1 tổng hợp; keys ngoài Git",
+            "Có key K2 riêng và recipe reload/restart config không mất K1"
+          ],
+          "data": "original=KEY-ROTATE-C03; new payload=KEY-NEW-C03; O2 chưa dùng.",
+          "frontend_steps": [
+            "Giữ một tin failed/unknown O_UI gửi dưới K1 để thử retry.",
+            "Đổi active key sang K2, giữ K1 đọc được; retry tin cũ thành sent một dòng.",
+            "Tạm làm K1 không đọc được, thử retry operation K1; UI lỗi rõ, không đổi ID; phục hồi key và Retry."
+          ],
+          "backend_steps": [
+            "Send O1/K1; rotate activeK2, POST original O1; send O2 mới.",
+            "Remove availability K1 ở môi trường test, retry O1; restore K1 rồi retry lại; restart API giữ key ring/key version."
+          ],
+          "expected_frontend": "Retry cũ không tạo tin mới; thiếu key không hiện success hoặc conflict giả.",
+          "expected_backend": "Replay K1 sau rotation200 sameID; operation mới key_id K2; missingK1:503 FINGERPRINT_KEY_UNAVAILABLE, không409 payload conflict; restore200.",
+          "database_checks": [
+            "Two original operations đúng O1/O2; không thêm row khi key thiếu/retry.",
+            "Fingerprint_version/key_id/hash khớp fixture, không raw content trong operation; key bytes không nằm DB/docs."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P3-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Legacy retry không bịa fingerprint và bigint/UUID fixture đúng",
+          "preconditions": [
+            "Migration fixture chứa legacy message có clientMessageId nhưng không send fingerprint",
+            "New writer chưa tạo operation cho legacy; user pair fixture bắt lỗi endian"
+          ],
+          "data": "UUID pair 00000001-0000-4000-8000-000000000000 và 00000100-0000-4000-8000-000000000000; legacy original operation alias LEGACY-O.",
+          "frontend_steps": [
+            "A mở legacy DM, xem tin hiện hành bằng history thật.",
+            "Gọi recipe legacy replay; UI/error không tự chuyển thành send ID mới.",
+            "Mở lại lịch sử và fixture hai UUID, kiểm tra vẫn đúng peer/tin, không duplicate."
+          ],
+          "backend_steps": [
+            "POST legacy key/content theo fixture; expect unverifiable, GET history remains readable.",
+            "Run UUID ordering/HMAC byte fixture và migration fresh/existing/idempotent runner; output numeric aggregates không keys/body riêng."
+          ],
+          "expected_frontend": "Legacy history vẫn đọc theo quyền; error replay không hồi sinh body hay thêm dòng mới.",
+          "expected_backend": "Legacy retry409 OPERATION_UNVERIFIABLE; không tính fingerprint từ message đã sửa; UUID comparator khớp low/high DB.",
+          "database_checks": [
+            "Legacy count/IDs/body hiện hành không đổi do replay; migration chạy lại không nhân rows/counter.",
+            "Unique pair ordering và bigint wire fixtures đều đạt, không castingNumber làm mất precision."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P4-T01",
+      "cases": [
+        {
+          "id": "DM-P4-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Hai browser nhận MessageChanged không reload",
+          "preconditions": [
+            "A1/B1 login và subscribe D-AB bằng Hub thật",
+            "Worker/registry running, capture subscribe ack"
+          ],
+          "data": "content=\"REALTIME-C01\"; UI ID captured; không chứng minh đã đọc/đã nhận.",
+          "frontend_steps": [
+            "B mở D-AB trước, A cũng mở D-AB.",
+            "A Gửi REALTIME-C01, ghi gửi→response và commit→B render timestamps.",
+            "B không reload vẫn thấy một dòng; A cũng một dòng, tên/ID/body đúng."
+          ],
+          "backend_steps": [
+            "Inspect /hubs/chat authenticated connection, SubscribeConversation({conversationId:D-AB}) ack.",
+            "Capture POST message response và MessageChanged payload, đối chiếu message.id/clientMessageId/version, eventId chỉ là event ID."
+          ],
+          "expected_frontend": "A sent sau persistence; B nhận dòng mới không reload; không hiển thị read receipt tự bịa.",
+          "expected_backend": "Send200; event DTO cùng current message/ID/version, routing chỉ connections đủ quyền; mutation chỉ REST.",
+          "database_checks": [
+            "Message/operation/create outbox delta1; published/lease state đúng; event sau commit.",
+            "Không chứa body trong outbox stored payload; dispatcher lấy current message để gửi."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P4-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Worker dừng thì history vẫn đúng và bật lại phát bù",
+          "preconditions": [
+            "A/B subscribe D-AB, runner có lệnh dừng riêng dispatcher không tắt DB/API",
+            "Capture baseline outbox/messages"
+          ],
+          "data": "content=\"WORKER-STOP-C02\"; dừng worker30 giây phục vụ fault, không target SLA.",
+          "frontend_steps": [
+            "Dừng worker theo lệnh đã bàn giao, A gửi tin và thấy sent.",
+            "B chưa nhận realtime, bấm reload history vẫn thấy tin từ DB.",
+            "Start worker, B/A không duplicate khi outbox được publish lại; kiểm tra connection states phản ánh transport thật."
+          ],
+          "backend_steps": [
+            "POST message khi dispatcher stopped, GET history bằng B200.",
+            "Query outbox pending; bật worker, record publish/event và lease/attempts; re-run dispatch same event trong test."
+          ],
+          "expected_frontend": "Sent đúng DB dù realtime chậm; load history được; worker recovery không thêm dòng thứ hai.",
+          "expected_backend": "Send200, history200, outbox pending lúc stopped; publish sau worker start, không gọi lại POST writer.",
+          "database_checks": [
+            "Message/operation/create event chỉ1; repeated dispatch không tạo message.",
+            "Outbox processed/published, lease không bị giữ mãi sau worker crash."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P4-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Event trước response duplicate và cũ không nhân tin",
+          "preconditions": [
+            "Browser fault harness reorder/delay HTTP chỉ case; backend event thật từ message đã commit",
+            "A/B subscribed"
+          ],
+          "data": "content=\"EVENT-FIRST-C03\"; O_UI; application event duplicate injection có nhãn fixture.",
+          "frontend_steps": [
+            "Delay HTTP response gửi của A nhưng để MessageChanged thật đến trước.",
+            "A gửi và nhận event trước ack, kiểm tra một dòng khi response muộn tới.",
+            "Harness phát lại event cùng ID/version hai lần; nhìn A/B vẫn một dòng, không tăng badge/count giả."
+          ],
+          "backend_steps": [
+            "Capture actual POST/current MessageChanged và delay release; record order event→response.",
+            "Inject duplicate application event in isolated browser runner; compare GET history DB and FE unique IDs; không coi injected event là proof dispatcher thực."
+          ],
+          "expected_frontend": "Tin tạm được hợp nhất bằng actor+clientMessageId/ID; không backslide hoặc duplicate.",
+          "expected_backend": "DB write1; repeat event cùng version bỏ qua/merge idempotent; eventId không dùng làm resume cursor.",
+          "database_checks": [
+            "Message/operation/outbox create count1; không rows do injected event.",
+            "Tập FE IDs/version cuối bằng API current snapshot."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P4-T01-C04",
+          "status": "planned-not-executed",
+          "title": "C subscribe bị chặn và unsubscribe không còn nhận",
+          "preconditions": [
+            "C không member D-AB; A/B connected",
+            "Có Hub invoke runner session-aware, không thêm send qua Hub"
+          ],
+          "data": "SubscribeConversation payload {\"conversationId\":\"<D-AB.id>\"}; content ROUTE-DENY-C04.",
+          "frontend_steps": [
+            "C mở DM UI, không có D-AB; chạy recipe Hub subscribe C và ghi lỗi.",
+            "B unsubscribe D-AB qua chuyển conversation và ack; giữ connection ở DM khác.",
+            "A gửi ROUTE-DENY-C04; C không có payload, B subscription cũ không nhận; B mở lại D-AB đọc history hợp lệ."
+          ],
+          "backend_steps": [
+            "Invoke SubscribeConversation D-AB bằng C, kiểm tra HubException ProblemDetails schema không stack/private participants.",
+            "Invoke UnsubscribeConversation bằng B rồi A POST; inspect registry target recipients và B resubscribe/history."
+          ],
+          "expected_frontend": "C không nhìn/nhận D-AB; B unsubscribe không còn nhận room event cho subscription cũ.",
+          "expected_backend": "C invoke deny theo Hub contract; B unsubscribe ack; message gửi hợp lệ200, chỉ target current authorized subscriptions.",
+          "database_checks": [
+            "Registry không có C/D-AB hoặc B subscription đã bỏ; message create1 vẫn lưu cho A/B history.",
+            "Không coi group membership SignalR cũ là đủ auth để dispatch."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P4-T02",
+      "cases": [
+        {
+          "id": "DM-P4-T02-C01",
+          "status": "planned-not-executed",
+          "title": "B offline rồi bù đủ101 tin ba trang",
+          "preconditions": [
+            "B đã load D-AB và lưu resumeCursor R0 ở frontier H0",
+            "A/B từng subscribe, helper seed qua writer chụp baseline IDs"
+          ],
+          "data": "R101 RECONNECT-001...101, limit50, added IDs manifest R_set.",
+          "frontend_steps": [
+            "B bật Offline/đóng Hub rồi A tạo101 tin qua writer.",
+            "B Online, kiểm tra subscribe lại và requests after tự bù.",
+            "Đợi merge hoàn tất; đối chiếu timeline đủ101 tin mới, không lặp những tin baseline."
+          ],
+          "backend_steps": [
+            "Using B: GET messages?after=<R0>&limit=50, lưu nextCursor/through H1.",
+            "Hai GET after=<nextCursor>&limit=50; không tự đưa sequence arbitrary; compare current R_set."
+          ],
+          "expected_frontend": "Offline/connecting/online phản ánh thật; đủ101 mới ngoài baseline; chưa tự retry failed send.",
+          "expected_backend": "Pages50/50/1, cùng through H1; resumeCursor mới chỉ publish ở page cuối; items.ID union đúng R_set.",
+          "database_checks": [
+            "DB có101 new operations/messages/create events từ seed; GET không tạo thêm.",
+            "FE/new REST set bằng DB new committed set, không lấy hiệu sequence làm count."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P4-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Mất mạng sau trang1 rồi resume không bỏ50 tin cuối",
+          "preconditions": [
+            "Data R101 như ca riêng, R0/H1 known",
+            "Harness ngắt transport ngay sau page1 merge"
+          ],
+          "data": "Break after page1 hoặc page2, chạy lần độc lập cho mỗi điểm ngắt.",
+          "frontend_steps": [
+            "B Online để catchup, page1 merge xong thì harness Offline.",
+            "Đợi state offline, kiểm tra resume không nhảy lên H1 khi chưa đủ.",
+            "Online lại, bù phần thiếu/refresh đúng contract; cuối có đủ101 duy nhất."
+          ],
+          "backend_steps": [
+            "Capture after page1 nextCursor và resumeCursor null trong response hasMore=true.",
+            "Retry catchup sau reconnect; giữ frontier khi continuation cursor hợp lệ hoặc bootstrap sạch theo contract khi cursor invalid."
+          ],
+          "expected_frontend": "Không coi50 tin đã merge là đủ101; UI không bị thiếu nhóm tin cuối.",
+          "expected_backend": "Frontier không tiến vì event live max; last resume chỉ sau all-page merge; repeated page idempotent.",
+          "database_checks": [
+            "DB R_set không đổi bởi GET/reconnect; FE counts101/unique101 cuối ca.",
+            "Client checkpoint logs không lưu body/token và không tuyên bố page success trước merge."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P4-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Event live giữa lúc bù không làm nhảy cursor",
+          "preconditions": [
+            "B offline có backlog101; A có thể gửi thêm LIVE-C03 lúc B đang nhận page1",
+            "Buffer handlers bật trước subscribe ack"
+          ],
+          "data": "Backlog frontier H1; live message H2=H1+1 sau snapshot.",
+          "frontend_steps": [
+            "B reconnect, hold response page1 để A gửi LIVE-C03.",
+            "Release page1 rồi bù pages2/3; kiểm tra live event được đệm/merge nhưng không nhảy checkpoint qua pages chưa đọc.",
+            "Tải thêm cycle/snapshot theo protocol, nhìn backlog và live mỗi tin một dòng."
+          ],
+          "backend_steps": [
+            "Inspect subscriptions established trước GET, page responses giữ through=H1.",
+            "Record MessageChanged LIVE-C03 và final history/checkpoint; next catchup từ frontier H1 nếu live H2 chưa covered."
+          ],
+          "expected_frontend": "Không mất backlog giữa page boundaries; event trước/giữa GET được merge với version đúng.",
+          "expected_backend": "All three catchup pages through H1; highest realtime H2 không dùng để bỏ qua H1 pages; final FE has102 new IDs once.",
+          "database_checks": [
+            "101 backlog+1 live message,102 operations/create records; không duplicates.",
+            "DB committed sequence order và FE sort precision consistent."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P4-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Cursor expired recovery và failed send không tự gửi",
+          "preconditions": [
+            "B có old resumeCursor; test config/fixture làm cursor expired không chờ24h thật",
+            "Một failed operation F_UI chưa commit nằm trong tab B"
+          ],
+          "data": "ExpiredCursor đã biết; unsent content KEEP-FAILED-C04.",
+          "frontend_steps": [
+            "B gửi trong rollback fault để giữ failed F_UI, tắt fault và Offline.",
+            "Làm cursor expired bằng helper test rồi Online; UI tải lại history/current window.",
+            "Không bấm Retry, Network không POST F_UI; sau history phục hồi bấm Retry chủ động để gửi một lần."
+          ],
+          "backend_steps": [
+            "GET messages after expired cursor:400 CURSOR_INVALID; GET latest sạch200 và reload pages đang xem.",
+            "Track POST F_UI attempts: first fault, không automatic replay, manual Retry mới có request; inspect operation records."
+          ],
+          "expected_frontend": "Lỗi cursor tự phục hồi bằng GET, failed vẫn failed đến khi bấm; không mất quyền hoặc dùng cache cũ làm current.",
+          "expected_backend": "400 invalid cursor không kéo mutation retry; old token invalid nếu fixture đổi thì auth chặn, không tự subscribe trái quyền.",
+          "database_checks": [
+            "Trước manual retry không row F_UI; sau manual successful commit một row.",
+            "Chỉ chứng minh reconnect new history ở phase này; edit/delete old-window E2E chờ P5-T03."
+          ],
+          "evidence": [
+            "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",
+            "Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P5-T01",
+      "cases": [
+        {
+          "id": "DM-P5-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Sửa hai lần, chỉ giữ nội dung hiện tại",
+          "preconditions": [
+            "A gửi EDIT-ORIGINAL, nhận id M_E, version='1'; B mở D-AB online, A2 có phiên riêng.",
+            "Chụp counts và editedAt ban đầu."
+          ],
+          "data": "Lần 1 \"EDIT-FIRST\"; lần 2 \"EDIT-SECOND\"; expectedVersion lấy từ response trước.",
+          "frontend_steps": [
+            "A chọn Sửa M_E, thay bằng EDIT-FIRST rồi Lưu.",
+            "B và A2 quan sát nội dung đổi, có trạng thái đã sửa, cùng ID/vị trí.",
+            "A sửa lần hai EDIT-SECOND; không hiện body cũ trong lịch sử sửa hoặc UI."
+          ],
+          "backend_steps": [
+            "Lane BE riêng: POST tạo M_E_BE với UUID mới; PATCH /api/v1/direct-conversations/<D-AB.id>/messages/<M_E_BE.id> {\"expectedVersion\":\"1\",\"content\":\"EDIT-FIRST\"}.",
+            "PATCH cùng URL {\"expectedVersion\":\"2\",\"content\":\"EDIT-SECOND\"}; GET trang history chứa ID để đọc hiện trạng."
+          ],
+          "expected_frontend": "FE chỉ còn EDIT-SECOND, ID/sequence giữ nguyên; mọi client online cùng version mới.",
+          "expected_backend": "PATCH lần lượt 200 version='2' và '3'; content đúng; editedAt không null; GET hiện version='3', không trả EDIT-ORIGINAL/EDIT-FIRST.",
+          "database_checks": [
+            "Per lane: cùng 1 message, sequence không đổi, version tăng đúng 2; counter tạo tin không tăng do PATCH.",
+            "Có 2 sự kiện sửa với metadata ID/version; không body sửa cũ trong message_edits, outbox, audit/log."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Hủy sửa và lưu nguyên nội dung là no-op",
+          "preconditions": [
+            "M_N thuộc A chưa xóa; biết version V, content, editedAt E và outbox count.",
+            "Không có mutation đồng thời."
+          ],
+          "data": "M_N.content=\"  Giữ khoảng trắng có chủ ý  \"; PATCH cùng chuỗi, cùng expectedVersion.",
+          "frontend_steps": [
+            "A mở Sửa, nhập KHONG-LUU rồi Hủy.",
+            "Mở lại kiểm tra vẫn chuỗi ban đầu đầy đủ khoảng trắng.",
+            "Giữ nguyên nội dung, bấm Lưu nếu UI cho phép; nếu UI chặn no-op ghi không có PATCH, vẫn kiểm tra BE."
+          ],
+          "backend_steps": [
+            "GET history ghi version V, editedAt E.",
+            "PATCH /api/v1/direct-conversations/<D-AB.id>/messages/<M_N.id> {\"expectedVersion\":\"<V>\",\"content\":\"  Giữ khoảng trắng có chủ ý  \"}."
+          ],
+          "expected_frontend": "Hủy không đổi tin; no-op không tạo dấu sửa mới, không thêm dòng, không mất khoảng trắng.",
+          "expected_backend": "200 cùng version V/content/editedAt E; không phát event sửa mới.",
+          "database_checks": [
+            "Message ID/sequence/version/editedAt nguyên trạng.",
+            "Delta outbox/journal mutation=0; không tạo lịch sử body."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Tác giả khác và ID thuộc hội thoại khác bị từ chối",
+          "preconditions": [
+            "M_A thuộc A trong D-AB; M_AC thuộc A trong D-AC; B là member D-AB, C outsider.",
+            "Chụp cả hai tin."
+          ],
+          "data": "B cố sửa M_A; A cố PATCH M_AC qua URL D-AB.",
+          "frontend_steps": [
+            "B mở D-AB; menu tin A không có quyền Sửa.",
+            "Dùng Network/helper gửi request cưỡng bức bằng phiên B, không sửa token thành A.",
+            "A và C mở D-AC kiểm tra M_AC còn nguyên."
+          ],
+          "backend_steps": [
+            "Bearer B PATCH D-AB/messages/M_A với expectedVersion hiện tại và content=\"UNAUTHORIZED-EDIT\": 403.",
+            "Bearer A PATCH D-AB/messages/M_AC: 404; C PATCH D-AB/messages/M_A trả đúng status/errorCode denial đã chốt tại P0."
+          ],
+          "expected_frontend": "UI không cho B sửa tin A; lỗi request không cập nhật lạc quan thành nội dung trái quyền.",
+          "expected_backend": "B=403; sai resource=404; outsider theo contract P0 cụ thể, không tiết lộ body/metadata tin.",
+          "database_checks": [
+            "Cả M_A/M_AC không đổi version/content.",
+            "Không event sửa, không journal protection mới do request bị từ chối."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Validation và version cũ giữ nội dung thật",
+          "preconditions": [
+            "M_V thuộc A version V; A2 đã tải V; A1 có quyền sửa.",
+            "Đã có file payload biên UTF-16 và fixture lỗi."
+          ],
+          "data": "content=\"\" hoặc a×2001; A1 sửa \"EDIT-WINNER\"; A2 stale sửa \"EDIT-LOSER\".",
+          "frontend_steps": [
+            "A thử xóa hết nội dung hoặc dán 2001 chữ a trong editor; không lưu thành công.",
+            "A1 lưu EDIT-WINNER; A2 vẫn giữ editor từ V.",
+            "A2 Lưu EDIT-LOSER; nhận xung đột, tải hiện trạng và thấy EDIT-WINNER."
+          ],
+          "backend_steps": [
+            "PATCH M_V với version hiện tại, content=\"\" =>400 CONTENT_EMPTY; content a×2001 =>400 CONTENT_TOO_LONG.",
+            "Lane BE riêng tạo tin version1, PATCH WINNER expectedVersion1 =>200/version2; PATCH LOSER expectedVersion1 =>409 VERSION_CONFLICT; GET history hiện WINNER."
+          ],
+          "expected_frontend": "Validation giữ editor cho người dùng sửa; xung đột không tự ghi đè, không auto retry PATCH.",
+          "expected_backend": "Input lỗi không đổi version; stale PATCH 409 VERSION_CONFLICT; history trả winner.",
+          "database_checks": [
+            "Per lane chỉ lần sửa hợp lệ tăng version/outbox đúng 1.",
+            "Không lưu loser/body lỗi; không tăng sequence tạo tin."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P5-T02",
+      "cases": [
+        {
+          "id": "DM-P5-T02-C01",
+          "status": "planned-not-executed",
+          "title": "Xóa giữ tombstone đúng ID, sequence và vị trí",
+          "preconditions": [
+            "A gửi DELETE-TARGET trong D-AB, B online; có tin trước/sau để xác định vị trí.",
+            "Biết ID M_D, version V và counter N."
+          ],
+          "data": "DELETE /api/v1/direct-conversations/<D-AB.id>/messages/<M_D.id>?expectedVersion=<V>.",
+          "frontend_steps": [
+            "A chọn Xóa M_D và xác nhận.",
+            "B quan sát placeholder tin đã xóa, không còn DELETE-TARGET.",
+            "A reload/lấy history: tombstone vẫn ở giữa hai tin, không nhảy vị trí hoặc tạo tin mới."
+          ],
+          "backend_steps": [
+            "Lane BE riêng tạo M_D_BE; DELETE đúng URL với expectedVersion hiện tại.",
+            "GET history chứa ID; so sánh response DELETE với current row/page."
+          ],
+          "expected_frontend": "Body biến mất trên A/B; tombstone giữ cùng ID/vị trí, không có undo khôi phục body.",
+          "expected_backend": "200 Message: content=null, deletedAt không null, version=V+1 dạng chuỗi; ID/sequence/createdAt giữ nguyên.",
+          "database_checks": [
+            "Per lane đúng 1 version tăng/1 event xóa; counter=N.",
+            "Không hard-delete message hoặc SendOperation; không body đã xóa ở outbox/log/audit."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Hủy xóa và lỗi trước commit không mất tin",
+          "preconditions": [
+            "M_KEEP của A đang có body KEEP-ME, version V.",
+            "Helper có fault rollback DELETE trước commit, không áp dụng production."
+          ],
+          "data": "Lỗi test DELETE 503 trước commit; không phải response mất sau commit.",
+          "frontend_steps": [
+            "A mở xác nhận Xóa, bấm Hủy; Network không có DELETE.",
+            "Bật fault trước commit, A xác nhận Xóa.",
+            "Thấy lỗi; sau tắt fault đọc lại tin trước khi bấm thao tác xóa mới."
+          ],
+          "backend_steps": [
+            "Chụp DB rồi gọi DELETE với version V khi fault đang bật; ghi 503 từ helper.",
+            "Tắt fault; GET history còn content KEEP-ME/version V; không tự DELETE lại."
+          ],
+          "expected_frontend": "Hủy giữ tin; lỗi rollback không làm UI giữ tombstone giả hoặc tự replay.",
+          "expected_backend": "Fault recipe trả 503, transaction rollback; GET trả body/version cũ.",
+          "database_checks": [
+            "Delta version/outbox/journal committed=0.",
+            "Không deletedAt, không tăng counter; prepared record nếu có phải được reconcile đúng trạng thái aborted."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Xóa lặp và PATCH tombstone",
+          "preconditions": [
+            "M_T của A được xóa thành tombstone version V_T; B member không phải author.",
+            "Đọc hiện trạng và outbox count sau lần xóa đầu."
+          ],
+          "data": "Lặp DELETE với expectedVersion=V_T; PATCH content=\"RESURRECT\".",
+          "frontend_steps": [
+            "A thử thao tác lại trên tombstone; UI không mở editor để phục hồi body.",
+            "B không có action xóa tin A, kể cả tombstone.",
+            "Reload cả A/B: chỉ một placeholder, không có body phục hồi."
+          ],
+          "backend_steps": [
+            "Bearer A DELETE M_T?expectedVersion=<V_T> =>200 cùng tombstone.",
+            "Bearer A PATCH M_T {\"expectedVersion\":\"<V_T>\",\"content\":\"RESURRECT\"} =>409 MESSAGE_DELETED; Bearer B DELETE cùng ID =>403."
+          ],
+          "expected_frontend": "Không thêm tombstone, không đổi vị trí, không khôi phục tin.",
+          "expected_backend": "DELETE lặp 200 cùng version/deletedAt; PATCH 409 MESSAGE_DELETED; B403.",
+          "database_checks": [
+            "Delta outbox/version cho cả các request lặp/từ chối=0.",
+            "Content null, marker dedup còn nguyên."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Replay send ban đầu sau xóa không làm sống lại tin",
+          "preconditions": [
+            "Lane BE riêng D-AB: send O1 body ORIGINAL-DELETE =>200 rồi DELETE tin đó.",
+            "Đã lưu original request O1, tombstone ID/version; không dùng O1 của ca khác trong cùng pair."
+          ],
+          "data": "O1=7c8e7c59-b35a-4d12-b22f-965b96ff4e44; original content=\"ORIGINAL-DELETE\".",
+          "frontend_steps": [
+            "A/B mở hội thoại có tombstone và ghi counts.",
+            "Chạy replay BE bên dưới khi UI đang online.",
+            "Quan sát không xuất hiện ORIGINAL-DELETE lần nữa; reload vẫn tombstone."
+          ],
+          "backend_steps": [
+            "POST messages đúng original O1/content ORIGINAL-DELETE =>200 current tombstone cùng ID.",
+            "POST cùng O1 nhưng content=\"CHANGED-DELETE\" =>409 OPERATION_CONFLICT; GET history xác nhận tombstone."
+          ],
+          "expected_frontend": "Không thêm tin, body cũ không trở lại dù replay send thành công.",
+          "expected_backend": "Replay original trả tombstone hiện tại; fingerprint so với body ban đầu, không so với content null; khác body409.",
+          "database_checks": [
+            "Delta message/send_operation/counter/create-outbox=0.",
+            "Tombstone/version không đổi; fingerprint marker vẫn tồn tại."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P5-T03",
+      "cases": [
+        {
+          "id": "DM-P5-T03-C01",
+          "status": "planned-not-executed",
+          "title": "Hai edit cùng version chỉ một winner",
+          "preconditions": [
+            "A1/A2 phiên độc lập đã tải M_R version V.",
+            "Helper barrier test sắp hai PATCH cùng expectedVersion, có manifest timestamp."
+          ],
+          "data": "Content A1=\"RACE-LEFT\"; A2=\"RACE-RIGHT\".",
+          "frontend_steps": [
+            "A1/A2 cùng mở editor trên M_R.",
+            "Dùng barrier recipe cho hai Lưu tới server cùng khoảng tranh chấp.",
+            "Phiên thua thấy conflict rồi đọc hiện trạng; A/B/A2 đồng nhất winner."
+          ],
+          "backend_steps": [
+            "Lane BE riêng gửi song song hai PATCH cùng ID/version V, content LEFT/RIGHT.",
+            "Ghi hai HTTP response, GET history; không giả định LEFT luôn thắng."
+          ],
+          "expected_frontend": "Chỉ một body cuối; loser không tự retry overwrite.",
+          "expected_backend": "Đúng một200 version V+1, một409 VERSION_CONFLICT; GET có content của response200.",
+          "database_checks": [
+            "Delta version=1, mutation-outbox=1.",
+            "Không lưu loser hoặc lịch sử body cũ; counter tạo tin không đổi."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T03-C02",
+          "status": "planned-not-executed",
+          "title": "Delete commit trước edit: tombstone luôn thắng",
+          "preconditions": [
+            "M_RD của A version V; A2 mở editor stale.",
+            "Barrier kiểm soát DELETE COMMIT xong mới thả PATCH stale; không gọi đây là race không xác định."
+          ],
+          "data": "DELETE expectedVersion=V; PATCH expectedVersion=V content=\"TOO-LATE\".",
+          "frontend_steps": [
+            "A2 nhập TOO-LATE nhưng giữ editor chưa Lưu.",
+            "A1 xóa và đợi ack/DB commit.",
+            "A2 Lưu; đóng editor khi thấy đã xóa, UI giữ tombstone."
+          ],
+          "backend_steps": [
+            "Lane BE riêng DELETE =>200 tombstone V+1, xác nhận commit.",
+            "Sau đó PATCH stale =>409 MESSAGE_DELETED; GET history cùng tombstone."
+          ],
+          "expected_frontend": "Không body TOO-LATE xuất hiện sau event/response xóa.",
+          "expected_backend": "DELETE200; PATCH sau tombstone409 MESSAGE_DELETED; không chấp nhận VERSION_CONFLICT thay thế kỳ vọng cụ thể này.",
+          "database_checks": [
+            "Delta version/outbox đúng1 từ DELETE.",
+            "Không lưu body stale hoặc phát event sửa sau xóa."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T03-C03",
+          "status": "planned-not-executed",
+          "title": "Reconnect sửa/xóa tin cũ đồng thời bù 101 tin mới",
+          "preconditions": [
+            "B đã tải cửa sổ cũ gồm OLD-EDIT và OLD-DELETE, lưu resume R0; Hub B offline.",
+            "A sửa OLD-EDIT, xóa OLD-DELETE, gửi R101 sau R0."
+          ],
+          "data": "RECONNECT-001..101; limit=50; baseline IDs/version của hai tin cũ.",
+          "frontend_steps": [
+            "Ngắt mạng B bằng recipe giữ phiên hiện tại.",
+            "A thực hiện hai mutation cũ và gửi R101 bằng helper real API.",
+            "B online: bù đủ 101 tin, tải lại cửa sổ cũ, thấy body mới/tombstone; không chỉ append tin."
+          ],
+          "backend_steps": [
+            "GET after R0: 3 trang cùng throughSequence H1, 50/50/1, chỉ checkpoint cuối.",
+            "GET cửa sổ before/through cũ để đối chiếu version mới của OLD-EDIT và OLD-DELETE."
+          ],
+          "expected_frontend": "101 ID mới đúng một lần; tin cũ được cập nhật, body đã xóa không còn.",
+          "expected_backend": "History mới đầy đủ; history cửa sổ cũ có edited version/tombstone hiện tại; không cung cấp bản body trước sửa.",
+          "database_checks": [
+            "Đúng101 send operations mới; hai mutation cũ không tăng sequence.",
+            "Mọi phiên đối chiếu cùng ID/version với DB; không giữ body cũ trong cache sau reconcile."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P5-T03-C04",
+          "status": "planned-not-executed",
+          "title": "Event cũ và replay send không đảo ngược version",
+          "preconditions": [
+            "Tin O1 ORIGINAL-RACE đã edit rồi delete; lưu DTO các version và tombstone hiện tại.",
+            "Helper client test có thể giao event cũ/duplicate, ghi rõ synthetic-event khác live proof."
+          ],
+          "data": "Thứ tự nhận: tombstone V3, edit V2, create V1, duplicate V3.",
+          "frontend_steps": [
+            "A/B mở tombstone hiện tại.",
+            "Inject thứ tự event trên qua helper merge test, không sửa DB.",
+            "Replay original send qua BE; UI vẫn tombstone, không thêm dòng."
+          ],
+          "backend_steps": [
+            "POST đúng O1/content ORIGINAL-RACE =>200 DTO tombstone hiện tại.",
+            "GET history current; đối chiếu không có thêm DB mutation vì synthetic events hay replay."
+          ],
+          "expected_frontend": "Merge dùng ID/version chuỗi chính xác; thấp hơn hoặc trùng version không phục hồi body.",
+          "expected_backend": "Replay cùng original trả current tombstone; không response create DTO cũ.",
+          "database_checks": [
+            "Delta message/operation/outbox/version/counter=0.",
+            "Không body ORIGINAL-RACE hoặc body edit trở lại writer/log."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P6-T01",
+      "cases": [
+        {
+          "id": "DM-P6-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Outsider biết ID vẫn không đọc/ghi/subscribe được",
+          "preconditions": [
+            "D-AB có SECRET-AB của A; C login riêng và chỉ thuộc D-AC.",
+            "P0 đã chốt status/errorCode cụ thể cho từng outsider route."
+          ],
+          "data": "C biết D-AB.id/M_SECRET.id; không cấp membership để dựng test.",
+          "frontend_steps": [
+            "C mở inbox: không thấy D-AB.",
+            "C dán URL D-AB vào address bar; nhận trạng thái không có quyền/không tồn tại theo thiết kế, không thấy SECRET-AB.",
+            "C dùng helper gọi Hub subscribe D-AB; A gửi thêm SECRET-AFTER, C không nhận payload."
+          ],
+          "backend_steps": [
+            "Bearer C GET D-AB/messages; POST tin mới; PATCH/DELETE M_SECRET: mỗi request bị từ chối đúng contract đã chốt, không trả Message body.",
+            "C SubscribeConversation D-AB bị từ chối; A gửi hợp lệ; kiểm tra stream C không có MessageChanged của D-AB."
+          ],
+          "expected_frontend": "Không secret, participant/private preview hoặc draft của D-AB lọt vào UI C.",
+          "expected_backend": "REST/Hub deny nhất quán; không trả payload riêng dù biết ID; không dùng chỉ menu ẩn làm bằng chứng.",
+          "database_checks": [
+            "Delta mutation do C=0; chỉ message mới hợp lệ của A làm counts tăng.",
+            "Membership D-AB chỉ A/B, subscription C không được nhận dispatch."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Member được đọc nhưng chỉ author được sửa/xóa",
+          "preconditions": [
+            "M_AUTH của A và M_B của B trong D-AB; C không thuộc.",
+            "D-AC hợp lệ cho A/C; đã lấy cursor A của D-AC."
+          ],
+          "data": "B PATCH/DELETE M_AUTH; C dùng cursor của A tại D-AC.",
+          "frontend_steps": [
+            "B mở D-AB và đọc được M_AUTH.",
+            "B có menu Sửa/Xóa M_B của mình, không có các menu đó ở M_AUTH.",
+            "C mở D-AC hợp lệ; không thể dùng cursor của A để vượt ràng buộc actor."
+          ],
+          "backend_steps": [
+            "Bearer B GET D-AB/messages =>200 có M_AUTH; PATCH/DELETE M_AUTH với version đúng =>403.",
+            "Bearer C GET D-AC/messages với cursor A đã lấy =>400 CURSOR_INVALID; không thử ở resource C không có quyền để tránh che lỗi cursor bởi guard."
+          ],
+          "expected_frontend": "B vẫn đọc được; mutation trái author báo lỗi và giữ tin A; C không thấy dữ liệu từ cursor A.",
+          "expected_backend": "Read200; author-deny403; cross-actor cursor trên resource được phép400 CURSOR_INVALID.",
+          "database_checks": [
+            "Content/version M_AUTH không đổi; không mutation-outbox.",
+            "Cursor lỗi không làm DB thay đổi hoặc mở quyền đọc khác."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Pending và phiên không hợp lệ không vượt guard",
+          "preconditions": [
+            "U chưa verify, chưa có ứng dụng session.",
+            "Helper backend test có case actor/session đã tồn tại rồi đổi eligibility trong DB thử; không tạo bypass production."
+          ],
+          "data": "login U=dm_demo_pending; password DmDemo2026!Local; không tự cấp token U.",
+          "frontend_steps": [
+            "U đăng nhập qua form; thấy yêu cầu xác minh, không vào DM.",
+            "Thử route DM khi chưa login; quay về login, không dữ liệu nhạy cảm.",
+            "A/B vẫn dùng DM bình thường để chứng minh không tắt auth cả ứng dụng."
+          ],
+          "backend_steps": [
+            "POST /api/v1/auth/login U =>403 Identity.EmailNotVerified, không access/refresh token; GET DM không Bearer =>401.",
+            "Chạy recipe test session hợp lệ rồi actor không còn eligible; REST/subscribe/dispatch đều deny theo status đã chốt; token cũ không tiếp tục payload."
+          ],
+          "expected_frontend": "Pending không có inbox/composer nội bộ; cache/draft từ actor trước không xuất hiện.",
+          "expected_backend": "Không token401; pending-login403; guard actor hiện tại áp dụng cho HTTP và Hub, không chỉ kiểm JWT chữ ký.",
+          "database_checks": [
+            "Không session ứng dụng mới cho login U bị từ chối.",
+            "Không DM mutation/subscription được cấp cho actor mất eligibility."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Đổi A sang C không nhận response/cache/draft A",
+          "preconditions": [
+            "A đang mở D-AB, có draft DRAFT-PRIVATE-A; helper delay GET history A.",
+            "C có phiên riêng; logout thật thu hồi A chứ không chỉ xóa storage."
+          ],
+          "data": "GET A bị giữ rồi thả sau logout A/login C.",
+          "frontend_steps": [
+            "A mở D-AB, nhập draft không gửi; bắt đầu GET bị delay.",
+            "Logout A, login C cùng tab, mở D-AC.",
+            "Thả response A; UI C không hiện SECRET-AB/DRAFT-PRIVATE-A, kể cả quay lại route cũ."
+          ],
+          "backend_steps": [
+            "Replay GET bằng đúng access token A trước logout =>401; C GET inbox/history hợp lệ =>200 chỉ phạm vi C.",
+            "Kiểm tra local/session storage và cache memory qua recipe dev/test: không body/draft/token A phục hồi; không in token."
+          ],
+          "expected_frontend": "Không lộ nội dung khi response cũ về muộn; draft A bị cleanup theo actor.",
+          "expected_backend": "Old token401; token C không được đọc D-AB; delayed-response bị bỏ theo actor generation.",
+          "database_checks": [
+            "Không mutation bởi nhập draft/đổi route.",
+            "Logout marker/session revocation đúng; data message đã gửi của A không bị xóa."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P6-T02",
+      "cases": [
+        {
+          "id": "DM-P6-T02-C01",
+          "status": "planned-not-executed",
+          "title": "Thu hồi A2, ngừng payload trong tối đa 5 giây",
+          "preconditions": [
+            "A1/A2 là hai login session độc lập; B liên tục gửi TEST-REVOKE-001... mỗi 200ms, A2 subscribed.",
+            "Ghi sessionId A2; đồng hồ/trace xác định DB commit t0 và payload receipt."
+          ],
+          "data": "A1 DELETE /api/v1/auth/sessions/<A2.sessionId>; stream bắt đầu 5s trước và tiếp tục ít nhất 15s sau t0.",
+          "frontend_steps": [
+            "A2 mở D-AB; A1 mở danh sách phiên chọn đúng A2.",
+            "A1 thu hồi A2 khi stream B đang chạy; A2 chuyển trạng thái phiên hết hiệu lực.",
+            "Ghi thời điểm payload cuối; A1 vẫn nhận/đọc bình thường; không chỉ chụp AccessRevoked."
+          ],
+          "backend_steps": [
+            "Bearer A1 DELETE session A2 =>204; trace DB commit t0.",
+            "Dùng đúng token cũ A2 GET/POST/subscribe =>401/Hub deny; đối soát stream: không payload sau t0+5s, A1 vẫn200."
+          ],
+          "expected_frontend": "A2 không tiếp tục body mới quá deadline; UI bỏ dữ liệu theo policy; A1 không bị logout nhầm.",
+          "expected_backend": "HTTP A2 bị reject sau commit; dispatch deadline≤5s; lượng gửi đủ để chứng minh không phải tình cờ không có event.",
+          "database_checks": [
+            "Revocation đúng session A2, A1 còn active.",
+            "Không mutation A2 sau revoke; log chỉ ID/timestamp, không raw token/body."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Dừng stream; login A2 mới nếu cần task khác, không phục hồi token cũ. Giữ timeline t0/receipt/clock uncertainty; nếu sai số không đủ kết luận thì Bị chặn."
+        },
+        {
+          "id": "DM-P6-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Logout-all không làm sống lại phiên cũ",
+          "preconditions": [
+            "A có A1/A2, mỗi phiên có access/refresh token lưu ngoài Git.",
+            "B online và có D-AB để thử gửi sau revoke."
+          ],
+          "data": "POST /api/v1/auth/logout-all bằng A1; sau đó login mới A3.",
+          "frontend_steps": [
+            "A1 logout tất cả; A2 nhận trạng thái hết phiên.",
+            "B gửi một tin sau thời điểm revoke; A2 không nhận body mới.",
+            "A đăng nhập lại A3, đọc được tin đã gửi, A1/A2 cũ vẫn vô hiệu."
+          ],
+          "backend_steps": [
+            "POST /api/v1/auth/logout-all =>204; đúng token A1/A2 cũ GET /users/me =>401; thử refresh cũ bị từ chối theo Identity contract.",
+            "Login A3 =>200 phiên mới, GET history200; token A1/A2 tiếp tục401, Hub cũ không hồi sinh."
+          ],
+          "expected_frontend": "Phiên mới hoạt động; phiên cũ không được tự hồi phục/replay mutation.",
+          "expected_backend": "Revoke tất cả phiên tồn tại lúc commit; refresh family cũ không cấp lại session; deadline stream≤5s.",
+          "database_checks": [
+            "Old sessions/family markers revoked được giữ.",
+            "A3 là session mới khác ID; không thay message hoặc reset dedup keys."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Khóa K: chặn send mới, vẫn giữ read và quyền author của A",
+          "preconditions": [
+            "D-AK tạo khi K active; A đã gửi O_K ORIGINAL-K và một tin A khác để sửa/xóa.",
+            "Helper chỉ DB thử khóa K và revoke đúng stamp/session; A vẫn active."
+          ],
+          "data": "Helper disable K; O_K lấy từ request gốc; NEW-K dùng UUID mới.",
+          "frontend_steps": [
+            "A mở D-AK, helper khóa K; UI báo không gửi mới được.",
+            "A vẫn đọc lịch sử, sửa/xóa tin do A viết.",
+            "A retry thao tác O_K đã commit: nhận current DTO; helper mở K, K phải login mới."
+          ],
+          "backend_steps": [
+            "Bearer A POST NEW-K khi K disabled: deny đúng status/errorCode P0; GET history200, author PATCH/DELETE200.",
+            "Replay đúng O_K/body gốc =>200 current DTO, không insert; K token trước khóa401 ngay cả sau mở; login mới K theo contract200."
+          ],
+          "expected_frontend": "Không mất history khi peer bị khóa; không che quyền author bằng trạng thái peer; không tạo tin mới.",
+          "expected_backend": "Send mới kiểm peer; replay operation đã commit được đọc hiện trạng sau guard actor/member; read/author mutation không yêu cầu peer active.",
+          "database_checks": [
+            "Không operation/message cho NEW-K; replay không tăng counter.",
+            "Status/stamp K thay đổi đúng, old session revoked; edit/delete của A có đúng versions."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Mở K bằng helper thử có kiểm status/stamp/revoke; đăng nhập phiên mới. Không dùng API admin công khai để reset."
+        },
+        {
+          "id": "DM-P6-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Thứ tự commit revoke và lỗi authority đều không cấp quyền giả",
+          "preconditions": [
+            "Recipe barrier test có shared UoW/guard lock và fault authority timeout.",
+            "Mới ghi baseline N/counts, chưa có message TEST-AUTHORITY."
+          ],
+          "data": "Nhánh 1: revoke COMMIT trước thả writer; nhánh 2: writer COMMIT trước revoke; nhánh 3: authority unavailable.",
+          "frontend_steps": [
+            "Giữ send ở barrier trước kiểm quyền rồi revoke session, thả writer; UI báo hết phiên.",
+            "Ở run riêng cho send commit trước revoke, UI nhận ack nhưng sau đó dừng phiên.",
+            "Bật authority fault và thử đọc/subscribe/gửi: thấy lỗi, không dữ liệu mới; tắt fault."
+          ],
+          "backend_steps": [
+            "Chạy từng nhánh recipe độc lập; revoke-first request401/no write; writer-first một200 đã commit hợp lệ rồi revoke.",
+            "Authority-fault trả đúng failure contract đã chốt (không fallback allow); đo stream no payload sau deadline, không auto mutation replay."
+          ],
+          "expected_frontend": "Không hiển thị tin chưa commit hoặc lộ body khi không xác định được authority.",
+          "expected_backend": "Ordering chứng minh transaction/guard; lỗi authority fail closed; trạng thái/errorCode từng fault được chốt trước bàn giao.",
+          "database_checks": [
+            "Revoke-first delta message=0; writer-first delta=1.",
+            "Authority-fault delta=0; không cấp subscription/dispatch khi guard không xác nhận."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P6-T03",
+      "cases": [
+        {
+          "id": "DM-P6-T03-C01",
+          "status": "planned-not-executed",
+          "title": "Desktop Enter, Shift+Enter và IME đúng ý định",
+          "preconditions": [
+            "Chrome desktop bản ghi rõ; A mở D-AB; B online.",
+            "Có bộ gõ thật hỗ trợ composition (ví dụ Japanese IME), không chỉ dispatch key event giả."
+          ],
+          "data": "Tin 1 \"DESKTOP-ENTER\"; tin 2 \"Dòng IME 1\\n日本語\".",
+          "frontend_steps": [
+            "Nhập DESKTOP-ENTER, Enter: đúng một POST và một tin.",
+            "Nhập Dòng IME 1, Shift+Enter: xuống dòng, không POST.",
+            "Gõ 日本語 ở composition, Enter xác nhận IME: chưa gửi; sau kết thúc composition Enter gửi một tin chứa đủ hai dòng."
+          ],
+          "backend_steps": [
+            "GET history đối chiếu hai ID/content với Network.",
+            "Replay từng body/UUID đã commit =>200 cùng ID, không tạo thêm; đếm Network mutations riêng, không dùng replay để đánh giá Enter."
+          ],
+          "expected_frontend": "Enter desktop gửi; Shift+Enter và Enter lúc composing không gửi sớm; tiếng Nhật không mất ký tự.",
+          "expected_backend": "Đúng2 send commits mới per lane, body newline LF và Unicode nguyên vẹn.",
+          "database_checks": [
+            "Delta message/operation/counter=2.",
+            "Không bản text chưa composition hoặc send trùng."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T03-C02",
+          "status": "planned-not-executed",
+          "title": "Mobile Enter xuống dòng, nút Gửi mới gửi",
+          "preconditions": [
+            "Thiết bị Android Chrome và iPhone Safari thật, ghi OS/browser/bàn phím.",
+            "A mở D-AB; recipe hỗ trợ quan sát Network/server trace theo IDs."
+          ],
+          "data": "MOBILE-ENTER dòng1, dòng2; thử bàn phím tiếng Việt/emoji.",
+          "frontend_steps": [
+            "Trên mỗi thiết bị nhập dòng1, Enter: thêm newline không send.",
+            "Nhập dòng2 có tiếng Việt/emoji, đóng/mở bàn phím kiểm composer không mất draft.",
+            "Bấm Gửi một lần: đúng một Message mỗi thiết bị; B đối chiếu hai tin."
+          ],
+          "backend_steps": [
+            "GET history theo ID bắt từ response và compare content newline LF.",
+            "Đếm POST/new operations theo device lane, không lấy viewport desktop làm bằng chứng mobile IME."
+          ],
+          "expected_frontend": "Enter mobile không gửi; nút Gửi dễ thao tác khi bàn phím mở, content đủ.",
+          "expected_backend": "Mỗi device lane một200 Message, không duplicate; server validation đúng UTF-16.",
+          "database_checks": [
+            "Delta=1 message/operation per device lane.",
+            "Không mutation chỉ vì Enter/đóng bàn phím."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T03-C03",
+          "status": "planned-not-executed",
+          "title": "Draft nhớ theo hội thoại trong tab, mất sau reload/logout",
+          "preconditions": [
+            "A mở D-AB/D-AC chưa gửi; chụp counter và message count.",
+            "Không dùng localStorage/sessionStorage/IndexedDB để giữ body draft."
+          ],
+          "data": "Draft AB=\"NHAP-RIENG-AB\"; AC=\"NHAP-RIENG-AC\".",
+          "frontend_steps": [
+            "Nhập draft AB, chuyển AC: không thấy AB; nhập draft AC.",
+            "Quay AB thấy đúng draft AB; quay AC thấy draft AC; không POST.",
+            "Reload: cả draft mất; nhập lại draft rồi logout/login: draft không trở lại."
+          ],
+          "backend_steps": [
+            "Quan sát Network từ nhập/chuyển/reload/logout, không POST messages.",
+            "GET history trước/sau + đọc storage bằng recipe: không body draft, không tin mới, chỉ logout đúng request Identity."
+          ],
+          "expected_frontend": "Nhớ draft trong RAM theo conversation; reload/logout cleanup; history đã gửi vẫn đọc được.",
+          "expected_backend": "Không send operation cho draft; không tự gửi khi route/reload/login.",
+          "database_checks": [
+            "Delta messages/send_operations/counter/outbox=0.",
+            "Session revoke logout đúng; dữ liệu tin đã gửi không bị cleanup nhầm."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P6-T03-C04",
+          "status": "planned-not-executed",
+          "title": "Draft/cache tách actor và tab, response muộn không hồi phục",
+          "preconditions": [
+            "A1/A2 login độc lập trong profile/tab khác; A1 có draft PRIVATE-A1, A2 không có.",
+            "Helper giữ GET history A1; C sẽ login cùng tab A1 sau logout."
+          ],
+          "data": "A1 draft D-AB; A2 draft riêng SECOND-TAB; delayed GET A1.",
+          "frontend_steps": [
+            "A1 nhập PRIVATE-A1; A2 mở cùng DM không thấy draft A1, nhập SECOND-TAB.",
+            "A1 logout/login C; C không thấy draft/cache A; thả GET A1 cũ.",
+            "A2 vẫn phiên A2/draft SECOND-TAB nếu chỉ logout A1, C reload vẫn không hiện nội dung A."
+          ],
+          "backend_steps": [
+            "GET với token A1 cũ401; A2 GET200 và C GET phạm vi C200.",
+            "Đối soát generation token/cache keys và storage không body draft; trace delayed-response bị bỏ, không mutation tự động."
+          ],
+          "expected_frontend": "Không đồng bộ draft giữa tab/actor; revoke riêng A1 không logout nhầm A2; stale response không nạp lại cache.",
+          "expected_backend": "Guards đúng session/actor; không send do switch/reconnect.",
+          "database_checks": [
+            "Delta messages/operations=0.",
+            "A1 revoked, A2 còn active; membership không đổi."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P7-T01",
+      "cases": [
+        {
+          "id": "DM-P7-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Luồng tích hợp tìm người đến tombstone bằng FE thật",
+          "preconditions": [
+            "Run mới A/B/C đã login; pair A-B chưa có DM; C outsider.",
+            "Task P0–P6 đã được người dùng xác nhận trên baseline tương ứng."
+          ],
+          "data": "Search dm_demo_bao; content=\"INTERNAL-E2E\"; edit=\"INTERNAL-EDIT\".",
+          "frontend_steps": [
+            "A tìm đúng username B, mở DM; B mở inbox thấy cùng conversation ID.",
+            "A gửi INTERNAL-E2E; B nhận không reload; A sửa INTERNAL-EDIT, B thấy version mới.",
+            "A xóa, A/B reload thấy tombstone; C mở ID trực tiếp bị từ chối."
+          ],
+          "backend_steps": [
+            "POST lại open A/B và B/A =>200 cùng ID; không tạo pair mới.",
+            "GET history A/B cùng tombstone ID/sequence/version3; C REST/Hub deny đúng contract."
+          ],
+          "expected_frontend": "Search/inbox/send/edit/delete/reload chạy nối tiếp thật, không mock; C không dữ liệu riêng.",
+          "expected_backend": "Open idempotent; create version1, edit2, delete3; history DTO hiện trạng; guards đúng.",
+          "database_checks": [
+            "Đúng1 conversation/cặp,2members,1message,1operation; counter tăng1.",
+            "Đúng3 mutation events metadata-only; body cũ không được lưu sau sửa/xóa."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P7-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Mất response rồi reconnect không trùng hoặc mất sửa/xóa",
+          "preconditions": [
+            "B offline sau baseline R0 và đã tải một tin cũ OLD-P7.",
+            "Recipe drop HTTP response sau commit cho một tin A; R101 chạy API thật."
+          ],
+          "data": "FAILED-ACK-P7 original UUID O_P7; OLD-P7 bị sửa/xóa; 101 tin RECONNECT.",
+          "frontend_steps": [
+            "A gửi FAILED-ACK-P7, response bị mất: UI failed/unknown; mạng lại không tự retry.",
+            "B offline, A sửa/xóa OLD-P7 rồi gửi R101; B online bù3trang và reload cửa sổ cũ.",
+            "A bấm Retry chính O_P7; đối soát A/B đúng một FAILED-ACK-P7 và 101 tin mới."
+          ],
+          "backend_steps": [
+            "POST replay đúng O_P7/body =>200 cùng ID đã commit.",
+            "GET history sau R0 với đúng fixed frontier, đủ mọi ID phát sinh; OLD-P7 là tombstone hiện tại; không suy ra tổng delta chỉ101 nếu FAILED-ACK cũng sau R0."
+          ],
+          "expected_frontend": "Không tự send; explicit retry không duplicate; không body cũ sau reconnect.",
+          "expected_backend": "Mọi thao tác xác minh bằng actual HTTP/DB; cursor cuối chỉ sau all pages; versions monotonic.",
+          "database_checks": [
+            "Delta messages =101+1 nếu FAILED-ACK cũng trong run mới; replay delta0.",
+            "Edit/delete tin cũ không tăng counter; outbox recovery không lưu body."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P7-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Dựng mới và nâng cấp baseline giữ dữ liệu/key",
+          "preconditions": [
+            "Hai DB thử riêng: fresh và upgrade có messages/operations/cursors từ baseline.",
+            "Backup và key ring/HMAC lưu ngoài Git; không dùng DB ứng dụng chính."
+          ],
+          "data": "Chụp IDs/counts/versions/checkpoint trước migration và restart.",
+          "frontend_steps": [
+            "Fresh checkout/build startup, A/B chạy smoke search/open/send/history.",
+            "DB upgrade chạy migration theo lệnh bàn giao, mở FE đọc tin có sẵn.",
+            "Restart API/worker/FE, history vẫn đọc; replay original operation từ trước upgrade không tạo thêm."
+          ],
+          "backend_steps": [
+            "GET history trước/sau upgrade/restart cùng IDs/version; cursor chưa hết hạn vẫn được chấp nhận theo binding.",
+            "POST replay operation cũ cùng body =>200 same current ID; kiểm migration history/schema tương ứng source."
+          ],
+          "expected_frontend": "Fresh và upgrade không rỗng giả hoặc mất body đã commit; không lỗi cursor vì key ring mất khi restart.",
+          "expected_backend": "Schema upgrade hoạt động; persistent keyring/HMAC old-key lookup; không reset counters.",
+          "database_checks": [
+            "Counts/IDs/versions trước upgrade giữ nguyên trừ dữ liệu smoke được ghi rõ delta.",
+            "Migration records đúng; không drop tables/volumes để che lỗi."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Dừng đúng Compose project thử, giữ volumes/keyfiles/backup. Fresh và upgrade ghi hai bộ kết quả riêng."
+        },
+        {
+          "id": "DM-P7-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Ma trận nghiệm thu có trace, chưa tuyên bố toàn v1",
+          "preconditions": [
+            "Có inventory AC/TC DM hiện hành và kết quả ca từng task.",
+            "Ghi môi trường thật/mock/fixture/thiết bị, build đã test; thiếu dependency phải Bị chặn."
+          ],
+          "data": "Map từng AC-DM/TC-DM hiện hành tới task/case/proof; không dùng tổng số dự đoán thay đọc docs.",
+          "frontend_steps": [
+            "Người dùng chạy lại happy path A/B và các ca C-deny, lỗi/retry trên build tích hợp.",
+            "Chạy mobile composer/IME trên thiết bị thật; kiểm draft đổi actor.",
+            "Ghi từng kết quả trong biên bản, không gộp thành PASS khi còn ca bắt buộc chưa chạy."
+          ],
+          "backend_steps": [
+            "Chạy backend regression PostgreSQL, FE build/unit/E2E đúng scope; lưu command/exit/result.",
+            "Đối chiếu coverage từng AC/TC với case IDs, source commit và DB proof; ghi thiếu Community/email/load/restore tương ứng gate P8/v1."
+          ],
+          "expected_frontend": "Người dùng có hướng dẫn tái lập và nhìn được điểm lỗi; acceptance nội bộ có phạm vi cụ thể.",
+          "expected_backend": "Ca bắt buộc có bằng chứng; không dùng mocked HTTP thay BE integration; không publish/merge từ kết quả test tự động.",
+          "database_checks": [
+            "Regression không chạy vào DB chính.",
+            "Counts fixture/run traceable; không secret/body trong log; không chỉnh trạng thái PASS thay người dùng."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P8-T01",
+      "cases": [
+        {
+          "id": "DM-P8-T01-C01",
+          "status": "planned-not-executed",
+          "title": "Restore trước edit: không hồi sinh body cũ",
+          "preconditions": [
+            "Backup thử tại tB chứa M_RESTORE body BEFORE-BACKUP version1.",
+            "Sau backup A sửa AFTER-BACKUP thành version2; journal ngoài backup giữ protection floor, thử trên DB restore riêng."
+          ],
+          "data": "tB < tEdit; journal committed floor M_RESTORE/version2; edited body mới không có trong backup.",
+          "frontend_steps": [
+            "A/B mở app restore chỉ sau reconcile protection hoàn tất.",
+            "Tìm M_RESTORE: thấy nội dung không khả dụng sau khôi phục, không BEFORE-BACKUP, không tombstone xóa.",
+            "A nhập nội dung NEW-AFTER-RESTORE bằng edit hợp lệ; B thấy hiện trạng mới."
+          ],
+          "backend_steps": [
+            "Trước mở traffic, replay journal edit floor; GET history M_RESTORE =>content=null, contentState=unavailable_after_restore, deletedAt=null, version>=2.",
+            "PATCH expectedVersion hiện trạng, content NEW-AFTER-RESTORE =>200/new version; GET cùng ID/sequence không lộ BEFORE-BACKUP."
+          ],
+          "expected_frontend": "Không hiển thị body từ backup đã bị sửa; placeholder đúng nghĩa, author có thể sửa/xóa.",
+          "expected_backend": "Floor ngăn stale content; không giả deletedAt cho edit; bản body sau edit chỉ có khi recovery point thật sự có nguồn hợp lệ.",
+          "database_checks": [
+            "Restored message giữ ID/sequence, version không thấp hơn floor; old body bị loại trước read.",
+            "Journal chỉ IDs/version/status, không AFTER-BACKUP/BEFORE-BACKUP plaintext."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Giữ DB gốc và backup thử; chỉ dừng restore stack. Không restore đè app chính."
+        },
+        {
+          "id": "DM-P8-T01-C02",
+          "status": "planned-not-executed",
+          "title": "Restore trước delete/revoke giữ tombstone và phiên bị thu hồi",
+          "preconditions": [
+            "Backup tại tB trước DELETE M_DEL và revoke session A2.",
+            "Sau tB hai mutation committed được ghi journal độc lập; original SendOperation payload/UUID đã lưu."
+          ],
+          "data": "tB < tDelete,tRevoke; A2 old token giữ ngoài Git.",
+          "frontend_steps": [
+            "Khởi động restore staging với traffic bị khóa tới khi apply floors.",
+            "A1/B mở history: M_DEL tombstone, không body từ backup.",
+            "A2 dùng đúng phiên cũ: bị deny; đăng nhập mới nếu hợp lệ là phiên khác."
+          ],
+          "backend_steps": [
+            "Replay original send UUID/body M_DEL =>200 current tombstone không insert.",
+            "Old A2 token GET401/Hub deny sau restore; kiểm security markers trước ready, không dùng login mới để chứng minh token cũ vô hiệu."
+          ],
+          "expected_frontend": "Body xóa không xuất hiện dù backup chứa nó; phiên revoke không sống lại.",
+          "expected_backend": "Tombstone version>=delete floor; dedup/revoke markers survives restore; replay original không tạo message mới.",
+          "database_checks": [
+            "Content M_DEL null, deletedAt đúng trạng thái xóa, SendOperation giữ.",
+            "Session/family revoke floor áp dụng trước ready và được enforce dispatch."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P8-T01-C03",
+          "status": "planned-not-executed",
+          "title": "Journal unknown hoặc thiếu phạm vi: khóa đọc, không suy đoán",
+          "preconditions": [
+            "Recipe journal prepared trước writer commit, committed/aborted và unknown crash; journal recovery point độc lập DB backup.",
+            "Status/errorCode maintenance/fail-closed đã chốt cụ thể trong contract vận hành trước bàn giao."
+          ],
+          "data": "Fault1 commit DB rồi mất finalize; fault2 prepared rồi rollback; fault3 mất journal scope.",
+          "frontend_steps": [
+            "A/B mở scope unknown lúc restore; thấy trạng thái chưa sẵn sàng, không body cũ.",
+            "Chạy reconcile với nguồn authoritative: committed apply floor, aborted mới cho phép bỏ protection đúng.",
+            "Mất journal scope: tiếp tục blocked, không bấm bỏ qua bảo vệ để mở chat."
+          ],
+          "backend_steps": [
+            "GET/messages và subscribe scope unknown bị deny theo status đã chốt, không trả payload; không coi bất kỳ503/403 là PASS.",
+            "Đối chiếu independent journal persistence và DB transaction receipts để phân loại committed/aborted; nếu không chứng minh được giữ unknown/closed."
+          ],
+          "expected_frontend": "Không body từ trạng thái không biết; UI lỗi có khả năng thử lại sau reconcile, không gửi tự động.",
+          "expected_backend": "Không lấy outbox async làm nguồn journal bảo vệ duy nhất; unknown/missing không fallback allow.",
+          "database_checks": [
+            "Floor/protection status đúng từng nhánh; no body trong journal.",
+            "Không ready/open scope unknown; không tạo mutation do người dùng thử lại GET."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P8-T01-C04",
+          "status": "planned-not-executed",
+          "title": "Retention và đo RPO/RTO không xóa marker còn hiệu lực",
+          "preconditions": [
+            "DB/backup thử có clock-controlled timestamps; quy tắc lifecycle đã đọc theo docs.",
+            "Có artifacts tuổi7/14/30/90ngày và active refresh family, send dedup/revoke markers."
+          ],
+          "data": "Detail terminal≥7d; log≥14d; audit≥90d; IP/user-agent thô của audit≥7d; backup artifact tuổi tối đa30d. Tạo bộ trước/đúng/sau retain_until UTC; không áp TTL IP audit lên phiên active.",
+          "frontend_steps": [
+            "Trước cleanup A/B mở history/tombstone và lưu snapshot.",
+            "Chạy cleanup recipe thử với clock injection, mở lại history và login/retry.",
+            "Chạy restore drill từ backup phù hợp; ghi downtime thực đo thay lời hứa."
+          ],
+          "backend_steps": [
+            "Kiểm TTL before/at/after từ docs, lệnh preview/count rồi chạy scoped cleanup.",
+            "Replay original operation và old revoked token sau cleanup: same current DTO và401; đo mất dữ liệu≤15min, phục hồi≤4h bằng timestamp và artifacts."
+          ],
+          "expected_frontend": "History/tombstone và quyền hiện tại còn đúng sau cleanup; không hồi sinh body/phiên.",
+          "expected_backend": "RPO≤15min/RTO≤4h được đo; giữ active families và markers có hiệu lực, không TTL mù toàn bảng.",
+          "database_checks": [
+            "Detail/log/audit/IP/artifacts hết hạn được cleanup đúng policy; marker cần bảo vệ không mất.",
+            "Lưu counts trước/sau/TTL boundary/backup inventory; không chứa secret/body trong report."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Khôi phục clock test, không thay clock máy/production; lưu báo cáo và restore artifacts hợp lệ."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P8-T02",
+      "cases": [
+        {
+          "id": "DM-P8-T02-C01",
+          "status": "planned-not-executed",
+          "title": "Đo tải đúng scope và các percentile từ timestamp thật",
+          "preconditions": [
+            "Seed thử đề xuất1000users/500DM/20communities/50rooms/100kpreload; ghi cấu hình máy và commit.",
+            "Benchmark chat v1 cần Community tương ứng; nếu chỉ DM thì báo riêng và giữ gate whole-chat Bị chặn."
+          ],
+          "data": "Baseline whole-chat: 100 online gồm80người/40DM và20người ở phòng được phép; mỗi người1tin/10s (~10tin/s, ~36000tin/60min), history1trang/30s, author edit/delete1tin/5min. Warmup5min + đo60min; mỗi send UUID mới. Seed1000users/500DM/20communities/50text rooms/100000tin; ít nhất2hội thoại/phòng có≥10000tin.",
+          "frontend_steps": [
+            "Trong tải A/B FE thật gửi và quan sát nhận một tập tin đo có ID trace.",
+            "Ghi thao tác gửi, HTTP ack, DB commit, thời điểm UI B merge/render; dùng đồng hồ đã hiệu chỉnh.",
+            "Mở history/inbox/search trong tải để ghi lỗi/độ trễ người dùng, không dùng load-client chỉ server thay UI nhận."
+          ],
+          "backend_steps": [
+            "Chạy load recipe với args/concurrency/mix/duration/seed rõ, lưu raw samples đã lọc sensitive.",
+            "Tính riêng p95 API request→response≤500ms, thao tác send→DBcommit≤500ms và DBcommit→online UI merge/render≤1s; unexpected5xx/timeout<1% trên request hợp lệ. Báo p50/p95/p99/số mẫu/tỷ lệ lỗi; clock uncertainty phải đủ kết luận."
+          ],
+          "expected_frontend": "Online UI nhận đủ IDs, không duplicate/hole và đáp ứng p95; không coi Hub receipt là UI render.",
+          "expected_backend": "Kết quả60min sau warmup, thông số thực tế; báo DM riêng khi thiếu Community, không tự ghi v1 đạt.",
+          "database_checks": [
+            "Counter/message/operation khớp committed sends; không tăng do retry/GET.",
+            "Worker/outbox backlog có timeline, dữ liệu measurement không body/token."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Dừng load/stream/fixture worker đúng run, giữ báo cáo; không xóa data/volume để làm đẹp benchmark."
+        },
+        {
+          "id": "DM-P8-T02-C02",
+          "status": "planned-not-executed",
+          "title": "Fault dưới tải: đo lỗi trung thực và giữ correctness",
+          "preconditions": [
+            "Có workload DM và baseline IDs/counts; fault recipe riêng mất response sau commit, rollback, worker pause.",
+            "Bảng error classification chốt trước chạy, không loại lỗi bất ngờ khỏi mẫu số sau khi thấy kết quả."
+          ],
+          "data": "Mỗi fault10operations có UUID riêng; 30 logical sends: commit-lost10, rollback10, worker-paused10.",
+          "frontend_steps": [
+            "A/B mở FE thật trong tải; người dùng thấy trạng thái unknown/failed đúng loại lỗi.",
+            "Không auto mutation retry khi online; bấm retry cho các operation được chọn, giữ UUID/body.",
+            "Sau phục hồi worker/reconnect, UI và history đủ tập ID committed, không duplicate."
+          ],
+          "backend_steps": [
+            "Commit-lost10 replay=>same10IDs; rollback10 retry thành công=>10IDs; worker-pause10 commit=>10IDs sau dispatch.",
+            "Đối soát dự kiến30 unique logical sends nếu tất cả10rollback đã được retry; đếm attempts/commits/errors riêng, báo lỗi fault-injected và unexpected theo phân loại đã chốt."
+          ],
+          "expected_frontend": "Không sent giả trước commit; realtime phục hồi không tạo thêm dòng.",
+          "expected_backend": "Retry logical exactly-one; rollback không có row trước retry; lỗi injected không che unexpected faults khác.",
+          "database_checks": [
+            "Delta messages/operations cuối=30 cho scope này; counter+30.",
+            "Outbox drained sau phục hồi, không body log, no orphan operations/counters."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P8-T02-C03",
+          "status": "planned-not-executed",
+          "title": "Ma trận trình duyệt và thiết bị trên bản nghiệm thu",
+          "preconditions": [
+            "Danh sách2stable versions tại thời điểm nghiệm thu của Chrome/Edge/Firefox/Safari; nguồn/version/date ghi rõ.",
+            "Android Chrome/iOS Safari thiết bị thật; nếu không có browser/device thì Bị chặn, không giả lập thành PASS."
+          ],
+          "data": "M01/M02/M03/M04; emoji biên2000/2002UTF16; IME; draft/logout; realtime/reconnect.",
+          "frontend_steps": [
+            "Mỗi browser chạy login/search/open/send M02/M03/M04; ghi emoji/newline/spaces và script không chạy.",
+            "Chạy Enter/Shift+Enter/IME, draft đổi DM/actor và lỗi validation.",
+            "Thiết bị mobile chạy Enter newline/nút Gửi/keyboard/reconnect thật; lưu device/version từng ca."
+          ],
+          "backend_steps": [
+            "GET history IDs của từng lane/browser so content/version với original normalized bodies.",
+            "Replay UUID/body tương ứng không duplicate; invalid payloads REST400 đúng policy, không lệ thuộc UI validation."
+          ],
+          "expected_frontend": "Text render đúng/an toàn, composer đúng thiết bị; reconnect merge cùng ID/version.",
+          "expected_backend": "API/DB kết quả giống nhau giữa browser/device; viewport chỉ là kiểm layout, không thay mobile IME.",
+          "database_checks": [
+            "Counts theo từng lane và accepted/rejected input; không lưu script như HTML thực thi.",
+            "Không body draft trong persistent storage; không auto mutation replay do reconnect."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P8-T02-C04",
+          "status": "planned-not-executed",
+          "title": "Observability và cảnh báo thử có thể vận hành",
+          "preconditions": [
+            "Metrics/traces/dashboard/cảnh báo receiver thử local đã cấu hình; không gửi email/Slack tới người ngoài.",
+            "Danh sách metrics/thresholds/runbook do task chốt, không ghi body/token/key trong labels."
+          ],
+          "data": "Pause worker60s; authority fault; revoke stream ≤5s; IDs/timestamps dùng correlation.",
+          "frontend_steps": [
+            "A/B online; pause worker, A gửi commit thành công nhưng B chưa có realtime.",
+            "Dashboard cho backlog/age tăng; phục hồi worker, B nhận không duplicate.",
+            "Chạy revoke với continuous stream; dashboard thể hiện deadline bằng commit/dispatch timestamps, mở runbook từ alert thử."
+          ],
+          "backend_steps": [
+            "Kiểm sample outbox backlog/age, dispatch delay, guard failure, send latency/error rate; alert tới controlled test sink theo threshold.",
+            "Tìm log/traces bằng correlation IDs; kiểm redaction không raw JWT/refresh/key/body; tắt authority fault và replay only khi người dùng yêu cầu."
+          ],
+          "expected_frontend": "Người vận hành xác định được lỗi/recipe; UI không ghi sent/received sai khi worker bị pause.",
+          "expected_backend": "Alert thử có firing/resolved proof; revoke metric đo từ commit≤5s, không từ thời điểm hiển thị AccessRevoked.",
+          "database_checks": [
+            "Pause không mất outbox committed; resume drain/correct lease.",
+            "Không ghi payload riêng vào labels/audit/log; metrics không query vào DB production."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Resume worker/tắt fault, kiểm alert resolved, dừng receiver thử; không mở kênh gửi thông báo thật nếu chưa được giao."
+        }
+      ]
+    },
+    {
+      "taskId": "DM-P8-T03",
+      "cases": [
+        {
+          "id": "DM-P8-T03-C01",
+          "status": "planned-not-executed",
+          "title": "Email thật register/verify/login rồi DM",
+          "preconditions": [
+            "Có Identity email provider và hộp thư thật do người dùng kiểm soát, staging hostname/redirect rõ.",
+            "example.test/Development token chỉ fixture; chưa có provider/mailbox thì Bị chặn, không tự đánh dấu verified."
+          ],
+          "data": "Account V mới, username run-specific; email/password thực tế cung cấp riêng ngoài Git.",
+          "frontend_steps": [
+            "Người dùng register V trên FE; chưa verify không vào ứng dụng DM.",
+            "Mở email xác minh nhận thật, kiểm link đúng host/TTL rồi xác minh theo UX hiện hành.",
+            "Login V, tìm B, mở DM, gửi REAL-MAIL-DM; B nhận và history persist."
+          ],
+          "backend_steps": [
+            "Đối chiếu API register/verification/login với accounts contract và actual request, ghi exact route/body/status khi bàn giao, không giả định provider đã có.",
+            "POST open/message từ phiên V valid=>200; GET history đúng ID, không login/DM access trước email verified."
+          ],
+          "expected_frontend": "Email tới hộp thư thật; verify UI chạy đúng và DM sau verify hoạt động.",
+          "expected_backend": "Bằng chứng real delivery/verification; Development auto-verify không đủ gate; DM đúng actor/guard.",
+          "database_checks": [
+            "V chuyển verified bởi flow thật, session tạo đúng sau verify; một logical DM message.",
+            "Không commit mật khẩu/link/token mail; outbox mail log không lộ verification token."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Dùng account thử có consent; giữ chỉ metadata đã lọc nhạy cảm. Không gửi tới hộp thư không do người dùng kiểm soát."
+        },
+        {
+          "id": "DM-P8-T03-C02",
+          "status": "planned-not-executed",
+          "title": "Reset mật khẩu thật thu hồi phiên và không consume bởi mail scanner GET",
+          "preconditions": [
+            "V verified đang có V1/V2 phiên riêng; nhận email reset thật.",
+            "Backend/frontend reset UX và tokens TTL/one-time theo accounts docs; thao tác mail chỉ tới mailbox đã cho phép."
+          ],
+          "data": "Reset request V; mở link GET trước, submit POST sau; NEW_PASSWORD giữ ngoài Git.",
+          "frontend_steps": [
+            "V1 yêu cầu quên mật khẩu; nhận reset email; mở link chỉ render form, chưa đổi mật khẩu.",
+            "Nhập mật khẩu mới và submit một lần; V2 online đang DM phải hết phiên theo deadline.",
+            "Login mật khẩu cũ thất bại, mới thành công; gửi DM bằng phiên mới, không auto gửi lại mutation từ V2."
+          ],
+          "backend_steps": [
+            "GET link không consume reset token; submit operation với đúng contract thành công; submit lại bị từ chối theo Identity error đã chốt.",
+            "Đúng V1/V2 old tokens GET401/Hub deny; new login valid, kiểm reset không tự verified account pending ở fixture riêng."
+          ],
+          "expected_frontend": "Link scanner/GET không phá reset; UI phiên cũ dừng; không leak token URL trong analytics/log.",
+          "expected_backend": "One-time token áp dụng ở mutation; revoke old families/session, stream≤5s; reset không thay email-verified status sai.",
+          "database_checks": [
+            "Password hash/current security stamp đổi; old sessions revoked giữ markers.",
+            "Không token reset/plain password trong Git/log; new session IDs khác."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P8-T03-C03",
+          "status": "planned-not-executed",
+          "title": "Diễn tập deploy và rollback giữ data, key và protection floors",
+          "preconditions": [
+            "Staging riêng; backup/journal/keyring còn đủ; migration compatibility/rollback method chốt theo release docs.",
+            "Runbook exact commands có kiểm tra target và người chịu trách nhiệm; chưa thực hiện production publish."
+          ],
+          "data": "Trước deploy chụp IDs/versions/counter/cursor, một edit/delete/revoke floor và original dedup operation.",
+          "frontend_steps": [
+            "Deploy build staging được giao; A/B smoke search/open/send/history và tombstone.",
+            "Rollback theo phương án đã review, mở FE/API kiểm cùng tin/phiên hiện trạng.",
+            "Nếu schema rollback không tương thích, dùng forward-fix được ghi rõ; không tự DROP/restore backup stale."
+          ],
+          "backend_steps": [
+            "GET old cursor còn hạn đúng keyring; replay original committed operation200 same current state.",
+            "Old revoked token401; history giữ protection floors; đọc migration/backup inventory và health qua reverse proxy theo runbook."
+          ],
+          "expected_frontend": "Data/quyền không đi lùi sau deploy/rollback; UI đúng trạng thái hiện tại.",
+          "expected_backend": "Host/proxy/auth hoạt động; keys không mất; không hồi sinh body/phiên do rollback.",
+          "database_checks": [
+            "Version/counter không giảm, dedup/journal/revoke markers giữ.",
+            "Không đè DB chính; health không lộ secrets/PII, backup artifact tuân retention."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        },
+        {
+          "id": "DM-P8-T03-C04",
+          "status": "planned-not-executed",
+          "title": "Hồ sơ phát hành có gates, quyền và bằng chứng cụ thể",
+          "preconditions": [
+            "P7internal acceptance và từng P8 proof có build/runtime thật; người ký release/quyền deploy được xác định.",
+            "Có danh sách Community/Identity/email/security/restore/load/browser gates còn mở."
+          ],
+          "data": "Release checklist, report metrics, mail proof, restore drill, user FE/BE confirmations cùng build.",
+          "frontend_steps": [
+            "Người dùng smoke staging A/B search/send/edit/delete/reconnect và C-deny.",
+            "Review hồ sơ từng gate: Đạt/Bị chặn/Chưa chạy/Chưa đạt với evidence, không tick hộ trạng thái user.",
+            "Xác nhận scope DM và dependency; dừng ở bàn giao nếu chưa được giao quyền publish."
+          ],
+          "backend_steps": [
+            "Chạy collection7DMoperations+Hub guard trên staging qua public entrypoint; health/auth/inbox hiện trạng đúng.",
+            "Kiểm config prod/staging về docs/Swagger theo policy đã chốt; read-only inventory verifies migrations/keys/journal/retention; release gate nào chưa đủ thì chưa release."
+          ],
+          "expected_frontend": "Người dùng có build để test và biết rủi ro còn mở; không gọi toàn MVP/v1 hoàn thành chỉ vì DM PASS.",
+          "expected_backend": "Evidence trace commit/schema/config/tests; publish/merge chỉ trong quyền đã giao, không tự diễn giải acceptance là production approval.",
+          "database_checks": [
+            "Không thay message/session/marker chỉ vì ký checklist.",
+            "Không secret/raw token trong hồ sơ; trạng thái phát hành không che dependency thiếu."
+          ],
+          "evidence": [
+            "Ghi commit/build, run, lane FE/BE và actor; lưu kết quả từng bước.",
+            "Lưu HTTP status/errorCode, ID/version/counts và bằng chứng browser/DB đã lọc token/secret."
+          ],
+          "cleanup": "Tắt fault; giữ manifest/bằng chứng run. Ca cần baseline khác dùng run mới, không drop DB hoặc xóa volume ứng dụng."
+        }
+      ]
+    }
+  ]
+}
