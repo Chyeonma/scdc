@@ -10,6 +10,8 @@ Thêm `community.servers.search_name text COLLATE "C" NOT NULL`; không dùng `n
 
 Migration `002-community-search.sql` dùng temp mapping key do runner .NET tính theo batch tối đa 500 record. Cùng advisory lock ledger của 001 và table lock, kiểm tra prerequisite 001/checksum, validate tên theo policy, apply DDL/backfill trong transaction; không đổi tên/metadata version/accessVersion/epoch. Bootstrap DB trắng ghi ledger 001/002; seed có key explicit. Không đổi migration/checksum 001 đã áp dụng.
 
+Backfill tạm tắt riêng trigger tăng version/updated_at. Constraint triggers owner/@everyone vẫn bật; sau UPDATE, `SET CONSTRAINTS ALL IMMEDIATE` kiểm tra các event đang chờ trước ALTER TABLE tiếp theo, rồi khôi phục DEFERRED trong transaction. Cơ chế kiểm tra hồi tố theo [PostgreSQL SET CONSTRAINTS](https://www.postgresql.org/docs/18/sql-set-constraints.html); lỗi vẫn rollback cả DDL, dữ liệu và trạng thái trigger.
+
 Apply migration 002 với writer cũ đã dừng/drain trước deploy writer mới: NOT NULL search_name khiến writer tạo server cũ không còn tương thích. API không tự migrate. Dữ liệu cần sửa được báo ID và rollback, không sửa âm thầm. Không chạy bootstrap có DROP SCHEMA lên DB cần giữ dữ liệu. Khi rollback app, giữ schema và dùng writer tương thích; không xóa cột/backfill.
 
 Partial btree `(search_name,id)` chỉ public/active/nondeleted hỗ trợ filter/keyset; contains với leading wildcard vẫn có thể quét/sort nhiều kết quả. Gói chưa có workload/load proof, không hứa index này đủ cho mọi quy mô hoặc thêm pg_trgm trước khi đo.

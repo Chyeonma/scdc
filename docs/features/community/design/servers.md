@@ -8,7 +8,7 @@ Thiết kế kỹ thuật của thành phần; quy tắc, use case và AC/TC ở
 
 HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
-[Thiết kế gói tạo/xem](create-view.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. Phạm vi và bằng chứng gói được dẫn chiếu từ [tiến độ](../status.md); search/chỉnh sửa/transfer tiếp tục theo các gói sau.
+[Thiết kế gói tạo/xem](create-view.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. [Gói tìm kiếm](search.md) chốt key tên, migration 002, summary/keyset và discovery của UC-COM-02. Phạm vi và bằng chứng gói được dẫn chiếu từ [tiến độ](../status.md); chỉnh sửa/transfer tiếp tục theo các gói sau.
 
 | Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
 |---|---|---|
@@ -30,4 +30,4 @@ HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts
 
 Search theo DEC-093 dùng key tên trim/NFC/ToLowerInvariant, exact trước rồi normalizedName/UUID để ổn định. Escape `%`, `_`, backslash cho LIKE literal; collation không bỏ dấu. Cursor Data Protection purpose `Community.Search.v1`, actor/query/limit/position/expiry 24 giờ; mỗi trang lọc lại visibility/status. Đổi public→private phải biến mất cả khi dùng cursor cũ, không dựa vào snapshot đã cấp quyền public trước đó.
 
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
+Migration và proof search nằm ở [thiết kế gói](search.md) và [nghiệm thu](../delivery/search/acceptance.md). Các thay đổi writer/guard khác theo [COM-SQL-01–10](integration.md#schema-migration) vẫn cần bằng chứng theo gói riêng.

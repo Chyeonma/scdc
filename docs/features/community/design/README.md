@@ -1,6 +1,6 @@
 # SCDC — Thiết kế Community
 
-Đọc quy tắc/use case tại [đặc tả](../specs/README.md); thiết kế gói đã chọn tại [tạo/xem](create-view.md).
+Đọc quy tắc/use case tại [đặc tả](../specs/README.md); các thiết kế gói đã chọn được liệt kê tại [hợp đồng và thiết kế](#contracts).
 
 Thiết kế theo thành phần: [Servers](servers.md), [Memberships](memberships.md), [Invitations](invitations.md), [Channels](channels.md), [Permissions](permissions.md). Cơ chế transaction/retry/migration chung nằm tại [Integration](integration.md).
 
@@ -51,7 +51,7 @@ Controllers đặt tại services/SCDC.Api/Controllers/Community theo từng nh�
 
 ## Hợp đồng và thiết kế
 
-Thiết kế theo gói: [tạo/xem](create-view.md), [tham gia trực tiếp public/immediate](direct-join.md). Tiến độ và phạm vi được kiểm chứng tại [status.md](../status.md).
+Thiết kế theo gói: [tạo/xem](create-view.md), [tham gia trực tiếp public/immediate](direct-join.md), [tìm kiếm công khai](search.md). Tiến độ và phạm vi được kiểm chứng tại [status.md](../status.md).
 
 [OpenAPI Community](../../../contracts/community.openapi.json) giữ schema máy đọc được; [schema realtime](../../../contracts/community-realtime.schema.json) giữ catalogue Hub chat. Các route/mutation theo từng thành phần trong đặc tả của phần đó.
 
