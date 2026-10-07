@@ -6,7 +6,7 @@ Phạm vi các gói và quy trình thực hiện. Trạng thái hiện tại đ�
 
 ## Kế hoạch và gói triển khai đầu tiên
 
-Áp dụng [quy trình dự án](../../../project.md#process) cho từng nhóm UC: rà soát luồng/ngoại lệ và AC/TC → đối chiếu UX, API, dữ liệu/giao dịch → xác định phụ thuộc và gói việc → triển khai cùng kiểm thử → tích hợp và ghi bằng chứng. Các bước được lặp theo nhóm chức năng; không đợi hoàn tất mọi module mới kiểm thử luồng đầu tiên.
+Áp dụng [quy trình dự án](../../../project/process.md#process) cho từng nhóm UC: rà soát luồng/ngoại lệ và AC/TC → đối chiếu UX, API, dữ liệu/giao dịch → xác định phụ thuộc và gói việc → triển khai cùng kiểm thử → tích hợp và ghi bằng chứng. Các bước được lặp theo nhóm chức năng; không đợi hoàn tất mọi module mới kiểm thử luồng đầu tiên.
 
 Trước mỗi bước, trình bày phạm vi, đầu ra và nội dung cần quyết định để người dùng duyệt. Sau mỗi bước, báo những gì đã làm, kết quả kiểm tra và phần còn thiếu. Việc duyệt một bước chỉ áp dụng cho phạm vi bước đó.
 

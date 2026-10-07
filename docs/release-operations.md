@@ -28,8 +28,7 @@ Tài liệu thực hành: [runbook vận hành](operations-runbook.md), [mẫu h
 Theo [DEC-117](decisions.md#dec-117), mỗi người tự kiểm thử phần sở hữu và có người khác kiểm tra lại; Vg/Sáng giữ kỳ vọng nghiệp vụ/quyền/đồng thời, Thái chuẩn bị dataset/bộ chạy và tổng hợp kết quả. Kết quả kiểm thử phải nối tới mã tiêu
 chí chấp nhận, môi trường, dữ liệu thử, phiên bản sản phẩm và lỗi phát hiện.
 Không coi tiêu chí dự thảo là đã đạt khi chưa có kết quả thực thi.
-Bộ ca và dữ liệu chuẩn bị cho tài khoản/DM/quyền phòng tại
-[SCDC-QA-DM-001](features/direct-messaging.md#tests); các ca TC trong đặc tả chưa có kết quả chạy được ghi nhận; repo có bộ test tự động được mô tả trong hướng dẫn phát triển.
+Bộ ca và dữ liệu chuẩn bị tại [Accounts](features/accounts/specs/acceptance.md#tests), [DM](features/direct-messaging/specs/acceptance.md#tests), [Community](features/community/specs/traceability.md#tests) và [TC-TEXT dùng chung](shared/messaging/text.md#tests). Kết quả từng gói được dẫn từ status của tính năng và chỉ áp dụng build/phạm vi trong hồ sơ; repo có bộ test tự động được mô tả trong hướng dẫn phát triển.
 
 | Nhóm | Tình huống cần kiểm chứng | Căn cứ |
 |---|---|---|
@@ -129,7 +128,7 @@ Kịch bản media đề xuất: phòng A 10, phòng B 8 và một DM hai ngư�
 
 Mỗi phép đo ghi điểm bắt đầu/kết thúc, số mẫu thành công/thất bại, mẫu số tỷ lệ, thời gian warm-up và phần loại trừ có lý do. Báo kết quả theo hành trình và nhóm browser/thiết bị bên cạnh tổng thể; không trộn offline hoặc máy ngoài điều kiện mạng để che kết quả người nhận online/good-network. Timeout và 4xx bất thường của request hợp lệ vẫn phải được giải thích/ghi lỗi, không tự loại vì không phải 5xx. Độ lệch clock hoặc instrumentation chưa đủ tin cậy thì kết quả chưa được xác nhận; không lấy createdAt hoặc cấu hình capture làm phép đo thay thế.
 
-Proof quyền media tách khỏi tải good-network: phát tín hiệu thử có timestamp, thu hồi giữa lúc RTP chạy; ghi commit/cutoff ở cả sender và receiver, thử SFU refresh token/direct route/clone epoch. Cắt kết nối authority/worker/RoomService nhưng giữ WebRTC, đo lease TTL/clock skew/watchdog theo [thiết kế media](features/voice-video.md#detailed-design). Thử publish dư camera/screen hoặc screen_audio từ client đã sửa; không được truyền trước lúc hậu kiểm. Giữ reservation/reconnect/draining trong phép đếm; không coi remove request thành ack dừng. Tất cả ca chưa chạy.
+Proof quyền media tách khỏi tải good-network: phát tín hiệu thử có timestamp, thu hồi giữa lúc RTP chạy; ghi commit/cutoff ở cả sender và receiver, thử SFU refresh token/direct route/clone epoch. Cắt kết nối authority/worker/RoomService nhưng giữ WebRTC, đo lease TTL/clock skew/watchdog theo [thiết kế media](features/voice-video/design/README.md#detailed-design). Thử publish dư camera/screen hoặc screen_audio từ client đã sửa; không được truyền trước lúc hậu kiểm. Giữ reservation/reconnect/draining trong phép đếm; không coi remove request thành ack dừng. Tất cả ca chưa chạy.
 
 ### Các cấp kiểm thử
 
@@ -181,7 +180,7 @@ thu của đại diện khách hàng.
 | Xác nhận | Người thực hiện và người xác nhận theo cấp kiểm thử. |
 
 
-Ca chi tiết được quản lý tại [Accounts](features/accounts.md#tests), [DM](features/direct-messaging.md#tests), [Community](features/community/specs/README.md#tests) và [Media](features/voice-video.md#acceptance). Một ca phụ thuộc quy tắc chưa chốt phải ghi “Chờ chốt quy tắc”. Các trạng thái Đạt/Chưa đạt/Chưa chạy gắn với build và lần thực thi, không chỉ với sự tồn tại của file test.
+Ca chi tiết được quản lý tại [Accounts](features/accounts/specs/acceptance.md#tests), [DM](features/direct-messaging/specs/acceptance.md#tests), [Community](features/community/specs/traceability.md#tests) và [Media](features/voice-video/specs/acceptance.md#acceptance). Một ca phụ thuộc quy tắc chưa chốt phải ghi “Chờ chốt quy tắc”. Các trạng thái Đạt/Chưa đạt/Chưa chạy gắn với build và lần thực thi, không chỉ với sự tồn tại của file test.
 
 [Vòng đời dữ liệu](data-lifecycle.md#acceptance) bổ sung AC-DATA/TC-DATA. [Mẫu hồ sơ đầy đủ](templates/release-record.md) có lần chạy/coverage/đo chất lượng/lỗi tồn/gate/restore/deploy/bàn giao và quyết định; [mẫu sự cố](templates/incident-record.md) dùng sau phát hành hoặc trong diễn tập. Nơi lưu hồ sơ thực tế sẽ được chọn khi triển khai, không đưa secrets/dữ liệu người dùng thật vào Git.
 
@@ -350,7 +349,7 @@ Các gói có thể đi cùng đợt phát triển phụ thuộc; chưa có kế
 ## 4. Thông tin cần chốt
 
 - OQ-007: chất lượng/trình duyệt/thu hồi chat và media đã chốt; chính sách lỗi tồn DEC-110 đã chốt. Còn OS/thiết bị/build, khóa phép đo/workload và bằng chứng cutoff/tải.
-- OQ-010: có [mô hình chi phí minh họa](project.md#budget); còn nơi triển khai, tài nguyên, mức dùng thực tế, báo giá và hạn mức.
+- OQ-010: có [mô hình chi phí minh họa](project/planning.md#budget); còn nơi triển khai, tài nguyên, mức dùng thực tế, báo giá và hạn mức.
 - OQ-011: [vòng đời dữ liệu](data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof, phân công/người trực/lịch trực và người duyệt DEC-111.
 - OQ-008: có thiết kế Accounts/DM/Community/Media; còn review/migration/email worker, lựa chọn extension/SDK/version LiveKit, key store và proof guards/realtime/SFU.
 

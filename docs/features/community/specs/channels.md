@@ -33,7 +33,7 @@ Thiết kế kỹ thuật của phần này: [dữ liệu/API và giao dịch](.
 
 ## Use case
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](README.md#use-case-coverage).
+Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](traceability.md#use-case-coverage).
 
 <a id="uc-com-16"></a>
 
@@ -154,7 +154,7 @@ COM-S03 · Màn hình rộng tham chiếu 1280 × 800
 Danh sách chỉ chứa phòng được phép xem. Thành viên mới được xem lịch sử
 cũ của phòng đó. Không có cấu hình chỉ đọc trong đợt đầu; người xem được
 phòng thì gửi được sau khi thỏa điều kiện tài khoản. Giới hạn tin,
-sửa/xóa, lỗi và chủ động thử lại giống [wireframe DM](../../direct-messaging.md#ux).
+sửa/xóa, lỗi và chủ động thử lại giống [wireframe DM](../../direct-messaging/specs/ux.md#ux).
 
 Trạng thái riêng: chưa có phòng được xem, phòng chưa có tin, tải lỗi,
 lời mời không dùng được, yêu cầu chờ duyệt, mất quyền khi đang mở và
@@ -181,7 +181,7 @@ Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích h�
 | <a id="ac-com-34"></a> AC-COM-34 | Người đúng/sai quyền sửa/xóa phòng đang có tin/cuộc gọi | Deleted không đọc/gửi/nhận/tiếp tục gọi được; chặn race writer; không có khôi phục v1 |
 
 
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](README.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
+Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](traceability.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="tests"></a>
 

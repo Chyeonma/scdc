@@ -61,13 +61,13 @@ Tài liệu tính năng tổ chức theo hành trình người dùng; module th�
 
 Identity có `IdentityDbContext` đã được đăng ký. Tiến độ Community theo nhánh được quản lý tại [status.md](features/community/status.md), gồm phạm vi đã có trên feature và trạng thái merge. Messaging vẫn chỉ có nền module. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
-Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/specs/permissions.md#permissions).
+Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của Messaging nằm trong [thiết kế lưu trữ](shared/messaging/persistence.md#contract-4); API DM ở [thiết kế DM](features/direct-messaging/design/README.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/specs/permissions.md#permissions).
 
-Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
+Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts/design/README.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
 
 ### Thiết kế tích hợp tài khoản/DM bổ sung
 
-[Accounts](features/accounts.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [DM](features/direct-messaging.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế trên nền Modular Monolith cho các phần chưa triển khai; khi chuyển sang microservice ở v1 phải điều chỉnh các giả định một host theo [mục tiêu](#target).
+[Accounts](features/accounts/design/README.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [Messaging](shared/messaging/README.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế trên nền Modular Monolith cho các phần chưa triển khai; khi chuyển sang microservice ở v1 phải điều chỉnh các giả định một host theo [mục tiêu](#target).
 
 Hợp đồng đề xuất cần thêm `IAccountAccessGuard`, `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi theo session. Để chặn race revoke/send, Identity giữ kiểm tra/row lock của user qua transaction scope dùng chung tới commit Messaging; BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module. Mỗi module vẫn chỉ đọc dữ liệu mình sở hữu. Proof guard/lock order và session revocation còn phải chạy; không suy IUserDirectory summary khác null thành đủ quyền gửi.
 
@@ -95,7 +95,7 @@ Server accessVersion, channel accessVersion và membershipId được dùng cho 
 
 ### Thiết kế tích hợp Media bổ sung
 
-[Media](features/voice-video.md#detailed-design) có OpenAPI 16 thao tác công khai/3 nội bộ, catalogue realtime 8 loại và mô hình room/call/participation/capacity/source/epoch. Đề xuất schema `media` và `IMediaRoomLifecycle` tạo room DB rỗng cùng transaction voice channel; module Media, interface, migration và provider chưa có trong repo. Guard Identity/Community giữ tới commit Media; thao tác SFU chạy sau commit, chỗ draining chỉ tái cấp sau bằng chứng ngừng media.
+[Media](features/voice-video/design/README.md#detailed-design) có OpenAPI 16 thao tác công khai/3 nội bộ, catalogue realtime 8 loại và mô hình room/call/participation/capacity/source/epoch. Đề xuất schema `media` và `IMediaRoomLifecycle` tạo room DB rỗng cùng transaction voice channel; module Media, interface, migration và provider chưa có trong repo. Guard Identity/Community giữ tới commit Media; thao tác SFU chạy sau commit, chỗ draining chỉ tái cấp sau bằng chứng ngừng media.
 
 DEC-099–102 chốt cutoff/fail-close ≤5 giây, first accept/no handoff, thiết bị mặc định tắt và screen chỉ hình. Admission kiểm tra mỗi join/resume; authorization lease và quota gate cần kiểm soát ngay đường chuyển tiếp SFU. Phương án có thể cần extension/fork LiveKit, chưa chọn/triển khai; phải proof token refresh/direct routes, quota trước publish, cutoff khi authority lỗi và pin server/SDK. Đóng websocket hoặc TTL JWT không tự chứng minh WebRTC ngừng. Chi tiết/bằng chứng cần thiết thuộc MEDIA-GAP-01–07; không thay DEC-084 bằng provider khác khi gặp hạn chế.
 
@@ -157,7 +157,7 @@ flowchart LR
 
 Sơ đồ thể hiện phạm vi sản phẩm, gồm các tính năng chưa triển khai. Luồng tài khoản hiện có code; DM/cộng đồng/media đọc chi tiết trong đặc tả tương ứng. Quyền được kiểm tra phía máy chủ khi đọc, ghi và nhận cập nhật; thay đổi quyền/phiên phải có cơ chế thu hồi kết nối, không chỉ ẩn giao diện.
 
-Gửi tin phải lưu bền trước khi hiển thị “Đã gửi”. Realtime bổ sung thông báo cho người đang online; lịch sử đã lưu là nguồn khôi phục khi mở lại. Ràng buộc transaction, idempotency, commit order và reconnect được quản lý tập trung trong [đặc tả DM](features/direct-messaging.md#contracts).
+Gửi tin phải lưu bền trước khi hiển thị “Đã gửi”. Realtime bổ sung thông báo cho người đang online; lịch sử đã lưu là nguồn khôi phục khi mở lại. Ràng buộc transaction, idempotency, commit order và reconnect được quản lý tập trung trong [Messaging dùng chung](shared/messaging/README.md).
 
 <a id="future"></a>
 <a id="target"></a>
@@ -199,6 +199,6 @@ Không dùng cổng 5000–5004 hoặc các schema `files`/`calls` trong sơ đ�
 
 ## 6. Điều kiện rà soát kỹ thuật
 
-Vg chủ trì quyết định ranh giới, quyền sở hữu dữ liệu, hợp đồng, giao dịch và thu hồi phiên/quyền; Sáng rà soát phần Messaging/lifecycle. Thái hiện thực và kiểm chứng worker, môi trường/config/CI và adapter provider theo hợp đồng được chốt. Mỗi người tự kiểm thử phần sở hữu, người khác kiểm tra lại theo [phân công DEC-117](project.md#team). Những lựa chọn chưa chốt tiếp tục thuộc OQ-008.
+Vg chủ trì quyết định ranh giới, quyền sở hữu dữ liệu, hợp đồng, giao dịch và thu hồi phiên/quyền; Sáng rà soát phần Messaging/lifecycle. Thái hiện thực và kiểm chứng worker, môi trường/config/CI và adapter provider theo hợp đồng được chốt. Mỗi người tự kiểm thử phần sở hữu, người khác kiểm tra lại theo [phân công DEC-117](project/planning.md#team). Những lựa chọn chưa chốt tiếp tục thuộc OQ-008.
 
-Một gói được bàn giao khi có hành vi rõ, thiết kế thống nhất, người phụ trách và phương pháp kiểm chứng. Các bằng chứng cần có được quản lý tại [bảng sẵn sàng](project.md#readiness). Thiết kế DM có thể tiến hành độc lập với việc thử nghiệm tích hợp media còn thiếu.
+Một gói được bàn giao khi có hành vi rõ, thiết kế thống nhất, người phụ trách và phương pháp kiểm chứng. Các bằng chứng cần có được quản lý tại [bảng sẵn sàng](project/readiness.md#readiness). Thiết kế DM có thể tiến hành độc lập với việc thử nghiệm tích hợp media còn thiếu.

@@ -32,7 +32,7 @@ Thiết kế kỹ thuật của phần này: [dữ liệu/API và giao dịch](.
 | <a id="com-018"></a> COM-018 | Thử lại cùng thao tác gửi trong phòng không tạo tin trùng. | DEC-037 |
 | <a id="com-022"></a> COM-022 | Người gửi phải xác minh email trước khi gửi tin trong phòng. | DEC-041, SCDC-FR-ACC-001 |
 | <a id="com-023"></a> COM-023 | Tin đã sửa chỉ giữ nội dung mới nhất; không cung cấp lịch sử bản cũ. | DEC-052, nguyên tắc tương tự DM tại DEC-034 |
-| <a id="com-024"></a> COM-024 | Tin văn bản tối đa 2.000 đơn vị UTF-16 sau CRLF/CR → LF; cho xuống dòng/emoji; từ chối UTF-16 lỗi và tin rỗng/chỉ trắng hoặc vô hình. Dùng chung [quy tắc nội dung DM](../../direct-messaging.md#detailed-design). | DEC-053, DEC-068, DEC-090 |
+| <a id="com-024"></a> COM-024 | Tin văn bản tối đa 2.000 đơn vị UTF-16 sau CRLF/CR → LF; cho xuống dòng/emoji; từ chối UTF-16 lỗi và tin rỗng/chỉ trắng hoặc vô hình. Dùng chung [quy tắc nội dung Messaging](../../../shared/messaging/text.md#contract-6). | DEC-053, DEC-068, DEC-090 |
 
 <a id="responsibilities"></a>
 
@@ -43,14 +43,14 @@ Tài liệu được đặt theo hành trình người dùng. Mỗi use case ghi
 | Nội dung | Module phụ trách | Nguồn chuẩn |
 |---|---|---|
 | Cộng đồng, membership, lời mời, metadata/phân quyền phòng | Community | [Servers](servers.md), [Memberships](memberships.md), [Invitations](invitations.md), [Channels](channels.md), [Permissions](permissions.md) |
-| Nội dung tin, lưu/gửi/lịch sử, sửa/xóa, chống trùng, sequence/cursor và tombstone dùng chung | Messaging | [Hợp đồng nhắn tin](../../direct-messaging.md#contracts), [thiết kế chi tiết](../../direct-messaging.md#detailed-design), [ca TC-TEXT](../../direct-messaging.md#tests) |
+| Nội dung tin, lưu/gửi/lịch sử, sửa/xóa, chống trùng, sequence/cursor và tombstone dùng chung | Messaging | [Cơ chế Messaging](../../../shared/messaging/README.md), [thiết kế chi tiết](../../../shared/messaging/README.md#detailed-design), [ca TC-TEXT](../../../shared/messaging/text.md#tests) |
 | Áp dụng cơ chế nhắn tin vào phòng, kiểm tra view/membership, route và định tuyến cập nhật | Messaging phối hợp Community/Identity/WebClient | [UC-COM-23/24/25](#use-cases), [tin phòng và realtime](../design/integration.md#channel-messaging), [OpenAPI](../../../contracts/community.openapi.json), [catalogue realtime](../../../contracts/community-realtime.schema.json) |
-| Điều kiện tài khoản và phiên | Identity | [Accounts](../../accounts.md#use-cases); Community/Messaging dùng hợp đồng Identity |
-| Giao diện, trạng thái gửi, cập nhật và đối soát sau reconnect | WebClient | [UX Community](#ux), [UX DM dùng chung cho tin](../../direct-messaging.md#ux) |
+| Điều kiện tài khoản và phiên | Identity | [Accounts](../../accounts/specs/use-cases.md#use-cases); Community/Messaging dùng hợp đồng Identity |
+| Giao diện, trạng thái gửi, cập nhật và đối soát sau reconnect | WebClient | [UX Community](#ux), [State/merge dùng chung](../../../shared/messaging/text.md) |
 
 COM-013/014/017/018/022/023/024 và các AC/TC bên dưới giữ quy tắc áp dụng cho tin phòng. Phần thuật toán nhắn tin chung chỉ dẫn chiếu nguồn Messaging ở bảng trên; thay đổi cơ chế chung cập nhật tại nguồn đó và các liên kết/phần tích hợp bị ảnh hưởng. Thứ tự quyền và thu hồi của Community tiếp tục ở [Permissions](permissions.md#view-permissions).
 
-UC-COM-17 tại [Channels](channels.md#uc-com-17) mô tả một luồng mở phòng: Community trả danh sách/metadata theo view, Messaging trả lịch sử qua guard Community. UC-COM-23/24 có module thực hiện chính là Messaging. UC-COM-25 phối hợp các module: Messaging giữ Hub/dispatcher, Community cung cấp quyền/lifecycle và thay đổi cần thu hồi, Identity cung cấp trạng thái phiên, WebClient đồng bộ giao diện. DM giữ quyền truy cập riêng theo [đặc tả DM](../../direct-messaging.md#permissions).
+UC-COM-17 tại [Channels](channels.md#uc-com-17) mô tả một luồng mở phòng: Community trả danh sách/metadata theo view, Messaging trả lịch sử qua guard Community. UC-COM-23/24 có module thực hiện chính là Messaging. UC-COM-25 phối hợp các module: Messaging giữ Hub/dispatcher, Community cung cấp quyền/lifecycle và thay đổi cần thu hồi, Identity cung cấp trạng thái phiên, WebClient đồng bộ giao diện. DM giữ quyền truy cập riêng theo [đặc tả DM](../../direct-messaging/specs/requirements.md#permissions).
 
 <a id="use-case-conditions"></a>
 
@@ -67,7 +67,7 @@ UC-COM-17 tại [Channels](channels.md#uc-com-17) mô tả một luồng mở ph
 
 ## Use case tích hợp tin phòng và realtime
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](README.md#use-case-coverage).
+Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](traceability.md#use-case-coverage).
 
 <a id="uc-com-23"></a>
 
@@ -154,7 +154,7 @@ Chrome/Edge/Firefox/Safari và Chrome Android/Safari iOS cho Community;
 phiên bản/OS/thiết bị/build và bằng chứng khả dụng còn cần khóa tại OQ-007.
 Media v1 cam kết trên desktop, điện thoại ở đợt sau.
 
-Vg sở hữu UI Community và quyền/lifecycle phòng; Sáng cung cấp nền Messaging và đối chiếu hợp đồng tin phòng. Thái cung cấp dataset/bộ chạy kiểm tra theo [DEC-117](../../../project.md#team). Các ca dưới đây mô tả yêu cầu; bằng chứng đã ghi nhận được dẫn chiếu từ [tiến độ](../status.md).
+Vg sở hữu UI Community và quyền/lifecycle phòng; Sáng cung cấp nền Messaging và đối chiếu hợp đồng tin phòng. Thái cung cấp dataset/bộ chạy kiểm tra theo [DEC-117](../../../project/planning.md#team). Các ca dưới đây mô tả yêu cầu; bằng chứng đã ghi nhận được dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="acceptance"></a>
 
@@ -170,7 +170,7 @@ Vg sở hữu UI Community và quyền/lifecycle phòng; Sáng cung cấp nền 
 | <a id="ac-com-24"></a> AC-COM-24 | Thành viên gửi/sửa tin tại biên 2.000/2.001 UTF-16 sau chuẩn hóa xuống dòng; gửi tin chỉ trắng/vô hình hoặc Unicode lỗi. | Nhận đến 2.000 UTF-16, từ chối vượt giới hạn/tin trống/Unicode lỗi; giữ tiếng Việt, emoji và ZWJ trong tin có nội dung theo DEC-090. |
 
 
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](README.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
+Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](traceability.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="tests"></a>
 
@@ -194,7 +194,7 @@ Dữ liệu: O là chủ sở hữu; M được cấp một quyền quản lý c
 
 Các tiêu chí mới dẫn tới DEC-072–077/087/092–098; đối chiếu bằng chứng theo [gói triển khai](../delivery/create-view/plan.md#first-package). Ca chat thu hồi đo ≤5 giây theo DEC-083; media thu hồi ≤5 giây/fail-close theo DEC-099, chưa có kết quả SFU.
 
-Các ca này bao phủ quyền đã chốt; cần bổ sung ca cho từng AC-COM khi hoàn thiện backend/API. Chạy trực tiếp API để kiểm tra quyền, không chỉ nhìn nút UI. Ca nội dung tin dùng [TC-TEXT](../../direct-messaging.md#tests). Ca gửi lại/đồng thời cũng cần chạy cho tin phòng sau khi chọn hợp đồng.
+Các ca này bao phủ quyền đã chốt; cần bổ sung ca cho từng AC-COM khi hoàn thiện backend/API. Chạy trực tiếp API để kiểm tra quyền, không chỉ nhìn nút UI. Ca nội dung tin dùng [TC-TEXT](../../../shared/messaging/text.md#tests). Ca gửi lại/đồng thời cũng cần chạy cho tin phòng sau khi chọn hợp đồng.
 
 Ca [AC-COM-22](#ac-com-22) kiểm tra điều kiện chưa xác minh phía máy chủ; DEC-051 vẫn chặn truy cập ứng dụng từ trước, không suy rằng người chưa xác minh được đọc phòng. Chat thu hồi đã chốt DEC-083; ca media theo DEC-099 và MEDIA-GAP ở đặc tả media vẫn “Chưa chạy”, không đánh dấu đạt. Kết quả theo [mẫu nghiệm thu](../../../release-operations.md#testing).
 

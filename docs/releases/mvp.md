@@ -18,9 +18,9 @@ MVP là mốc đầu tiên trước [v1](v1.md): có bản chạy được để
 
 | Tính năng | Luồng chạy thật cần làm trước | Đặc tả nguồn | Phần hoàn thiện sau mốc đầu |
 |---|---|---|---|
-| Identity | Đăng ký, xác minh email, đăng nhập, duy trì phiên và đăng xuất; tận dụng code hiện có | [Use case và đối chiếu source](../features/accounts.md#use-cases), [API hiện tại](../features/accounts.md#api-current) | Đóng các gap còn lại và kiểm chứng đầy đủ vòng đời tài khoản theo v1; không xóa phần đã làm chỉ để giảm scope |
+| Identity | Đăng ký, xác minh email, đăng nhập, duy trì phiên và đăng xuất; tận dụng code hiện có | [Use case và đối chiếu source](../features/accounts/specs/use-cases.md#use-cases), [API hiện tại](../features/accounts/design/README.md#api-current) | Đóng các gap còn lại và kiểm chứng đầy đủ vòng đời tài khoản theo v1; không xóa phần đã làm chỉ để giảm scope |
 | Community | Tạo/xem cộng đồng của mình; một đường tham gia hoạt động; tạo/xem phòng text và giao tiếp trong phòng | [UC-COM](../features/community/specs/README.md#use-cases), [Servers](../features/community/specs/servers.md), [Memberships](../features/community/specs/memberships.md), [Channels](../features/community/specs/channels.md), [tin phòng](../features/community/specs/integration.md#use-cases) | Đủ các đường tham gia/lời mời, quản lý vai trò/ACL, chuyển owner và các nhánh quản lý trong đặc tả v1 |
-| Direct Messaging | Tìm người, mở hội thoại hai người, gửi/nhận văn bản, xem lại lịch sử sau reload hoặc mở lại | [Quy tắc DM](../features/direct-messaging.md#requirements), [hợp đồng](../features/direct-messaging.md#contracts), [AC](../features/direct-messaging.md#acceptance) | Bổ sung và kiểm chứng đầy đủ sửa/xóa, retry không trùng, phân trang/reconnect và các tình huống đồng thời của v1 |
+| Direct Messaging | Tìm người, mở hội thoại hai người, gửi/nhận văn bản, xem lại lịch sử sau reload hoặc mở lại | [Quy tắc DM](../features/direct-messaging/specs/requirements.md#requirements), [hợp đồng](../features/direct-messaging/design/README.md#contracts), [AC](../features/direct-messaging/specs/acceptance.md#acceptance) | Bổ sung và kiểm chứng đầy đủ sửa/xóa, retry không trùng, phân trang/reconnect và các tình huống đồng thời của v1 |
 
 Ngày 2026-10-07 đã chọn [gói Community đầu tiên](../features/community/delivery/create-view/plan.md#first-package): UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03. Scope/tiêu chí ở kế hoạch gói, các bước và tiến độ hiện tại ở [status.md](../features/community/status.md). Tải phòng/lịch sử và đối soát sau leave/rejoin của UC-COM-03 thuộc các gói sau; gói đầu đạt chưa đồng nghĩa toàn bộ UC-COM-03 đạt. Tiếp theo bổ sung UC-COM-06 và phòng/tin theo phụ thuộc. Các UC vẫn giữ quy tắc của đặc tả nguồn; thêm mốc MVP không tự thay đổi quyền, nội dung tin hoặc hợp đồng API.
 
@@ -30,7 +30,7 @@ Việc chưa đưa một thao tác vào gói đầu không đồng nghĩa tự b
 
 ## Gói việc và phân công kế hoạch
 
-Phân công dưới đây theo DEC-117 và [nguồn nhân sự](../project.md#team). Mỗi người theo đầu ra đến khi chạy được, gồm dữ liệu, backend, frontend, kiểm thử và tích hợp theo nhu cầu; mỗi người giữ một gói chính đang làm. [Phân bổ công suất](../project.md#capacity) tính cả hướng dẫn/review và giữ 20% dự phòng; đây chưa phải bằng chứng các gói đã hoàn tất.
+Phân công dưới đây theo DEC-117 và [nguồn nhân sự](../project/planning.md#team). Mỗi người theo đầu ra đến khi chạy được, gồm dữ liệu, backend, frontend, kiểm thử và tích hợp theo nhu cầu; mỗi người giữ một gói chính đang làm. [Phân bổ công suất](../project/planning.md#capacity) tính cả hướng dẫn/review và giữ 20% dự phòng; đây chưa phải bằng chứng các gói đã hoàn tất.
 
 | Gói | Đầu ra bàn giao | Người phụ trách | Phụ thuộc trực tiếp |
 |---|---|---|---|
@@ -41,9 +41,9 @@ Phân công dưới đây theo DEC-117 và [nguồn nhân sự](../project.md#te
 
 MVP-COM và MVP-DM thực hiện song song sau khi thống nhất hợp đồng nhắn tin/quyền. MVP-SYS bắt đầu ngay từ môi trường hiện có và job email, không chờ hai tính năng kia hoàn tất. Chuyển nhiều service là gói v1; không cần làm trước để bắt đầu MVP.
 
-Vg/Sáng tự kiểm thử gói nghiệp vụ của mình; Thái cung cấp dataset, bộ chạy và tổng hợp kết quả. Khi một người quá tải, điều chuyển một đầu ra đã có contract/AC rõ theo [quy tắc cân tải](../project.md#capacity), đồng thời giảm phần việc cũ của người nhận. Không giao Thái toàn bộ frontend/QA hoặc thêm gửi file vào scope để lấp công suất.
+Vg/Sáng tự kiểm thử gói nghiệp vụ của mình; Thái cung cấp dataset, bộ chạy và tổng hợp kết quả. Khi một người quá tải, điều chuyển một đầu ra đã có contract/AC rõ theo [quy tắc cân tải](../project/planning.md#capacity), đồng thời giảm phần việc cũ của người nhận. Không giao Thái toàn bộ frontend/QA hoặc thêm gửi file vào scope để lấp công suất.
 
-Worker là tiến trình backend trong phạm vi Identity. Identity giữ logic cấp/consume token và hiệu lực liên kết; worker thực hiện gửi, retry và ghi kết quả theo policy đã chọn. Hợp đồng gửi email hiện còn cần hoàn thiện tại [Accounts](../features/accounts.md#detailed-design); outbox chỉ tham chiếu token đã băm chưa đủ để dựng liên kết.
+Worker là tiến trình backend trong phạm vi Identity. Identity giữ logic cấp/consume token và hiệu lực liên kết; worker thực hiện gửi, retry và ghi kết quả theo policy đã chọn. Hợp đồng gửi email hiện còn cần hoàn thiện tại [Accounts](../features/accounts/design/README.md#detailed-design); outbox chỉ tham chiếu token đã băm chưa đủ để dựng liên kết.
 
 <a id="acceptance"></a>
 

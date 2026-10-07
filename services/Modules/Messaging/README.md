@@ -6,7 +6,8 @@ Identity cung cấp điều kiện tài khoản/phiên qua `SCDC.Contracts`.
 
 Tài liệu tổ chức theo hành trình người dùng:
 
-- [Direct Messaging](../../../docs/features/direct-messaging.md): đặc tả DM và nguồn chuẩn cho cơ chế xử lý tin dùng chung.
+- [Direct Messaging](../../../docs/features/direct-messaging/README.md): hành trình và quyền truy cập riêng của DM.
+- [Messaging dùng chung](../../../docs/shared/messaging/README.md): nội dung tin, persistence/fingerprint/transaction, history/cursor và realtime.
 - [Tích hợp tin phòng](../../../docs/features/community/specs/integration.md#responsibilities): áp dụng cơ chế Messaging vào phòng cộng đồng, gồm [UC-COM-23](../../../docs/features/community/specs/integration.md#uc-com-23), [UC-COM-24](../../../docs/features/community/specs/integration.md#uc-com-24) và phối hợp realtime [UC-COM-25](../../../docs/features/community/specs/integration.md#uc-com-25).
 
 UC-COM là mã truy vết hành trình; tin phòng được thực hiện trong Messaging.
