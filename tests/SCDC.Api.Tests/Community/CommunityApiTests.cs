@@ -115,13 +115,15 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.roles WHERE server_id=@id AND name='@everyone' AND is_default AND is_system", ("id", id)));
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.member_roles WHERE server_id=@id", ("id", id)));
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id AND event_type='Community.ServerCreated.v1' AND published_at IS NULL", ("id", id)));
-        await SqlAsync("UPDATE community.servers SET name='Updated title' WHERE id=@id", ("id", id));
+        await SqlAsync("UPDATE community.servers SET name='Updated title',search_name='updated title' WHERE id=@id", ("id", id));
         var replay = await CreateAsync(operation, "Nhóm Việt 👩‍💻", "Hai chủ đề\nMột cộng đồng", "public");
         Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
         var current = await JsonAsync(replay);
         Assert.Equal(id, current.GetProperty("id").GetGuid());
         Assert.Equal("Updated title", current.GetProperty("name").GetString());
         Assert.Equal("2", current.GetProperty("version").GetString());
+        Assert.Contains(id, SearchIds(await JsonAsync(await SearchAsync("Updated title"))));
+        Assert.DoesNotContain(id, SearchIds(await JsonAsync(await SearchAsync("Nhóm Việt 👩‍💻"))));
         Assert.Equal(first.Headers.Location, replay.Headers.Location);
         await AssertErrorAsync(await CreateAsync(operation, "Changed payload"), HttpStatusCode.Conflict, "OPERATION_CONFLICT");
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.operations WHERE actor_user_id=@actor AND client_operation_id=@op", ("actor", _owner.UserId), ("op", operation)));
