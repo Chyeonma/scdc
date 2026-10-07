@@ -37,7 +37,7 @@ Code Community trên `main` vẫn ở nền module. Gói tạo/xem nằm trên `
 
 ## Việc còn lại
 
-- Gói tiếp theo cần duyệt scope, ngoại lệ và kiểm chứng trước khi triển khai; đề xuất search/discovery UC-COM-02 để tìm cộng đồng công khai và nối đường join đã có.
+- Người dùng đã duyệt tiếp tục gói search/discovery UC-COM-02; đang triển khai trên `feat/community-search`, chưa có bằng chứng nghiệm thu: [kế hoạch](delivery/search/plan.md), [thiết kế](design/search.md). Các gói sau vẫn cần duyệt riêng.
 - UC-COM-03 còn phòng/lịch sử và đối soát theo mutation leave/rejoin; UC-COM-02 còn search/discovery. Không dùng kết quả gói đầu để đóng toàn bộ hai UC.
 - UC-COM-06 còn đường chuyển approval/pending và mở phòng; join hiện tại trả conflict với approval. Rejoin chỉ kiểm chứng bằng record left fixture; chưa có leave API, cleanup không thay proof FK/CAS epoch của gói role/ACL.
 - Các OQ/ACL-O giữ tại nguồn chủ trì: [Servers](specs/servers.md#gaps), [Memberships](specs/memberships.md#gaps), [Invitations](specs/invitations.md#gaps), [Channels](specs/channels.md#gaps), [Permissions](specs/permissions.md#gaps), [tích hợp](specs/integration.md#gaps). Giữ nguyên quyết định và yêu cầu proof.
