@@ -29,7 +29,7 @@ Code Community trên `main` vẫn ở nền module. Implementation gói tạo/xe
 | 4. Backend | Đã triển khai và ghi bằng chứng | [Nghiệm thu backend](delivery/create-view/acceptance.md#backend) |
 | 5. WebClient và kiểm chứng luồng | Đã triển khai và ghi bằng chứng | [Nghiệm thu frontend](delivery/create-view/acceptance.md#frontend) |
 | Tổ chức lại tài liệu trước bước 6 | Đã áp dụng bố cục mới cho Community | [Tổng quan](README.md), [quy ước quản lý](README.md#quy-ước-duy-trì) |
-| 6. Mở rộng Community theo gói | Chưa bắt đầu; đề xuất UC-COM-06 tham gia trực tiếp public, chờ người dùng duyệt | [Memberships](specs/memberships.md#uc-com-06) |
+| 6. Mở rộng Community theo gói | Đã duyệt bắt đầu gói public/immediate UC-COM-06; đang triển khai, chưa nghiệm thu | [Kế hoạch](delivery/direct-join/plan.md), [thiết kế](design/direct-join.md) |
 | 7. Messaging và realtime | Chưa bắt đầu | [Tích hợp](specs/integration.md#use-cases) |
 
 <a id="remaining"></a>
