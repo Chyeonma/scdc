@@ -51,6 +51,8 @@ Controllers đặt tại services/SCDC.Api/Controllers/Community theo từng nh�
 
 ## Hợp đồng và thiết kế
 
+Thiết kế theo gói: [tạo/xem](create-view.md), [tham gia trực tiếp public/immediate](direct-join.md). Tiến độ và phạm vi được kiểm chứng tại [status.md](../status.md).
+
 [OpenAPI Community](../../../contracts/community.openapi.json) giữ schema máy đọc được; [schema realtime](../../../contracts/community-realtime.schema.json) giữ catalogue Hub chat. Các route/mutation theo từng thành phần trong đặc tả của phần đó.
 
 Hai artefact tổng hợp hợp đồng của hành trình cộng đồng, gồm cả thao tác tin phòng do Messaging thực hiện. Prefix route `/servers/...` và mã COM/UC-COM phục vụ giao diện/truy vết; quyền sở hữu dữ liệu và nơi triển khai theo [bảng phân công](../specs/README.md#use-cases), [ranh giới module](../../../architecture.md#boundaries).

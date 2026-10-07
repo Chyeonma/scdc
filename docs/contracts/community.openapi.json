@@ -360,7 +360,7 @@
       "post": {
         "operationId": "joinPublicServer",
         "summary": "Vào ngay hoặc gửi yêu cầu chờ duyệt",
-        "description": "Vào ngay hoặc gửi yêu cầu chờ duyệt",
+        "description": "Target contract includes immediate join and pending approval. The public/immediate package on feat/community-join implements 200 Membership with actor from claims and no body. Active public retries return the current membership without another event/version increment. Nonmembers on approval receive 409 JOIN_APPROVAL_REQUIRED without a membership/request; 202 and pending transitions remain unimplemented. Private/inactive/deleted/unknown return 404. Unclear mutation results must be reconciled through GET before an explicit retry.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -384,7 +384,7 @@
             "$ref": "#/components/responses/503"
           },
           "200": {
-            "description": "Committed result; target design, endpoint not implemented.",
+            "description": "Public/immediate membership committed on feat/community-join; active retry returns the same current epoch.",
             "content": {
               "application/json": {
                 "schema": {
@@ -394,7 +394,7 @@
             }
           },
           "202": {
-            "description": "Pending join request, no membership or channel access.",
+            "description": "Target pending request contract; not implemented by the public/immediate package.",
             "content": {
               "application/json": {
                 "schema": {
@@ -404,14 +404,16 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "partial-on-feature-branch",
         "x-scdc-access": "current public server",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
           {
             "$ref": "#/components/parameters/serverId"
           }
-        ]
+        ],
+        "x-scdc-runtime-branch": "feat/community-join",
+        "x-scdc-design-document": "../features/community/design/direct-join.md"
       }
     },
     "/servers/{serverId}/join-requests/me": {

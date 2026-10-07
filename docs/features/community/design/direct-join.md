@@ -18,6 +18,8 @@
 
 Member active trên public nhận cùng membership kể cả mode approval, không ghi event/version lần nữa. Private chặn route join công khai; active membership trong private vẫn đọc được qua API riêng.
 
+JWT middleware có thể từ chối account inactive bằng 401 trước application guard; guard account/email không đủ điều kiện trả 403. Hai lớp đều không ghi membership.
+
 ## Giao dịch
 
 1. Shared work scope READ COMMITTED; Identity guard giữ user share lock và session expiry.
@@ -34,6 +36,6 @@ Không thêm migration: các bảng/cột cần dùng đã có sau migration 001
 
 Public summary qua URL chia sẻ là điểm vào, chưa có màn hình search. Nonmember/left public immediate thấy Tham gia; active/private/approval không có nút join trực tiếp.
 
-Mutation dùng retry:false, bound actor, AbortController và chặn double submit. Đổi route/actor bỏ response cũ. Thành công tải detail/own list bằng GET; lỗi read sau commit không tự POST lại.
+Mutation dùng retry:false, bound actor, AbortController, timeout 15 giây và chặn double submit. Đổi route/actor bỏ response cũ. Thành công tải detail/own list bằng GET; lỗi read sau commit không tự POST lại.
 
 Mất mạng/401/503/500 giữ trạng thái cần kiểm tra: Kiểm tra kết quả chỉ GET detail/membership. Active mở detail/cập nhật list; chưa active sau GET thành công và còn public/immediate mới cho người dùng bấm Tham gia lại. Reload chỉ GET; 404 bỏ summary cũ; conflict approval đọc lại mode rồi dừng join. Không giả đã vào phòng khi chưa có phòng/lịch sử.
