@@ -2525,3 +2525,9 @@ button:disabled {
     opacity: 1;
   }
 }
+
+.dm-search__results { list-style: none; padding: 0; margin: 12px 0; max-height: 340px; overflow-y: auto; }
+.dm-search__result { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 12px; margin-bottom: 6px; background: var(--bg-secondary, #252732); border: 1px solid transparent; border-radius: 8px; color: inherit; cursor: pointer; }
+.dm-search__result.is-selected, .dm-search__result:focus-visible { border-color: #8597ff; outline: 2px solid #8597ff; }
+.dm-search__result span { opacity: .8; }
+.dm-search__selection { padding: 12px; border-radius: 8px; background: #343950; }

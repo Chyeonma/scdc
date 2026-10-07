@@ -7,12 +7,15 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
       Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
+      Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
     ports:
       - "5026:8080"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - identity-user-search-keys:/app/.dm-keys/user-search
 
   web-client:
     build:
@@ -45,3 +48,4 @@ services:
 
 volumes:
   scdc-postgres-data:
+  identity-user-search-keys:

@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +49,13 @@ public static class IdentityModule
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
+        services.AddScoped<UserSearchKeyInitializer>();
+        var searchKeyRing = configuration["Modules:Identity:UserSearch:CursorKeyRingPath"]
+            ?? Path.Combine(AppContext.BaseDirectory, ".dm-keys", "user-search");
+        services.AddDataProtection()
+            .SetApplicationName(configuration["Modules:Identity:UserSearch:ApplicationName"] ?? "SCDC.UserSearch")
+            .PersistKeysToFileSystem(new DirectoryInfo(searchKeyRing));
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -110,6 +118,12 @@ public static class IdentityModule
         {
             context.Fail("The session is no longer active.");
         }
+    }
+
+    public static async Task InitializeUserSearchKeysAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        await using var scope = services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<UserSearchKeyInitializer>().InitializeAsync(cancellationToken);
     }
 
     private sealed class IdentityModuleDescriptor : IModuleDescriptor

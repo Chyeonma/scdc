@@ -17,6 +17,17 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in ChangeTracker.Entries<UserProfile>())
+        {
+            if (entry.State == EntityState.Added || (entry.State == EntityState.Modified
+                && entry.Property(p => p.DisplayName).IsModified))
+                entry.Entity.DisplayNameSearchKey = UserSearchKey.Normalize(entry.Entity.DisplayName);
+        }
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task LockUserAsync(Guid userId, CancellationToken cancellationToken)
     {
         if (Database.CurrentTransaction is null)
@@ -79,6 +90,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
         entity.HasKey(profile => profile.UserId);
         entity.Property(profile => profile.UserId).HasColumnName("user_id");
         entity.Property(profile => profile.DisplayName).HasColumnName("display_name").HasMaxLength(64);
+        entity.Property(profile => profile.DisplayNameSearchKey).HasColumnName("display_name_search_key").UseCollation("C");
         entity.Property(profile => profile.Bio).HasColumnName("bio").HasMaxLength(500);
         entity.Property(profile => profile.AvatarObjectKey).HasColumnName("avatar_object_key").HasMaxLength(500);
         entity.Property(profile => profile.Locale).HasColumnName("locale").HasMaxLength(16);

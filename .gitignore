@@ -58,3 +58,5 @@ docker-compose.override.yml
 # Documentation
 # Allow all documentation under docs/
 !/docs/**
+
+**/.dm-keys/

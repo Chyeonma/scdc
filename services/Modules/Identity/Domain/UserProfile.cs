@@ -4,6 +4,7 @@ internal sealed class UserProfile
 {
     public Guid UserId { get; set; }
     public required string DisplayName { get; set; }
+    public string DisplayNameSearchKey { get; set; } = "";
     public string? Bio { get; set; }
     public string? AvatarObjectKey { get; set; }
     public required string Locale { get; set; }

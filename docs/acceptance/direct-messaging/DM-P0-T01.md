@@ -21,7 +21,7 @@ Trạng thái task: **Người dùng PASS FE/BE và đồng ý baseline ngày 07
 | Key/config | `.env.dm-test`, `.dm-acceptance/keyrings/hmac`, cursor dir riêng; P0 Foundation chưa tiêu thụ cursor/HMAC config |
 | Nhánh tích hợp / PR target | `message`, đã push từ main remote tại `2096e0bc493ff128467c836e63edacdd8027d590` |
 | Push task | Đã push `origin/chore/dm-p0-t01-acceptance-baseline`; commit implementation `62fd137` và commit cập nhật Git-flow sau đó. Kiểm tra SHA hiện hành bằng `git ls-remote --heads origin chore/dm-p0-t01-acceptance-baseline`; đối chiếu `git rev-parse HEAD` |
-| PR / merge | Chưa tạo PR; chưa merge. Quyền push/merge vào `message` đã cấp ngày 07/10/2026; merge chỉ sau người dùng PASS FE/BE và review baseline trên build bàn giao |
+| PR / merge | Chưa tạo PR; P0 đã merge/push vào `message`. Quyền push/merge vào `message` đã cấp ngày 07/10/2026; đã ghi user PASS và tích hợp tại `170d959` (chi tiết cuối biên bản) |
 
 Mật khẩu chung của **tài khoản fixture local**: `DmDemo2026!Local`. Email example.test không nhận thư thật. A/B/C/K/S được verify bằng Development token qua API thật; đây không phải bằng chứng gửi email sản phẩm.
 
@@ -232,4 +232,4 @@ Thao tác: ... | Mong đợi: ... | Thực tế: ...
 Sửa cùng task rồi bàn giao lại; chưa thực hiện DM-P1-T01.
 ```
 
-Người dùng FE/BE: **PASS**, baseline review: **Đồng ý** theo phản hồi ngày 07/10/2026. Các ô bằng chứng từng case phía trên vẫn giữ kết quả agent và “Chưa xác nhận” nếu người dùng không báo riêng từng bước; phản hồi nghiệm thu tổng thể này áp dụng cho bản bàn giao P0. Push task và `message`: đã thực hiện. Merge P0 vào `message`: được phép sau xác minh push và xử lý docs/smoke. Publish: chưa thực hiện. Task kế được giao: duy nhất DM-P1-T01.
+Người dùng FE/BE: **PASS**, baseline review: **Đồng ý** theo phản hồi ngày 07/10/2026. Các ô bằng chứng từng case phía trên vẫn giữ kết quả agent và “Chưa xác nhận” nếu người dùng không báo riêng từng bước; phản hồi nghiệm thu tổng thể này áp dụng cho bản bàn giao P0. Push task và `message`: đã thực hiện. Merge P0 vào `message`: **đã merge và push tại `170d95933190d71df74de6ebcc537a5a8c41ce56`**, remote SHA và ancestry đã xác minh. Conflict OpenAPI giữ baseline version 0.3 cùng đường dẫn docs mới; không đổi source/config/schema P0. Smoke API profile200/logout204 và PostgreSQL đúng DB28user/0message đã chạy. Publish: chưa thực hiện. Task kế được giao: duy nhất DM-P1-T01.

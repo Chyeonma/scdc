@@ -358,7 +358,7 @@ Trạng thái ví dụ: Chưa chạy (planned-not-executed).
 Điều kiện trước:
 - A đã login; fixture không có tên không dấu trùng riêng
 - Có q Bảo và q Bao để so hai tập
-Dữ liệu cụ thể: Queries: "x", "dm", "a" x64, "a" x65, "BẢO", "Bảo", "Bao".
+Dữ liệu cụ thể: Queries: "x", "dm", "a" x64, "a" x65, "BẢO", "Bảo", "Bao". Bao vẫn tìm thấy B qua username dm_demo_bao không dấu; không được trả C chỉ vì bỏ dấu của displayName Bảo Demo.
 Bước kiểm tra frontend:
 1. Nhập x, kiểm tra hướng dẫn minimum không trả results giả.
 2. Nhập BẢO rồi Bảo, so B/C; nhập Bao, không tự trả Bảo chỉ vì bỏ dấu.

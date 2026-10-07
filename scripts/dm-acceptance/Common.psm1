@@ -159,6 +159,10 @@ function Set-DmFixtures([string]$Run='baseline') {
     $urls=Get-DmUrls
     $health=Invoke-DmRequest GET /health
     Assert-DmStatus $health 200 'Health'
+    # Scope this ownership exception to the authorized repository and this command.
+    # Sandbox-created worktrees may have another owner when Docker runs as the user.
+    $commit=& git -c "safe.directory=$script:RepoRoot" -C $script:RepoRoot rev-parse HEAD
+    if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot read source commit; fixture manifest has not been changed.' }
     $folder=Get-DmRunPath $Run; $manifestPath=Join-Path $folder 'manifest.json'
     $old=$null
     if (Test-Path -LiteralPath $manifestPath) { $old=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json }
@@ -199,7 +203,6 @@ function Set-DmFixtures([string]$Run='baseline') {
         $owned=@($owned | Where-Object { $_.alias -ne $a.alias }) + @($resolved[-1])
         Write-DmJson $manifestPath @{run=$Run;database=$script:Database;status='setup-incomplete';accounts=$owned}
     }
-    $commit=& git -C $script:RepoRoot rev-parse HEAD
     $manifest=[ordered]@{run=$Run;database=$script:Database;status='created-and-verified-via-real-identity-api';webUrl=$urls.Web;apiUrl=$urls.Api;sourceCommit=$commit.Trim();schemaSha256=(Get-FileHash (Join-Path $script:RepoRoot 'database/postgres/schema.sql') -Algorithm SHA256).Hash;createdAtUtc=[DateTime]::UtcNow.ToString('o');accounts=$resolved;conversations=@();messages=@()}
     Write-DmJson $manifestPath $manifest
     Write-Host "Fixture ${Run}: 28 accounts, 27 verified, U pending; no DM seeded. Manifest: $manifestPath"

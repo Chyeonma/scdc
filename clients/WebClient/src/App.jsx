@@ -352,22 +352,7 @@ export default function App() {
       setIsHomeActive(true);
       setActiveDmId(userOrDm.spaceId);
     } else {
-      const existing = dms.find((d) => d.user?.username === userOrDm.username);
-      if (existing) {
-        setIsHomeActive(true);
-        setActiveDmId(existing.spaceId);
-      } else {
-        const newDm = {
-          spaceId: `dm-${Date.now()}`,
-          spaceType: 1,
-          user: userOrDm,
-          lastMessage: 'Bắt đầu cuộc trò chuyện mới.',
-          unreadCount: 0,
-        };
-        setDms((prev) => [newDm, ...prev]);
-        setIsHomeActive(true);
-        setActiveDmId(newDm.spaceId);
-      }
+      setShowCreateDm(true);
     }
   }
 
@@ -594,8 +579,7 @@ export default function App() {
       {showCreateDm && (
         <CreateDmModal
           onClose={() => setShowCreateDm(false)}
-          onStartDm={handleStartDm}
-          notify={notify}
+          key={session?.user?.id}
         />
       )}
 

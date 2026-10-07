@@ -70,6 +70,8 @@ CREATE TABLE identity.users (
 
 CREATE UNIQUE INDEX ux_users_normalized_username
     ON identity.users (normalized_username);
+CREATE INDEX ix_users_search_order ON identity.users (normalized_username COLLATE "C", id)
+    WHERE status = 1 AND deleted_at IS NULL;
 CREATE INDEX ix_users_active_username_trgm
     ON identity.users USING gin (normalized_username gin_trgm_ops)
     WHERE status = 1 AND deleted_at IS NULL;
@@ -83,6 +85,7 @@ FOR EACH ROW EXECUTE FUNCTION common.touch_updated_at_and_version();
 CREATE TABLE identity.user_profiles (
     user_id           uuid PRIMARY KEY,
     display_name      varchar(64) NOT NULL,
+    display_name_search_key text COLLATE "C" NOT NULL DEFAULT '',
     bio               varchar(500),
     avatar_object_key varchar(500),
     locale            varchar(16) NOT NULL DEFAULT 'vi-VN',

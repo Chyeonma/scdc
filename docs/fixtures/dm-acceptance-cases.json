@@ -221,7 +221,7 @@
             "A đã login; fixture không có tên không dấu trùng riêng",
             "Có q Bảo và q Bao để so hai tập"
           ],
-          "data": "Queries: \"x\", \"dm\", \"a\" x64, \"a\" x65, \"BẢO\", \"Bảo\", \"Bao\".",
+          "data": "Queries: \"x\", \"dm\", \"a\" x64, \"a\" x65, \"BẢO\", \"Bảo\", \"Bao\". Bao vẫn tìm thấy B qua username dm_demo_bao không dấu; không được trả C chỉ vì bỏ dấu của displayName Bảo Demo.",
           "frontend_steps": [
             "Nhập x, kiểm tra hướng dẫn minimum không trả results giả.",
             "Nhập BẢO rồi Bảo, so B/C; nhập Bao, không tự trả Bảo chỉ vì bỏ dấu.",

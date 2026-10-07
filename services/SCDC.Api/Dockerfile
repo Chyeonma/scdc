@@ -27,6 +27,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+RUN mkdir -p /app/.dm-keys/user-search && chown -R $APP_UID:$APP_UID /app/.dm-keys
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "SCDC.Api.dll"]
