@@ -1,6 +1,6 @@
 # DM-P0-T01 — bản chạy và hướng dẫn người dùng kiểm tra
 
-Trạng thái task: **Chờ người dùng test FE/BE và review baseline**. Phần agent và người dùng ghi riêng. Người dùng chưa xác nhận PASS; không bắt đầu DM-P1-T01. Scope P0 là môi trường, Identity baseline và contract/thiết kế DM; search/send/history/Hub DM chưa triển khai, chat nhìn thấy trên FE vẫn là mock.
+Trạng thái task: **Người dùng PASS FE/BE và đồng ý baseline ngày 07/10/2026**. Phần agent và người dùng ghi riêng. Người dùng đã trả lời “PASS FE/BE và đồng ý baseline P0” trong phiên khi giao DM-P1-T01. Bản bàn giao tương ứng: implementation `62fd137`, cập nhật Git-flow `0d5f068`; phản hồi không nêu build khác. Cho phép tích hợp P0 vào `message` theo quyền đã cấp và thực hiện duy nhất P1-T01. Scope P0 là môi trường, Identity baseline và contract/thiết kế DM; search/send/history/Hub DM chưa triển khai, chat nhìn thấy trên FE vẫn là mock.
 
 ## Bản chạy và dữ liệu thật
 
@@ -232,4 +232,4 @@ Thao tác: ... | Mong đợi: ... | Thực tế: ...
 Sửa cùng task rồi bàn giao lại; chưa thực hiện DM-P1-T01.
 ```
 
-Người dùng FE/BE: **Chưa xác nhận**. Baseline review: **Chưa xác nhận**. Push task và `message`: đã thực hiện. Merge vào `message`: chờ PASS FE/BE và baseline review. Publish: chưa thực hiện. Task dừng ở **Chờ người dùng test**.
+Người dùng FE/BE: **PASS**, baseline review: **Đồng ý** theo phản hồi ngày 07/10/2026. Các ô bằng chứng từng case phía trên vẫn giữ kết quả agent và “Chưa xác nhận” nếu người dùng không báo riêng từng bước; phản hồi nghiệm thu tổng thể này áp dụng cho bản bàn giao P0. Push task và `message`: đã thực hiện. Merge P0 vào `message`: được phép sau xác minh push và xử lý docs/smoke. Publish: chưa thực hiện. Task kế được giao: duy nhất DM-P1-T01.
