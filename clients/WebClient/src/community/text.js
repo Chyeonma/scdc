@@ -38,3 +38,11 @@ export function validateServerInput(input) {
   if (!['public', 'private'].includes(visibility)) errors.visibility = ['Chọn công khai hoặc riêng tư.'];
   return { data: { name, description, visibility }, errors };
 }
+export function validateSearchQuery(input) {
+  const query = typeof input === 'string' ? trimWhitespace(input) : '';
+  const scalars = [...query].map((character) => character.codePointAt(0));
+  const invalid = !isValidUnicode(query) || query.length < 2 || query.length > 100
+    || scalars.every((value) => control(value) || inRanges(value, whitespace) || inRanges(value, ignorable))
+    || scalars.some((value) => control(value) || value === 0x2028 || value === 0x2029);
+  return { query, error: invalid ? 'Từ khóa cần 2–100 ký tự, có nội dung và nằm trên một dòng.' : null };
+}

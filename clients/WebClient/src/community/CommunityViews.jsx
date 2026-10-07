@@ -14,12 +14,13 @@ function Badges({ server }) {
     {server.visibility === 'public' && <span>{server.joinMode === 'approval' ? 'Chờ duyệt tham gia' : 'Tham gia ngay'}</span>}
   </div>;
 }
-export function CommunityList({ list, onSelect, onCreate }) {
+export function CommunityList({ list, onSelect, onCreate, onDiscover }) {
   return <main className="community-stage">
     <header className="community-heading">
       <div><p className="eyebrow">KHÔNG GIAN CỦA BẠN</p><h1>Cộng đồng của tôi</h1>
         <p>Các cộng đồng bạn đang tham gia.</p></div>
       <div className="community-actions">
+        <button className="btn btn--secondary" onClick={onDiscover}>Khám phá cộng đồng</button>
         <button className="btn btn--secondary" onClick={list.reload} disabled={list.loading}>Tải lại danh sách</button>
         <button className="btn btn--primary" onClick={onCreate}>Tạo cộng đồng</button>
       </div>
@@ -31,7 +32,7 @@ export function CommunityList({ list, onSelect, onCreate }) {
     </div>}
     {!list.loading && !list.error && !list.items.length && <div className="community-empty">
       <span aria-hidden="true">◎</span><h2>Bạn chưa tham gia cộng đồng nào</h2>
-      <p>Tạo một cộng đồng để bắt đầu xây dựng không gian của bạn.</p>
+      <p>Khám phá cộng đồng công khai hoặc tạo không gian của bạn.</p>
       <button className="btn btn--primary" onClick={onCreate}>Tạo cộng đồng đầu tiên</button>
     </div>}
     <div className="community-grid">
@@ -45,7 +46,7 @@ export function CommunityList({ list, onSelect, onCreate }) {
   </main>;
 }
 
-export function CommunityDetail({ actorId, serverId, onBack, onJoined }) {
+export function CommunityDetail({ actorId, serverId, onBack, onJoined, backLabel = '← Cộng đồng của tôi' }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState({ loading: true });
   const [join, setJoin] = useState({ busy: false, uncertain: false, error: null });
@@ -126,7 +127,7 @@ export function CommunityDetail({ actorId, serverId, onBack, onJoined }) {
   }
   return <main className="community-stage" aria-busy={loading}>
     <div className="community-actions">
-      <button className="btn btn--secondary" onClick={onBack}>← Cộng đồng của tôi</button>
+      <button className="btn btn--secondary" onClick={onBack}>{backLabel}</button>
       <button className="btn btn--secondary" onClick={reload} disabled={loading || join.busy}>Tải lại chi tiết</button>
     </div>
     {loading && <p role="status">Đang tải chi tiết…</p>}

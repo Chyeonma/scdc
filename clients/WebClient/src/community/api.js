@@ -5,6 +5,11 @@ export function getMyServers(actorId, { cursor = null, limit = 20, signal } = {}
   if (cursor) query.set('cursor', cursor);
   return api(`/servers?${query}`, { actorId, signal });
 }
+export function searchServers(actorId, query, { cursor = null, limit = 20, signal } = {}) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  return api(`/servers/search?${params}`, { actorId, signal });
+}
 export function getServer(actorId, serverId, signal) {
   return api(`/servers/${encodeURIComponent(serverId)}`, { actorId, signal });
 }

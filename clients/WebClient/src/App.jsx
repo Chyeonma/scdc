@@ -34,6 +34,7 @@ import { AuthScreen } from './components/AuthScreen.jsx';
 
 import { useCommunityList } from './community/useCommunityList.js';
 import { CommunityList, CommunityDetail } from './community/CommunityViews.jsx';
+import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
 import { readPending } from './community/pendingCreate.js';
 
 export default function App() {
@@ -47,6 +48,9 @@ function Application({ session }) {
   const list = useCommunityList(actorId);
   const [route, setRoute] = useState(window.location.hash);
   const activeServerId = route.startsWith('#community/') ? route.slice(11) : null;
+  const isDiscovery = route === '#discover' || route.startsWith('#discover?');
+  const discoveryQuery = isDiscovery ? new URLSearchParams(route.split('?')[1] || '').get('q') || '' : '';
+  const [communityReturnTo, setCommunityReturnTo] = useState('#communities');
   const isHomeActive = route === '#home';
   const [hasPending, setHasPending] = useState(false);
   const checkPending = useCallback(() => {
@@ -59,7 +63,10 @@ function Application({ session }) {
     checkPending();
     return () => window.removeEventListener('hashchange', navigate);
   }, [checkPending]);
-  function selectServer(id) { window.location.hash = `community/${id}`; }
+  function selectServer(id) {
+    setCommunityReturnTo(isDiscovery ? route : '#communities');
+    window.location.hash = `community/${id}`;
+  }
   function setIsHomeActive(value) { window.location.hash = value ? 'home' : 'communities'; }
 
 
@@ -343,8 +350,15 @@ function Application({ session }) {
           <button className="btn btn--secondary" onClick={() => setShowCreateServer(true)}>Tiếp tục yêu cầu</button>
         </div>}
         {activeServerId
-          ? <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId} onBack={() => setIsHomeActive(false)} onJoined={list.reload} />
-          : <CommunityList list={list} onSelect={selectServer} onCreate={() => setShowCreateServer(true)} />}
+          ? <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
+            onBack={() => { window.location.hash = communityReturnTo; }} onJoined={list.reload}
+            backLabel={communityReturnTo.startsWith('#discover') ? '← Kết quả tìm kiếm' : undefined} />
+          : isDiscovery
+            ? <CommunityDiscovery key={`${actorId}:${discoveryQuery}`} actorId={actorId} query={discoveryQuery} onSelect={selectServer}
+              onSearch={(query) => { window.location.hash = `discover?${new URLSearchParams({ q: query })}`; }}
+              onBack={() => setIsHomeActive(false)} />
+            : <CommunityList list={list} onSelect={selectServer} onCreate={() => setShowCreateServer(true)}
+              onDiscover={() => { window.location.hash = 'discover'; }} />}
       </div>}
 
       {/* COLUMN 3: MAIN CHAT STAGE */}

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import test from 'node:test';
-import { validateServerInput } from '../src/community/text.js';
+import { validateServerInput, validateSearchQuery } from '../src/community/text.js';
 import { whitespaceRanges, ignorableRanges } from '../src/community/textPolicy.js';
 import { readPending, savePending, clearPending, operationId } from '../src/community/pendingCreate.js';
 const policy = JSON.parse(await readFile(new URL('../../../docs/fixtures/text-policy.json', import.meta.url)));
@@ -27,6 +27,16 @@ test('name validation preserves composed/decomposed text and counts UTF-16 at th
   }
   for (const name of ['😀'.repeat(51), 'A', '\u200b\u034f', 'OK\u0085X', 'OK\u2028X', '\ud800X', 'OK\0']) {
     assert.ok(validateServerInput({ name }).errors.name, JSON.stringify(name));
+  }
+});
+test('search preserves accents, casing and literal pattern characters after policy trim', () => {
+  for (const query of ['CAFE\u0301 👩‍💻', '%_\\', "' OR 1=1 --", '𐐀', '😀'.repeat(50)]) {
+    assert.deepEqual(validateSearchQuery(`\u0085${query}\u3000`), { query, error: null });
+  }
+});
+test('search rejects malformed Unicode, invisible content and UTF-16 overflow before requesting', () => {
+  for (const query of [null, '', 'A', '   ', '😀'.repeat(51), '\u200b\u034f', '\ud800X', 'OK\0', 'OK\nX', 'OK\u2028X']) {
+    assert.ok(validateSearchQuery(query).error, JSON.stringify(query));
   }
 });
 test('description normalizes only line endings, preserving spaces, case and NFC form', () => {
