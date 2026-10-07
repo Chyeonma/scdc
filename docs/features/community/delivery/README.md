@@ -38,4 +38,6 @@ Trạng thái các bước nằm tại [status.md](../status.md#steps); bảng n
 | 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. |
 | 7. Tích hợp Messaging và realtime | Messaging lưu/đọc/gửi tin phòng trên quyền Community; sau đó kiểm chứng Hub, reconnect và xử lý mất quyền |
 
+Gói đầu của bước 6: [tham gia trực tiếp public/immediate](direct-join/plan.md), kế thừa gói tạo/xem trên `feat/community-join`; requests/search và các gói còn lại được duyệt riêng.
+
 Evaluator Permissions được triển khai ở mức cần cho gói hiện hành và đối chiếu fixture khi mở role/ACL. Outbox/revoker cho mutation thu hồi phải hoàn thiện trước khi gói đó được coi đạt; tin phòng/realtime/Media có bằng chứng riêng theo phụ thuộc.
