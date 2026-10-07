@@ -25,8 +25,7 @@ docs/
 │   └── v1.md                  # Phạm vi bổ sung/hoàn thiện và điều kiện bàn giao v1
 ├── features/                  # Một nguồn đặc tả cho mỗi tính năng
 │   ├── accounts.md
-│   ├── community.md
-│   ├── community/
+│   ├── community/             # README, status, specs, design và delivery
 │   ├── direct-messaging.md
 │   └── voice-video.md
 ├── architecture.md            # Hiện trạng, mục tiêu và việc chuyển kiến trúc
@@ -45,7 +44,8 @@ docs/
 |---|---|---|
 | Hành vi, quyền, dữ liệu/API, UX, AC/TC của tính năng | File trong `features/` và hợp đồng liên quan | Hồ sơ MVP/v1 dẫn tới UC/quy tắc/AC được chọn, không chép lại đặc tả |
 | Phần phải bàn giao ở một mốc | File tương ứng trong `releases/` | Roadmap chỉ dẫn đường và tóm tắt các nhóm chức năng |
-| Gói việc, phụ thuộc và cách chứng minh hoàn tất mốc | File tương ứng trong `releases/` | Task triển khai dẫn tới gói và đặc tả nguồn |
+| Gói việc, phụ thuộc và cách chứng minh hoàn tất mốc | File tương ứng trong `releases/` | Gói Community cụ thể nằm trong `features/community/delivery/`; task dẫn tới scope và đặc tả nguồn |
+| Trạng thái hiện tại và bằng chứng Community | [status.md](features/community/status.md) và hồ sơ trong `features/community/delivery/` | Tổng quan và các hồ sơ mốc dẫn liên kết, không lặp bảng tiến độ |
 | Mục tiêu toàn sản phẩm, nguồn lực, dự toán và khoảng trống | `project.md` | Hồ sơ mốc dẫn chiếu; không tạo thêm dự toán hoặc bảng tiến độ tài liệu độc lập |
 | Quyết định và thay đổi phạm vi | `decisions.md` | Các file bị ảnh hưởng cập nhật cùng thay đổi |
 

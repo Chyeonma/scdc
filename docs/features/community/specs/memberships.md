@@ -1,17 +1,18 @@
 # SCDC — Memberships — Thành viên và yêu cầu tham gia
 
-Cập nhật: 2026-10-06. Thành phần nội bộ của module Community. Quy tắc nghiệp vụ đã xác nhận theo các DEC dẫn chiếu; use case và thiết kế kỹ thuật là bản dự thảo để rà soát. Source còn Foundation, chưa có kết quả chạy UC-COM.
+Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu tư cách thành viên, membership epoch và yêu cầu tham gia. Các đường join/approve/accept dùng chung hành vi tạo hoặc kích hoạt membership; leave phối hợp dọn quyền của epoch hiện tại.
 
-[Tổng quan và truy vết Community](../community.md#use-cases) · [Kế hoạch triển khai](../community.md#use-case-delivery).
+[Tổng quan Community](../README.md) · [Truy vết UC/COM/AC/TC](README.md#use-cases) · [Kế hoạch triển khai](../delivery/README.md#use-case-delivery).
+
+Thiết kế kỹ thuật của phần này: [dữ liệu/API và giao dịch](../design/memberships.md#contracts).
 
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
 - [Use case](#use-cases)
 - [UX và trạng thái](#ux)
-- [Thiết kế dữ liệu/API](#contracts)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Việc còn lại](#gaps)
@@ -32,7 +33,7 @@ Sở hữu tư cách thành viên, membership epoch và yêu cầu tham gia. Cá
 
 ## Use case
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](../community.md#use-case-coverage).
+Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](README.md#use-case-coverage).
 
 <a id="uc-com-06"></a>
 
@@ -152,27 +153,6 @@ COM-S02/06 phục vụ gửi/xem/hủy và review request; COM-S03 phục vụ l
 
 Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích hợp UX](integration.md#ux).
 
-<a id="contracts"></a>
-
-## Thiết kế dữ liệu/API
-
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
-
-| Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
-|---|---|---|
-| `POST /servers/{id}/join` | Không có body | 200 membership nếu vào ngay; 202 yêu cầu pending nếu chờ duyệt; không join server private từ tìm kiếm |
-| `GET /servers/{id}/join-requests/me` | Phiên người yêu cầu | 200 `{request: JoinRequest|null}`; chưa có trả null; không trả request người khác |
-| `POST /servers/{id}/join-requests/{requestId}/approve` hoặc `/reject` | `{expectedVersion}` | 200 trạng thái cuối; đúng quyền duyệt; chỉ transition từ pending |
-| `DELETE /servers/{id}/join-requests/{requestId}` | `expectedVersion` | 200 cancelled; chỉ chính người gửi hủy pending |
-| `DELETE /servers/{id}/members/me?membershipId=...` | Epoch đang tham gia | 204 tự rời; owner chưa chuyển nhận 409; epoch cũ không làm rời epoch mới; chặn HTTP/realtime/media theo ngưỡng |
-
-### Giao dịch của thành phần
-
-- Join công khai: khóa server, xét visibility/joinMode hiện hành, rồi membership/request. Đã active trả membership hiện hành. Vào ngay tạo/reactivate membership và kết thúc pending cũ; chờ duyệt có tối đa một pending/server/user, gọi lặp trả cùng pending. Dùng [partial unique index](https://www.postgresql.org/docs/18/indexes-partial.html) cho pending; service vẫn khóa để transition nguyên tử. Join qua đường khác kết thúc request pending bằng approved/reason joined_elsewhere và membershipId hiện hành; UI hiển thị đã tham gia bằng đường khác, không giả reviewer đã duyệt.
-- Approve/reject/cancel: kiểm tra actor/target và version; chỉ một transition pending thắng. Approve tạo membership cùng commit; đã joined bằng link/đường khác thì đóng pending với lý do joined_elsewhere, không tạo membership thứ hai. Request mới sau rejected/cancelled có ID mới, không sửa lại lịch sử request cũ.
-
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
-
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận
@@ -187,13 +167,13 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md
 | <a id="ac-com-35"></a> AC-COM-35 | Thành viên rời tham gia lại; mời đích danh hết 7 ngày/đã hủy/từ chối được dùng lại | Rejoin theo join mode hiện hành, role mặc định; lịch sử theo quyền; mời cuối trạng thái không accept được |
 
 
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](../community.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Chưa có kết quả chạy AC-COM.
+Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](README.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="tests"></a>
 
 ## Ca kiểm thử
 
-Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới đều chưa chạy; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
+Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới là đặc tả kiểm chứng; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
 
 | Mã ca | Thao tác và dữ liệu | Kết quả cần quan sát | Dẫn chiếu |
 |---|---|---|---|
@@ -208,9 +188,9 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence).
 
 ## Việc còn lại
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../community.md#use-case-delivery), [migration](integration.md#schema-migration) và [vòng đời dữ liệu](../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
 | Yêu cầu tham gia | DEC-073/096 đã chốt; có transition/schema, còn kiểm chứng approve/cancel/private switch; limiter bổ sung chưa chốt. | OQ-003, OQ-004 |
-| Rời cộng đồng | Epoch/clear role/override/transfer có thiết kế; mất quyền dọn cache/role/override epoch cũ, giữ tin; dấu revoke/access floor bảo vệ restore theo [vòng đời](../../data-lifecycle.md#restore), metadata khác còn review. | OQ-003, OQ-011 |
+| Rời cộng đồng | Epoch/clear role/override/transfer có thiết kế; mất quyền dọn cache/role/override epoch cũ, giữ tin; dấu revoke/access floor bảo vệ restore theo [vòng đời](../../../data-lifecycle.md#restore), metadata khác còn review. | OQ-003, OQ-011 |

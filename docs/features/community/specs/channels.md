@@ -1,17 +1,18 @@
 # SCDC — Channels — Phòng và vòng đời phòng
 
-Cập nhật: 2026-10-06. Thành phần nội bộ của module Community. Quy tắc nghiệp vụ đã xác nhận theo các DEC dẫn chiếu; use case và thiết kế kỹ thuật là bản dự thảo để rà soát. Source còn Foundation, chưa có kết quả chạy UC-COM.
+Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa phối hợp Messaging/Media qua hợp đồng lifecycle; view và ACL theo Permissions.
 
-[Tổng quan và truy vết Community](../community.md#use-cases) · [Kế hoạch triển khai](../community.md#use-case-delivery).
+[Tổng quan Community](../README.md) · [Truy vết UC/COM/AC/TC](README.md#use-cases) · [Kế hoạch triển khai](../delivery/README.md#use-case-delivery).
+
+Thiết kế kỹ thuật của phần này: [dữ liệu/API và giao dịch](../design/channels.md#contracts).
 
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
 - [Use case](#use-cases)
 - [UX và trạng thái](#ux)
-- [Thiết kế dữ liệu/API](#contracts)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Việc còn lại](#gaps)
@@ -32,7 +33,7 @@ Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa p
 
 ## Use case
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](../community.md#use-case-coverage).
+Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](README.md#use-case-coverage).
 
 <a id="uc-com-16"></a>
 
@@ -153,7 +154,7 @@ COM-S03 · Màn hình rộng tham chiếu 1280 × 800
 Danh sách chỉ chứa phòng được phép xem. Thành viên mới được xem lịch sử
 cũ của phòng đó. Không có cấu hình chỉ đọc trong đợt đầu; người xem được
 phòng thì gửi được sau khi thỏa điều kiện tài khoản. Giới hạn tin,
-sửa/xóa, lỗi và chủ động thử lại giống [wireframe DM](../direct-messaging.md#ux).
+sửa/xóa, lỗi và chủ động thử lại giống [wireframe DM](../../direct-messaging.md#ux).
 
 Trạng thái riêng: chưa có phòng được xem, phòng chưa có tin, tải lỗi,
 lời mời không dùng được, yêu cầu chờ duyệt, mất quyền khi đang mở và
@@ -168,25 +169,6 @@ Phòng bị xóa đóng vùng nội dung và cuộc gọi theo DEC-077.
 
 Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích hợp UX](integration.md#ux).
 
-<a id="contracts"></a>
-
-## Thiết kế dữ liệu/API
-
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
-
-| Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
-|---|---|---|
-| `POST /servers/{id}/channels` | `{name,topic?,kind}` | 201 phòng text/voice; đúng quyền quản lý phòng; mặc định mọi thành viên xem |
-| `PATCH /servers/{id}/channels/{channelId}` | `{name?,topic?,expectedVersion}` | 200 phòng; đúng quyền quản lý phòng |
-| `DELETE /servers/{id}/channels/{channelId}` | `expectedVersion` | 204 xóa logic, dừng truy cập/kết nối; không tự xóa vật lý tin/backup |
-| `GET /servers/{id}/channels` | Phiên/thành viên | 200 chỉ phòng được xem; phòng deleted không được trả |
-
-### Giao dịch của thành phần
-
-- Xóa phòng: Community chuyển deleted/version/accessVersion, Messaging đánh dấu space deleted qua hợp đồng lifecycle, outbox thu hồi cùng transaction. Không có hai commit độc lập khiến phòng đã deleted vẫn nhận tin; không purge tin/backup ở đây.
-
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
-
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận
@@ -199,13 +181,13 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md
 | <a id="ac-com-34"></a> AC-COM-34 | Người đúng/sai quyền sửa/xóa phòng đang có tin/cuộc gọi | Deleted không đọc/gửi/nhận/tiếp tục gọi được; chặn race writer; không có khôi phục v1 |
 
 
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](../community.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Chưa có kết quả chạy AC-COM.
+Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](README.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="tests"></a>
 
 ## Ca kiểm thử
 
-Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới đều chưa chạy; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
+Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới là đặc tả kiểm chứng; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
 
 | Mã ca | Thao tác và dữ liệu | Kết quả cần quan sát | Dẫn chiếu |
 |---|---|---|---|
@@ -216,6 +198,6 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence).
 
 ## Việc còn lại
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../community.md#use-case-delivery), [migration](integration.md#schema-migration) và [vòng đời dữ liệu](../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
 Lifecycle create/delete cùng Messaging cần shared transaction; voice phụ thuộc Media lifecycle và proof cutoff riêng. Danh sách/metadata cần view guard và tên Unicode theo schema mới.

@@ -2,7 +2,7 @@
 
 SCDC phát triển ứng dụng giao tiếp cho nhóm bạn và cộng đồng. [MVP](docs/releases/mvp.md) bàn giao trước với Identity, Community và Direct Messaging; [v1](docs/releases/v1.md) là bản hoàn thiện kế thừa phạm vi đầy đủ, gồm thoại/video và chia sẻ màn hình. [Lộ trình](docs/roadmap.md) giải thích cách đọc và quản lý tài liệu theo hai mốc.
 
-MVP giữ một API host Modular Monolith; **microservice thuộc v1** theo [DEC-116](docs/decisions.md#dec-116) để đáp ứng môn học. Ranh giới service cụ thể còn cần chốt. Nhánh `feat/community-create-view` có Identity và API tạo/xem Community; Messaging còn ở nền module, giao diện cộng đồng chưa nối API. Media thuộc v1. [Kiến trúc](docs/architecture.md) ghi riêng hiện trạng main và phương án mục tiêu; [phân công](docs/project.md#team) và [công suất](docs/project.md#capacity) ghi gói việc của ba thành viên.
+MVP giữ một API host Modular Monolith; **microservice thuộc v1** theo [DEC-116](docs/decisions.md#dec-116) để đáp ứng môn học. Ranh giới service cụ thể còn cần chốt. [Trạng thái Community](docs/features/community/status.md) ghi phần đã triển khai, nhánh code và bằng chứng theo gói. [Kiến trúc](docs/architecture.md) ghi hiện trạng và phương án mục tiêu; [phân công](docs/project.md#team) và [công suất](docs/project.md#capacity) ghi gói việc của ba thành viên.
 
 ## Khởi chạy nhanh
 
@@ -45,7 +45,7 @@ Docker Desktop và Docker Engine dùng mặc định `ENGINE=docker`; Podman dù
 
 ## Tài liệu
 
-Điểm bắt đầu là [mục lục docs](docs/README.md). Đặc tả tính năng chứa phạm vi, requirements, UX, hợp đồng, ngoại lệ, tiêu chí chấp nhận và kiểm thử. [Community](docs/features/community.md#organization) có trang tổng quan và đặc tả theo năm thành phần nghiệp vụ, cùng tài liệu tích hợp dùng chung.
+Điểm bắt đầu là [mục lục docs](docs/README.md). Đặc tả tính năng chứa phạm vi, requirements, UX, hợp đồng, ngoại lệ, tiêu chí chấp nhận và kiểm thử. [Community](docs/features/community/README.md) có trang tổng quan và đặc tả theo năm thành phần nghiệp vụ, cùng tài liệu tích hợp dùng chung.
 
 - [Dự án: requirements, scope, nguồn lực và kế hoạch](docs/project.md)
 - [Lộ trình MVP và v1](docs/roadmap.md)

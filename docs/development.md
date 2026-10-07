@@ -153,6 +153,8 @@ git push
 
 Commit theo phạm vi staging đã review; nếu trước đó có code staged thì commit sẽ bao gồm cả code đó. Công cụ không tự stash, commit hoặc push. Trước khi dùng `TO`, commit bộ công cụ; các lệnh `make` khả dụng trên những nhánh đã nhận Makefile và script. Có thể gọi trực tiếp `python3 scripts/sync_docs.py --source main --target feat/identity --dry-run` khi cần; cách mở rộng lệnh ngắn là thêm target và recipe trong Makefile.
 
+Khi đổi bố cục tài liệu, cập nhật liên kết trong `README.md` ở root và README module của nhánh nhận. `docs-sync` chỉ chép `docs/`; README ngoài thư mục này giữ hướng dẫn runtime theo nhánh và được cập nhật liên kết riêng. Sau chuyển đổi, chạy `make docs-check` để kiểm tra cả tài liệu và README liên quan.
+
 <a id="configuration"></a>
 
 ## 2. Cấu hình

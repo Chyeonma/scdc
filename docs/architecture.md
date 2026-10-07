@@ -17,6 +17,8 @@ Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. 
 
 ## 1. Hệ thống hiện tại
 
+Phần hiện trạng bên dưới đối chiếu code `main`; tiến độ các gói Community trên nhánh feature được quản lý riêng tại [status.md](features/community/status.md).
+
 ```mermaid
 flowchart LR
     Web[WebClient · React 19 / Vite] -->|HTTP /api/v1| Api[SCDC.Api · .NET 10 · cổng 5026]
@@ -55,11 +57,11 @@ Các interface và transaction/guard bên dưới mô tả source hoặc thiết
 
 Mỗi module sở hữu dữ liệu của mình; giao tiếp qua interfaces trong `SCDC.Contracts`, không tham chiếu trực tiếp implementation của module khác. Mã ứng dụng không đọc/JOIN bảng của module khác. Các view quan sát trong SQL phục vụ kiểm tra dữ liệu và không thay thế hợp đồng nghiệp vụ.
 
-Tài liệu tính năng tổ chức theo hành trình người dùng; module thực hiện được ghi tại [danh mục UC-COM](features/community.md#use-cases) và [bảng nguồn chuẩn/phối hợp](features/community/integration.md#responsibilities). UC-COM-23/24 và route tin phòng nằm trong tài liệu Community nhưng Messaging giữ nghiệp vụ/dữ liệu tin; UC-COM-17/25 phối hợp theo phần trách nhiệm. Vị trí tài liệu, mã use case và prefix API không thay ranh giới module.
+Tài liệu tính năng tổ chức theo hành trình người dùng; module thực hiện được ghi tại [danh mục UC-COM](features/community/specs/README.md#use-cases) và [bảng nguồn chuẩn/phối hợp](features/community/specs/integration.md#responsibilities). UC-COM-23/24 và route tin phòng nằm trong tài liệu Community nhưng Messaging giữ nghiệp vụ/dữ liệu tin; UC-COM-17/25 phối hợp theo phần trách nhiệm. Vị trí tài liệu, mã use case và prefix API không thay ranh giới module.
 
-Identity có `IdentityDbContext` đã được đăng ký. CommunityModule hiện chỉ đăng ký descriptor Foundation; chưa có model/DTO, DbContext, service/controller hoặc bằng chứng chạy nghiệp vụ. Messaging vẫn chỉ có nền module. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
+Identity có `IdentityDbContext` đã được đăng ký. Tiến độ Community theo nhánh được quản lý tại [status.md](features/community/status.md), gồm phạm vi đã có trên feature và trạng thái merge. Messaging vẫn chỉ có nền module. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
-Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/permissions.md#permissions).
+Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của DM nằm trong [đặc tả DM](features/direct-messaging.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/specs/permissions.md#permissions).
 
 Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa có worker gửi email trong repo; payload tham chiếu token đã băm chưa tự đủ để dựng lại liên kết email. Cần hoàn thiện cơ chế cung cấp liên kết cho worker trước phát hành. [Đối chiếu Identity](features/accounts.md#implementation-review) ghi các chênh lệch source và coverage test ngày 2026-10-04; đặc biệt chưa cấp token reset cho tài khoản chưa xác minh dù yêu cầu cho phép.
 
@@ -77,17 +79,17 @@ Ngày 2026-10-06 thống nhất năm phần nghiệp vụ trong cùng module/pro
 Memberships, Invitations, Channels và Permissions. Nghiệp vụ đặt theo feature với
 Domain/Application riêng; Permissions có Infrastructure cho checker/guard.
 Persistence, idempotency và outbox dùng chung. Cấu trúc code, ranh giới và gói đầu tiên tại
-[tổng quan Community](features/community.md#organization); thiết kế transaction dùng chung tại
-[tích hợp](features/community/integration.md#transactions).
+[tổng quan Community](features/community/design/README.md#organization); thiết kế transaction dùng chung tại
+[tích hợp](features/community/design/integration.md#transactions).
 
 Các phần dùng chung schema `community` và một CommunityDbContext khi triển khai;
 mutation xuyên phần giữ một transaction nghiệp vụ. `CommunityModule.cs` là điểm ghép DI.
-Hiện source vẫn Foundation, chưa có các feature/DbContext/guard tương ứng. Đây là
-cấu trúc mục tiêu đã thống nhất; các thành phần sẽ được tạo khi triển khai.
+Đây là cấu trúc nội bộ đã thống nhất. Phần được tạo theo từng gói và trạng thái
+merge được quản lý tại [status.md](features/community/status.md).
 
 ### Thiết kế tích hợp Community và tin phòng bổ sung
 
-[Tích hợp Community](features/community/integration.md#contracts) đã có membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration; [Permissions](features/community/permissions.md#detailed-design) giữ role/ACL snapshot. `IChannelAccessGuard` đề xuất giữ Community server/channel share lock tới commit Messaging; `IChatSpaceLifecycle` tạo/xóa space cùng transaction với channel, mỗi module vẫn chỉ sở hữu schema của mình. Mutation Community khóa server theo thứ tự sau Identity, trước Messaging để tuần tự hóa thay đổi quyền và join/leave/transfer.
+[Tích hợp Community](features/community/design/integration.md#contracts) đã có membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration; [Permissions](features/community/design/permissions.md#detailed-design) giữ role/ACL snapshot. `IChannelAccessGuard` đề xuất giữ Community server/channel share lock tới commit Messaging; `IChatSpaceLifecycle` tạo/xóa space cùng transaction với channel, mỗi module vẫn chỉ sở hữu schema của mình. Mutation Community khóa server theo thứ tự sau Identity, trước Messaging để tuần tự hóa thay đổi quyền và join/leave/transfer.
 
 Server accessVersion, channel accessVersion và membershipId được dùng cho registry/cache; thu hồi chat phải đo ≤5 giây từ commit, media kiểm chứng riêng. @everyone/20 custom role, quản lý cần view, private switch và issuer lifetime đã chốt DEC-092–098. Interface/source/SQL chưa thay; shared transaction, Unicode migration, token key ring, outbox và proof thuộc triển khai. Không cấp management permission để tự đọc phòng bị ẩn hoặc sửa/xóa tin người khác.
 

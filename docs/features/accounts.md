@@ -76,7 +76,7 @@ DEC-062 đồng bộ trường `displayName` bắt buộc theo form và API hi�
 | ACL-01 | Đọc/sửa hồ sơ riêng, quản lý phiên của mình | Đã xác thực; đối tượng thuộc chính tài khoản | Dùng định danh của tài khoản khác | ACC-003, DEC-065/066 |
 | ACL-02 | Khóa/mở khóa tài khoản qua quy trình kỹ thuật | Có quyết định và người thực hiện được phân quyền đúng tài khoản/phạm vi, có audit theo RB-ACCOUNT | Chưa được cấp quyền, sai phạm vi hoặc thiếu quyết định; quyền vận hành không cho đọc DM/sửa/xóa tin thay tác giả | ACC-015, DEC-104/112; người/vai trò/công cụ cụ thể còn OQ-011 |
 
-Tài khoản chưa xác minh chỉ dùng xác minh/khôi phục, không có phiên truy cập ứng dụng (DEC-051). Đặt lại mật khẩu không tự xác minh email. Quyền tìm người/DM ở [đặc tả DM](direct-messaging.md#permissions); quyền phòng ở [Community Permissions](community/permissions.md#permissions).
+Tài khoản chưa xác minh chỉ dùng xác minh/khôi phục, không có phiên truy cập ứng dụng (DEC-051). Đặt lại mật khẩu không tự xác minh email. Quyền tìm người/DM ở [đặc tả DM](direct-messaging.md#permissions); quyền phòng ở [Community Permissions](community/specs/permissions.md#permissions).
 
 <a id="use-cases"></a>
 

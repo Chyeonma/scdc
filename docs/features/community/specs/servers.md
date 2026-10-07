@@ -1,18 +1,18 @@
 # SCDC — Servers — Cộng đồng và chủ sở hữu
 
-Cập nhật: 2026-10-07. Thành phần nội bộ của module Community. Quy tắc nghiệp vụ đã xác nhận theo các DEC dẫn chiếu; gói tạo/xem đã được rà soát nghiệp vụ bên dưới, thiết kế kỹ thuật tiếp tục là bản dự thảo. Source còn Foundation, chưa có kết quả chạy UC-COM.
+Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. Chuyển owner phối hợp Memberships; public→private kết thúc request qua cùng transaction.
 
-[Tổng quan và truy vết Community](../community.md#use-cases) · [Kế hoạch triển khai](../community.md#use-case-delivery).
+[Tổng quan Community](../README.md) · [Truy vết UC/COM/AC/TC](README.md#use-cases) · [Kế hoạch triển khai](../delivery/README.md#use-case-delivery).
+
+Thiết kế kỹ thuật của phần này: [dữ liệu/API và giao dịch](../design/servers.md#contracts).
 
 ## Mục lục
 
 - [Phạm vi và quy tắc](#requirements)
 - [Use case](#use-cases)
-- [Rà soát nghiệp vụ gói tạo/xem](#first-package-business)
 - [UX và trạng thái](#ux)
-- [Thiết kế dữ liệu/API](#contracts)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Việc còn lại](#gaps)
@@ -36,7 +36,7 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 
 ## Use case
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](../community.md#use-case-coverage).
+Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](integration.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](README.md#use-case-coverage).
 
 <a id="uc-com-01"></a>
 
@@ -109,52 +109,6 @@ Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. 
 **Ngoại lệ:** Chưa tham gia server nào hiển thị danh sách rỗng. Sau leave, server không còn trong danh sách active nhưng người dùng vẫn đọc được membership đã left của chính mình theo contract. Quyền đọc status không cấp lại member detail/private content. Danh sách thay đổi được dedup ID và tải lại trang đầu.
 
 **Kết quả sau cùng:** Giao diện có trạng thái tham gia và quyền hiện hành, không tạo hoặc phục hồi membership bằng thao tác đọc.
-
-<a id="first-package-business"></a>
-
-### Rà soát nghiệp vụ gói tạo/xem — 2026-10-07
-
-Đây là đầu ra bước 2 của [gói đầu tiên](../community.md#first-package): đối chiếu UC-COM-01 và phần đọc được chọn của UC-COM-03 với các quyết định đã xác nhận. Các bảng dưới đây cụ thể hóa quy tắc hiện có và tình huống cần kiểm chứng; không ghi nhận kết quả chạy hoặc quyết định sản phẩm mới. API/schema, cách chuẩn hóa dữ liệu và cơ chế giao dịch đã được xác định tại [thiết kế gói bước 3](create-view-design.md), chờ triển khai/kiểm chứng ở bước 4/5.
-
-| Nội dung | Quy tắc áp dụng trong gói đầu | Nguồn chuẩn |
-|---|---|---|
-| Người thực hiện | Tài khoản active, email đã xác minh, phiên hợp lệ; tạo không yêu cầu membership trước đó. Actor lấy từ phiên và phải còn đủ điều kiện khi thao tác được chấp nhận. | [Điều kiện chung](integration.md#use-case-conditions), [DEC-051](../../decisions.md#dec-051), [COM-029](#com-029) |
-| Tên | Trim đầu/cuối, 2–100 UTF-16, cho tiếng Việt và emoji; từ chối tên trống/chỉ trắng/vô hình hoặc Unicode không hợp lệ. Hai cộng đồng được dùng cùng tên. | [COM-029](#com-029), [COM-038](#com-038), [COM-039](#com-039) |
-| Mô tả | Tùy chọn, tối đa 1.000 UTF-16; nội dung vượt giới hạn bị từ chối. | [COM-029](#com-029), [COM-038](#com-038) |
-| Visibility và tham gia | Cho chọn public/private, mặc định public. Public mới mặc định vào ngay. Private không xuất hiện trong tìm kiếm; việc vào private vẫn theo đường lời mời được đặc tả cho gói sau. | [COM-002](#com-002), [COM-003](#com-003), [COM-029](#com-029), [hành trình tham gia](../community.md#requirements) |
-| Người tạo | Sau thành công, người tạo là owner và thành viên active của chính cộng đồng; ownership lấy từ server, không dựng thêm role owner làm nguồn quyền thứ hai. | [UC-COM-01](#uc-com-01), [ranh giới nội bộ](../community.md#organization), [quyền owner](permissions.md#detailed-design) |
-| Vai trò mặc định | Có @everyone, tự áp cho membership active, không có quyền quản lý và không cần gán thủ công cho người tạo. Gói đầu chưa mở quản lý custom role. | [COM-037](permissions.md#com-037), [thiết kế vai trò](permissions.md#detailed-design) |
-| Phòng ban đầu | Tạo cộng đồng không tự tạo phòng. Giao diện chi tiết của gói đầu hiển thị metadata/tư cách; danh sách phòng và lịch sử được nối khi triển khai UC-COM-17. | [UC-COM-01](#uc-com-01), [phạm vi gói](../community.md#first-package) |
-| Commit và thử lại | Thành công phải có đủ server, owner membership, @everyone và dữ liệu thao tác; lỗi giữa chừng không để lại phần tạo dở. Cùng thao tác/payload chỉ tạo một server, kể cả hai request đồng thời; cùng khóa khác payload là xung đột. | [UC-COM-01](#uc-com-01), [điều kiện chung](integration.md#use-case-conditions), [operation retry](integration.md#operations) |
-| Danh sách của mình | Chỉ trả các cộng đồng người gọi có membership active; có phân trang và trạng thái rỗng. Danh sách đổi thì dedup theo ID và tải lại từ đầu, không hứa snapshot bất biến. | [UC-COM-03](#uc-com-03), [quy tắc collection](integration.md#collections) |
-| Chi tiết và tư cách | Member detail chỉ dành cho thành viên active; status riêng chỉ của người gọi. Đọc status không cấp quyền member detail hoặc tạo/phục hồi membership. Người ngoài private nhận 404; public summary không chứa owner/membership/quyền quản lý riêng. | [UC-COM-03](#uc-com-03), [quy tắc collection](integration.md#collections), [OpenAPI](../../contracts/community.openapi.json) |
-| Quyền của owner | Tư cách owner cấp các quyền quản lý đã đặc tả trong phạm vi cộng đồng sau kiểm tra điều kiện nền. Nó không cấp quyền đọc DM hoặc sửa/xóa tin của người khác; các thao tác quản lý ngoài gói đầu chưa được coi đã triển khai. | [Ma trận ACL](permissions.md#permissions), [quyền owner](permissions.md#detailed-design) |
-
-#### Tình huống cần kiểm chứng cho gói
-
-Các dòng này bổ sung tình huống cụ thể cho [tiêu chí gói đầu](../community.md#first-package) và phần được chọn của AC/TC hiện có. Chúng chưa chạy; HTTP/lỗi, dữ liệu và cách kiểm chứng theo [thiết kế gói](create-view-design.md#verification), thực thi ở bước 4/5.
-
-| Tình huống | Kết quả cần quan sát | Dẫn chiếu |
-|---|---|---|
-| Tạo public, bỏ lựa chọn visibility; tạo private | Public mặc định và cho vào ngay; private được tạo; mỗi lần tạo người gọi có membership active và là owner. | [UC-COM-01](#uc-com-01), phần tạo của [AC-COM-29](#ac-com-29) |
-| Tài khoản chưa xác minh, inactive, phiên thiếu/hết hiệu lực hoặc actor không khớp phiên | Từ chối cả khi gọi API trực tiếp; không tạo server/membership/role/operation như đã thành công. Tài khoản mất điều kiện trước khi commit cũng không được hoàn tất thao tác tạo. | [Điều kiện chung](integration.md#use-case-conditions), [giao dịch/guard](integration.md#transactions) |
-| Tên 1/2/100/101 UTF-16 sau trim, tiếng Việt, emoji; tên chỉ trắng/vô hình; hai server cùng tên | Nhận đúng giới hạn, giữ cách viết hợp lệ và cho trùng tên; từ chối tên sai mà không lưu phần tạo dở. | [AC-COM-38](#ac-com-38), phần tên server của [TC-COM-19](#tc-com-19) |
-| Mô tả bỏ trống, 1.000/1.001 UTF-16 | Nhận mô tả tùy chọn và đúng giới hạn; quá giới hạn trả lỗi để sửa form, không tạo dữ liệu dở dang. | [COM-029](#com-029), phần tạo của [TC-COM-02](#tc-com-02) |
-| Lỗi khi ghi membership/@everyone hoặc phần còn lại của giao dịch tạo | Toàn bộ phần tạo rollback; danh sách không hiện server thiếu owner hoặc @everyone. | [UC-COM-01](#uc-com-01), phần tạo của [TC-COM-02](#tc-com-02) |
-| Server đã commit nhưng response mất; thử lại cùng khóa/payload hoặc gửi đồng thời | Cùng một server được trả lại, không nhân server/membership/@everyone; không tự gửi lại mutation sau timeout/refresh. | [UC-COM-01](#uc-com-01), phần tạo server của [TC-COM-23](integration.md#tc-com-23) |
-| Sau mất response, đổi tên/mô tả/visibility rồi dùng lại khóa cũ | Báo xung đột; giữ nguyên kết quả cũ, không tạo server thứ hai hoặc sửa server đã tạo. | [Operation retry](integration.md#operations) |
-| Người tạo mở list/detail/status, tài khoản khác gọi cùng API; danh sách rỗng và nhiều trang | Người tạo đọc đúng tư cách và quyền; tài khoản khác không nhận member detail/status của người tạo, private bị che. Đọc/list không tạo hoặc phục hồi membership. | [UC-COM-03](#uc-com-03), [collection](integration.md#collections) |
-| Tải lại UI hoặc restart API sau tạo | Cộng đồng vẫn được đọc từ dữ liệu đã lưu; chỉ báo thành công sau xác nhận commit, lỗi giữ dữ liệu form để người dùng xử lý. | [UX](#ux), [điều kiện bàn giao MVP](../../releases/mvp.md#acceptance) |
-
-#### Đầu vào kỹ thuật từ rà soát nghiệp vụ
-
-Các đầu vào dưới đây đã được cụ thể hóa tại [thiết kế gói bước 3](create-view-design.md); các lựa chọn chưa có runtime proof.
-
-- Đối chiếu contract tạo/list/detail và `GET /servers/{serverId}/membership/me` với các tình huống trên; phân biệt quyền đọc public summary, member detail và status của chính mình. Phần tìm kiếm và trải nghiệm khám phá UC-COM-02 vẫn ở gói sau.
-- Chuẩn hóa và lỗi trường: tên một dòng/control, thứ tự trim/kiểm tra Unicode, mô tả rỗng thành null, giới hạn UTF-16 và cách biểu diễn lỗi đang là thiết kế mục tiêu, chưa phải lựa chọn kỹ thuật đã nghiệm thu.
-- Public mới mặc định `immediate` đã có căn cứ nghiệp vụ. Giá trị `joinMode` lưu cho private được chọn tại [thiết kế API gói](create-view-design.md#api); giá trị này không mở đường tham gia trực tiếp vào private.
-- Chốt model/schema, migration trên dữ liệu legacy, version ban đầu, cursor, Identity guard, transaction, dedup/khóa và dữ liệu operation/outbox cần cho việc tạo. Gói đầu chưa có Hub/realtime; việc ghi outbox và phát sự kiện cần được xác định riêng.
-- Bổ sung assertion riêng cho phần đọc của UC-COM-03, các biên dữ liệu và race tạo/account; không suy rằng chạy TC-COM-02/19/23 là đã bao phủ các nhánh sửa metadata/role/channel hoặc toàn bộ UC-COM-03.
 
 <a id="uc-com-04"></a>
 
@@ -259,36 +213,6 @@ COM-S12 Chuyển chủ sở hữu: chọn thành viên active/đã xác minh, x�
 
 Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích hợp UX](integration.md#ux).
 
-<a id="contracts"></a>
-
-## Thiết kế dữ liệu/API
-
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
-
-[Thiết kế gói tạo/xem](create-view-design.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. Gói đã có [backend bước 4](create-view-backend.md) và [UI bước 5](create-view-ui.md) trên nhánh feature, chưa merge code vào main; search/chỉnh sửa/transfer tiếp tục theo các gói sau.
-
-| Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
-|---|---|---|
-| `POST /servers` | `{name,description?,visibility}` | 201 server; account active/verified; tạo server và membership owner cùng transaction |
-| `PATCH /servers/{id}` | `{name?,description?,visibility?,expectedVersion}` | 200 server; chỉ owner; private không xuất hiện trong tìm kiếm |
-| `GET /servers/search` | `q,cursor,limit` | 200 trang server công khai; q/khớp/phân trang theo DEC-093; không trả nội dung/phòng riêng tư |
-| `PATCH /servers/{id}/join-mode` | `{joinMode,expectedVersion}` | 200 server; đúng quyền đổi chế độ, không vô hiệu nguyên tắc link cho vào ngay |
-| `POST /servers/{id}/ownership-transfer` | `{newOwnerUserId,expectedVersion}` | 200 server; owner hiện tại, target là thành viên active/verified; chuyển ngay, không tạo pending |
-
-### Giao dịch của thành phần
-
-- Tạo server: Identity guard → server + owner membership + @everyone + operation + outbox một transaction; không có khoảng thời gian server thiếu owner. Hai create cùng clientOperationId chưa có server để khóa: unique operation làm một transaction thắng; bên thua rollback toàn bộ server/membership/role/outbox rồi đọc operation đã commit trong transaction mới, không chỉ bỏ lỗi insert operation và giữ server trùng.
-- Public → private: update visibility và chuyển mọi pending request sang cancelled với reason server_private trong cùng transaction theo DEC-096; không xóa lịch sử request. Sender vẫn đọc được trạng thái của chính mình và nhận thông báo lý do. Existing members/invites giữ nguyên; join request cũ không được approve sau commit private.
-- Chuyển owner: khóa actor/target theo thứ tự rồi server/membership; target còn active/verified và là member tại commit. Owner field là nguồn chuẩn duy nhất; target rời trước thì transfer thất bại, transfer trước thì target thành owner không được rời. Chủ cũ chỉ rời sau chuyển đã commit.
-
-<a id="search"></a>
-
-### Search
-
-Search theo DEC-093 dùng key tên trim/NFC/ToLowerInvariant, exact trước rồi normalizedName/UUID để ổn định. Escape `%`, `_`, backslash cho LIKE literal; collation không bỏ dấu. Cursor Data Protection purpose `Community.Search.v1`, actor/query/limit/position/expiry 24 giờ; mỗi trang lọc lại visibility/status. Đổi public→private phải biến mất cả khi dùng cursor cũ, không dựa vào snapshot đã cấp quyền public trước đó.
-
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
-
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận
@@ -305,13 +229,13 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](integration.md
 | <a id="ac-com-40"></a> AC-COM-40 | Public có pending đổi sang private trong lúc reviewer duyệt | Một thứ tự commit xác định; pending còn lại cancelled/server_private, sender biết lý do; members/invites được giữ theo DEC-096 |
 
 
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](../community.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Chưa có kết quả chạy AC-COM.
+Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](README.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../status.md).
 
 <a id="tests"></a>
 
 ## Ca kiểm thử
 
-Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới đều chưa chạy; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
+Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence). Các ca bên dưới là đặc tả kiểm chứng; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
 
 | Mã ca | Thao tác và dữ liệu | Kết quả cần quan sát | Dẫn chiếu |
 |---|---|---|---|
@@ -327,6 +251,6 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence).
 
 ## Việc còn lại
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../community.md#use-case-delivery), [migration](integration.md#schema-migration) và [vòng đời dữ liệu](../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
 Private switch cần proof cùng Memberships; transfer cần proof với target leave/Identity guard. Tên/search Unicode, version và operation cần migration và đối chiếu dữ liệu legacy.

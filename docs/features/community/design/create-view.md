@@ -1,8 +1,8 @@
 # SCDC — Thiết kế gói tạo và xem cộng đồng
 
-Cập nhật: 2026-10-07. Đầu ra bước 3 của [gói đầu tiên](../community.md#first-package), dựa trên [rà soát nghiệp vụ](servers.md#first-package-business). Các lựa chọn dưới đây là thiết kế để triển khai và kiểm chứng ở bước 4/5; source `main` vẫn Foundation. [Kết quả bước 4](create-view-backend.md) ghi implementation và kiểm thử trên nhánh `feat/community-create-view`; [kết quả bước 5](create-view-ui.md) ghi kiểm chứng UI. Các mục đối chiếu source dưới đây phản ánh thời điểm chốt thiết kế bước 3.
+Thiết kế chốt ngày 2026-10-07 cho [gói tạo/xem](../delivery/create-view/plan.md#first-package), dựa trên [rà soát nghiệp vụ](../delivery/create-view/plan.md#first-package-business). Bảng đối chiếu source ghi thời điểm bước 3; trạng thái hiện tại tại [status.md](../status.md), bằng chứng tại hồ sơ nghiệm thu của gói.
 
-Phạm vi: UC-COM-01 và phần list/detail/tư cách của UC-COM-03. Quy tắc sản phẩm giữ ở [Servers](servers.md#requirements), [Permissions](permissions.md#permissions) và [điều kiện chung](integration.md#use-case-conditions). Tài liệu này chốt cách thực hiện gói; thuật toán dùng chung dẫn chiếu [thiết kế tích hợp](integration.md#detailed-design), không thay phạm vi các gói sau.
+Phạm vi: UC-COM-01 và phần list/detail/tư cách của UC-COM-03. Quy tắc sản phẩm giữ ở [Servers](../specs/servers.md#requirements), [Permissions](../specs/permissions.md#permissions) và [điều kiện chung](../specs/integration.md#use-case-conditions). Tài liệu này chốt cách thực hiện gói; thuật toán dùng chung dẫn chiếu [thiết kế tích hợp](integration.md#detailed-design), không thay phạm vi các gói sau.
 
 ## Mục lục
 
@@ -20,12 +20,12 @@ Phạm vi: UC-COM-01 và phần list/detail/tư cách của UC-COM-03. Quy tắc
 
 | Hiện có | Hệ quả cho gói |
 |---|---|
-| [CommunityModule](../../../services/Modules/Community/CommunityModule.cs) chỉ đăng ký descriptor; project chưa có EF provider | Bổ sung DbContext, services/DI và controller trong bước 4; dùng cùng phiên bản provider với Identity, hiện là 10.0.3 |
-| [IdentityModule](../../../services/Modules/Identity/IdentityModule.cs) kiểm tra session/stamp trong JWT middleware; [IUserDirectory](../../../services/SCDC.Contracts/Identity/IUserDirectory.cs) chỉ trả user summary | Middleware và directory chưa giữ điều kiện tài khoản đến commit; bổ sung guard do Identity triển khai |
-| [IdentityDbContext.LockUserAsync](../../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs) dùng `FOR NO KEY UPDATE`; các mutation bảo mật hiện gọi khóa user trước khi sửa email/stamp/session | Guard lấy `FOR SHARE` trên cùng user, kiểm tra lại dưới khóa; mọi writer làm đổi điều kiện tài khoản phải giữ cùng quy ước |
-| [schema.sql](../../../database/postgres/schema.sql) có server/member/role và trigger tăng server version; chưa có visibility, join mode, membership epoch hoặc operation | Migration bổ sung đúng phần gói cần; giữ trigger server làm nguồn tăng metadata version |
-| [seed.sql](../../../database/postgres/seed.sql) dùng system role `Owner`/`Member` và mã permission legacy | Seed hiện tại chưa phải dữ liệu kiểm chứng gói mới; đồng bộ bootstrap/seed riêng cho DB Development mới, preflight dữ liệu cũ trước migration |
-| [ApiControllerBase](../../../services/SCDC.Api/Controllers/ApiControllerBase.cs) và [ApiErrorMapper](../../../services/SCDC.Api/Errors/ApiErrorMapper.cs) đã có Result/ProblemDetails | Dùng cơ chế lỗi hiện có; không tạo định dạng lỗi Community riêng |
+| [CommunityModule](../../../../services/Modules/Community/CommunityModule.cs) chỉ đăng ký descriptor; project chưa có EF provider | Bổ sung DbContext, services/DI và controller trong bước 4; dùng cùng phiên bản provider với Identity, hiện là 10.0.3 |
+| [IdentityModule](../../../../services/Modules/Identity/IdentityModule.cs) kiểm tra session/stamp trong JWT middleware; [IUserDirectory](../../../../services/SCDC.Contracts/Identity/IUserDirectory.cs) chỉ trả user summary | Middleware và directory chưa giữ điều kiện tài khoản đến commit; bổ sung guard do Identity triển khai |
+| [IdentityDbContext.LockUserAsync](../../../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs) dùng `FOR NO KEY UPDATE`; các mutation bảo mật hiện gọi khóa user trước khi sửa email/stamp/session | Guard lấy `FOR SHARE` trên cùng user, kiểm tra lại dưới khóa; mọi writer làm đổi điều kiện tài khoản phải giữ cùng quy ước |
+| [schema.sql](../../../../database/postgres/schema.sql) có server/member/role và trigger tăng server version; chưa có visibility, join mode, membership epoch hoặc operation | Migration bổ sung đúng phần gói cần; giữ trigger server làm nguồn tăng metadata version |
+| [seed.sql](../../../../database/postgres/seed.sql) dùng system role `Owner`/`Member` và mã permission legacy | Seed hiện tại chưa phải dữ liệu kiểm chứng gói mới; đồng bộ bootstrap/seed riêng cho DB Development mới, preflight dữ liệu cũ trước migration |
+| [ApiControllerBase](../../../../services/SCDC.Api/Controllers/ApiControllerBase.cs) và [ApiErrorMapper](../../../../services/SCDC.Api/Errors/ApiErrorMapper.cs) đã có Result/ProblemDetails | Dùng cơ chế lỗi hiện có; không tạo định dạng lỗi Community riêng |
 
 <a id="models"></a>
 
@@ -51,7 +51,7 @@ Owner nhận năm management code trong [catalogue](permissions.md#detailed-desi
 
 ## API, dữ liệu và lỗi
 
-Prefix `/api/v1`. [OpenAPI Community](../../contracts/community.openapi.json) giữ schema máy đọc được; bốn thao tác sau được chọn cho bước 4. Status của toàn bộ contract vẫn là thiết kế, không phải API đang chạy.
+Prefix `/api/v1`. [OpenAPI Community](../../../contracts/community.openapi.json) giữ schema máy đọc được; bốn thao tác sau được chọn cho bước 4. Status của toàn bộ contract vẫn là thiết kế, không phải API đang chạy.
 
 | Thao tác | Đầu vào | Kết quả được chọn |
 |---|---|---|
@@ -65,7 +65,7 @@ Prefix `/api/v1`. [OpenAPI Community](../../contracts/community.openapi.json) gi
 Thứ tự validation được chọn:
 
 1. Kiểm tra JSON/field/enum/UUID; không nhận owner, actor, slug, version hoặc trạng thái do client chỉ định. Visibility bỏ trống thành public; private cũng lưu joinMode immediate, nhưng visibility vẫn chặn đường tham gia trực tiếp.
-2. Tên: kiểm tra Unicode hợp lệ, trim theo tập White_Space của [text-policy](../../fixtures/text-policy.json), đếm 2–100 UTF-16; từ chối control, CR/LF, U+2028/U+2029 và tên chỉ trắng/vô hình. Giữ case, tiếng Việt, emoji và các scalar ignorable trong tên có nội dung; không NFC tên hiển thị. `normalized_name` hiện có chưa là search key đã chốt cho gói tìm kiếm.
+2. Tên: kiểm tra Unicode hợp lệ, trim theo tập White_Space của [text-policy](../../../fixtures/text-policy.json), đếm 2–100 UTF-16; từ chối control, CR/LF, U+2028/U+2029 và tên chỉ trắng/vô hình. Giữ case, tiếng Việt, emoji và các scalar ignorable trong tên có nội dung; không NFC tên hiển thị. `normalized_name` hiện có chưa là search key đã chốt cho gói tìm kiếm.
 3. Mô tả: văn bản thuần, chuẩn hóa CRLF/CR thành LF; không trim nội dung có chữ, không NFC; bỏ trống/null/chuỗi rỗng thành null, kiểm tra Unicode/NUL và tối đa 1.000 UTF-16 sau chuẩn hóa. Cùng thứ tự chuẩn hóa ở UI/backend và fingerprint; không chép giới hạn 2.000 của nội dung tin sang mô tả.
 4. Sinh slug nội bộ từ UUID dạng 32 ký tự hex viết thường; không dùng tên làm định danh hoặc yêu cầu client nhập slug. Dữ liệu chuẩn hóa mới được đưa vào writer/fingerprint.
 
@@ -109,9 +109,9 @@ Outbox ghi event nội bộ `Community.ServerCreated.v1`, aggregate server/versi
 
 ## Operation, cursor và khóa
 
-Operation dùng định dạng binary/HMAC-SHA256 và [fixture Community](../../fixtures/community-operations.json) đã có ở [thiết kế operation](integration.md#operations). Scope của create server là UUID zero, duy nhất theo `(actor_user_id,kind,scope_id,client_operation_id)`. So hash constant-time. Record lưu `fingerprint_version=1`, `key_id`, hash 32 byte, resource ID và UTC; không lưu JWT hoặc toàn request. Resource ID của bảng operation chung được writer kiểm chứng cùng commit; không dùng FK đa hình giả sang mọi loại tài nguyên.
+Operation dùng định dạng binary/HMAC-SHA256 và [fixture Community](../../../fixtures/community-operations.json) đã có ở [thiết kế operation](integration.md#operations). Scope của create server là UUID zero, duy nhất theo `(actor_user_id,kind,scope_id,client_operation_id)`. So hash constant-time. Record lưu `fingerprint_version=1`, `key_id`, hash 32 byte, resource ID và UTC; không lưu JWT hoặc toàn request. Resource ID của bảng operation chung được writer kiểm chứng cùng commit; không dùng FK đa hình giả sang mọi loại tài nguyên.
 
-Khóa HMAC riêng cho Community, ngẫu nhiên tối thiểu 32 byte, cấu hình active key ID và tập key ID → key qua secret configuration. Startup kiểm tra active key; không có khóa Development mặc định trong source. Retry dùng key cũ của record, rotation chỉ áp thao tác mới; giữ key cho record còn tồn tại và backup liên quan theo [quy tắc khóa DM](../direct-messaging.md#detailed-design). Gói không tự đặt TTL/xóa operation khi metadata retention còn mở.
+Khóa HMAC riêng cho Community, ngẫu nhiên tối thiểu 32 byte, cấu hình active key ID và tập key ID → key qua secret configuration. Startup kiểm tra active key; không có khóa Development mặc định trong source. Retry dùng key cũ của record, rotation chỉ áp thao tác mới; giữ key cho record còn tồn tại và backup liên quan theo [quy tắc khóa DM](../../direct-messaging.md#detailed-design). Gói không tự đặt TTL/xóa operation khi metadata retention còn mở.
 
 List của mình sort `server.id DESC`, keyset `id < lastServerId`, lấy limit + 1 và chỉ active server/member. Cursor bảo vệ bằng Data Protection, purpose `Community.MyServers.v1`, gồm actor ID, limit, lastServerId, expiry 24 giờ và version format. Next cursor chỉ sinh khi còn trang. Không dùng offset hoặc thời điểm tên thay đổi làm vị trí sort; concurrent join/leave vẫn có thể đổi tập kết quả, UI dedup ID/refresh từ đầu.
 
@@ -159,8 +159,8 @@ Bootstrap `schema.sql`/`seed.sql` cho DB mới được đồng bộ với schem
 | Cursor | Cross-actor/limit/purpose/tamper/expiry bị chặn; key ring bền qua restart; dữ liệu trang không chứa server/member inactive ở snapshot query; dedup/refresh khi tập kết quả đổi |
 | Outbox/lưu bền | Chỉ một event cùng commit, rollback không có event; reload/restart API vẫn đọc được kết quả, không báo đã phát realtime khi chưa có dispatcher |
 
-Dùng PostgreSQL riêng cho integration/race tests, hai connection và barrier xác định thứ tự; không dùng EF InMemory để chứng minh lock/constraint. Fixture có cả DB trắng sau bootstrap mới và snapshot legacy trước migration. Build/test backend ở bước 4, thao tác UI/API và hồ sơ [nghiệm thu](../../release-operations.md#testing) ở bước 5; bảng trên hiện chưa có kết quả chạy.
+Dùng PostgreSQL riêng cho integration/race tests, hai connection và barrier xác định thứ tự; không dùng EF InMemory để chứng minh lock/constraint. Fixture có cả DB trắng sau bootstrap mới và snapshot legacy trước migration. Build/test backend ở bước 4, thao tác UI/API và hồ sơ [nghiệm thu](../../../release-operations.md#testing) ở bước 5; bảng trên là kế hoạch kiểm chứng; kết quả từng phần ở [hồ sơ nghiệm thu](../delivery/create-view/acceptance.md).
 
-Gói code dùng `feat/community-create-view` từ main đã có tài liệu/phụ thuộc. Thứ tự commit kiểm chứng được: work scope + Identity guard; persistence/migration và preflight; create/read API; các kiểm chứng còn lại. Mỗi phần có kiểm tra phù hợp, commit và push theo tiến độ; không merge nhánh code nếu chưa duyệt. Tài liệu độc lập tiếp tục trên main theo [quy ước Git](../../development.md#conventions).
+Gói code dùng `feat/community-create-view` từ main đã có tài liệu/phụ thuộc. Thứ tự commit kiểm chứng được: work scope + Identity guard; persistence/migration và preflight; create/read API; các kiểm chứng còn lại. Mỗi phần có kiểm tra phù hợp, commit và push theo tiến độ; không merge nhánh code nếu chưa duyệt. Tài liệu độc lập tiếp tục trên main theo [quy ước Git](../../../development.md#conventions).
 
 Đầu vào bước 4 đã xác định trong tài liệu này. Các ngưỡng timeout/cursor là cấu hình thiết kế cần kiểm chứng; migration dữ liệu thật chỉ chạy khi có mapping/preflight hợp lệ. Hoàn thành thiết kế không đóng các OQ/ACL-O, không xác nhận API hoặc quyền/realtime đã hoạt động.
