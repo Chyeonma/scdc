@@ -31,6 +31,12 @@ UI có loading, empty, error/thử lại, tải thêm, phân biệt username và
 
 Người dùng báo tìm `Bảo` không ra kết quả ở FE15300. Chẩn đoán runtime: container được chạy từ checkout `scdc` P0; Swagger không có search và request trả404. Đã dựng lại P1 qua `user-search.ps1 -Action Upgrade` ở worktree `dm-message-integration`, giữ 28 tài khoản/IDs, cursor keys và volume; migration idempotent. Smoke API/DB C01–C04 và browser C01 đã chạy PASS trước yêu cầu chọn nhiều người. Proof runtime cũ ở `.dm-acceptance/runs/baseline/p1-c01-recovery.json`; không thay xác nhận người dùng.
 
+Lượt test tiếp: người dùng thấy2 kết quả nhưng chọn người thứ hai làm mất người thứ nhất, xác nhận modal chỉ có dòng “Đã chọn Bảo Demo (@...)”. Đây là giao diện chọn đơn cũ; backend và FE container hiện tại đúng P1 chọn nhiều người. Agent chạy lại2 ca C01 trên trình duyệt sạch đều PASS. Tab đã mở/cached entry có thể còn giữ bundle cũ; không thể thay JS đang chạy chỉ bằng cập nhật container.
+
+Đã bổ sung `Cache-Control: no-store` cho entry `index.html`, tắt ETag/If-Modified-Since ở entry, giữ headers bảo vệ và cache asset có hash. Nginx `-t` PASS; root, index và SPA fallback trả200/no-store kể cả conditional headers cũ; JS hash mới vẫn200/immutable. Chạy lại6 E2E trên FE sau sửa cache. User cần đóng tab cũ, mở URL mới bên dưới hoặc Ctrl+F5 để nhận entry/bundle mới; user chưa xác nhận PASS.
+
+Mở bản mới: http://localhost:15300/?dm-ui=multi-select-20261008 . Login A và tìm `Bảo`; chọn B/C phải hiện **Đã chọn 2 người**, hai thẻ username có nút × và **Bỏ chọn tất cả**. Nếu vẫn chỉ có dòng tên một người, đang chạy giao diện cũ; ghi URL/actor thực tế và không dùng kết quả đó để nghiệm thu build mới.
+
 Người dùng chốt “người bạn gần nhất” là **người vừa nhắn tin**, cần lịch sử hội thoại thật. Phần này được đưa vào P1-T03 (inbox/modal lấy peer theo `lastActivityAt`) và kiểm thử thứ tự sau writer P2-T01. Hiện DB có0 hội thoại/0 tin; chưa hiển thị danh sách gần đây từ mock hoặc lượt chọn. [Kế hoạch](../../plans/direct-messaging.md) và [prompt đầy đủ](../../plans/direct-messaging-prompts.md) đã cập nhật phụ thuộc/test. Chọn nhiều người hiện là lựa chọn UI; contract một DM/hai participant giữ nguyên, group chat chưa được triển khai.
 
 ## Chuẩn bị, start/stop và tài khoản
