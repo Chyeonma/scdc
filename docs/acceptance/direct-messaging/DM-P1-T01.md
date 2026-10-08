@@ -1,6 +1,6 @@
 # DM-P1-T01 — tìm và chọn người nhận
 
-Trạng thái: **Người dùng PASS FE/BE — 08/10/2026; chờ tích hợp vào message**. Chỉ thực hiện P1-T01. P0 đã PASS baseline và tích hợp tại `170d959`. Người dùng trả lời “tôi xác nhận” sau lời đề nghị xác nhận PASS cả FE/BE của P1-T01; gắn với build cuối bàn giao `9d995d055803495075ede6564318ea08b9705bf3`. Chưa thực hiện P1-T02.
+Trạng thái: **Người dùng PASS FE/BE — 08/10/2026; đã merge/push vào message**. Chỉ thực hiện P1-T01. P0 đã PASS baseline và tích hợp tại `170d959`. Người dùng trả lời “tôi xác nhận” sau lời đề nghị xác nhận PASS cả FE/BE của P1-T01; gắn với build cuối bàn giao `9d995d055803495075ede6564318ea08b9705bf3`. Chưa thực hiện P1-T02.
 
 ## Bản chạy và phạm vi
 
@@ -11,7 +11,7 @@ Trạng thái: **Người dùng PASS FE/BE — 08/10/2026; chờ tích hợp và
 | Commit implementation đầu tiên (07/10) | `ca75a0d3ed96b14249d1794f91340808638d33c2` |
 | Build người dùng xác nhận | `9d995d055803495075ede6564318ea08b9705bf3` (cache fix), gồm UI nhiều người tại `93e645c`; bản ghi PASS tiếp theo chỉ đổi docs/contract status |
 | Commit bàn giao / build | Bản sửa chọn nhiều người ngày08/10: đọc `git rev-parse HEAD` trong worktree hoặc `.dm-acceptance/runs/baseline/p1-build.json`. Metadata ghi commit bàn giao, image IDs, test counts và schema hash. Backend/schema vẫn từ implementation07/10; frontend đã dựng lại và chạy6 E2E trên source mới |
-| Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Implementation ban đầu `ca75a0d`; bản sửa08/10 được push trên cùng nhánh, remote SHA bàn giao phải trùng metadata. Chưa tạo PR, chưa merge P1 |
+| Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Implementation ban đầu `ca75a0d`; bản sửa08/10 được push trên cùng nhánh, remote SHA bàn giao phải trùng metadata. Không tạo PR; merge --no-ff vào `message` tại `d18d9a4cc736637906452bbd63c5ba9af807b31f`, đã push/xác minh remote |
 | Frontend | http://localhost:15300 |
 | API / Swagger | http://localhost:15026/api/v1 / http://localhost:15026/swagger |
 | Proxy Swagger | http://localhost:15300/swagger |
@@ -301,4 +301,13 @@ Sửa P1-T01 rồi bàn giao để tôi test lại.
 
 User PASS/FAIL P1: **PASS FE/BE**, ngày08/10/2026. Người dùng trả lời **“tôi xác nhận”** sau lời đề nghị “Nếu P1-T01 đã PASS cả FE/BE, bạn xác nhận để tôi merge vào message”. Build gắn với bản cuối đã bàn giao `9d995d055803495075ede6564318ea08b9705bf3`; người dùng không cung cấp build khác hoặc báo lỗi còn tồn. Xác nhận ở mức task; không tự suy ra biên bản manual chi tiết cho mọi biến thể chưa được gửi.
 
-Quyền push/merge vào `message` đã cấp; đã fetch và kiểm tra remote task đúng accepted build, message tại `170d959`. Commit ghi nhận PASS chỉ đổi tài liệu/trạng thái contract, không đổi runtime/schema. Integration: **chờ merge/push**. Chưa giao hoặc bắt đầu P1-T02; hành vi xác nhận nhiều người ở bước tạo DM sẽ chốt khi task đó được giao, contract vẫn một DM/cặp.
+Quyền push/merge vào `message` đã cấp; đã fetch và kiểm tra remote task đúng accepted build, message tại `170d959`. Commit ghi nhận PASS chỉ đổi tài liệu/trạng thái contract, không đổi runtime/schema. Integration: **Đã merge/push vào message** tại `d18d9a4cc736637906452bbd63c5ba9af807b31f`; task tip `5dd16c9ab288c7dabd22dfc167fe88f86fc7928f` là ancestor của origin/message. Xác minh remote merge SHA trùng local; không force push, không merge main. Chưa giao hoặc bắt đầu P1-T02; hành vi xác nhận nhiều người ở bước tạo DM sẽ chốt khi task đó được giao, contract vẫn một DM/cặp.
+
+## Kết quả tích hợp vào message
+
+- Accepted build: `9d995d055803495075ede6564318ea08b9705bf3`; user xác nhận task FE/BE bằng “tôi xác nhận” ngày08/10/2026.
+- Commit ghi nhận PASS trên task branch: `5dd16c9ab288c7dabd22dfc167fe88f86fc7928f`; chỉ đổi docs/trạng thái OpenAPI.
+- Merge commit: `d18d9a4cc736637906452bbd63c5ba9af807b31f`, `merge --no-ff`, không xung đột; đã push thành công lên origin/message, remote SHA và ancestry đã đối chiếu.
+- So merged tree với accepted build: chỉ khác docs; source/runtime/config/schema giống bản người dùng duyệt. Sau merge chạy smoke HTTP/DB C01–C04 PASS, FE200/no-store, Swagger200; dataset28 user, DM/member/message counts giữ0/0/0. Không dựng lại image hoặc chạy lại toàn bộ test khi source runtime không đổi; proof browser6/6, unit8/8, backend31/31 giữ mốc ở bảng trên.
+- Worktree tích hợp `E:\Project\SCDC\dm-p1-merge` trên branch message; môi trường test vẫn từ `E:\Project\SCDC\dm-message-integration`, giữ env/keys/volume. Checkout scdc giữ nguyên thay đổi người dùng.
+- Commit tiếp theo chỉ hoàn thiện biên bản merge; final origin/message SHA ghi ở `.dm-acceptance/runs/baseline/p1-integration.json` trong worktree chạy test. P1-T02 chưa được giao hoặc thực hiện; mục Người vừa nhắn tin vẫn theo phụ thuộc P1-T03/P2-T01.

@@ -174,7 +174,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ## Tổng hợp phase và task
 
-**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026, chờ tích hợp vào message; 18 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; 18 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|
@@ -224,7 +224,7 @@ Branch `feat/dm-p1-t01-user-search`. AC-DM-01/16; TC-DM-01/18. Phụ thuộc P0-
 
 **Bạn test BE:** Cùng q qua Swagger/helper; thử 1/2/64/65 UTF-16, `%/_/\`, cursor đổi q hoặc actor; JSON không có email. DB đối chiếu kết quả/rank đủ người và không ghi membership khi search.
 
-**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Tích hợp vào `message` sau kiểm tra remote/smoke; chưa nghiệm thu tạo DM, chưa được giao P1-T02.
+**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Đã merge/push vào `message` tại `d18d9a4`, remote/ancestry và smoke đạt; chưa nghiệm thu tạo DM, chưa được giao P1-T02.
 
 ### DM-P1-T02 tạo hoặc lấy một hội thoại duy nhất
 
