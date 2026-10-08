@@ -6,7 +6,7 @@ Thiết kế kỹ thuật của thành phần; quy tắc, use case và AC/TC ở
 
 ## Thiết kế dữ liệu/API
 
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
+HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) chứa contract đầy đủ và metadata trạng thái từng operation. Các route Invitations ở trang này còn là mục tiêu; phần đã chạy của những thành phần khác được quản lý tại [status](../status.md). Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
 | Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
 |---|---|---|

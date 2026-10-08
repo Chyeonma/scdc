@@ -1,8 +1,8 @@
 # SCDC — Kiến trúc và quy ước tích hợp
 
-Cập nhật: 2026-10-06. MVP giữ một API host Modular Monolith; chuyển microservice thuộc v1 theo DEC-116. Source hiện tại chưa chuyển đổi. Các quyết định sản phẩm được quản lý ở decisions.md; phạm vi từng mốc ở [MVP](releases/mvp.md) và [v1](releases/v1.md).
+Cập nhật: 2026-10-08. MVP giữ một API host Modular Monolith; chuyển microservice thuộc v1 theo DEC-116. Code chưa chuyển sang microservice. Hiện trạng mục 1 và bảng module đối chiếu `main`; các gói Community trên feature có phạm vi riêng tại [status](features/community/status.md). Các quyết định sản phẩm được quản lý ở decisions.md; phạm vi từng mốc ở [MVP](releases/mvp.md) và [v1](releases/v1.md).
 
-Kiến trúc hiện tại được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền/media còn thiết kế cần kiểm chứng; microservice được chuyển ở giai đoạn V1-0 sau MVP.
+Kiến trúc `main` được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền HTTP/transaction đã có proof trên feature Community, Messaging/Hub/Media còn phần tích hợp cần kiểm chứng. Microservice được chuyển ở giai đoạn V1-0 sau MVP.
 
 ## Mục lục
 
@@ -47,7 +47,7 @@ Health endpoint `/api/v1/health` trả trạng thái module và thời điểm; 
 
 Các interface và transaction/guard bên dưới mô tả source hoặc thiết kế trên một host, phù hợp nền MVP theo DEC-116. Khi tách service ở v1, phải rà soát hợp đồng mạng, quyền sở hữu DB, lỗi giao tiếp và tính nhất quán; chưa coi các lời gọi giữ row lock xuyên module là thiết kế chạy được xuyên service. [Mục tiêu microservice](#target) ghi phần cần chuyển đổi.
 
-| Thành phần | Trách nhiệm | Dữ liệu / hợp đồng | Tình trạng |
+| Thành phần trên main | Trách nhiệm | Dữ liệu / hợp đồng | Tình trạng trên main |
 |---|---|---|---|
 | Identity | Tài khoản, mật khẩu, xác minh, phiên, hồ sơ | `identity`; `IUserDirectory` | Có implementation và test tự động |
 | Community | Cộng đồng, thành viên, phòng, lời mời và quyền | `community`; `IChannelAccessChecker` | Nền module; thuật toán quyền trong đặc tả Community |
@@ -59,7 +59,7 @@ Mỗi module sở hữu dữ liệu của mình; giao tiếp qua interfaces tron
 
 Tài liệu tính năng tổ chức theo hành trình người dùng; module thực hiện được ghi tại [danh mục UC-COM](features/community/specs/README.md#use-cases) và [bảng nguồn chuẩn/phối hợp](features/community/specs/integration.md#responsibilities). UC-COM-23/24 và route tin phòng nằm trong tài liệu Community nhưng Messaging giữ nghiệp vụ/dữ liệu tin; UC-COM-17/25 phối hợp theo phần trách nhiệm. Vị trí tài liệu, mã use case và prefix API không thay ranh giới module.
 
-Identity có `IdentityDbContext` đã được đăng ký. Tiến độ Community theo nhánh được quản lý tại [status.md](features/community/status.md), gồm phạm vi đã có trên feature và trạng thái merge. Messaging vẫn chỉ có nền module. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
+Identity có `IdentityDbContext` đã được đăng ký. Tiến độ Community theo nhánh được quản lý tại [status.md](features/community/status.md), gồm phạm vi đã có trên feature và trạng thái merge. Messaging trên main có nền module; trên feature Community đã có lifecycle tạo chat space, chưa có writer tin/Hub. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
 Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của Messaging nằm trong [thiết kế lưu trữ](shared/messaging/persistence.md#contract-4); API DM ở [thiết kế DM](features/direct-messaging/design/README.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/specs/permissions.md#permissions).
 
@@ -69,7 +69,7 @@ Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa c
 
 [Accounts](features/accounts/design/README.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [Messaging](shared/messaging/README.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế trên nền Modular Monolith cho các phần chưa triển khai; khi chuyển sang microservice ở v1 phải điều chỉnh các giả định một host theo [mục tiêu](#target).
 
-Hợp đồng đề xuất cần thêm `IAccountAccessGuard`, `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi theo session. Để chặn race revoke/send, Identity giữ kiểm tra/row lock của user qua transaction scope dùng chung tới commit Messaging; BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module. Mỗi module vẫn chỉ đọc dữ liệu mình sở hữu. Proof guard/lock order và session revocation còn phải chạy; không suy IUserDirectory summary khác null thành đủ quyền gửi.
+`IAccountAccessGuard` và transaction scope đã được triển khai/kiểm chứng trên chuỗi feature Community: Identity giữ kiểm tra/row lock tới commit của caller. `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi kết nối theo session vẫn thuộc thiết kế DM. BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module; mỗi module chỉ đọc dữ liệu mình sở hữu. Guard đã có proof nền, còn writer tin/Hub dùng guard và session revocation đang kết nối cần proof riêng; không suy IUserDirectory summary khác null thành đủ quyền gửi.
 
 DM wire `sequence` ánh xạ field per-space mới `conversation_sequence`, giữ identity global legacy riêng; schema/migration hiện chưa thay. OpenAPI HTTP và JSON Schema realtime có nhãn design-draft; API Swagger vẫn được sinh từ source.
 
@@ -89,9 +89,9 @@ merge được quản lý tại [status.md](features/community/status.md).
 
 ### Thiết kế tích hợp Community và tin phòng bổ sung
 
-[Tích hợp Community](features/community/design/integration.md#contracts) đã có membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration; [Permissions](features/community/design/permissions.md#detailed-design) giữ role/ACL snapshot. `IChannelAccessGuard` đề xuất giữ Community server/channel share lock tới commit Messaging; `IChatSpaceLifecycle` tạo/xóa space cùng transaction với channel, mỗi module vẫn chỉ sở hữu schema của mình. Mutation Community khóa server theo thứ tự sau Identity, trước Messaging để tuần tự hóa thay đổi quyền và join/leave/transfer.
+[Tích hợp Community](features/community/design/integration.md#contracts) có membership epoch, schema HTTP/realtime, canonical operation fingerprint và đối chiếu migration; [Permissions](features/community/design/permissions.md#detailed-design) giữ role/ACL snapshot. Trên `feat/community-channels`, `IChannelAccessGuard` đã giữ Identity/Community server/channel share lock tới caller commit; proof cho thấy mutation role/ACL phải chờ. `IChatSpaceLifecycle` đã tạo space cùng transaction với channel; lifecycle delete vẫn là mục tiêu. Mỗi module chỉ sở hữu schema của mình. Lock order Identity → Community → Messaging được dùng trong gói hiện hành; các mutation leave/transfer còn cần triển khai và kiểm chứng riêng.
 
-Server accessVersion, channel accessVersion và membershipId được dùng cho registry/cache; thu hồi chat phải đo ≤5 giây từ commit, media kiểm chứng riêng. @everyone/20 custom role, quản lý cần view, private switch và issuer lifetime đã chốt DEC-092–098. Interface/source/SQL chưa thay; shared transaction, Unicode migration, token key ring, outbox và proof thuộc triển khai. Không cấp management permission để tự đọc phòng bị ẩn hoặc sửa/xóa tin người khác.
+Server/channel accessVersion và membershipId đã có trên feature; registry/cache/revoker còn là thiết kế. Thu hồi chat phải đo ≤5 giây từ commit trên kết nối thật, media kiểm chứng riêng. @everyone/20 custom role, quản lý cần view, private switch và issuer lifetime đã chốt DEC-092–098. Shared transaction, migration 001–004, HMAC/keyring và outbox lưu DB đã có bằng chứng theo [các gói](features/community/delivery/verification.md); dispatcher/Hub, private switch/invitations và proof Messaging còn thiếu. Management permission không tự cấp view phòng ẩn hoặc quyền sửa/xóa tin người khác.
 
 ### Thiết kế tích hợp Media bổ sung
 

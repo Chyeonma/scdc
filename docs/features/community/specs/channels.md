@@ -1,6 +1,6 @@
 # SCDC — Channels — Phòng và vòng đời phòng
 
-Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
+Cập nhật: 2026-10-08. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu tên, topic, kind và trạng thái vòng đời phòng. Tạo/xóa phối hợp Messaging/Media qua hợp đồng lifecycle; view và ACL theo Permissions.
 
@@ -200,4 +200,4 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence).
 
 Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
-Lifecycle create/delete cùng Messaging cần shared transaction; voice phụ thuộc Media lifecycle và proof cutoff riêng. Danh sách/metadata cần view guard và tên Unicode theo schema mới.
+Lifecycle create text cùng Messaging, danh sách/metadata/view guard/tên Unicode đã có bằng chứng trong [gói phòng/ACL](../delivery/channels-access/acceptance.md). Còn lifecycle delete nguyên tử và race gửi/xóa, lịch sử/writer Messaging dùng guard, Hub/thu hồi; voice phụ thuộc Media lifecycle và proof cutoff riêng. Phạm vi đã đạt và phần chưa chứng minh được đối chiếu tại [verification](../delivery/verification.md), tiến độ chỉ ghi tại [status](../status.md).

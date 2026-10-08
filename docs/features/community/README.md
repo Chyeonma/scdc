@@ -9,6 +9,10 @@ Community sở hữu cộng đồng, membership, phòng và quyền. Messaging s
 | Cần tìm | Đọc |
 |---|---|
 | Đã triển khai gì, ở nhánh nào, bước tiếp theo | [Trạng thái Community](status.md) |
+| Community MVP gồm gì và khi nào được coi hoàn tất | [Phạm vi và gate MVP](../../releases/mvp.md#community-scope) |
+| Việc còn lại, ưu tiên, phụ thuộc và đầu mối | [Bảng công việc](status.md#work-items) |
+| Chạy API/UI, database và kiểm thử theo nhánh | [Hướng dẫn local Community](development.md) |
+| UC/AC/TC nào có test thực tế, phần nào chưa chứng minh | [Đối chiếu bằng chứng](delivery/verification.md) |
 | Quy tắc nghiệp vụ và use case | [Danh mục và truy vết](specs/README.md) |
 | Cấu trúc module, API, dữ liệu và transaction | [Thiết kế Community](design/README.md) |
 | Chọn gói và cách thực hiện | [Các gói triển khai](delivery/README.md) |

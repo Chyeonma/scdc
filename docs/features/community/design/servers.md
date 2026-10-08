@@ -6,7 +6,7 @@ Thiết kế kỹ thuật của thành phần; quy tắc, use case và AC/TC ở
 
 ## Thiết kế dữ liệu/API
 
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
+HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) chứa contract đầy đủ và metadata trạng thái từng operation. Phần API đã chạy được đối chiếu ở [status](../status.md) và hồ sơ nghiệm thu; phần ngoài các gói đó còn là mục tiêu. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
 [Thiết kế gói tạo/xem](create-view.md) là đầu ra bước 3 ngày 2026-10-07: chốt bốn API, model/validation, Identity guard, migration/preflight và kiểm chứng cần cho UC-COM-01 và phần đọc của UC-COM-03. [Gói tìm kiếm](search.md) chốt key tên, migration 002, summary/keyset và discovery của UC-COM-02. Phạm vi và bằng chứng gói được dẫn chiếu từ [tiến độ](../status.md); chỉnh sửa/transfer tiếp tục theo các gói sau.
 

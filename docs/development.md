@@ -1,6 +1,6 @@
 # SCDC — Hướng dẫn phát triển
 
-Cập nhật: 2026-10-05. Hướng dẫn thực hành theo source hiện tại. Vai trò, lịch và ngân sách được quản lý tại [kế hoạch dự án](project/planning.md).
+Cập nhật: 2026-10-08. Hướng dẫn nền theo code `main`; cấu hình và bộ chạy các gói Community trên feature ở [hướng dẫn Community](features/community/development.md). Vai trò, lịch và ngân sách được quản lý tại [kế hoạch dự án](project/planning.md).
 
 Các lệnh dưới đây chạy từ root repo trừ khi có ghi thư mục khác. Cấu hình và dữ liệu mẫu dành cho local Development.
 
@@ -36,7 +36,7 @@ docker compose up -d --build
 | Health | `http://localhost:5026/api/v1/health` |
 | PostgreSQL | `localhost:5432` |
 
-Compose khởi tạo PostgreSQL, API và web. Identity gọi backend thật; giao diện chat/cộng đồng chưa có backend nghiệp vụ.
+Compose khởi tạo PostgreSQL, API và web. Trên `main`, Identity gọi backend thật, Community/Messaging còn nền module. Trên feature, các gói Community đã có API/UI thật theo [status](features/community/status.md); khởi chạy cần HMAC/keyring Community, Compose yêu cầu `COMMUNITY_OPERATION_KEY` bền trong `.env` hoặc môi trường. Hub/tin phòng chưa có runtime. Không suy chức năng từ giao diện dữ liệu mẫu.
 
 <a id="container-engines"></a>
 
@@ -82,6 +82,8 @@ py -3 scripts/sync_docs.py --source main --target feat/identity
 Nếu Python của máy cung cấp lệnh `python` thay vì `py`, thay `py -3` bằng `python`. Đồng bộ docs chỉ cần Python/Git; không phụ thuộc Docker hay Podman.
 
 ### Debug backend local
+
+Nếu checkout feature Community, đặt thêm cấu hình HMAC/keyring trước khi chạy; dùng [bộ chạy DB thử nghiệm riêng](features/community/development.md#local-environment) khi kiểm thử. Các lệnh dưới đây là bộ chạy nền trên main.
 
 ```bash
 docker compose up -d postgres
@@ -141,6 +143,8 @@ make docs-sync FROM=main TO=feat/identity
 
 `FROM` mặc định là `main`; `TO` mặc định là nhánh hiện tại. Lệnh preview so sánh bản đã commit của hai nhánh và liệt kê file thêm/sửa/xóa. Khi thực hiện, công cụ chuyển sang `TO` nếu cần, chép toàn bộ `docs/` (gồm archive) từ commit nguồn rồi đưa thay đổi vào staging. File tracked chỉ có ở đích sẽ bị xóa để khớp nguồn; đây là chép snapshot, không hòa trộn nội dung hai nhánh. Phạm vi chép là `docs/`; README ở root và code không được lấy từ nguồn.
 
+Nếu hai nhánh chủ ý giữ bố cục hoặc tài liệu cũ khác nhau, chỉ đồng bộ danh sách file của commit tài liệu cần nhận, bằng `git restore --source <commit-nguồn> --worktree -- <file-1> <file-2>`. Kiểm tra diff và docs-check rồi stage/commit trên nhánh nhận; không chép toàn bộ snapshot chỉ để nhận một bản sửa Community. Việc này giữ các file khác ngoài danh sách đồng bộ theo trạng thái của nhánh nhận.
+
 Những thay đổi chưa commit ở nguồn chưa được đồng bộ. Khi dùng `origin/main`, chạy `git fetch origin` trước để cập nhật ref remote; công cụ dùng ref đã có ở local. Công cụ dừng khi docs có thay đổi/file mới/ignored, khi đang merge/rebase hoặc khi working tree có thay đổi trước việc chuyển nhánh. Nếu đang giữ nguyên nhánh, thay đổi code ngoài docs được giữ nguyên. Khi chuyển nhánh, code hiện ra là code vốn có của nhánh đích.
 
 Sau đồng bộ, bạn đang ở nhánh đích và có thể review/lưu thay đổi:
@@ -167,6 +171,8 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `Modules:Identity:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient` |
 | `Modules:Identity:SigningKey` | Khóa local có trong cấu hình Development; cấu hình ngoài Development cần khóa riêng đủ dài |
 | `Modules:Identity:ExposeDevelopmentTokens` | `true` trong Development, dùng token trả về để thử xác minh/reset; giá trị mặc định `false` |
+| `Modules:Community:Operations:ActiveKeyId` / `Keys:<id>` | Feature Community yêu cầu ID active và key base64 ít nhất 32 byte ngẫu nhiên; giữ key cũ cho operation còn lưu, xem [hướng dẫn](features/community/development.md#configuration) |
+| `Modules:Community:KeyRingPath` | Feature Community yêu cầu thư mục keyring bền, API đọc/ghi được; giữ qua restart để cursor vẫn đọc được |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
 Các thời hạn token/phiên và lockout hiện tại nằm trong [đặc tả Accounts](features/accounts/design/README.md#api-current). Khi override bằng environment variable, dùng `__` thay dấu `:`, ví dụ `ConnectionStrings__Database`.
@@ -231,7 +237,7 @@ Khi review thay đổi, đối chiếu requirement và AC bị ảnh hưởng, q
 dotnet test SCDC.slnx --configuration Release
 ```
 
-`IdentityV1FlowTests` và `IdentityConcurrencyTests` cần PostgreSQL Development với schema repo. Các nhóm test hiện có: vòng đời tài khoản/phiên, xử lý đồng thời, response/ProblemDetails và Result. Factory dùng môi trường Development, cấu hình DB local và token thử.
+`IdentityV1FlowTests` và `IdentityConcurrencyTests` cần PostgreSQL Development với schema repo. Trên feature Community, suite còn có API/quyền/operation/migration/transaction; DB phải kết thúc `_test`, bootstrap theo nhánh và user có quyền tạo/drop fixture DB. Đặt `ConnectionStrings__Database`, Identity signing key và Development tokens trước khi chạy theo [hướng dẫn Community](features/community/development.md#backend-tests). Không chạy suite này trên `scdc_chat` hoặc DB cần giữ dữ liệu.
 
 ### Frontend — trong clients/WebClient
 
@@ -240,7 +246,7 @@ npm test
 npm run build
 ```
 
-Test hiện có kiểm tra wrapper API và quản lý phiên; build kiểm tra đóng gói frontend. Không coi chúng là bằng chứng toàn bộ hành trình chat/cộng đồng/media đã chạy.
+Trên main, test kiểm tra wrapper API và quản lý phiên. Feature Community bổ sung validation/storage và Playwright với API/DB thật; lệnh browser, cổng và biến `_test` ở [hướng dẫn Community](features/community/development.md#frontend-tests). Phạm vi đã chứng minh được ghi tại [verification](features/community/delivery/verification.md); build hoặc test domain không tự chứng minh Messaging/Hub/media.
 
 ### Tài liệu
 

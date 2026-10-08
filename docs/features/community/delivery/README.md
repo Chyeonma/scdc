@@ -12,7 +12,9 @@ Trước mỗi bước, trình bày phạm vi, đầu ra và nội dung cần qu
 
 Theo thỏa thuận ngày 2026-10-07, các phần đã hoàn thành và kiểm tra được commit theo tiến độ: tài liệu độc lập trên `main`, code trên nhánh theo gói chức năng (gói đầu là `feat/community-create-view`). Người dùng đã chọn tự push sau lỗi xác thực HTTPS của môi trường. Quyền commit/push không thay thế việc duyệt bước tiếp theo hoặc duyệt merge nhánh code.
 
-Các nhóm dưới đây là lộ trình tổng thể; nhóm 1 được bắt đầu bằng [gói tạo/xem cộng đồng](create-view/plan.md#first-package), rồi bổ sung tìm kiếm, tham gia và chỉnh sửa theo các gói tiếp theo.
+Các nhóm dưới đây phân loại đặc tả đầy đủ, không bắt buộc hoàn thành cả nhóm 3 rồi mới làm nhóm 4. Theo [phạm vi MVP đã chọn](../../../releases/mvp.md#community-scope), nền tin/lịch sử/gửi/nhận và mất quyền được ưu tiên sau các gói nền. Thứ tự công việc, phụ thuộc và đầu mối được quản lý tại [COM-W01–13](../status.md#work-items); phần mở rộng vẫn giữ đặc tả v1.
+
+Trước khi bắt đầu gói mới, tạo `delivery/<tên-gói>/plan.md` ghi mã công việc, UC/AC/TC trong phạm vi, ngoại lệ, phần để sau, nhánh/base commit, đầu mối, phụ thuộc, đầu ra và điều kiện hoàn tất. `design/<tên-gói>.md` ghi contract/schema/transaction/UI và quyết định cần review. Sau triển khai, `acceptance.md` ghi code commit, môi trường, lệnh/dataset, test hoặc thao tác thật, expected/actual result, artifact và phần chưa chứng minh; cập nhật [đối chiếu test](verification.md) và [status](../status.md). Mỗi gói phải có bằng chứng của phần tích hợp nó nhận trách nhiệm, không chỉ test domain.
 
 | Nhóm | Use case | Đầu vào kỹ thuật cần có | Đầu ra cần kiểm chứng |
 |---|---|---|---|
@@ -35,7 +37,7 @@ Trạng thái các bước nằm tại [status.md](../status.md#steps); bảng n
 | 3. Chốt thiết kế kỹ thuật | [Thiết kế gói tạo/xem](../design/create-view.md): model/schema/migration, API/DTO/lỗi, transaction/retry, hợp đồng Identity và kế hoạch kiểm thử |
 | 4. Triển khai backend | Persistence, application, DI/API và kiểm thử quyền/tạo nguyên tử/thử lại/đọc dữ liệu |
 | 5. Giao diện và nghiệm thu gói đầu | Nối form/danh sách/detail với API; chạy luồng thật và ghi bằng chứng theo tiêu chí gói |
-| 6. Mở rộng Community theo gói | Tiếp theo UC-COM-06 tham gia trực tiếp; bổ sung search/quản lý, role/quyền, phòng và các đường tham gia/rời/lời mời theo phụ thuộc. Phạm vi từng gói được duyệt riêng. |
+| 6. Mở rộng Community theo gói | Các gói nền: join public/immediate, search, role/assignment, phòng text/ACL. Các đường approval/lời mời/leave và quản lý mở rộng có kế hoạch riêng; không chặn nền tin của MVP chỉ vì còn ngoài scope. Phạm vi từng gói được duyệt riêng. |
 | 7. Tích hợp Messaging và realtime | Messaging lưu/đọc/gửi tin phòng trên quyền Community; sau đó kiểm chứng Hub, reconnect và xử lý mất quyền |
 
 Các gói đầu của bước 6: [tham gia trực tiếp public/immediate](direct-join/plan.md) trên `feat/community-join`, rồi [tìm kiếm công khai](search/plan.md) trên `feat/community-search`. Mỗi nhánh kế thừa gói trước; requests và các gói còn lại được duyệt riêng. Bằng chứng và phạm vi còn lại ở [status.md](../status.md).
