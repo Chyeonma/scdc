@@ -9,7 +9,8 @@ Trạng thái: **Chờ người dùng test FE và BE**, ngày09/10/2026. P1-T01 
 | Task / truy vết | P1-T02.1–.5; AC-DM-01/12/13, TC-DM-02/12/24, DM-SQL-01 |
 | Branch / base | `feat/dm-p1-t02-open-conversation` / `origin/message` tại `9f5afbc0b032bfef2407bb0e1305b756eeb30725` |
 | Repository / worktree | Repo gốc `E:\Project\SCDC\scdc`; thực thi ở `E:\Project\SCDC\dm-message-integration` |
-| Commit/build / remote task SHA | `git rev-parse HEAD` tại worktree; `.dm-acceptance/runs/baseline/p1-t02-build.json` ghi SHA source/bàn giao, image IDs và remote SHA đã đối chiếu |
+| Commit implementation/build | `e53f4676147859cc1c576d0e1cd5192df5cd2806`; push và `git ls-remote` đã xác minh cùng SHA |
+| Commit bàn giao / remote cuối | Commit docs tiếp theo chỉ ghi hồ sơ này; `git rev-parse HEAD` và `.dm-acceptance/runs/baseline/p1-t02-build.json` ghi handoverCommit/remoteTaskSha cuối cùng, không đổi code đã test |
 | PR / integration | Chưa tạo PR; target `message`, chưa merge P1-T02, không thay main |
 | FE | http://localhost:15300/?dm-ui=p1-t02-20261009 |
 | API / Swagger | http://localhost:15026/api/v1 / http://localhost:15026/swagger |
@@ -177,6 +178,12 @@ SELECT count(*) AS orphan_direct_spaces FROM messaging.spaces s
 WHERE space_type=1 AND NOT EXISTS(SELECT 1 FROM messaging.direct_conversations d WHERE d.space_id=s.id);
 '@
 ```
+
+## Bản dữ liệu và image lúc bàn giao
+
+DB hiện có7 pair/14 membership/0 message; không có fault trigger của acceptance. Pair A/C, A/S10 và A/S11 vẫn0 để người dùng test tạo mới. Manifest đã bổ sung7 ID hội thoại commit từ POST API, giữ28 account và user IDs cũ. Agent test các pair còn lại; không lấy tổng7 làm kỳ vọng một case.
+
+API image `sha256:6b8de3952ee88aa1b5956d73d364f18f28a97e05a97971a00d92a8ec7ed3087f`. FE E2E dùng image `sha256:0b14f47a991c5d22652025f975dcf15632010483db0eb68dda56e139be24af58`; Upgrade thay attestation/tag nên container bàn giao được align tag mới sau khi đối chiếu SHA256 toàn bộ site assets, entry và cấu hình Nginx giống hệt. Entry đang phục vụ `index-DqK4M8fD.js`, no-store; image IDs cuối nằm ở metadata. Bản backend test được giữ thêm `.dm-acceptance/runs/baseline/p1-t02-backend.trx` để không bị lệnh test sau ghi đè.
 
 ## Bằng chứng agent và gate
 
