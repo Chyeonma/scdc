@@ -269,7 +269,7 @@ D. Toàn bộ 5 subtask cần hoàn tất
 - P1-T01.1 Bổ sung contract search do Identity thực hiện, projection không email/security state; kiểm tra actor/session và recipient active/verified.
 - P1-T01.2 Query q 2–64 UTF-16, case-insensitive/giữ dấu, substring literal cho `%`, `_`, `\`; rank username exact rồi username/ID; cursor bind actor/q/limit và key ring bền.
 - P1-T01.3 Thêm GET `/users/search`, DTO/ProblemDetails/OpenAPI; kiểm tra q sai, cursor sai và phiên không hợp lệ.
-- P1-T01.4 Nối UI tìm người thật: loading/empty/error/retry, chống response muộn khi đổi q, hiển thị username với tên trùng; chọn người mới chỉ hiển thị selection, chưa bịa conversation ID.
+- P1-T01.4 Nối UI tìm người thật: loading/empty/error/retry, chống response muộn khi đổi q, hiển thị username với tên trùng; chọn nhiều người theo ID, giữ lựa chọn khi đổi q/tải thêm/lỗi, bỏ từng người hoặc tất cả; chỉ hiển thị selection, chưa bịa conversation ID.
 - P1-T01.5 Integration/Unicode/pagination test và E2E tìm kiếm; bàn giao request/response đối chiếu.
 
 E. Môi trường và dữ liệu để tôi test
@@ -314,11 +314,11 @@ Dữ liệu cụ thể: q="Bảo"; B username dm_demo_bao; C username dm_demo_ch
 Bước kiểm tra frontend:
 1. Mở khu vực Tìm người từ DM, nhập Bảo.
 2. Đợi response tìm kiếm; đọc từng kết quả, kiểm tra hai username khác nhau.
-3. Chọn B rồi đổi chọn C; kiểm tra selection theo ID/username, không tự bịa conversation ở task search.
+3. Chọn B rồi chọn thêm C: có hai người đã chọn theo ID/username. Đổi q thành dm_demo_bao vẫn giữ cả B/C; bấm B lần nữa bỏ B, bấm lại thêm B; nút Bỏ chọn @dm_demo_chi bỏ C, Bỏ chọn tất cả dọn hết. Không tạo conversation ở task search.
 Bước kiểm tra backend:
 1. Bearer A: GET /api/v1/users/search?q=B%E1%BA%A3o&limit=20.
 2. GET /api/v1/users/search?q=dm_demo_bao&limit=20; so IDs với manifest B/C.
-Frontend mong đợi: Tìm Bảo có B và C được phân biệt username; chọn đúng người. Query exact username ưu tiên B.
+Frontend mong đợi: Tìm Bảo có B/C phân biệt bằng username; chọn đồng thời B/C, không trùng ID, giữ lựa chọn khi đổi q/tải thêm/lỗi API. Bỏ riêng hoặc bỏ tất cả hoạt động; đóng modal rồi mở lại không giữ lựa chọn. Query exact username ưu tiên B.
 Backend mong đợi: 200; items của q Bảo chứa B/C đủ điều kiện; không chứa A/U/email/security state; query exact B xếp B trước.
 Đối soát DB chỉ đọc:
 - Đối chiếu items IDs với Identity; search không insert conversation/membership.
@@ -386,7 +386,7 @@ Dữ liệu cụ thể: Cursor trang 1 của A; B.token riêng; q không kết q
 Bước kiểm tra frontend:
 1. Tìm zzz_no_dm_person, kiểm tra empty state.
 2. Bật fault GET search 503, tìm dm_demo_search; đọc lỗi và bấm thử lại sau khi tắt fault.
-3. Gõ Bảo rồi lập tức dm_demo_bao với response Bảo bị delay; selection/results cuối phải thuộc q cuối.
+3. Gõ Bảo rồi lập tức dm_demo_bao với response Bảo bị delay; kết quả cuối phải thuộc q cuối, danh sách người đã chọn không bị response cũ ghi đè.
 Bước kiểm tra backend:
 1. GET users/search giữ cursor A nhưng đổi q=Bảo hoặc limit=10.
 2. Dùng B.token với cursor A; sau đó gọi GET search không cursor để phục hồi.
@@ -648,9 +648,11 @@ Các kiểm chứng cần thiết chưa chạy được phải ghi Bị chặn c
 D. Toàn bộ 5 subtask cần hoàn tất
 - P1-T03.1 GET `/direct-conversations` chỉ actor member; projection participant, activity và pagination 20/50/cursor protected.
 - P1-T03.2 Kiểm tra auth từng trang, dedup ID trên UI và refresh trang đầu khi danh sách thay đổi; không hứa snapshot cố định.
-- P1-T03.3 Thay DM mock bằng loader/inbox thật; loading/empty/error/retry và chọn conversation sau reload.
+- P1-T03.3 Thay DM mock bằng loader/inbox thật; loading/empty/error/retry và chọn conversation sau reload. Modal chọn người có mục Người vừa nhắn tin: lấy peer từ hội thoại của actor có lastActivityAt khác null, theo lastActivityAt DESC rồi conversation ID ASC, dedup peer ID, bỏ actor; hiện displayName/username, cho chọn/bỏ chọn chung với kết quả search. Hội thoại chưa có tin không vào mục này; API lỗi có retry, không fallback mock/localStorage lượt chọn.
 - P1-T03.4 Cache list theo actor và cleanup logout; response cũ không ghi dữ liệu vào actor mới.
 - P1-T03.5 Seed thêm DM A–S để test >20 hội thoại qua API; E2E empty/list/pagination/actor switch.
+
+Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
 E. Môi trường và dữ liệu để tôi test
 Dữ liệu mẫu và bản chạy:
@@ -840,7 +842,7 @@ D. Toàn bộ 5 subtask cần hoàn tất
 - P2-T01.2 Validator client/server theo fixture Unicode; HMAC key/version tách key ring; same-key retry trả trạng thái hiện hành, payload khác conflict ngay từ writer đầu tiên.
 - P2-T01.3 Guard actor/member/peer, thứ tự khóa thống nhất; counter + message + operation + outbox/projection cùng transaction, rollback không để trạng thái dở.
 - P2-T01.4 POST `/direct-conversations/{id}/messages`; API wrapper `retry:false`; UI sending/sent/error, tạm và response merge cùng ID; chỉ text, không API Hub mutation.
-- P2-T01.5 Backend/FE/E2E send và biên content; bàn giao SQL đọc message/operation/outbox và hiện trạng chưa có realtime/history đầy đủ.
+- P2-T01.5 Backend/FE/E2E send và biên content; bàn giao SQL đọc message/operation/outbox và hiện trạng chưa có realtime/history đầy đủ. Kiểm thử Người vừa nhắn tin trên run riêng D-AB/D-AC ban đầu rỗng: commit thật A→B, A→C, B→A; mục gần đây của A lần lượt chỉ B, C→B, B→C. Refresh inbox/modal sau mỗi commit, đối chiếu API và DB; gửi lỗi trước commit không đổi thứ tự.
 
 E. Môi trường và dữ liệu để tôi test
 Dữ liệu mẫu và bản chạy:
@@ -858,6 +860,17 @@ Chỉ chuẩn bị dữ liệu cần cho task. Không tạo API/bypass quản tr
 F. Kiểm tra kỹ thuật trước bàn giao
 Tự chạy backend integration với PostgreSQL thật, frontend tests/build và E2E phù hợp task. Kiểm tra cả thành công, lỗi/quyền/đồng thời và DB invariants theo scope. Chỉ bổ sung regression khi thay đổi/lỗi cần chứng minh.
 Ghi đúng loại proof: mock/fetch, fault fixture, mobile viewport không thay API/DB/browser/thiết bị thật. Không log token/key/body riêng; fault harness chỉ test/local, không đưa developer controls vào flow sản phẩm.
+
+F2. Regression bổ sung DM-RECENT-01 theo yêu cầu08/10/2026 — Chưa chạy
+- Dùng run/lane riêng: D-AB và D-AC mới, cùng28 tài khoản mẫu nhưng0 tin của hai hội thoại này; không xóa tin của run trước. Agent cung cấp lệnh tạo/lấy pair, IDs/counters/counts baseline và collection/SQL thật trước bàn giao.
+- Mở modal của A khi chưa có tin: Người vừa nhắn tin rỗng; mở hội thoại mà chưa gửi không được thêm người vào mục này.
+- A gửi "RECENT01: chào Bảo" vào D-AB với UUIDv4 mới, đợi200/commit rồi refresh inbox/modal A: chỉ B (@dm_demo_bao), chưa có C. GET list A có D-AB.lastActivityAt khác null; D-AC vẫn null.
+- A gửi "RECENT02: chào Chi" vào D-AC bằng UUIDv4 khác; đợi200 rồi refresh: C (@dm_demo_chi) trước B. Hai người cùng displayName nhưng khác ID/username, không gộp theo tên.
+- B gửi "RECENT03: trả lời An" vào D-AB bằng UUIDv4 thứ ba; đợi200 rồi refresh A: B trước C. B/C mở modal riêng: mỗi người chỉ thấy A từ hội thoại của mình; C không thấy peer B qua D-AB.
+- Chọn B từ mục gần đây, tìm dm_demo_bao: đã chọn đúng1 B, không thêm bản sao. Chọn thêm C thì có2 thẻ; bỏ B ở kết quả search cũng bỏ B trong selection/mục gần đây. Không tạo group DM.
+- Query API và DB đối soát đúng membership, lastActivityAt/order và ID; delta tin của run=3, D-AB=2, D-AC=1. Gửi lỗi có chủ ý trước commit không thêm tin hoặc đổi lastActivityAt/thứ tự; mỗi request mới dùng UUIDv4 mới, recipe fault có bật/tắt và scope run.
+- Lỗi tải danh sách có retry, không hiện người mock/lượt chọn localStorage. Reload giữ lịch sử gần đây từ server; logout/đổi actor dọn cache/selection. Refresh chủ động; không yêu cầu realtime chưa tới phase.
+- Lưu build, FE/BE actual, IDs/timestamps/counts không token. Chỉ PASS khi người dùng test; proof P1-T03 chỉ empty/permission chưa thay proof thứ tự bằng tin commit thật ở đây.
 
 G. Các ca tôi tự kiểm tra
 Frontend: A gửi M01/M02/M03/M04 thấy sent sau response; L2000/E2000 nhận, L2001/E2002/EMPTY bị từ chối; HTML không chạy. DB lỗi/fault trước commit hiện lỗi, không báo sent.

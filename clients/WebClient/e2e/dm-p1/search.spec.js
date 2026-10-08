@@ -28,18 +28,33 @@ test.afterEach(async ({ context }) => {
 const input = page => page.getByLabel('Tên tài khoản hoặc tên hiển thị', { exact: true });
 const results = page => page.locator('.dm-search__result');
 
-test('DM-P1-T01-C01 duplicate display names select public real recipient only', async ({ page }) => {
+test('DM-P1-T01-C01 multiple recipients persist across queries and can be removed', async ({ page }) => {
   const before = await page.locator('.dm-list .dm-item').count();
   await input(page).fill('Bảo');
   await expect(results(page)).toHaveCount(2);
   await results(page).filter({ hasText: '@dm_demo_bao' }).click();
-  await expect(page.locator('.dm-search__selection')).toHaveText('Đã chọn Bảo Demo (@dm_demo_bao).');
+  await expect(page.getByRole('status').filter({ hasText: 'Đã chọn 1 người' })).toBeVisible();
   await results(page).filter({ hasText: '@dm_demo_chi' }).click();
-  await expect(page.locator('.dm-search__selection')).toHaveText('Đã chọn Bảo Demo (@dm_demo_chi).');
+  await expect(page.getByRole('status').filter({ hasText: 'Đã chọn 2 người' })).toBeVisible();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(2);
+  await expect(results(page).filter({ hasText: '@dm_demo_bao' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(results(page).filter({ hasText: '@dm_demo_chi' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.dm-list .dm-item')).toHaveCount(before);
   await input(page).fill('dm_demo_bao');
   await expect(results(page)).toHaveCount(1);
   await expect(results(page).first()).toContainText('@dm_demo_bao');
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(2);
+  await results(page).first().click();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(1);
+  await expect(results(page).first()).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.dm-search__chips')).toContainText('@dm_demo_chi');
+  await results(page).first().click();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Bỏ chọn @dm_demo_chi', exact: true }).click();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Bỏ chọn tất cả', exact: true }).click();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(0);
+  await expect(results(page).first()).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('DM-P1-T01-C02 23 real people load 20 plus 3 and refresh search without duplicates', async ({ page }) => {
@@ -55,6 +70,33 @@ test('DM-P1-T01-C02 23 real people load 20 plus 3 and refresh search without dup
   await expect(page.getByText('Không tìm thấy người phù hợp.', { exact: true })).toBeVisible();
   await input(page).fill('dm_demo_search');
   await expect(results(page)).toHaveCount(20);
+});
+
+test('DM-P1-T01-C01 selection survives pagination and errors; closing clears the draft', async ({ page }) => {
+  await input(page).fill('Bảo');
+  await expect(results(page)).toHaveCount(2);
+  await results(page).filter({ hasText: '@dm_demo_bao' }).click();
+  await input(page).fill('dm_demo_search');
+  await expect(results(page)).toHaveCount(20);
+  await results(page).filter({ hasText: '@dm_demo_search01' }).click();
+  await page.getByRole('button', { name: 'Tải thêm', exact: true }).click();
+  await expect(results(page)).toHaveCount(23);
+  await results(page).filter({ hasText: '@dm_demo_search23' }).click();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(3);
+  const matcher = '**/api/v1/users/search?**';
+  await page.route(matcher, route => route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ status: 503 }) }));
+  await input(page).fill('dm_demo_bao');
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(3);
+  await page.unroute(matcher);
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
+  await expect(results(page)).toHaveCount(1);
+  await expect(results(page).first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+  await page.getByTitle('Tạo cuộc trò chuyện trực tiếp (DM)', { exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Tìm người nhận' })).toBeVisible();
+  await expect(page.locator('.dm-search__chips li')).toHaveCount(0);
 });
 
 test('DM-P1-T01-C03 validation/case/accent/NFC and self/pending exclusion', async ({ page }) => {

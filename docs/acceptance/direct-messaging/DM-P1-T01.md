@@ -8,9 +8,9 @@ Trạng thái: **Chờ người dùng test FE/BE**. Chỉ thực hiện P1-T01. 
 |---|---|
 | Branch / base | `feat/dm-p1-t01-user-search` / `message` tại `170d95933190d71df74de6ebcc537a5a8c41ce56` |
 | Worktree thực thi | `E:\Project\SCDC\dm-message-integration`; repository gốc `E:\Project\SCDC\scdc` giữ nguyên thay đổi người dùng |
-| Commit implementation đã kiểm thử | `ca75a0d3ed96b14249d1794f91340808638d33c2` |
-| Commit bàn giao / build | Bao gồm commit docs bằng chứng tiếp theo; đọc `git rev-parse HEAD` trong worktree hoặc `.dm-acceptance/runs/baseline/p1-build.json`. Metadata ghi implementation commit, handoff commit, image IDs, test counts và schema hash; docs tiếp theo không đổi source/config/schema |
-| Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Đã push implementation `ca75a0d`; remote SHA hiện hành được kiểm tra trùng handoff commit trong metadata. Chưa tạo PR, chưa merge P1 |
+| Commit implementation đầu tiên (07/10) | `ca75a0d3ed96b14249d1794f91340808638d33c2` |
+| Commit bàn giao / build | Bản sửa chọn nhiều người ngày08/10: đọc `git rev-parse HEAD` trong worktree hoặc `.dm-acceptance/runs/baseline/p1-build.json`. Metadata ghi commit bàn giao, image IDs, test counts và schema hash. Backend/schema vẫn từ implementation07/10; frontend đã dựng lại và chạy6 E2E trên source mới |
+| Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Implementation ban đầu `ca75a0d`; bản sửa08/10 được push trên cùng nhánh, remote SHA bàn giao phải trùng metadata. Chưa tạo PR, chưa merge P1 |
 | Frontend | http://localhost:15300 |
 | API / Swagger | http://localhost:15026/api/v1 / http://localhost:15026/swagger |
 | Proxy Swagger | http://localhost:15300/swagger |
@@ -25,7 +25,13 @@ Search do **Identity** thực hiện qua `IUserSearchDirectory`; recipient phả
 
 Search key là trim → NFC → .NET `ToLowerInvariant`, giữ dấu; displayName gốc được giữ. Key được cập nhật cùng profile trong `IdentityDbContext.SaveChangesAsync`. SQL dùng escaped `LIKE` và `COLLATE "C"`; rank username exact trước, rồi normalized username/UUID. Phân trang lấy limit+1, mặc định20/tối đa50. Profile thay đổi giữa trang có thể thay membership; refresh từ đầu. Cursor bind actor/normalized q/limit/position và deadline của trang đầu; cursor không cấp quyền truy cập.
 
-UI có loading, empty, error/thử lại, tải thêm, phân biệt username và lựa chọn theo ID. Chọn B/C chỉ đổi dòng “Đã chọn…”, không tạo conversation ID. Các phần inbox/chat mẫu cũ ngoài modal chưa là DM runtime; AC-DM-01 mới có lát cắt tìm/chọn. Tạo hội thoại thuộc P1-T02.
+UI có loading, empty, error/thử lại, tải thêm, phân biệt username và lựa chọn theo ID. Điều chỉnh 08/10/2026: chọn đồng thời nhiều người, hiện danh sách đã chọn và số lượng; đổi q/tải thêm/lỗi không xóa lựa chọn. Bấm người đã chọn lần nữa hoặc nút × để bỏ riêng; Bỏ chọn tất cả dọn hết. Lựa chọn chỉ trong bộ nhớ modal, đóng/mở lại hoặc đổi actor sẽ dọn; không tạo conversation ID. Các phần inbox/chat mẫu cũ ngoài modal chưa là DM runtime; AC-DM-01 mới có lát cắt tìm/chọn. Tạo hội thoại thuộc P1-T02.
+
+## Yêu cầu bổ sung và kết quả C01 ngày 08/10/2026
+
+Người dùng báo tìm `Bảo` không ra kết quả ở FE15300. Chẩn đoán runtime: container được chạy từ checkout `scdc` P0; Swagger không có search và request trả404. Đã dựng lại P1 qua `user-search.ps1 -Action Upgrade` ở worktree `dm-message-integration`, giữ 28 tài khoản/IDs, cursor keys và volume; migration idempotent. Smoke API/DB C01–C04 và browser C01 đã chạy PASS trước yêu cầu chọn nhiều người. Proof runtime cũ ở `.dm-acceptance/runs/baseline/p1-c01-recovery.json`; không thay xác nhận người dùng.
+
+Người dùng chốt “người bạn gần nhất” là **người vừa nhắn tin**, cần lịch sử hội thoại thật. Phần này được đưa vào P1-T03 (inbox/modal lấy peer theo `lastActivityAt`) và kiểm thử thứ tự sau writer P2-T01. Hiện DB có0 hội thoại/0 tin; chưa hiển thị danh sách gần đây từ mock hoặc lượt chọn. [Kế hoạch](../../plans/direct-messaging.md) và [prompt đầy đủ](../../plans/direct-messaging-prompts.md) đã cập nhật phụ thuộc/test. Chọn nhiều người hiện là lựa chọn UI; contract một DM/hai participant giữ nguyên, group chat chưa được triển khai.
 
 ## Chuẩn bị, start/stop và tài khoản
 
@@ -89,9 +95,11 @@ Swagger: login A qua `POST /auth/login`, copy accessToken chỉ trong máy → A
 
 1. FE: mở http://localhost:15300, login A. Bấm biểu tượng **Direct Messages** bên trái → nút **+** cạnh TIN NHẮN TRỰC TIẾP (tooltip “Tạo cuộc trò chuyện trực tiếp (DM)”). Modal **Tìm người nhận** mở.
 2. Nhập `Bảo`. Mong đợi đúng hai dòng Bảo Demo, kèm `@dm_demo_bao` và `@dm_demo_chi`; không email.
-3. Bấm B: dòng selection “Đã chọn Bảo Demo (@dm_demo_bao).”. Bấm C: selection đổi sang C; modal vẫn mở, inbox không có dòng mới.
-4. Đổi q thành `dm_demo_bao`: B là dòng đầu; selection cũ được dọn. Đổi thành `dm_demo_an`, rồi `dm_demo_pending`: kết quả rỗng, có empty state.
-5. BE: chạy block sau, ghi status/items và IDs so manifest.
+3. Bấm `@dm_demo_bao`: phần **Người đã chọn** hiện Bảo và “Đã chọn 1 người”. Bấm thêm `@dm_demo_chi`: hiện2 thẻ khác username, “Đã chọn 2 người”; cả hai dòng kết quả có dấu ✓. Modal vẫn mở, inbox không có dòng mới.
+4. Đổi q thành `dm_demo_bao`: chỉ có B trong kết quả, cả hai thẻ B/C vẫn giữ. Bấm kết quả B lần nữa → chỉ còn thẻ C; bấm B lại → có2 thẻ, không trùng B. Bấm × có nhãn **Bỏ chọn @dm_demo_chi** → chỉ còn B. Bấm **Bỏ chọn tất cả** → hết thẻ và kết quả B hết dấu ✓.
+5. Chọn B lại; đổi q `dm_demo_search`, chọn S01, bấm **Tải thêm** rồi chọn S23 → có3 thẻ B/S01/S23. Đổi thành `dm_demo_an`, rồi `dm_demo_pending`: kết quả rỗng nhưng3 thẻ vẫn giữ. Thử chặn request search như C04: lỗi và retry không xóa3 người đã chọn.
+6. Bấm **Đóng**, mở lại modal → không có người đã chọn; reload hoặc logout/login tài khoản khác cũng không giữ lựa chọn cũ. Đây là bản nháp trong modal, không phải danh sách người vừa nhắn tin.
+7. BE: chạy block sau, ghi status/items và IDs so manifest. Chọn/bỏ chọn không phát sinh POST tạo hội thoại; GET search không đổi response hoặc DB counts.
 
 ```powershell
 $r = Search-DmUser 'Bảo'
@@ -229,7 +237,7 @@ npm.cmd run test:dm-p1 -- --headed -g C04
 # Cả hai phải pass; report phân loại rõ fault client, không là proof backend503.
 ```
 
-Sau delay, query/selection/results cuối thuộc `dm_demo_bao`, không xuất hiện C từ response cũ. Runner tắt route fixture trong test, logout session riêng sau mỗi ca; không trace/HAR/token dump. Cursor TTL được kiểm tra bằng TimeProvider +25h trong host integration (không đổi đồng hồ hệ thống), cursor invalid và session vẫn hợp lệ. Cursor dùng cùng session sống qua restart API thật:
+Sau delay, query/results cuối thuộc `dm_demo_bao`, không xuất hiện C trong kết quả từ response cũ; danh sách người đã chọn trước đó giữ nguyên. Runner tắt route fixture trong test, logout session riêng sau mỗi ca; không trace/HAR/token dump. Cursor TTL được kiểm tra bằng TimeProvider +25h trong host integration (không đổi đồng hồ hệ thống), cursor invalid và session vẫn hợp lệ. Cursor dùng cùng session sống qua restart API thật:
 
 ```powershell
 Set-Location E:\Project\SCDC\dm-message-integration
@@ -243,16 +251,18 @@ Agent: **Đạt**. Người dùng: **Chưa xác nhận**. Sau test phải tắt 
 
 | Phần | Proof đã chạy | Kết quả | Người dùng |
 |---|---|---|---|
-| Backend toàn bộ | .NET10/container + PostgreSQL thật, `.dm-acceptance/backend-artifacts/test-results/dm-acceptance.trx` | 31/31 | Chưa xác nhận |
+| Backend toàn bộ (07/10, BE source không đổi) | .NET10/container + PostgreSQL thật, `.dm-acceptance/backend-artifacts/test-results/dm-acceptance.trx` | 31/31 | Chưa xác nhận |
 | Frontend unit | `npm.cmd test`, API encode/cursor/abort và503 không retry/mock | 8/8 | Chưa xác nhận |
 | FE production build / API publish | Vite build + Docker .NET publish | Đạt | Chưa xác nhận |
-| C01/C02/C03/C04 browser | Edge154.0.4258.53, 5 Playwright tests, `.dm-acceptance/e2e-p1/results.json`; `browser-metadata.json` và ảnh modal `recipient-selection.png` không token | 5/5 | Chưa xác nhận |
-| HTTP/DB smoke C01–C04 | `.dm-acceptance/runs/baseline/p1-search-smoke.json` | Đạt, counts0/0/0 không đổi | Chưa xác nhận |
+| C01/C02/C03/C04 browser | Edge154.0.4258.53, 6 Playwright tests trên FE mới08/10, `.dm-acceptance/e2e-p1/results.json`; `browser-metadata.json` và ảnh modal `multi-recipient-selection.png` không token | 6/6 | Chưa xác nhận |
+| HTTP/DB smoke C01–C04 (chạy lại08/10) | `.dm-acceptance/runs/baseline/p1-search-smoke.json` | Đạt, counts0/0/0 không đổi | Chưa xác nhận |
 | Cursor restart | Cùng actor/session/cursor qua restart API thật; `p1-search-persistence.json` | Đạt, trang2 vẫn3 IDs | Chưa xác nhận |
 | Disabled/deleted/unverified-active | Dedicated integration fixture, SQL trạng thái đúng enum/constraint; API search không trả recipient không hợp lệ | Đạt | Chưa xác nhận; manual K disabled thuộc P6-T02 |
 | UTF-16 lỗi / guard Contracts | Gọi directory với surrogate lỗi, sid/stamp sai; không qua mock HTTP | Validation400 / unauthorized | Chưa xác nhận |
 
 Helper setup đã sửa đọc commit với safe.directory chỉ áp dụng cho đúng path trong từng lệnh, preflight trước khi ghi manifest; không đổi Git config toàn máy. Stop/start/setup/restart và upgrade idempotent đã chạy lại trên stack acceptance.
+
+Bản sửa08/10: giữ nhiều recipient theo ID, không mất khi đổi q/tải thêm/lỗi; xóa riêng hoặc tất cả; đóng modal dọn draft. Unit8/8, build và browser6/6 PASS; không đổi backend/schema. Những proof cursor-restart/integration07/10 là lịch sử cho source BE không đổi, không ghi đã chạy lại toàn bộ31 tests ngày08/10. User chưa test/PASS build mới.
 
 Lỗi đã sửa/kiểm chứng: explicit `cursor=` trước đây bị MVC biến thành null; nay trả400 CURSOR_INVALID. Test fixture dùng đúng Disabled3/Deleted4 và kỳ vọng `Bao` phân biệt khớp username với bỏ dấu displayName. Không còn test fail trên build bàn giao. npm advisory cũ `source-map-js` được ghi ở P0, không cập nhật dependencies ngoài scope P1.
 

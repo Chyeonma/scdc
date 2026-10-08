@@ -165,13 +165,13 @@
           "frontend_steps": [
             "Mở khu vực Tìm người từ DM, nhập Bảo.",
             "Đợi response tìm kiếm; đọc từng kết quả, kiểm tra hai username khác nhau.",
-            "Chọn B rồi đổi chọn C; kiểm tra selection theo ID/username, không tự bịa conversation ở task search."
+            "Chọn B rồi chọn thêm C: có hai người đã chọn theo ID/username. Đổi q thành dm_demo_bao vẫn giữ cả B/C; bấm B lần nữa bỏ B, bấm lại thêm B; nút Bỏ chọn @dm_demo_chi bỏ C, Bỏ chọn tất cả dọn hết. Không tạo conversation ở task search."
           ],
           "backend_steps": [
             "Bearer A: GET /api/v1/users/search?q=B%E1%BA%A3o&limit=20.",
             "GET /api/v1/users/search?q=dm_demo_bao&limit=20; so IDs với manifest B/C."
           ],
-          "expected_frontend": "Tìm Bảo có B và C được phân biệt username; chọn đúng người. Query exact username ưu tiên B.",
+          "expected_frontend": "Tìm Bảo có B/C phân biệt bằng username; chọn đồng thời B/C, không trùng ID, giữ lựa chọn khi đổi q/tải thêm/lỗi API. Bỏ riêng hoặc bỏ tất cả hoạt động; đóng modal rồi mở lại không giữ lựa chọn. Query exact username ưu tiên B.",
           "expected_backend": "200; items của q Bảo chứa B/C đủ điều kiện; không chứa A/U/email/security state; query exact B xếp B trước.",
           "database_checks": [
             "Đối chiếu items IDs với Identity; search không insert conversation/membership.",
@@ -255,7 +255,7 @@
           "frontend_steps": [
             "Tìm zzz_no_dm_person, kiểm tra empty state.",
             "Bật fault GET search 503, tìm dm_demo_search; đọc lỗi và bấm thử lại sau khi tắt fault.",
-            "Gõ Bảo rồi lập tức dm_demo_bao với response Bảo bị delay; selection/results cuối phải thuộc q cuối."
+            "Gõ Bảo rồi lập tức dm_demo_bao với response Bảo bị delay; kết quả cuối phải thuộc q cuối, danh sách người đã chọn không bị response cũ ghi đè."
           ],
           "backend_steps": [
             "GET users/search giữ cursor A nhưng đổi q=Bảo hoặc limit=10.",

@@ -5,7 +5,7 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
   const [q, setQ] = useState(initialQuery);
   const [items, setItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState([]);
   const [status, setStatus] = useState('idle');
   const [retryCursor, setRetryCursor] = useState(null);
   const generation = useRef(0);
@@ -35,7 +35,7 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
 
   useEffect(() => {
     const ticket = ++generation.current;
-    setItems([]); setNextCursor(null); setSelected(null); setStatus('idle');
+    setItems([]); setNextCursor(null); setStatus('idle');
     if (!valid) return;
     const timer = setTimeout(() => load(searchKey, null, ticket), 250);
     return () => { clearTimeout(timer); controller.current?.abort(); generation.current++; };
@@ -44,7 +44,13 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
   function changeQuery(value) {
     // Invalidate synchronously, before effects run, even if fetch ignores abort.
     generation.current++; controller.current?.abort();
-    setItems([]); setNextCursor(null); setSelected(null); setStatus('idle'); setQ(value);
+    setItems([]); setNextCursor(null); setStatus('idle'); setQ(value);
+  }
+
+  function toggleRecipient(user) {
+    setSelected(previous => previous.some(item => item.id === user.id)
+      ? previous.filter(item => item.id !== user.id)
+      : [...previous, user]);
   }
 
   return (
@@ -54,6 +60,16 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
           <h2 id="dm-search-title">Tìm người nhận</h2>
           <p>Tìm bằng tên tài khoản hoặc tên hiển thị.</p>
         </div>
+        {selected.length > 0 && <section className="dm-search__selection" aria-label="Người đã chọn">
+          <p role="status">Đã chọn {selected.length} người</p>
+          <ul className="dm-search__chips">
+            {selected.map(user => <li key={user.id}>
+              <span><strong>{user.displayName}</strong> @{user.username}</span>
+              <button type="button" aria-label={`Bỏ chọn @${user.username}`} onClick={() => toggleRecipient(user)}>×</button>
+            </li>)}
+          </ul>
+          <button type="button" className="btn btn--secondary" onClick={() => setSelected([])}>Bỏ chọn tất cả</button>
+        </section>}
         <label className="form-group">
           <span>Tên tài khoản hoặc tên hiển thị</span>
           <input aria-describedby="dm-search-hint" value={q} onChange={e => changeQuery(e.target.value)} autoFocus />
@@ -67,13 +83,12 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
         </div>}
         <ul className="dm-search__results" aria-label="Kết quả tìm người">
           {items.map(user => <li key={user.id}>
-            <button type="button" className={`dm-search__result ${selected?.id === user.id ? 'is-selected' : ''}`} aria-pressed={selected?.id === user.id} onClick={() => setSelected(user)}>
-              <strong>{user.displayName}</strong><span>@{user.username}</span>
+            <button type="button" className={`dm-search__result ${selected.some(item => item.id === user.id) ? 'is-selected' : ''}`} aria-pressed={selected.some(item => item.id === user.id)} onClick={() => toggleRecipient(user)}>
+              <strong>{selected.some(item => item.id === user.id) && '✓ '}{user.displayName}</strong><span>@{user.username}</span>
             </button>
           </li>)}
         </ul>
         {nextCursor && <button type="button" className="btn btn--secondary" disabled={status === 'loading'} onClick={() => load(searchKey, nextCursor, generation.current)}>Tải thêm</button>}
-        {selected && <p role="status" className="dm-search__selection">Đã chọn {selected.displayName} (@{selected.username}).</p>}
         <div className="modal-actions"><button type="button" className="btn btn--secondary" onClick={onClose}>Đóng</button></div>
       </section>
     </div>

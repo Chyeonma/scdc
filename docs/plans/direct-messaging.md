@@ -217,7 +217,7 @@ Branch `feat/dm-p1-t01-user-search`. AC-DM-01/16; TC-DM-01/18. Phụ thuộc P0-
 - [ ] P1-T01.1 Bổ sung contract search do Identity thực hiện, projection không email/security state; kiểm tra actor/session và recipient active/verified.
 - [ ] P1-T01.2 Query q 2–64 UTF-16, case-insensitive/giữ dấu, substring literal cho `%`, `_`, `\`; rank username exact rồi username/ID; cursor bind actor/q/limit và key ring bền.
 - [ ] P1-T01.3 Thêm GET `/users/search`, DTO/ProblemDetails/OpenAPI; kiểm tra q sai, cursor sai và phiên không hợp lệ.
-- [ ] P1-T01.4 Nối UI tìm người thật: loading/empty/error/retry, chống response muộn khi đổi q, hiển thị username với tên trùng; chọn người mới chỉ hiển thị selection, chưa bịa conversation ID.
+- [ ] P1-T01.4 Nối UI tìm người thật: loading/empty/error/retry, chống response muộn khi đổi q, hiển thị username với tên trùng; chọn nhiều người theo ID, giữ lựa chọn khi đổi q/tải thêm/lỗi, bỏ từng người hoặc tất cả; chỉ hiển thị selection, chưa bịa conversation ID.
 - [ ] P1-T01.5 Integration/Unicode/pagination test và E2E tìm kiếm; bàn giao request/response đối chiếu.
 
 **Bạn test FE:** A tìm `Bảo` thấy B/C phân biệt username; tìm `dm_demo_bao` ưu tiên B; `dm_demo_search` có trang tiếp; không tìm thấy A/U; search không có kết quả và lỗi API có thông báo. Ca K disabled có integration fixture ở task này và lượt người dùng E2E ở P6-T02 khi có helper khóa.
@@ -248,13 +248,15 @@ Branch `feat/dm-p1-t03-conversation-inbox`. AC-DM-01/12, contract danh sách; c�
 
 - [ ] P1-T03.1 GET `/direct-conversations` chỉ actor member; projection participant, activity và pagination 20/50/cursor protected.
 - [ ] P1-T03.2 Kiểm tra auth từng trang, dedup ID trên UI và refresh trang đầu khi danh sách thay đổi; không hứa snapshot cố định.
-- [ ] P1-T03.3 Thay DM mock bằng loader/inbox thật; loading/empty/error/retry và chọn conversation sau reload.
+- [ ] P1-T03.3 Thay DM mock bằng loader/inbox thật; loading/empty/error/retry và chọn conversation sau reload. Modal chọn người có mục Người vừa nhắn tin: lấy peer từ hội thoại của actor có lastActivityAt khác null, theo lastActivityAt DESC rồi conversation ID ASC, dedup peer ID, bỏ actor; hiện displayName/username, cho chọn/bỏ chọn chung với kết quả search. Hội thoại chưa có tin không vào mục này; API lỗi có retry, không fallback mock/localStorage lượt chọn.
 - [ ] P1-T03.4 Cache list theo actor và cleanup logout; response cũ không ghi dữ liệu vào actor mới.
 - [ ] P1-T03.5 Seed thêm DM A–S để test >20 hội thoại qua API; E2E empty/list/pagination/actor switch.
 
 **Bạn test FE:** A thấy D-AB/D-AC và đủ các trang; B chỉ thấy DM của B; C không thấy D-AB; tài khoản mới inbox rỗng, API lỗi không fallback mock.
 
 **Bạn test BE:** Compare list với membership, kiểm tra limit/cursor dùng chéo actor; U/no token không đọc list. Không dùng lastActivity làm cursor lịch sử tin.
+
+Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
 **Gate:** Inbox thật đúng quyền; bạn PASS rồi mới gửi tin.
 
@@ -268,7 +270,7 @@ Branch `feat/dm-p2-t01-persist-text-message`. AC-DM-02/09/11/19/21; TC-TEXT-01�
 - [ ] P2-T01.2 Validator client/server theo fixture Unicode; HMAC key/version tách key ring; same-key retry trả trạng thái hiện hành, payload khác conflict ngay từ writer đầu tiên.
 - [ ] P2-T01.3 Guard actor/member/peer, thứ tự khóa thống nhất; counter + message + operation + outbox/projection cùng transaction, rollback không để trạng thái dở.
 - [ ] P2-T01.4 POST `/direct-conversations/{id}/messages`; API wrapper `retry:false`; UI sending/sent/error, tạm và response merge cùng ID; chỉ text, không API Hub mutation.
-- [ ] P2-T01.5 Backend/FE/E2E send và biên content; bàn giao SQL đọc message/operation/outbox và hiện trạng chưa có realtime/history đầy đủ.
+- [ ] P2-T01.5 Backend/FE/E2E send và biên content; bàn giao SQL đọc message/operation/outbox và hiện trạng chưa có realtime/history đầy đủ. Kiểm thử Người vừa nhắn tin trên run riêng D-AB/D-AC ban đầu rỗng: commit thật A→B, A→C, B→A; mục gần đây của A lần lượt chỉ B, C→B, B→C. Refresh inbox/modal sau mỗi commit, đối chiếu API và DB; gửi lỗi trước commit không đổi thứ tự.
 
 **Bạn test FE:** A gửi M01/M02/M03/M04 thấy sent sau response; L2000/E2000 nhận, L2001/E2002/EMPTY bị từ chối; HTML không chạy. DB lỗi/fault trước commit hiện lỗi, không báo sent.
 

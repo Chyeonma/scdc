@@ -45,6 +45,10 @@ Kết quả tìm kiếm luôn đi kèm tên tài khoản để phân biệt tên
 trùng nhau; API trả định danh ổn định của người được chọn. Không đưa
 email vào kết quả. Đây là cách thể hiện đề xuất cho AC-ACC-03/AC-DM-01.
 
+Điều chỉnh theo yêu cầu người dùng ngày08/10/2026: modal tìm người cho chọn nhiều recipient theo ID, giữ danh sách đã chọn khi đổi từ khóa/tải thêm/lỗi tìm, có thẻ tên hiển thị và username, bỏ riêng hoặc bỏ tất cả. Draft selection chỉ trong bộ nhớ modal; đóng/mở lại hoặc đổi tài khoản sẽ dọn. Đây là lựa chọn UI, contract DM vẫn gồm đúng hai participant; không tự tạo group conversation.
+
+Mục **Người vừa nhắn tin** lấy peer khác actor từ hội thoại mà actor là member, `lastActivityAt` khác null, theo thứ tự API (DESC rồi conversation ID ASC), dedup peer ID. Tên trùng luôn có username; chọn/bỏ chọn dùng chung selection với search. Empty/error/loading/retry riêng; không lấy lịch sử lượt chọn hoặc mock để thay dữ liệu hội thoại. UI/loader được giao P1-T03; thứ tự người vừa nhắn chỉ nghiệm thu bằng tin commit thật sau writer P2-T01. Các task này chưa triển khai ở bản search P1-T01.
+
 Giới hạn 2.000 ký tự theo DEC-053; bộ đếm dùng cùng quy tắc với máy chủ. Khi chưa chọn ai, vùng chính hướng dẫn tìm người để
 bắt đầu. Hội thoại mới có lời nhắc gửi tin đầu tiên và không dùng tin giả.
 
