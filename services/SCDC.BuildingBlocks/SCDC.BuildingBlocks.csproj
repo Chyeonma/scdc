@@ -8,4 +8,9 @@
     <AssemblyName>SCDC.BuildingBlocks</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <EmbeddedResource Include="../../docs/fixtures/text-policy.json" LogicalName="SCDC.TextPolicy.json" />
+  </ItemGroup>
+
 </Project>

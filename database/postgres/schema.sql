@@ -1074,4 +1074,233 @@ FROM messaging.messages m
 LEFT JOIN identity.users u ON u.id = m.author_user_id
 LEFT JOIN identity.user_profiles p ON p.user_id = m.author_user_id;
 
+
+-- Community create/view baseline; identical to migration 001.
+CREATE TEMP TABLE community_server_migration_map (id uuid PRIMARY KEY, visibility smallint NOT NULL, join_mode smallint NOT NULL) ON COMMIT DROP;
+CREATE FUNCTION common.utf16_length(value text) RETURNS integer
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT coalesce(sum(CASE WHEN ch = '' THEN 0 WHEN ascii(ch) > 65535 THEN 2 ELSE 1 END), 0)::integer
+    FROM regexp_split_to_table(value, '') AS chars(ch)
+$$;
+
+ALTER TABLE community.servers
+    ADD COLUMN visibility smallint,
+    ADD COLUMN join_mode smallint,
+    ADD COLUMN access_version integer NOT NULL DEFAULT 1,
+    ALTER COLUMN description TYPE varchar(1000);
+
+-- The runner supplies an explicitly reviewed map for every existing server.
+ALTER TABLE community.servers DISABLE TRIGGER tr_servers_touch;
+UPDATE community.servers s SET visibility = m.visibility, join_mode = m.join_mode
+FROM pg_temp.community_server_migration_map m WHERE m.id = s.id;
+ALTER TABLE community.servers ENABLE TRIGGER tr_servers_touch;
+ALTER TABLE community.servers
+    ALTER COLUMN visibility SET NOT NULL,
+    ALTER COLUMN visibility SET DEFAULT 2,
+    ALTER COLUMN join_mode SET NOT NULL,
+    ALTER COLUMN join_mode SET DEFAULT 1,
+    DROP CONSTRAINT ck_servers_name,
+    ADD CONSTRAINT ck_servers_name CHECK (common.utf16_length(name) BETWEEN 2 AND 100),
+    ADD CONSTRAINT ck_servers_description CHECK (description IS NULL OR common.utf16_length(description) <= 1000),
+    ADD CONSTRAINT ck_servers_visibility CHECK (visibility IN (1,2)),
+    ADD CONSTRAINT ck_servers_join_mode CHECK (join_mode IN (1,2)),
+    ADD CONSTRAINT ck_servers_access_version CHECK (access_version >= 1);
+
+ALTER TABLE community.server_members
+    ADD COLUMN membership_id uuid NOT NULL DEFAULT uuidv7(),
+    ADD COLUMN version integer NOT NULL DEFAULT 1,
+    ADD CONSTRAINT ux_server_members_membership UNIQUE (membership_id),
+    ADD CONSTRAINT ck_server_members_version CHECK (version >= 1),
+    DROP CONSTRAINT ck_server_members_status,
+    ADD CONSTRAINT ck_server_members_status CHECK (status IN (1,2));
+
+ALTER TABLE community.servers ADD CONSTRAINT fk_servers_owner_membership
+    FOREIGN KEY (id,owner_user_id) REFERENCES community.server_members (server_id,user_id)
+    DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE community.roles ADD CONSTRAINT ck_roles_system_default
+    CHECK ((NOT is_system AND NOT is_default) OR (is_system AND is_default AND name = '@everyone'));
+
+CREATE TABLE community.operations (
+    actor_user_id uuid NOT NULL REFERENCES identity.users(id) ON DELETE RESTRICT,
+    kind varchar(50) NOT NULL,
+    scope_id uuid NOT NULL,
+    client_operation_id uuid NOT NULL,
+    fingerprint_version smallint NOT NULL,
+    key_id varchar(100) NOT NULL,
+    fingerprint bytea NOT NULL,
+    resource_id uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    CONSTRAINT pk_community_operations PRIMARY KEY (actor_user_id,kind,scope_id,client_operation_id),
+    CONSTRAINT ck_community_operations_fingerprint CHECK (octet_length(fingerprint) = 32 AND fingerprint_version >= 1),
+    CONSTRAINT ck_community_operations_key CHECK (length(key_id) > 0),
+    CONSTRAINT ck_community_operations_kind CHECK (kind = 'create_server' AND scope_id = '00000000-0000-0000-0000-000000000000')
+);
+
+CREATE FUNCTION community.assert_server_invariants(checked_id uuid) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE role_record record; owner_id uuid;
+BEGIN
+    SELECT owner_user_id INTO owner_id FROM community.servers WHERE id = checked_id;
+    IF NOT FOUND THEN RETURN; END IF;
+    IF NOT EXISTS (SELECT 1 FROM community.server_members WHERE server_id = checked_id AND user_id = owner_id AND status = 1) THEN
+        RAISE EXCEPTION 'Owner membership must be active' USING ERRCODE = '23514', CONSTRAINT = 'ck_server_owner_active';
+    END IF;
+    SELECT id, name, is_system INTO role_record FROM community.roles WHERE server_id = checked_id AND is_default;
+    IF NOT FOUND OR role_record.name <> '@everyone' OR NOT role_record.is_system THEN
+        RAISE EXCEPTION 'Server requires @everyone' USING ERRCODE = '23514', CONSTRAINT = 'ck_server_everyone';
+    END IF;
+    IF EXISTS (SELECT 1 FROM community.role_permissions WHERE role_id = role_record.id AND permission_code IN
+        ('manage_channels','manage_invites','review_join_requests','manage_join_mode','manage_channel_access')) THEN
+        RAISE EXCEPTION '@everyone cannot manage the server' USING ERRCODE = '23514', CONSTRAINT = 'ck_everyone_permissions';
+    END IF;
+END $$;
+
+CREATE FUNCTION community.check_server_invariants() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE checked_id uuid;
+BEGIN
+    IF TG_TABLE_NAME = 'servers' THEN
+        IF TG_OP <> 'INSERT' THEN PERFORM community.assert_server_invariants(OLD.id); END IF;
+        IF TG_OP <> 'DELETE' THEN PERFORM community.assert_server_invariants(NEW.id); END IF;
+    ELSIF TG_TABLE_NAME = 'role_permissions' THEN
+        IF TG_OP <> 'INSERT' THEN
+            SELECT server_id INTO checked_id FROM community.roles WHERE id = OLD.role_id;
+            PERFORM community.assert_server_invariants(checked_id);
+        END IF;
+        IF TG_OP <> 'DELETE' THEN
+            SELECT server_id INTO checked_id FROM community.roles WHERE id = NEW.role_id;
+            PERFORM community.assert_server_invariants(checked_id);
+        END IF;
+    ELSE
+        IF TG_OP <> 'INSERT' THEN PERFORM community.assert_server_invariants(OLD.server_id); END IF;
+        IF TG_OP <> 'DELETE' THEN PERFORM community.assert_server_invariants(NEW.server_id); END IF;
+    END IF;
+    RETURN NULL;
+END $$;
+
+CREATE CONSTRAINT TRIGGER ct_server_invariants AFTER INSERT OR UPDATE OR DELETE ON community.servers
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION community.check_server_invariants();
+CREATE CONSTRAINT TRIGGER ct_member_invariants AFTER INSERT OR UPDATE OR DELETE ON community.server_members
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION community.check_server_invariants();
+CREATE CONSTRAINT TRIGGER ct_role_invariants AFTER INSERT OR UPDATE OR DELETE ON community.roles
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION community.check_server_invariants();
+CREATE CONSTRAINT TRIGGER ct_role_permission_invariants AFTER INSERT OR UPDATE OR DELETE ON community.role_permissions
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION community.check_server_invariants();
+
+CREATE TABLE common.schema_migrations (module varchar(50) NOT NULL, version integer NOT NULL, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(module,version));
+INSERT INTO common.schema_migrations(module,version,checksum) VALUES ('community',1,'b434be5e002497ef204a39c38d7cb4d0783f869804824e130779e74d8f8adab4');
+
+-- Community search baseline 002 (empty bootstrap; upgrades use the .NET runner).
+CREATE TEMP TABLE community_search_migration_map(id uuid PRIMARY KEY,search_name text NOT NULL) ON COMMIT DROP;
+-- Search key format 1: text-policy trim -> .NET NFC -> ToLowerInvariant.
+-- The runner supplies community_search_migration_map in the same transaction.
+ALTER TABLE community.servers ADD COLUMN search_name text COLLATE "C";
+ALTER TABLE community.servers DISABLE TRIGGER tr_servers_touch;
+UPDATE community.servers s SET search_name=m.search_name
+FROM community_search_migration_map m WHERE m.id=s.id;
+-- Check queued invariants before further ALTER TABLE; leave constraints enabled.
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE community.servers ENABLE TRIGGER tr_servers_touch;
+ALTER TABLE community.servers ALTER COLUMN search_name SET NOT NULL;
+ALTER TABLE community.servers ADD CONSTRAINT ck_servers_search_name CHECK (search_name <> '');
+CREATE INDEX ix_servers_public_search ON community.servers(search_name,id)
+    WHERE visibility=1 AND status=1 AND deleted_at IS NULL;
+COMMENT ON COLUMN community.servers.search_name IS 'Format 1: text-policy trim/NFC/ToLowerInvariant in .NET; update atomically with display name.';
+SET CONSTRAINTS ALL DEFERRED;
+DROP TABLE community_search_migration_map;
+INSERT INTO common.schema_migrations(module,version,checksum) VALUES ('community',2,'fe07dcc516bfce7eedf257c8fb42d7baa615c716aba9034de9f4e9cebe40ccff');
+
+-- Community role baseline 003 (empty bootstrap; upgrades use .NET runner).
+CREATE TEMP TABLE community_role_migration_map(id uuid PRIMARY KEY,server_id uuid NOT NULL,name_key text COLLATE "C" NOT NULL) ON COMMIT DROP;
+-- The runner supplies validated .NET role keys in this transaction.
+ALTER TABLE community.roles ADD COLUMN name_key text COLLATE "C", ADD COLUMN version integer NOT NULL DEFAULT 1;
+ALTER TABLE community.roles DISABLE TRIGGER tr_server_roles_touch;
+UPDATE community.roles r SET name_key=m.name_key FROM community_role_migration_map m WHERE m.id=r.id;
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE community.roles
+    DROP CONSTRAINT ux_server_roles_name,
+    DROP CONSTRAINT ck_server_roles_name,
+    DROP COLUMN normalized_name,
+    ALTER COLUMN name TYPE varchar(64),
+    ADD COLUMN normalized_name text GENERATED ALWAYS AS (lower(btrim(name))) STORED,
+    ALTER COLUMN name_key SET NOT NULL,
+    ADD CONSTRAINT ux_role_name_key UNIQUE(server_id,name_key),
+    ADD CONSTRAINT ck_role_name_key CHECK(name_key<>''),
+    ADD CONSTRAINT ck_server_roles_name CHECK(common.utf16_length(name) BETWEEN 1 AND 64),
+    ADD CONSTRAINT ck_role_version CHECK(version>=1);
+DROP TRIGGER tr_server_roles_touch ON community.roles;
+CREATE TRIGGER tr_server_roles_touch BEFORE UPDATE ON community.roles
+    FOR EACH ROW EXECUTE FUNCTION common.touch_updated_at_and_version();
+ALTER TABLE community.server_members ADD CONSTRAINT ux_member_epoch UNIQUE(server_id,user_id,membership_id);
+ALTER TABLE community.member_roles ADD COLUMN membership_id uuid;
+ALTER TABLE community.channel_user_overrides ADD COLUMN membership_id uuid;
+UPDATE community.member_roles r SET membership_id=m.membership_id FROM community.server_members m
+    WHERE m.server_id=r.server_id AND m.user_id=r.user_id;
+UPDATE community.channel_user_overrides r SET membership_id=m.membership_id FROM community.server_members m
+    WHERE m.server_id=r.server_id AND m.user_id=r.user_id;
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE community.member_roles ALTER COLUMN membership_id SET NOT NULL,
+    ADD CONSTRAINT fk_member_role_epoch FOREIGN KEY(server_id,user_id,membership_id)
+        REFERENCES community.server_members(server_id,user_id,membership_id) ON DELETE CASCADE;
+ALTER TABLE community.channel_user_overrides ALTER COLUMN membership_id SET NOT NULL,
+    ADD CONSTRAINT fk_user_override_epoch FOREIGN KEY(server_id,user_id,membership_id)
+        REFERENCES community.server_members(server_id,user_id,membership_id) ON DELETE CASCADE;
+ALTER TABLE community.role_permissions ADD CONSTRAINT ck_role_management_catalog CHECK(permission_code IN
+    ('manage_channels','manage_invites','review_join_requests','manage_join_mode','manage_channel_access'));
+ALTER TABLE community.channel_role_overrides ADD CONSTRAINT ck_role_override_catalog CHECK(permission_code='channel_view');
+ALTER TABLE community.channel_user_overrides ADD CONSTRAINT ck_user_override_catalog CHECK(permission_code='channel_view');
+INSERT INTO community.permissions(code,description) VALUES
+    ('manage_channels','Manage channels'),('manage_invites','Manage invitations'),
+    ('review_join_requests','Review join requests'),('manage_join_mode','Manage join mode'),
+    ('manage_channel_access','Manage channel access'),('channel_view','View a channel') ON CONFLICT DO NOTHING;
+ALTER TABLE community.operations DROP CONSTRAINT ck_community_operations_kind,
+    ADD CONSTRAINT ck_community_operations_kind CHECK(
+        (kind='create_server' AND scope_id='00000000-0000-0000-0000-000000000000') OR
+        (kind='create_role' AND scope_id<>'00000000-0000-0000-0000-000000000000'));
+SET CONSTRAINTS ALL DEFERRED;
+DROP TABLE community_role_migration_map;
+INSERT INTO common.schema_migrations(module,version,checksum) VALUES('community',3,'9c109521897297c26a2f1b920194b8ef725b2828be98d1ffb3134f8896e1069d');
+
+-- Community channels/ACL baseline 004 (empty bootstrap).
+CREATE TEMP TABLE community_channel_migration_map(id uuid PRIMARY KEY,server_id uuid NOT NULL,name_key text COLLATE "C" NOT NULL,kind smallint NOT NULL,default_view smallint NOT NULL,active boolean NOT NULL) ON COMMIT DROP;
+-- The runner provides reviewed channel settings and .NET name keys.
+ALTER TABLE community.channels
+    ADD COLUMN name_key text COLLATE "C",
+    ADD COLUMN kind smallint NOT NULL DEFAULT 1,
+    ADD COLUMN default_view smallint NOT NULL DEFAULT 1,
+    ADD COLUMN status smallint NOT NULL DEFAULT 1,
+    ADD COLUMN deleted_at timestamptz,
+    ADD COLUMN version integer NOT NULL DEFAULT 1,
+    ADD COLUMN access_version integer NOT NULL DEFAULT 1;
+ALTER TABLE community.channels DISABLE TRIGGER tr_server_channels_touch;
+UPDATE community.channels c SET name_key=m.name_key,kind=m.kind,default_view=m.default_view,
+    status=s.status,deleted_at=s.deleted_at
+    FROM community_channel_migration_map m,messaging.spaces s WHERE m.id=c.space_id AND s.id=c.space_id;
+SET CONSTRAINTS ALL IMMEDIATE;
+ALTER TABLE community.channels
+    DROP CONSTRAINT ux_server_channels_name,
+    DROP CONSTRAINT IF EXISTS ck_server_channels_name,
+    DROP CONSTRAINT ck_server_channels_visibility,
+    DROP COLUMN visibility,
+    DROP COLUMN normalized_name,
+    ADD COLUMN normalized_name text GENERATED ALWAYS AS (lower(btrim(name))) STORED,
+    ALTER COLUMN topic TYPE varchar(1000),
+    ALTER COLUMN name_key SET NOT NULL,
+    ADD CONSTRAINT ck_channel_name CHECK(common.utf16_length(name) BETWEEN 1 AND 100),
+    ADD CONSTRAINT ck_channel_topic CHECK(topic IS NULL OR common.utf16_length(topic)<=1000),
+    ADD CONSTRAINT ck_channel_name_key CHECK(name_key<>''),
+    ADD CONSTRAINT ck_channel_kind CHECK(kind IN(1,2)),
+    ADD CONSTRAINT ck_channel_default_view CHECK(default_view IN(1,2)),
+    ADD CONSTRAINT ck_channel_status CHECK((status=1 AND deleted_at IS NULL) OR(status=3 AND deleted_at IS NOT NULL)),
+    ADD CONSTRAINT ck_channel_versions CHECK(version>=1 AND access_version>=1);
+CREATE UNIQUE INDEX ux_channel_active_name_key ON community.channels(server_id,name_key) WHERE status=1 AND deleted_at IS NULL;
+DROP TRIGGER tr_server_channels_touch ON community.channels;
+CREATE TRIGGER tr_server_channels_touch BEFORE UPDATE ON community.channels
+    FOR EACH ROW EXECUTE FUNCTION common.touch_updated_at_and_version();
+ALTER TABLE community.operations DROP CONSTRAINT ck_community_operations_kind,
+    ADD CONSTRAINT ck_community_operations_kind CHECK(
+        (kind='create_server' AND scope_id='00000000-0000-0000-0000-000000000000') OR
+        (kind IN('create_role','create_channel') AND scope_id<>'00000000-0000-0000-0000-000000000000'));
+SET CONSTRAINTS ALL DEFERRED;
+DROP TABLE community_channel_migration_map;
+INSERT INTO common.schema_migrations(module,version,checksum) VALUES('community',4,'b5518a26af4b4987b0c2b8aed09909afdfb6d7884c7133cf78fa330af253206c');
 COMMIT;

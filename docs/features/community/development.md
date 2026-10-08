@@ -1,13 +1,13 @@
 # SCDC — Chạy local và kiểm thử Community
 
-Cập nhật: 2026-10-08. Bộ chạy cho `feat/community-channels`, kế thừa create/view, join, search và permissions. Code Community trên main còn foundation; đọc tài liệu trên main không làm các API feature xuất hiện. Phạm vi chạy được tại [status](status.md), bằng chứng theo revision tại [verification](delivery/verification.md). Các lệnh dưới đây là hướng dẫn chạy lại, không phải một lần kiểm thử mới đã thực hiện.
+Cập nhật: 2026-10-08. Bộ chạy cho `main` sau khi hợp nhất `feat/community-channels`, kế thừa create/view, join, search và permissions. Backend/WebClient Community và migration 001–004 đã có trên `main`. Phạm vi chạy được tại [status](status.md), bằng chứng theo revision tại [verification](delivery/verification.md). Các lệnh dưới đây là hướng dẫn chạy lại; kết quả lần hợp nhất ghi riêng tại [kiểm chứng main](delivery/verification.md#main-merge).
 
 ## Chuẩn bị
 
 Cần .NET SDK 10, Node 24/npm, Python 3, OpenSSL và PostgreSQL 18 qua Docker hoặc Podman. Chạy từ root repo trong Bash/zsh hoặc WSL; mở terminal riêng cho API và Vite. Chọn nhánh code đã có tại local, sau khi lưu công việc đang sửa:
 
 ```bash
-git switch feat/community-channels
+git switch main
 git status --short --branch
 ```
 
@@ -29,7 +29,7 @@ export SCDC_CONTAINER_ENGINE=podman # Đổi thành docker nếu dùng Docker.
   pg_isready -U scdc -d scdc_community_docs_test
 ```
 
-Chờ `pg_isready` báo accepting connections, gọi lại lệnh kiểm tra nếu container chưa sẵn sàng. Bootstrap **DB mới của container này** bằng schema từ nhánh feature:
+Chờ `pg_isready` báo accepting connections, gọi lại lệnh kiểm tra nếu container chưa sẵn sàng. Bootstrap **DB mới của container này** bằng schema trên `main`:
 
 ```bash
 "$SCDC_CONTAINER_ENGINE" exec -i scdc-community-docs-db \
@@ -37,7 +37,7 @@ Chờ `pg_isready` báo accepting connections, gọi lại lệnh kiểm tra n�
   < database/postgres/schema.sql
 ```
 
-Schema mới gồm ledger 001–004. Không cần seed để đăng ký các tài khoản thử qua API. `schema.sql` có DROP SCHEMA; DB đã có dữ liệu cần giữ phải dùng runner ở [phần nâng cấp](#migration), không dùng lệnh bootstrap này.
+Schema trên `main` gồm ledger 001–004. Không cần seed để đăng ký các tài khoản thử qua API. `schema.sql` có DROP SCHEMA; DB đã có dữ liệu cần giữ phải dùng runner ở [phần nâng cấp](#migration), không dùng lệnh bootstrap này.
 
 <a id="configuration"></a>
 
@@ -56,7 +56,7 @@ export Modules__Community__KeyRingPath="$(mktemp -d /tmp/scdc-community-docs-key
 
 Các key trên chỉ dùng cho bộ chạy thử mới này. Giữ nguyên signing key, HMAC key và thư mục keyring khi restart API trong cùng lần thử. Chạy lại block sinh key sẽ thay cấu hình, có thể làm token/cursor/operation cũ không đọc được. Test factory tạo HMAC/keyring tổng hợp riêng nhưng đọc cấu hình DB/Identity. Không đưa giá trị key/token vào commit hoặc artifact công khai.
 
-Ở môi trường cần giữ dữ liệu, lưu HMAC key và keyring bằng secret/volume bền; giữ key cũ khi đổi active ID để đối soát operation đã lưu. Mất HMAC key cũ trả 503, không tạo lại resource. Giữ EnvironmentName vì Data Protection dùng `SCDC.Community.{EnvironmentName}`. Compose của feature yêu cầu `COMMUNITY_OPERATION_KEY` base64 ít nhất 32 byte từ `.env` hoặc môi trường và có volume keyring riêng; hướng dẫn kỹ thuật ở `services/Modules/Community/README.md` **của nhánh code**.
+Ở môi trường cần giữ dữ liệu, lưu HMAC key và keyring bằng secret/volume bền; giữ key cũ khi đổi active ID để đối soát operation đã lưu. Mất HMAC key cũ trả 503, không tạo lại resource. Giữ EnvironmentName vì Data Protection dùng `SCDC.Community.{EnvironmentName}`. Compose trên `main` yêu cầu `COMMUNITY_OPERATION_KEY` base64 ít nhất 32 byte từ `.env` hoặc môi trường và có volume keyring riêng; hướng dẫn kỹ thuật ở [README module](../../../services/Modules/Community/README.md).
 
 <a id="backend-tests"></a>
 
@@ -121,7 +121,7 @@ Bộ chạy hiện hành dừng ở nền Community/phòng/quyền. Chưa có co
 
 ## Nâng cấp DB đã có dữ liệu
 
-Chọn connection string riêng cho DB cần nâng cấp, backup DB/keys và drain writer cũ trước khi áp migration còn thiếu. Đọc ledger `common.schema_migrations` và README module của nhánh code; không sửa SQL/checksum đã áp. Runner ở `tools/SCDC.DbMigrator` có trên feature. Ví dụ chuỗi cho baseline legacy chưa áp 001–004:
+Chọn connection string riêng cho DB cần nâng cấp, backup DB/keys và drain writer cũ trước khi áp migration còn thiếu. Đọc ledger `common.schema_migrations` và README module; không sửa SQL/checksum đã áp. Runner ở `tools/SCDC.DbMigrator` đã có trên `main`. Ví dụ chuỗi cho baseline legacy chưa áp 001–004:
 
 ```bash
 dotnet run --project tools/SCDC.DbMigrator -- \

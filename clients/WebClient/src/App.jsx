@@ -6,21 +6,13 @@ import React, {
   useState,
   useSyncExternalStore,
 } from 'react';
-import {
-  HubConnectionBuilder,
-  HubConnectionState,
-  LogLevel,
-} from '@microsoft/signalr';
 
 import {
-  api,
-  getAccessToken,
   sessionStore,
   getMe,
 } from './api.js';
 
 import {
-  INITIAL_SERVERS,
   INITIAL_DMS,
   INITIAL_MEMBERS,
   INITIAL_MESSAGES,
@@ -35,16 +27,53 @@ import { MessageComposer } from './components/MessageComposer.jsx';
 import { RightPanel } from './components/RightPanel.jsx';
 import { UserProfileModal } from './components/UserProfileModal.jsx';
 import { UserSettingsModal } from './components/UserSettingsModal.jsx';
-import { ServerSettingsModal } from './components/ServerSettingsModal.jsx';
 import { CreateServerModal } from './components/CreateServerModal.jsx';
-import { CreateChannelModal } from './components/CreateChannelModal.jsx';
 import { CreateDmModal } from './components/CreateDmModal.jsx';
-import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
 
+import { useCommunityList } from './community/useCommunityList.js';
+import { CommunityList, CommunityDetail } from './community/CommunityViews.jsx';
+import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
+import { CommunityRoles } from './community/CommunityRoles.jsx';
+import { CommunityChannels } from './community/CommunityChannels.jsx';
+import { readPending } from './community/pendingCreate.js';
+
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
+  // Changing actor unmounts all private state and cancels in-flight requests immediately.
+  return <Application key={session?.user?.id || 'anonymous'} session={session} />;
+}
+
+function Application({ session }) {
+  const actorId = session?.user?.id;
+  const list = useCommunityList(actorId);
+  const [route, setRoute] = useState(window.location.hash);
+  const communityRoute = /^#community\/([^/]+)(\/(?:roles|channels))?$/.exec(route);
+  const activeServerId = communityRoute?.[1] || null;
+  const isRoleManagement = communityRoute?.[2] === '/roles';
+  const isChannels = communityRoute?.[2] === '/channels';
+  const isDiscovery = route === '#discover' || route.startsWith('#discover?');
+  const discoveryQuery = isDiscovery ? new URLSearchParams(route.split('?')[1] || '').get('q') || '' : '';
+  const [communityReturnTo, setCommunityReturnTo] = useState('#communities');
+  const isHomeActive = route === '#home';
+  const [hasPending, setHasPending] = useState(false);
+  const checkPending = useCallback(() => {
+    try { setHasPending(Boolean(actorId && readPending(window.sessionStorage, actorId))); }
+    catch { setHasPending(Boolean(actorId)); }
+  }, [actorId]);
+  useEffect(() => {
+    const navigate = () => setRoute(window.location.hash);
+    window.addEventListener('hashchange', navigate);
+    checkPending();
+    return () => window.removeEventListener('hashchange', navigate);
+  }, [checkPending]);
+  function selectServer(id) {
+    setCommunityReturnTo(isDiscovery ? route : '#communities');
+    window.location.hash = `community/${id}`;
+  }
+  function setIsHomeActive(value) { window.location.hash = value ? 'home' : 'communities'; }
+
 
   // Toast notification state
   const [toast, setToast] = useState(null);
@@ -58,17 +87,13 @@ export default function App() {
   const [userStatus, setUserStatus] = useState('online');
 
   // Navigation State
-  const [isHomeActive, setIsHomeActive] = useState(false);
-  const [servers, setServers] = useState(INITIAL_SERVERS);
-  const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
-  const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
   const [dms, setDms] = useState(INITIAL_DMS);
   const [activeDmId, setActiveDmId] = useState(INITIAL_DMS[0].spaceId);
 
   // Messages & Threads State
   const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
   const [threadsMap, setThreadsMap] = useState(INITIAL_THREADS);
-  const [members, setMembers] = useState(INITIAL_MEMBERS);
+  const members = INITIAL_MEMBERS;
 
   // Active Collapsible Right Panel ('memberList' | 'thread' | 'pinned' | null)
   const [rightPanelMode, setRightPanelMode] = useState('memberList');
@@ -76,48 +101,32 @@ export default function App() {
 
   // Modals & Popovers
   const [showUserSettings, setShowUserSettings] = useState(false);
-  const [showServerSettings, setShowServerSettings] = useState(false);
   const [showCreateServer, setShowCreateServer] = useState(false);
-  const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateDm, setShowCreateDm] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [reportingMessage, setReportingMessage] = useState(null);
   const [inspectingUser, setInspectingUser] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
-  const [connectionState, setConnectionState] = useState('online');
+  const connectionState = 'offline';
 
   const timelineEndRef = useRef(null);
 
-  // Initialize or fetch current user on session change
   useEffect(() => {
-    if (session?.user) {
-      setCurrentUser(session.user);
-      getMe().then((res) => {
-        if (res) setCurrentUser(res);
-      }).catch(() => {});
-    }
-  }, [session]);
-
-  // Active Server & Channel reference
-  const activeServer = useMemo(
-    () => servers.find((s) => s.id === activeServerId) || servers[0],
-    [servers, activeServerId]
-  );
-
-  const activeChannel = useMemo(
-    () => activeServer?.channels?.find((c) => c.spaceId === activeChannelId) || activeServer?.channels?.[0],
-    [activeServer, activeChannelId]
-  );
+    if (!actorId) return;
+    let disposed = false;
+    setCurrentUser(session.user);
+    getMe().then((res) => { if (!disposed && res?.id === actorId) setCurrentUser(res); }).catch(() => {});
+    return () => { disposed = true; };
+  }, [session, actorId]);
 
   const activeDm = useMemo(
     () => dms.find((d) => d.spaceId === activeDmId) || dms[0],
     [dms, activeDmId]
   );
 
-  const currentSpaceId = isHomeActive ? activeDmId : activeChannelId;
+  const currentSpaceId = activeDmId;
 
   // Active Messages list
   const currentMessages = useMemo(() => {
@@ -137,76 +146,6 @@ export default function App() {
   useEffect(() => {
     timelineEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length, currentSpaceId]);
-
-  // SignalR Hub Connection Setup
-  useEffect(() => {
-    if (!session?.accessToken || !currentSpaceId) return undefined;
-
-    let disposed = false;
-    const connection = new HubConnectionBuilder()
-      .withUrl('/hubs/chat', { accessTokenFactory: getAccessToken })
-      .withAutomaticReconnect([0, 2000, 5000, 10000])
-      .configureLogging(LogLevel.Warning)
-      .build();
-
-    connection.on('MessageCreated', (message) => {
-      if (message?.spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [message.spaceId]: [...(prev[message.spaceId] || []), message],
-        }));
-      }
-    });
-
-    connection.on('MessageUpdated', (message) => {
-      if (message?.spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [message.spaceId]: (prev[message.spaceId] || []).map((m) =>
-            m.id === message.id ? { ...m, ...message } : m
-          ),
-        }));
-      }
-    });
-
-    connection.on('MessageDeleted', ({ spaceId, messageId }) => {
-      if (spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [spaceId]: (prev[spaceId] || []).filter((m) => m.id !== messageId),
-        }));
-      }
-    });
-
-    connection.onreconnecting(() => setConnectionState('connecting'));
-    connection.onreconnected(() => setConnectionState('online'));
-    connection.onclose(() => {
-      if (!disposed) setConnectionState('offline');
-    });
-
-    async function startSignalR() {
-      try {
-        await connection.start();
-        if (!disposed) {
-          setConnectionState('online');
-          await connection.invoke('SubscribeChannel', currentSpaceId);
-        }
-      } catch {
-        if (!disposed) {
-          setConnectionState('online'); // fallback smoothly
-        }
-      }
-    }
-
-    startSignalR();
-
-    return () => {
-      disposed = true;
-      if (connection.state !== HubConnectionState.Disconnected) {
-        connection.stop();
-      }
-    };
-  }, [session, currentSpaceId]);
 
   // Send Message Handler
   function handleSendMessage({ content, replyTo, attachments }) {
@@ -238,12 +177,6 @@ export default function App() {
     }));
 
     setReplyingTo(null);
-
-    // Try calling backend API if available
-    api(`/channels/${currentSpaceId}/messages`, {
-      method: 'POST',
-      body: { clientMessageId: crypto.randomUUID(), content },
-    }).catch(() => {});
   }
 
   // Toggle Reaction Handler
@@ -371,24 +304,10 @@ export default function App() {
     }
   }
 
-  // Create Server
-  function handleCreateServer(serverData) {
-    setServers((prev) => [...prev, serverData]);
-    setIsHomeActive(false);
-    setActiveServerId(serverData.id);
-    setActiveChannelId(serverData.channels[0].spaceId);
-    notify('success', `Đã tạo server "${serverData.name}".`);
-  }
-
-  // Create Channel
-  function handleCreateChannel(channelData) {
-    setServers((prev) =>
-      prev.map((s) =>
-        s.id === activeServerId ? { ...s, channels: [...(s.channels || []), channelData] } : s
-      )
-    );
-    setActiveChannelId(channelData.spaceId);
-    notify('success', `Đã tạo kênh #${channelData.name}.`);
+  function handleCreateServer(server) {
+    list.reload();
+    selectServer(server.id);
+    notify('success', `Đã xác nhận cộng đồng "${server.name}".`);
   }
 
   // If not logged in, render Auth Screen
@@ -410,57 +329,59 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {/* COLUMN 1: SERVER RAIL */}
       <ServerRail
-        servers={servers}
+        servers={list.items}
         activeServerId={activeServerId}
         isHomeActive={isHomeActive}
         onSelectHome={() => setIsHomeActive(true)}
-        onSelectServer={(serverId) => {
-          setIsHomeActive(false);
-          setActiveServerId(serverId);
-          const srv = servers.find((s) => s.id === serverId);
-          if (srv?.channels?.[0]) {
-            setActiveChannelId(srv.channels[0].spaceId);
-          }
-        }}
+        onSelectOverview={() => setIsHomeActive(false)}
+        onSelectServer={selectServer}
         onOpenCreateServer={() => setShowCreateServer(true)}
-        totalUnreadDMs={dms.reduce((acc, d) => acc + (d.unreadCount || 0), 0)}
       />
-
-      {/* COLUMN 2: SUB-SIDEBAR (CHANNELS OR DMS + USER DOCK) */}
-      <SubSidebar
-        isHomeActive={isHomeActive}
-        activeServer={activeServer}
-        activeChannelId={activeChannelId}
-        onSelectChannel={(chId) => setActiveChannelId(chId)}
-        dms={dms}
-        activeDmId={activeDmId}
-        onSelectDm={(dmId) => setActiveDmId(dmId)}
+      {isHomeActive && <SubSidebar
+        isHomeActive={true}
+        dms={dms} activeDmId={activeDmId} onSelectDm={setActiveDmId}
         onOpenCreateDm={() => setShowCreateDm(true)}
-        onOpenCreateChannel={() => setShowCreateChannel(true)}
-        onOpenServerSettings={() => setShowServerSettings(true)}
-        onOpenInviteModal={() => setShowInviteModal(true)}
-        onLeaveServer={() => {
-          if (confirm(`Bạn có chắc chắn muốn rời khỏi ${activeServer?.name}?`)) {
-            setServers((prev) => prev.filter((s) => s.id !== activeServerId));
-            setIsHomeActive(true);
-            notify('warning', `Đã rời khỏi ${activeServer?.name}.`);
-          }
-        }}
-        currentUser={currentUser}
-        onOpenUserSettings={() => setShowUserSettings(true)}
-        userStatus={userStatus}
-        onChangeStatus={(status) => setUserStatus(status)}
-      />
+        currentUser={currentUser} onOpenUserSettings={() => setShowUserSettings(true)}
+        userStatus={userStatus} onChangeStatus={setUserStatus}
+      />}
+      {!isHomeActive && <div className="community-workspace">
+        <div className="community-toolbar">
+          <span>{currentUser?.displayName || session.user.username}</span>
+          <button className="btn btn--secondary" onClick={() => setShowUserSettings(true)}>Cài đặt tài khoản</button>
+        </div>
+        {hasPending && <div className="community-pending" role="status">
+          <span>Có yêu cầu tạo chưa được xác nhận.</span>
+          <button className="btn btn--secondary" onClick={() => setShowCreateServer(true)}>Tiếp tục yêu cầu</button>
+        </div>}
+        {activeServerId
+          ? isRoleManagement
+            ? <CommunityRoles key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
+              onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
+            : isChannels
+              ? <CommunityChannels key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
+                onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
+              : <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
+            onBack={() => { window.location.hash = communityReturnTo; }} onJoined={list.reload}
+            onManage={() => { window.location.hash = `community/${activeServerId}/roles`; }}
+            onChannels={() => { window.location.hash = `community/${activeServerId}/channels`; }}
+            backLabel={communityReturnTo.startsWith('#discover') ? '← Kết quả tìm kiếm' : undefined} />
+          : isDiscovery
+            ? <CommunityDiscovery key={`${actorId}:${discoveryQuery}`} actorId={actorId} query={discoveryQuery} onSelect={selectServer}
+              onSearch={(query) => { window.location.hash = `discover?${new URLSearchParams({ q: query })}`; }}
+              onBack={() => setIsHomeActive(false)} />
+            : <CommunityList list={list} onSelect={selectServer} onCreate={() => setShowCreateServer(true)}
+              onDiscover={() => { window.location.hash = 'discover'; }} />}
+      </div>}
 
       {/* COLUMN 3: MAIN CHAT STAGE */}
-      <main className="main-chat">
+      {isHomeActive && <main className="main-chat">
+        <p className="community-pending">Giao diện tin nhắn mẫu — nội dung chưa được lưu lên máy chủ.</p>
         {/* Chat Header */}
         <ChatHeader
-          title={isHomeActive ? (activeDm?.name || activeDm?.user?.displayName || 'Tin nhắn trực tiếp') : (activeChannel?.name ? `#${activeChannel.name}` : 'Kênh')}
-          topic={isHomeActive ? (activeDm?.user?.bio || '') : (activeChannel?.topic || '')}
-          icon={isHomeActive ? (activeDm?.spaceType === 2 ? '👥' : '@') : (activeChannel?.visibility === 2 ? '🔒' : activeChannel?.visibility === 3 ? '📢' : '#')}
+          title={isHomeActive ? (activeDm?.name || activeDm?.user?.displayName || 'Tin nhắn trực tiếp') : ''}
+          topic={isHomeActive ? (activeDm?.user?.bio || '') : ''}
+          icon={isHomeActive ? (activeDm?.spaceType === 2 ? '👥' : '@') : ''}
           connectionState={connectionState}
           showMemberList={rightPanelMode === 'memberList'}
           onToggleMemberList={() =>
@@ -490,7 +411,7 @@ export default function App() {
               <h2>
                 {isHomeActive
                   ? `Cuộc trò chuyện với ${activeDm?.user?.displayName || activeDm?.name}`
-                  : `Chào mừng tới #${activeChannel?.name || 'kênh'}`}
+                  : ''}
               </h2>
               <p>Đây là điểm khởi đầu của cuộc trò chuyện này. Hãy gửi lời chào đầu tiên!</p>
             </div>
@@ -530,15 +451,15 @@ export default function App() {
 
         {/* Message Composer */}
         <MessageComposer
-          channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
+          channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : ''}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
         />
-      </main>
+      </main>}
 
       {/* COLUMN 4: COLLAPSIBLE RIGHT PANEL (MEMBER LIST / THREAD / PINNED) */}
-      <RightPanel
+      {isHomeActive && <RightPanel
         mode={rightPanelMode}
         members={members}
         onSelectMember={(mem) => setInspectingUser(mem)}
@@ -550,7 +471,7 @@ export default function App() {
         onClosePinned={() => setRightPanelMode(null)}
         onJumpToMessage={() => {}}
         onUnpinMessage={handlePinMessage}
-      />
+      />}
 
       {/* USER SETTINGS MODAL */}
       {showUserSettings && (
@@ -562,48 +483,18 @@ export default function App() {
         />
       )}
 
-      {/* SERVER SETTINGS MODAL */}
-      {showServerSettings && (
-        <ServerSettingsModal
-          server={activeServer}
-          onClose={() => setShowServerSettings(false)}
-          onUpdateServer={(updated) => {
-            setServers((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-          }}
-          notify={notify}
-        />
-      )}
-
-      {/* CREATE SERVER MODAL */}
-      {showCreateServer && (
-        <CreateServerModal
-          onClose={() => setShowCreateServer(false)}
-          onCreateServer={handleCreateServer}
-        />
-      )}
-
-      {/* CREATE CHANNEL MODAL */}
-      {showCreateChannel && (
-        <CreateChannelModal
-          onClose={() => setShowCreateChannel(false)}
-          onCreateChannel={handleCreateChannel}
-        />
-      )}
+      {showCreateServer && <CreateServerModal
+        actorId={actorId}
+        onClose={() => setShowCreateServer(false)}
+        onCreateServer={handleCreateServer}
+        onPendingChange={checkPending}
+      />}
 
       {/* CREATE DM MODAL */}
       {showCreateDm && (
         <CreateDmModal
           onClose={() => setShowCreateDm(false)}
           onStartDm={handleStartDm}
-          notify={notify}
-        />
-      )}
-
-      {/* INVITE MODAL */}
-      {showInviteModal && (
-        <InviteModal
-          server={activeServer}
-          onClose={() => setShowInviteModal(false)}
           notify={notify}
         />
       )}

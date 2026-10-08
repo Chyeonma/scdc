@@ -27,6 +27,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+RUN mkdir -p /app/community-keys && chown "$APP_UID" /app/community-keys && chmod 700 /app/community-keys
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "SCDC.Api.dll"]

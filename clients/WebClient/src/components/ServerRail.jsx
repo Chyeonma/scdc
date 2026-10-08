@@ -5,7 +5,7 @@ export function initials(name) {
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
+    .map((part) => [...part][0]?.toUpperCase())
     .join('');
 }
 
@@ -14,6 +14,7 @@ export function ServerRail({
   activeServerId,
   isHomeActive,
   onSelectHome,
+  onSelectOverview,
   onSelectServer,
   onOpenCreateServer,
   totalUnreadDMs = 0,
@@ -29,8 +30,8 @@ export function ServerRail({
           type="button"
           className={`server-icon server-icon--home ${isHomeActive ? 'is-active' : ''}`}
           onClick={onSelectHome}
-          title="Tin nhắn trực tiếp (Direct Messages)"
-          aria-label="Direct Messages"
+          title="Tin nhắn (giao diện mẫu)"
+          aria-label="Tin nhắn (giao diện mẫu)"
         >
           <span className="server-icon__mark">S</span>
           {totalUnreadDMs > 0 && (
@@ -41,6 +42,9 @@ export function ServerRail({
 
       <div className="server-rail__divider" role="separator" />
 
+      <div className="server-rail__item">
+        <button type="button" className={`server-icon ${!isHomeActive && !activeServerId ? 'is-active' : ''}`} title="Cộng đồng của tôi" aria-label="Cộng đồng của tôi" onClick={onSelectOverview}>◎</button>
+      </div>
       {/* Server List */}
       <div className="server-rail__list">
         {servers.map((server) => {
@@ -79,8 +83,8 @@ export function ServerRail({
           type="button"
           className="server-icon server-icon--action"
           onClick={onOpenCreateServer}
-          title="Tạo hoặc tham gia Server mới"
-          aria-label="Tạo server"
+          title="Tạo cộng đồng mới"
+          aria-label="Tạo cộng đồng mới"
         >
           <span className="icon-plus">+</span>
         </button>

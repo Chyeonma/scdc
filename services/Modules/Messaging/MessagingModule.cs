@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SCDC.BuildingBlocks.Application;
+using SCDC.Contracts.Messaging;
+using SCDC.Modules.Messaging.Infrastructure;
 
 namespace SCDC.Modules.Messaging;
 
@@ -11,6 +13,7 @@ public static class MessagingModule
         IConfiguration configuration)
     {
         _ = configuration;
+        services.AddScoped<IChatSpaceLifecycle, ChatSpaceLifecycle>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

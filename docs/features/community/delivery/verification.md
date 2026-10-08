@@ -14,7 +14,26 @@ Cập nhật: 2026-10-08. Bảng này nối [truy vết đặc tả đầy đủ
 
 Các số là tổng suite tại từng revision, gồm hồi quy; không cộng các gói để tính tổng test hoặc tiến độ. Bảng bên dưới đối chiếu source backend `eaaa2e3`, WebClient `f8d582d` trên `feat/community-channels` với kết quả gói cuối. Bổ sung tài liệu này không chạy lại test sản phẩm. TRX đã ghi ở `artifacts/community-channels/backend/community-channels.trx`, browser output/ảnh ở `artifacts/community-channels/`; artifact local bị ignore, không bảo đảm có sẵn trong checkout mới. Muốn bằng chứng mới dùng [hướng dẫn chạy lại](../development.md), ghi revision và actual result mới vào acceptance tương ứng.
 
-Tên test dùng dạng `file::method` hoặc `file::test title`, tra theo commit trên nhánh code vì main chưa có các file feature. Backend prefix `tests/SCDC.Api.Tests/Community/`; browser prefix `clients/WebClient/e2e/`; Node prefix `clients/WebClient/tests/`. Các method theory có nhiều trường hợp trong TRX. Bảng giữ assertion đại diện cho từng nhóm tiêu chí; đọc toàn file/acceptance để xem fixture, fault injection và các assertion bổ sung.
+Tên test dùng dạng `file::method` hoặc `file::test title`, tra theo commit nguồn của gói; các file feature đã được hợp nhất vào `main`. Backend prefix `tests/SCDC.Api.Tests/Community/`; browser prefix `clients/WebClient/e2e/`; Node prefix `clients/WebClient/tests/`. Các method theory có nhiều trường hợp trong TRX. Bảng giữ assertion đại diện cho từng nhóm tiêu chí; đọc toàn file/acceptance để xem fixture, fault injection và các assertion bổ sung. Những mô tả chưa merge trong acceptance cũ phản ánh thời điểm kiểm chứng của gói; trạng thái hiện tại theo [status](../status.md).
+
+<a id="main-merge"></a>
+
+## Kiểm chứng hợp nhất vào main — 2026-10-08
+
+Hợp nhất `feat/community-channels` tại `2052c60` vào `main` nền `998daf8`, giữ lịch sử các gói. Code backend/WebClient, SQL và test không thay đổi so với nhánh nguồn; xử lý xung đột README, bỏ các trang tài liệu cũ đã được tách và cập nhật hiện trạng/hướng dẫn trên `main`. Không đưa các nhánh Messaging vào lần hợp nhất này.
+
+Môi trường: .NET SDK 10.0.112, PostgreSQL 18 trong container Podman tạm thời không gắn volume ứng dụng, Node/Chromium trong image `mcr.microsoft.com/playwright:v1.63.0-noble` đã có sẵn. DB tổng hợp `scdc_community_main_merge_test` ở `127.0.0.1:15438`; API/Vite ở cổng 15038/15338. Nạp `database/postgres/schema.sql` vào DB mới trước khi chạy; không migrate DB ứng dụng.
+
+| Kiểm tra thực tế | Kết quả |
+|---|---|
+| `dotnet build SCDC.slnx --configuration Release --no-restore -m:1` | Đạt, 0 warning / 0 error |
+| `dotnet test SCDC.slnx --configuration Release --no-build --no-restore -m:1` trên DB riêng | 191 đạt, 0 lỗi, 0 bỏ qua; TRX tại `artifacts/community-main-merge/backend/community-main-merge.trx` |
+| WebClient `npm test` | 24 đạt, 0 lỗi, 0 bỏ qua |
+| WebClient `npm run build` | Production build đạt, Vite 8.2.2 |
+| `npm run test:e2e -- --output ../../artifacts/community-main-merge/browser --reporter=line` với API/DB thật | 50 Chromium đạt trong 54,4 giây; log `artifacts/community-main-merge/browser.log` |
+| `podman-compose config` với khóa tổng hợp chỉ cho kiểm tra | Đạt cấu hình HMAC và volume keyring Community |
+
+Các artifact local bị ignore; checkout mới cần chạy lại theo [hướng dẫn](../development.md). Kết quả này kiểm chứng nền Community/Identity hiện có và migrations, không thay proof tích hợp writer tin, Hub/dispatcher, reconnect hoặc deadline thu hồi ≤5 giây. Các gate chat MVP tiếp tục chưa được nghiệm thu; giới hạn theo [phần chưa kiểm chứng](#unverified).
 
 <a id="backend"></a>
 

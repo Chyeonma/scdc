@@ -2,7 +2,7 @@
 
 Cập nhật: 2026-10-08. Nguồn duy nhất ghi trạng thái triển khai hiện tại của Community. Quy tắc và use case ở [specs/](specs/README.md); thiết kế ở [design/](design/README.md); bằng chứng lịch sử ở từng hồ sơ nghiệm thu và [bảng đối chiếu test](delivery/verification.md).
 
-Mốc Community MVP đã chọn theo [DEC-118](../../decisions.md#dec-118): tạo/tìm/tham gia, phòng text, lịch sử/gửi/nhận tin và xử lý mất quyền. Điều kiện hoàn tất nằm tại [hồ sơ MVP](../../releases/mvp.md#community-scope). Hiện nền cộng đồng/phòng/quyền đã có trên feature; luồng giao tiếp trong phòng chưa chạy được, nên chưa đạt mốc này. Không tính tỷ lệ hoàn thành từ số UC hoặc số test vì phạm vi các gói khác nhau.
+Mốc Community MVP đã chọn theo [DEC-118](../../decisions.md#dec-118): tạo/tìm/tham gia, phòng text, lịch sử/gửi/nhận tin và xử lý mất quyền. Điều kiện hoàn tất nằm tại [hồ sơ MVP](../../releases/mvp.md#community-scope). Nền cộng đồng/phòng/quyền đã được hợp nhất vào `main` từ `feat/community-channels`; luồng giao tiếp trong phòng chưa được tích hợp trên `main`, nên chưa đạt mốc này. Không tính tỷ lệ hoàn thành từ số UC hoặc số test vì phạm vi các gói khác nhau.
 
 <a id="implementation"></a>
 
@@ -20,7 +20,7 @@ Mốc Community MVP đã chọn theo [DEC-118](../../decisions.md#dec-118): tạ
 | ACL phòng — phần HTTP UC-COM-22 | API/UI snapshot, policy view và guard transaction đã kiểm chứng; subscription/thu hồi realtime còn thiếu | Cùng gói phòng/ACL; [thiết kế](design/channels-access.md), [nghiệm thu](delivery/channels-access/acceptance.md) |
 | Tin phòng, Hub/dispatcher/realtime | Chưa có runtime của gói tích hợp | [Use case tích hợp](specs/integration.md#use-cases) |
 
-Code Community trên `main` vẫn ở nền module. Chuỗi gói kế thừa: `feat/community-create-view` → `feat/community-join` → `feat/community-search` → `feat/community-permissions` → `feat/community-channels`. Chưa merge code vào `main`. Tài liệu độc lập được commit trên `main`, rồi đồng bộ sang feature. Người dùng tự push nhánh tài liệu/code; trạng thái remote cần kiểm tra khi bàn giao, không suy từ báo cáo kiểm thử.
+Code Community trên `main` đã bao gồm chuỗi gói `feat/community-create-view` → `feat/community-join` → `feat/community-search` → `feat/community-permissions` → `feat/community-channels` (nguồn `2052c60`), gồm backend/WebClient, guard/lifecycle tạo space, migration 001–004 và bộ kiểm thử. Các nhánh feature giữ lịch sử từng gói; tài liệu độc lập tiếp tục được quản lý trên `main`. Lần hợp nhất này chưa đưa các nhánh Messaging vào `main`; lịch sử/gửi/nhận tin và thu hồi chat còn cần tích hợp với người phụ trách Messaging. Người dùng tự push; trạng thái remote cần kiểm tra khi bàn giao, không suy từ báo cáo kiểm thử. Bằng chứng mới của lần hợp nhất ghi tại [kiểm chứng main](delivery/verification.md#main-merge).
 
 <a id="steps"></a>
 

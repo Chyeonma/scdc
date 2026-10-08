@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddIdentityModule(builder.Configuration);
-builder.Services.AddCommunityModule(builder.Configuration);
+builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.AddMessagingModule(builder.Configuration);
 
 builder.Services.AddControllers();
@@ -37,7 +37,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "SCDC modular monolith. Identity v1 is active; Community and Messaging are at foundation stage."
+        Description = "SCDC modular monolith. Identity v1 and Community create/read APIs are active; Messaging is at foundation stage."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -51,6 +51,8 @@ builder.Services.AddSwaggerGen(options =>
         [new OpenApiSecuritySchemeReference("Bearer", document, null)] = []
     });
     options.OperationFilter<AuthenticationOperationFilter>();
+    options.OperationFilter<CommunityServerViewOperationFilter>();
+    options.SchemaFilter<CommunityResponseSchemaFilter>();
 });
 
 var app = builder.Build();

@@ -44,7 +44,7 @@ Mỗi lần thao tác cần có người thực hiện đã được cấp quy�
 | [Nginx](../clients/WebClient/nginx.conf) có `/healthz`, proxy API/hub | `/healthz` chỉ trả chuỗi tĩnh; access log mặc định cần kiểm tra query nhạy cảm trước dùng production |
 | [Program.cs](../services/SCDC.Api/Program.cs) và [IdentityModule](../services/Modules/Identity/IdentityModule.cs) | Swagger bật trong Development; cần cấu hình proxy/HTTPS/CORS và thử đường truy cập thực tế |
 | [appsettings.json](../services/SCDC.Api/appsettings.json) | Connection string/signing key trống; `ExposeDevelopmentTokens` mặc định false, chưa có kiểm tra cấm bật ngoài Development |
-| Identity có nghiệp vụ; Community/Messaging ở Foundation | Chưa có triển khai chat/realtime/media, worker retention hoặc sổ bảo vệ độc lập; không dùng UI mẫu để ký nghiệm thu các phần này |
+| Identity và các gói Community đã có nghiệp vụ trên `main`; Messaging có nền module/lifecycle tạo space | Các nhánh tin nhắn/realtime chưa được tích hợp vào `main`; chưa có media, worker retention hoặc sổ bảo vệ độc lập. Xem [phạm vi và bằng chứng Community](features/community/status.md) trước khi nghiệm thu |
 
 Chi tiết cấu hình có trong [hướng dẫn phát triển](development.md#configuration). Production phải kiểm tra giá trị cấu hình thực sự được nạp: environment phù hợp, signing key riêng, token Development tắt, origin hợp lệ, domain liên kết email đúng và DB không mở trực tiếp cho browser. Kiểm tra từ response/log đã lọc; không dump toàn environment hoặc connection string vào hồ sơ.
 

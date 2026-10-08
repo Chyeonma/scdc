@@ -1,6 +1,6 @@
 # SCDC — Kiến trúc và quy ước tích hợp
 
-Cập nhật: 2026-10-08. MVP giữ một API host Modular Monolith; chuyển microservice thuộc v1 theo DEC-116. Code chưa chuyển sang microservice. Hiện trạng mục 1 và bảng module đối chiếu `main`; các gói Community trên feature có phạm vi riêng tại [status](features/community/status.md). Các quyết định sản phẩm được quản lý ở decisions.md; phạm vi từng mốc ở [MVP](releases/mvp.md) và [v1](releases/v1.md).
+Cập nhật: 2026-10-08. MVP giữ một API host Modular Monolith; chuyển microservice thuộc v1 theo DEC-116. Code chưa chuyển sang microservice. Hiện trạng mục 1 và bảng module đối chiếu `main` sau khi hợp nhất `feat/community-channels`; phạm vi Community tại [status](features/community/status.md). Các quyết định sản phẩm được quản lý ở decisions.md; phạm vi từng mốc ở [MVP](releases/mvp.md) và [v1](releases/v1.md).
 
 Kiến trúc `main` được đối chiếu từ source và compose.yaml. REST/SignalR và quy ước ID/cursor cho DM đã chọn DEC-081; phân quyền HTTP/transaction đã có proof trên feature Community, Messaging/Hub/Media còn phần tích hợp cần kiểm chứng. Microservice được chuyển ở giai đoạn V1-0 sau MVP.
 
@@ -17,25 +17,28 @@ Kiến trúc `main` được đối chiếu từ source và compose.yaml. REST/S
 
 ## 1. Hệ thống hiện tại
 
-Phần hiện trạng bên dưới đối chiếu code `main`; tiến độ các gói Community trên nhánh feature được quản lý riêng tại [status.md](features/community/status.md).
+Phần hiện trạng bên dưới đối chiếu code `main` sau khi hợp nhất `feat/community-channels`; tiến độ và bằng chứng Community được quản lý tại [status.md](features/community/status.md).
 
 ```mermaid
 flowchart LR
     Web[WebClient · React 19 / Vite] -->|HTTP /api/v1| Api[SCDC.Api · .NET 10 · cổng 5026]
     subgraph Host[Module trong cùng tiến trình API]
         Identity[Identity · Active]
-        Community[Community · Foundation]
+        Community[Community · Active]
         Messaging[Messaging · Foundation]
     end
     Api --> Identity
     Api --> Community
     Api --> Messaging
     Identity -->|EF Core| Pg[(PostgreSQL 18)]
+    Community -->|EF Core / Npgsql| Pg
+    Community -->|Lifecycle tạo space| Messaging
+    Messaging -->|Npgsql| Pg
 ```
 
 Compose hiện có ba service: `web-client` (cổng 3000), `chat-service` (5026) và `postgres` (5432). Không có Gateway, Redis, MinIO, LiveKit hoặc worker đang chạy trong compose.
 
-`SCDC.Api` đăng ký ba module và map controllers. Identity có endpoint và implementation. Community/Messaging đăng ký mô tả module; chưa có API nghiệp vụ hoặc SignalR Hub. Giao diện chat/cộng đồng có dữ liệu mẫu, không chứng minh backend các tính năng đã hoạt động.
+`SCDC.Api` đăng ký ba module và map controllers. Identity có endpoint và implementation. Community có API/UI tạo/xem, tìm/tham gia trực tiếp, role/assignment và phòng text/ACL. Messaging đăng ký mô tả module Foundation và lifecycle tạo space trong transaction caller; các nhánh tin nhắn/SignalR chưa được hợp nhất vào `main`. Giao diện chat mẫu còn lại không chứng minh backend tin nhắn đã hoạt động.
 
 Nguồn đối chiếu: [Program.cs](../services/SCDC.Api/Program.cs), [compose.yaml](../compose.yaml), [package.json](../clients/WebClient/package.json), [CommunityModule](../services/Modules/Community/CommunityModule.cs), [MessagingModule](../services/Modules/Messaging/MessagingModule.cs).
 
@@ -49,17 +52,17 @@ Các interface và transaction/guard bên dưới mô tả source hoặc thiết
 
 | Thành phần trên main | Trách nhiệm | Dữ liệu / hợp đồng | Tình trạng trên main |
 |---|---|---|---|
-| Identity | Tài khoản, mật khẩu, xác minh, phiên, hồ sơ | `identity`; `IUserDirectory` | Có implementation và test tự động |
-| Community | Cộng đồng, thành viên, phòng, lời mời và quyền | `community`; `IChannelAccessChecker` | Nền module; thuật toán quyền trong đặc tả Community |
-| Messaging | DM, tin phòng, lịch sử, thử lại và cập nhật | `messaging`; `IRealtimeAccessRevoker` | Nền module; hợp đồng DM đề xuất |
-| WebClient | Giao diện, điều hướng và trạng thái phiên | `clients/WebClient`; Identity gọi API thật, phần chat dùng dữ liệu mẫu | Có code frontend; cần tích hợp các tính năng còn lại |
+| Identity | Tài khoản, mật khẩu, xác minh, phiên, hồ sơ | `identity`; `IUserDirectory`, `IAccountAccessGuard` | Có implementation và test tự động |
+| Community | Cộng đồng, thành viên, phòng, lời mời và quyền | `community`; `IChannelAccessGuard` | Có API/UI và guard cho các gói đã chọn; lời mời và lifecycle mở rộng còn thiếu |
+| Messaging | DM, tin phòng, lịch sử, thử lại và cập nhật | `messaging`; `IChatSpaceLifecycle`, `IRealtimeAccessRevoker` | Nền module và create lifecycle đã có; tin/Hub còn cần tích hợp |
+| WebClient | Giao diện, điều hướng và trạng thái phiên | `clients/WebClient`; Identity/Community gọi API thật, phần chat dùng dữ liệu mẫu | Có UI các gói Community; lịch sử/composer/realtime còn cần tích hợp |
 | PostgreSQL | Lưu trữ nghiệp vụ | `identity`, `community`, `messaging`, `moderation`, `audit`, `integration`, `common` | Có schema/seed; có bảng không đồng nghĩa đã có tính năng |
 
 Mỗi module sở hữu dữ liệu của mình; giao tiếp qua interfaces trong `SCDC.Contracts`, không tham chiếu trực tiếp implementation của module khác. Mã ứng dụng không đọc/JOIN bảng của module khác. Các view quan sát trong SQL phục vụ kiểm tra dữ liệu và không thay thế hợp đồng nghiệp vụ.
 
 Tài liệu tính năng tổ chức theo hành trình người dùng; module thực hiện được ghi tại [danh mục UC-COM](features/community/specs/README.md#use-cases) và [bảng nguồn chuẩn/phối hợp](features/community/specs/integration.md#responsibilities). UC-COM-23/24 và route tin phòng nằm trong tài liệu Community nhưng Messaging giữ nghiệp vụ/dữ liệu tin; UC-COM-17/25 phối hợp theo phần trách nhiệm. Vị trí tài liệu, mã use case và prefix API không thay ranh giới module.
 
-Identity có `IdentityDbContext` đã được đăng ký. Tiến độ Community theo nhánh được quản lý tại [status.md](features/community/status.md), gồm phạm vi đã có trên feature và trạng thái merge. Messaging trên main có nền module; trên feature Community đã có lifecycle tạo chat space, chưa có writer tin/Hub. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
+Identity có `IdentityDbContext` đã được đăng ký. Community có persistence và shared transaction scope; tiến độ và trạng thái merge được quản lý tại [status.md](features/community/status.md). Messaging trên `main` có nền module và lifecycle tạo chat space, chưa nhận writer tin/Hub từ các nhánh Messaging. Các interface `IMessagingService`, `IFileStorageService`, `ICallCoordinator`, `IOutboxDispatcher` trong docs cũ là định hướng, chưa phải hợp đồng đã tồn tại trong source.
 
 Schema SQL: [schema.sql](../database/postgres/schema.sql). Dữ liệu mẫu: [seed.sql](../database/postgres/seed.sql). Mô hình và ràng buộc logic của Messaging nằm trong [thiết kế lưu trữ](shared/messaging/persistence.md#contract-4); API DM ở [thiết kế DM](features/direct-messaging/design/README.md#contracts); quyền xem và thứ tự vai trò/cá nhân nằm trong [Permissions](features/community/specs/permissions.md#permissions).
 
@@ -69,7 +72,7 @@ Identity hiện ghi sự kiện outbox vào `integration.outbox_events`. Chưa c
 
 [Accounts](features/accounts/design/README.md#detailed-design) đã mô tả policy token/cooldown, EmailDelivery/envelope và worker; [Messaging](shared/messaging/README.md#detailed-design) mô tả HMAC, cursor/resume, mapping SQL và SignalR registry. Đây là thiết kế trên nền Modular Monolith cho các phần chưa triển khai; khi chuyển sang microservice ở v1 phải điều chỉnh các giả định một host theo [mục tiêu](#target).
 
-`IAccountAccessGuard` và transaction scope đã được triển khai/kiểm chứng trên chuỗi feature Community: Identity giữ kiểm tra/row lock tới commit của caller. `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi kết nối theo session vẫn thuộc thiết kế DM. BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module; mỗi module chỉ đọc dữ liệu mình sở hữu. Guard đã có proof nền, còn writer tin/Hub dùng guard và session revocation đang kết nối cần proof riêng; không suy IUserDirectory summary khác null thành đủ quyền gửi.
+`IAccountAccessGuard` và transaction scope đã được triển khai/kiểm chứng trên chuỗi feature Community và hợp nhất vào `main`: Identity giữ kiểm tra/row lock tới commit của caller. `IAuthenticatedSessionReader`, `IUserSearchDirectory` và thu hồi kết nối theo session vẫn thuộc thiết kế DM. BuildingBlocks cung cấp scope, Contracts cung cấp lời gọi giữa module; mỗi module chỉ đọc dữ liệu mình sở hữu. Guard đã có proof nền, còn writer tin/Hub dùng guard và session revocation đang kết nối cần proof riêng; không suy IUserDirectory summary khác null thành đủ quyền gửi.
 
 DM wire `sequence` ánh xạ field per-space mới `conversation_sequence`, giữ identity global legacy riêng; schema/migration hiện chưa thay. OpenAPI HTTP và JSON Schema realtime có nhãn design-draft; API Swagger vẫn được sinh từ source.
 

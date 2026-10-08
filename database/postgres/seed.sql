@@ -98,22 +98,11 @@ VALUES
     ('01990000-0000-7200-8000-000000000003', '01990000-0000-7000-8000-000000000004', 'registration_succeeded', '192.168.1.40', 'Demo browser', '{"email_verified":false}'::jsonb, now() - interval '10 minutes'),
     ('01990000-0000-7200-8000-000000000004', '01990000-0000-7000-8000-000000000004', 'email_verification_requested', '192.168.1.40', 'Demo browser', '{}'::jsonb, now() - interval '9 minutes');
 
--- Permission catalog.
-INSERT INTO community.permissions (code, description)
-VALUES
-    ('manage_server', 'Cap nhat thong tin va cau hinh server'),
-    ('manage_channels', 'Tao, sua va xoa channel'),
-    ('manage_roles', 'Tao role va gan quyen'),
-    ('invite_members', 'Tao loi moi vao server'),
-    ('kick_members', 'Moi thanh vien khoi server'),
-    ('ban_members', 'Cam thanh vien'),
-    ('read_messages', 'Doc lich su tin nhan'),
-    ('send_messages', 'Gui tin nhan'),
-    ('edit_own_messages', 'Sua tin nhan cua chinh minh'),
-    ('delete_messages', 'Xoa tin nhan cua thanh vien'),
-    ('attach_files', 'Gui file dinh kem'),
-    ('add_reactions', 'Them reaction'),
-    ('mention_everyone', 'Mention tat ca thanh vien');
+-- Community v1 catalog; migration already installs these codes.
+INSERT INTO community.permissions(code,description) VALUES
+    ('manage_channels','Quan ly phong'), ('manage_invites','Quan ly loi moi'),
+    ('review_join_requests','Duyet yeu cau tham gia'), ('manage_join_mode','Doi che do tham gia'),
+    ('manage_channel_access','Quan ly quyen xem phong'), ('channel_view','Xem phong') ON CONFLICT DO NOTHING;
 
 -- One direct conversation, one group conversation and two server channels.
 INSERT INTO messaging.spaces
@@ -143,9 +132,9 @@ VALUES
     ('01990000-0000-7300-8000-000000000002', '01990000-0000-7000-8000-000000000003', 1, 1, now() - interval '14 days');
 
 INSERT INTO community.servers
-    (id, owner_user_id, name, slug, description, status, created_at, updated_at)
+    (id, owner_user_id, name, slug, description, status, created_at, updated_at, visibility, join_mode, search_name)
 VALUES
-    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000001', 'SCDC Community', 'scdc-community', 'Server mẫu mô tả luồng dữ liệu thực tế của SCDC.', 1, now() - interval '30 days', now() - interval '30 days');
+    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000001', 'SCDC Community', 'scdc-community', 'Server mẫu mô tả luồng dữ liệu thực tế của SCDC.', 1, now() - interval '30 days', now() - interval '30 days', 1, 1, 'scdc community');
 
 INSERT INTO community.server_members
     (server_id, user_id, nickname, status, joined_at, invited_by_user_id)
@@ -155,55 +144,43 @@ VALUES
     ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000003', 'Charlie', 1, now() - interval '28 days', '01990000-0000-7000-8000-000000000001');
 
 INSERT INTO community.channels
-    (space_id, server_id, name, topic, visibility, position, created_at, updated_at)
+    (space_id, server_id, name, topic, default_view, position, created_at, updated_at, name_key)
 VALUES
-    ('01990000-0000-7300-8000-000000000003', '01990000-0000-7400-8000-000000000001', 'general', 'Trao đổi chung của dự án', 1, 0, now() - interval '30 days', now() - interval '30 days'),
-    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', 'backend', 'Thảo luận API và database', 1, 1, now() - interval '30 days', now() - interval '30 days');
+    ('01990000-0000-7300-8000-000000000003', '01990000-0000-7400-8000-000000000001', 'general', 'Trao đổi chung của dự án', 1, 0, now() - interval '30 days', now() - interval '30 days', 'general'),
+    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', 'backend', 'Thảo luận API và database', 1, 1, now() - interval '30 days', now() - interval '30 days', 'backend');
 
 INSERT INTO community.roles
-    (id, server_id, name, color, position, is_default, is_system, created_at, updated_at)
+    (id, server_id, name, color, position, is_default, is_system, created_at, updated_at, name_key)
 VALUES
-    ('01990000-0000-7500-8000-000000000001', '01990000-0000-7400-8000-000000000001', 'Owner',     '#E53935', 100, false, true,  now() - interval '30 days', now() - interval '30 days'),
-    ('01990000-0000-7500-8000-000000000002', '01990000-0000-7400-8000-000000000001', 'Moderator', '#1E88E5',  50, false, false, now() - interval '30 days', now() - interval '30 days'),
-    ('01990000-0000-7500-8000-000000000003', '01990000-0000-7400-8000-000000000001', 'Member',    '#757575',   0, true,  true,  now() - interval '30 days', now() - interval '30 days');
+    ('01990000-0000-7500-8000-000000000001', '01990000-0000-7400-8000-000000000001', 'Admins',    '#E53935', 100, false, false,  now() - interval '30 days', now() - interval '30 days', 'admins'),
+    ('01990000-0000-7500-8000-000000000002', '01990000-0000-7400-8000-000000000001', 'Moderator', '#1E88E5',  50, false, false, now() - interval '30 days', now() - interval '30 days', 'moderator'),
+    ('01990000-0000-7500-8000-000000000003', '01990000-0000-7400-8000-000000000001', '@everyone', '#757575',   0, true,  true,  now() - interval '30 days', now() - interval '30 days', '@everyone');
 
 INSERT INTO community.role_permissions (role_id, permission_code)
 SELECT '01990000-0000-7500-8000-000000000001'::uuid, code
-FROM community.permissions;
+FROM community.permissions
+WHERE code IN ('manage_channels','manage_invites','review_join_requests','manage_join_mode','manage_channel_access');
 
-INSERT INTO community.role_permissions (role_id, permission_code)
-VALUES
-    ('01990000-0000-7500-8000-000000000002', 'invite_members'),
-    ('01990000-0000-7500-8000-000000000002', 'kick_members'),
-    ('01990000-0000-7500-8000-000000000002', 'read_messages'),
-    ('01990000-0000-7500-8000-000000000002', 'send_messages'),
-    ('01990000-0000-7500-8000-000000000002', 'edit_own_messages'),
-    ('01990000-0000-7500-8000-000000000002', 'delete_messages'),
-    ('01990000-0000-7500-8000-000000000002', 'attach_files'),
-    ('01990000-0000-7500-8000-000000000002', 'add_reactions'),
-    ('01990000-0000-7500-8000-000000000003', 'read_messages'),
-    ('01990000-0000-7500-8000-000000000003', 'send_messages'),
-    ('01990000-0000-7500-8000-000000000003', 'edit_own_messages'),
-    ('01990000-0000-7500-8000-000000000003', 'attach_files'),
-    ('01990000-0000-7500-8000-000000000003', 'add_reactions');
+INSERT INTO community.role_permissions (role_id, permission_code) VALUES
+    ('01990000-0000-7500-8000-000000000002', 'manage_channels'),
+    ('01990000-0000-7500-8000-000000000002', 'manage_invites');
 
 INSERT INTO community.member_roles
-    (server_id, user_id, role_id, assigned_by_user_id, assigned_at)
+    (server_id, user_id, role_id, assigned_by_user_id, assigned_at, membership_id)
 VALUES
-    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000001', '01990000-0000-7500-8000-000000000001', NULL, now() - interval '30 days'),
-    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000002', '01990000-0000-7500-8000-000000000002', '01990000-0000-7000-8000-000000000001', now() - interval '29 days'),
-    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000003', '01990000-0000-7500-8000-000000000003', '01990000-0000-7000-8000-000000000001', now() - interval '28 days');
+    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000001', '01990000-0000-7500-8000-000000000001', NULL, now() - interval '30 days', (SELECT membership_id FROM community.server_members WHERE server_id='01990000-0000-7400-8000-000000000001' AND user_id='01990000-0000-7000-8000-000000000001')),
+    ('01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000002', '01990000-0000-7500-8000-000000000002', '01990000-0000-7000-8000-000000000001', now() - interval '29 days', (SELECT membership_id FROM community.server_members WHERE server_id='01990000-0000-7400-8000-000000000001' AND user_id='01990000-0000-7000-8000-000000000002'));
 
--- Member role is denied send in #backend, while Bob gets an explicit user allow.
+-- @everyone denies view in #backend; Bob gets an explicit personal allow (policy fixture).
 INSERT INTO community.channel_role_overrides
     (space_id, server_id, role_id, permission_code, effect)
 VALUES
-    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', '01990000-0000-7500-8000-000000000003', 'send_messages', 2);
+    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', '01990000-0000-7500-8000-000000000003', 'channel_view', 2);
 
 INSERT INTO community.channel_user_overrides
-    (space_id, server_id, user_id, permission_code, effect)
+    (space_id, server_id, user_id, permission_code, effect, membership_id)
 VALUES
-    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000002', 'send_messages', 1);
+    ('01990000-0000-7300-8000-000000000004', '01990000-0000-7400-8000-000000000001', '01990000-0000-7000-8000-000000000002', 'channel_view', 1, (SELECT membership_id FROM community.server_members WHERE server_id='01990000-0000-7400-8000-000000000001' AND user_id='01990000-0000-7000-8000-000000000002'));
 
 INSERT INTO community.invites
     (id, server_id, code_hash, created_by_user_id, default_role_id, max_uses, use_count, expires_at, created_at)

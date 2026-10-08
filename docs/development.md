@@ -36,7 +36,7 @@ docker compose up -d --build
 | Health | `http://localhost:5026/api/v1/health` |
 | PostgreSQL | `localhost:5432` |
 
-Compose khởi tạo PostgreSQL, API và web. Trên `main`, Identity gọi backend thật, Community/Messaging còn nền module. Trên feature, các gói Community đã có API/UI thật theo [status](features/community/status.md); khởi chạy cần HMAC/keyring Community, Compose yêu cầu `COMMUNITY_OPERATION_KEY` bền trong `.env` hoặc môi trường. Hub/tin phòng chưa có runtime. Không suy chức năng từ giao diện dữ liệu mẫu.
+Compose khởi tạo PostgreSQL, API và web. Trên `main`, Identity và các gói tạo/xem, tìm/tham gia, role/assignment, phòng text/ACL của Community đã có API/UI thật theo [status](features/community/status.md). Khởi chạy cần HMAC/keyring Community; Compose yêu cầu `COMMUNITY_OPERATION_KEY` bền trong `.env` hoặc môi trường. DB mới có migration 001–004 trong bootstrap; DB đã có dữ liệu cần [nâng cấp explicit](features/community/development.md#migration). Messaging trên `main` mới có nền module và lifecycle tạo chat space; Hub/tin phòng còn cần tích hợp từ các nhánh Messaging.
 
 <a id="container-engines"></a>
 

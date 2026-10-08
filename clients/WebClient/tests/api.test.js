@@ -177,3 +177,40 @@ test('without Web Locks each tab keeps an independent session and deduplicates i
   assert.deepEqual(sentTokens.sort(), ['first-tab', 'second-tab']);
   assert.equal(JSON.parse(app.storage.get(sessionKey)).refreshToken, 'refresh-1');
 });
+
+test('actor-bound request is rejected before sending when another account is signed in', async () => {
+  let calls = 0;
+  const app = browser(rotatedSession);
+  const client = await app.openTab(async () => { calls++; return response(200, {}); });
+  await assert.rejects(client.api('/servers', { actorId: 'user-2' }), (error) => error.problem.errorCode === 'CLIENT_SESSION_CHANGED');
+  assert.equal(calls, 0);
+});
+test('account changed during proactive refresh cannot send an old actor operation with the new token', async () => {
+  const started = deferred(), released = deferred();
+  const app = browser();
+  const sent = [];
+  const client = await app.openTab(async (url) => { sent.push(url); started.resolve(); return released.promise; });
+  const pending = client.api('/servers', { actorId: 'user-1', method: 'POST', body: {}, retry: false });
+  await started.promise;
+  client.emitSession({ ...rotatedSession, user: { id: 'user-2' } });
+  released.resolve(response(200, rotatedSession));
+  await assert.rejects(pending, (error) => error.problem.errorCode === 'CLIENT_SESSION_CHANGED');
+  assert.deepEqual(sent, ['/api/v1/auth/refresh']);
+});
+test('late private response is discarded after actor changes, including while parsing JSON', async () => {
+  const started = deferred(), released = deferred();
+  const app = browser(rotatedSession);
+  const client = await app.openTab(async () => ({ ok: true, status: 200, json: () => { started.resolve(); return released.promise; } }));
+  const pending = client.api('/servers/private', { actorId: 'user-1' });
+  await started.promise;
+  client.emitSession({ ...rotatedSession, user: { id: 'user-2' } });
+  released.resolve({ name: 'Private old account data' });
+  await assert.rejects(pending, (error) => error.problem.errorCode === 'CLIENT_SESSION_CHANGED');
+});
+test('create-style POST does not refresh and replay automatically after a 401', async () => {
+  const app = browser(rotatedSession);
+  let calls = 0;
+  const client = await app.openTab(async (url) => { calls++; assert.equal(url, '/api/v1/servers'); return response(401, {}); });
+  await assert.rejects(client.api('/servers', { actorId: 'user-1', method: 'POST', body: {}, retry: false }), (error) => error.status === 401);
+  assert.equal(calls, 1);
+});
