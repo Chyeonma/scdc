@@ -29,7 +29,9 @@ services:
       Modules__Identity__SigningKey: ${DM_IDENTITY_SIGNING_KEY:?Run Init first}
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Cors__AllowedOrigins__0: http://localhost:${DM_WEB_PORT:-15300}
-      # Reserved for P1/P2: P0 Foundation does not consume these settings.
+      Modules__Identity__UserSearch__CursorKeyRingPath: /app/dm-keys/cursor
+      Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-acceptance
+      # Fingerprint/history settings reserved for later Messaging tasks.
       Modules__Messaging__CursorKeyRingPath: /app/dm-keys/cursor
       Modules__Messaging__FingerprintKeyDirectory: /app/dm-keys/hmac
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
@@ -60,6 +62,8 @@ services:
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
       Modules__Identity__SigningKey: ${DM_IDENTITY_SIGNING_KEY}
       Modules__Identity__ExposeDevelopmentTokens: "true"
+      Modules__Identity__UserSearch__CursorKeyRingPath: /artifacts/user-search-keys
+      Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-integration-tests
     volumes:
       - .:/workspace:ro
       - ./.dm-acceptance/backend-artifacts:/artifacts
@@ -67,7 +71,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["dotnet", "test", "SCDC.slnx", "--configuration", "Release", "--artifacts-path", "/artifacts", "--results-directory", "/artifacts/test-results", "--logger", "trx;LogFileName=dm-p0-baseline.trx"]
+    command: ["dotnet", "test", "SCDC.slnx", "--configuration", "Release", "--artifacts-path", "/artifacts", "--results-directory", "/artifacts/test-results", "--logger", "trx;LogFileName=dm-acceptance.trx"]
 
 volumes:
   dm-postgres-data:

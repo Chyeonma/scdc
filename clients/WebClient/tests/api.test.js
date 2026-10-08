@@ -58,7 +58,7 @@ function browser(initialSession = expiredSession) {
         if (event === 'storage') tab.storageListener = listener;
       },
     };
-    const module = new vm.SourceTextModule(source, { context: vm.createContext({ window, fetch }) });
+    const module = new vm.SourceTextModule(source, { context: vm.createContext({ window, fetch, URLSearchParams }) });
     await module.link(() => { throw new Error('Unexpected import'); });
     await module.evaluate();
     return module.namespace;
@@ -176,4 +176,29 @@ test('without Web Locks each tab keeps an independent session and deduplicates i
   await Promise.all([first.getAccessToken(), first.getAccessToken(), second.getAccessToken()]);
   assert.deepEqual(sentTokens.sort(), ['first-tab', 'second-tab']);
   assert.equal(JSON.parse(app.storage.get(sessionKey)).refreshToken, 'refresh-1');
+});
+
+test('search safely encodes literal wildcard/query/cursor and forwards abort signal', async () => {
+  const abort = new AbortController();
+  const app = browser(rotatedSession);
+  const tab = await app.openTab(async (url, options) => {
+    const parsed = new URL(url, 'http://localhost');
+    assert.equal(parsed.pathname, '/api/v1/users/search');
+    assert.equal(parsed.searchParams.get('q'), 'Bảo %_\\');
+    assert.equal(parsed.searchParams.get('cursor'), 'a+b/c=');
+    assert.equal(parsed.searchParams.get('limit'), '10');
+    assert.equal(options.method, 'GET');
+    assert.equal(options.signal, abort.signal);
+    assert.equal(options.headers.Authorization, 'Bearer access-2');
+    return response(200, { items: [], nextCursor: null });
+  });
+  await tab.searchUsers('Bảo %_\\', { cursor: 'a+b/c=', limit: 10, signal: abort.signal });
+});
+
+test('search 503 is surfaced without retry or mock fallback', async () => {
+  let requests = 0;
+  const app = browser(rotatedSession);
+  const tab = await app.openTab(async () => { requests++; return response(503, { errorCode: 'AUTHORITY_UNAVAILABLE' }); });
+  await assert.rejects(tab.searchUsers('Bảo'), error => error.status === 503 && error.problem.errorCode === 'AUTHORITY_UNAVAILABLE');
+  assert.equal(requests, 1);
 });

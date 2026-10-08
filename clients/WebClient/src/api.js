@@ -281,3 +281,9 @@ export async function updateMe(profile) {
     body: profile,
   });
 }
+
+export async function searchUsers(q, { cursor = null, limit = 20, signal } = {}) {
+  const parameters = new URLSearchParams({ q, limit: String(limit) });
+  if (cursor !== null) parameters.set('cursor', cursor);
+  return api(`/users/search?${parameters}`, { signal });
+}

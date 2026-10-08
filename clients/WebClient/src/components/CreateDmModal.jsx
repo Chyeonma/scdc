@@ -1,117 +1,96 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { searchUsers } from '../api.js';
 
-export function CreateDmModal({
-  onClose,
-  onStartDm,
-  notify,
-}) {
-  const [username, setUsername] = useState('');
-  const [isGroup, setIsGroup] = useState(false);
-  const [groupName, setGroupName] = useState('');
+export function CreateDmModal({ onClose, initialQuery = '' }) {
+  const [q, setQ] = useState(initialQuery);
+  const [items, setItems] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [selected, setSelected] = useState([]);
+  const [status, setStatus] = useState('idle');
+  const [retryCursor, setRetryCursor] = useState(null);
+  const generation = useRef(0);
+  const controller = useRef(null);
+  const searchKey = q.trim().normalize('NFC');
+  const valid = searchKey.length >= 2 && searchKey.length <= 64;
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    const cleanUsername = username.trim().toLowerCase();
-    if (!cleanUsername) return;
-
-    if (isGroup) {
-      onStartDm({
-        spaceId: `dm-group-${Date.now()}`,
-        spaceType: 2,
-        name: groupName.trim() || `Nhóm của @${cleanUsername}`,
-        membersCount: 2,
-        user: {
-          id: `usr-${Date.now()}`,
-          username: cleanUsername,
-          displayName: cleanUsername,
-          status: 'online',
-        },
-        lastMessage: 'Đã tạo nhóm trò chuyện.',
-        unreadCount: 0,
-      });
-      notify?.('success', `Đã tạo nhóm trò chuyện với @${cleanUsername}.`);
-    } else {
-      onStartDm({
-        spaceId: `dm-${Date.now()}`,
-        spaceType: 1,
-        user: {
-          id: `usr-${Date.now()}`,
-          username: cleanUsername,
-          displayName: cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
-          status: 'online',
-          bio: 'Thành viên SCDC.',
-        },
-        lastMessage: 'Bắt đầu cuộc trò chuyện mới.',
-        unreadCount: 0,
-      });
-      notify?.('success', `Đã mở cuộc trò chuyện với @${cleanUsername}.`);
+  async function load(query, cursor, ticket) {
+    controller.current?.abort();
+    const requestController = new AbortController();
+    controller.current = requestController;
+    setStatus('loading');
+    setRetryCursor(cursor);
+    try {
+      const result = await searchUsers(query, { cursor, limit: 20, signal: requestController.signal });
+      if (generation.current !== ticket || requestController.signal.aborted) return;
+      setItems(previous => cursor
+        ? [...new Map([...previous, ...result.items].map(user => [user.id, user])).values()]
+        : result.items);
+      setNextCursor(result.nextCursor);
+      setStatus('success');
+    } catch (error) {
+      if (generation.current !== ticket || requestController.signal.aborted) return;
+      setStatus('error');
     }
-    onClose();
+  }
+
+  useEffect(() => {
+    const ticket = ++generation.current;
+    setItems([]); setNextCursor(null); setStatus('idle');
+    if (!valid) return;
+    const timer = setTimeout(() => load(searchKey, null, ticket), 250);
+    return () => { clearTimeout(timer); controller.current?.abort(); generation.current++; };
+  }, [q]);
+
+  function changeQuery(value) {
+    // Invalidate synchronously, before effects run, even if fetch ignores abort.
+    generation.current++; controller.current?.abort();
+    setItems([]); setNextCursor(null); setStatus('idle'); setQ(value);
+  }
+
+  function toggleRecipient(user) {
+    setSelected(previous => previous.some(item => item.id === user.id)
+      ? previous.filter(item => item.id !== user.id)
+      : [...previous, user]);
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <section className="modal-card dm-search" role="dialog" aria-modal="true" aria-labelledby="dm-search-title" onClick={e => e.stopPropagation()}>
         <div className="modal-card__header">
-          <h2>Bắt đầu cuộc trò chuyện mới</h2>
-          <p>Nhập username của người dùng bạn muốn nhắn tin trực tiếp.</p>
+          <h2 id="dm-search-title">Tìm người nhận</h2>
+          <p>Tìm bằng tên tài khoản hoặc tên hiển thị.</p>
         </div>
-
-        <form onSubmit={handleSubmit} className="modal-form">
-          <div className="tab-pills">
-            <button
-              type="button"
-              className={`pill-btn ${!isGroup ? 'is-active' : ''}`}
-              onClick={() => setIsGroup(false)}
-            >
-              👤 Tin nhắn 1-1
+        {selected.length > 0 && <section className="dm-search__selection" aria-label="Người đã chọn">
+          <p role="status">Đã chọn {selected.length} người</p>
+          <ul className="dm-search__chips">
+            {selected.map(user => <li key={user.id}>
+              <span><strong>{user.displayName}</strong> @{user.username}</span>
+              <button type="button" aria-label={`Bỏ chọn @${user.username}`} onClick={() => toggleRecipient(user)}>×</button>
+            </li>)}
+          </ul>
+          <button type="button" className="btn btn--secondary" onClick={() => setSelected([])}>Bỏ chọn tất cả</button>
+        </section>}
+        <label className="form-group">
+          <span>Tên tài khoản hoặc tên hiển thị</span>
+          <input aria-describedby="dm-search-hint" value={q} onChange={e => changeQuery(e.target.value)} autoFocus />
+        </label>
+        <p id="dm-search-hint">{searchKey.length > 64 ? 'Từ khóa tối đa 64 đơn vị UTF-16.' : 'Nhập từ 2 đến 64 đơn vị UTF-16 để tìm người.'}</p>
+        {status === 'loading' && <p role="status">Đang tìm người…</p>}
+        {status === 'success' && items.length === 0 && <p role="status">Không tìm thấy người phù hợp.</p>}
+        {status === 'error' && <div role="alert">
+          <p>Không tải được kết quả. Hãy thử lại.</p>
+          <button type="button" className="btn btn--secondary" onClick={() => load(searchKey, retryCursor, generation.current)}>Thử lại</button>
+        </div>}
+        <ul className="dm-search__results" aria-label="Kết quả tìm người">
+          {items.map(user => <li key={user.id}>
+            <button type="button" className={`dm-search__result ${selected.some(item => item.id === user.id) ? 'is-selected' : ''}`} aria-pressed={selected.some(item => item.id === user.id)} onClick={() => toggleRecipient(user)}>
+              <strong>{selected.some(item => item.id === user.id) && '✓ '}{user.displayName}</strong><span>@{user.username}</span>
             </button>
-            <button
-              type="button"
-              className={`pill-btn ${isGroup ? 'is-active' : ''}`}
-              onClick={() => setIsGroup(true)}
-            >
-              👥 Tạo Nhóm Chat
-            </button>
-          </div>
-
-          {isGroup && (
-            <label className="form-group">
-              <span>TÊN NHÓM</span>
-              <input
-                type="text"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                placeholder="Nhóm Dự án Frontend..."
-              />
-            </label>
-          )}
-
-          <label className="form-group">
-            <span>USERNAME NGƯỜI DÙNG</span>
-            <div className="input-prefix-box">
-              <span>@</span>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="bob"
-                required
-                autoFocus
-              />
-            </div>
-          </label>
-
-          <div className="modal-actions">
-            <button type="button" className="btn btn--secondary" onClick={onClose}>
-              Huỷ
-            </button>
-            <button type="submit" className="btn btn--primary" disabled={!username.trim()}>
-              Bắt đầu trò chuyện
-            </button>
-          </div>
-        </form>
-      </div>
+          </li>)}
+        </ul>
+        {nextCursor && <button type="button" className="btn btn--secondary" disabled={status === 'loading'} onClick={() => load(searchKey, nextCursor, generation.current)}>Tải thêm</button>}
+        <div className="modal-actions"><button type="button" className="btn btn--secondary" onClick={onClose}>Đóng</button></div>
+      </section>
     </div>
   );
 }

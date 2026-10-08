@@ -55,6 +55,12 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+if (args.Contains("--initialize-user-search-keys", StringComparer.Ordinal))
+{
+    await app.Services.InitializeUserSearchKeysAsync();
+    return;
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCors();

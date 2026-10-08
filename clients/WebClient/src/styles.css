@@ -2525,3 +2525,14 @@ button:disabled {
     opacity: 1;
   }
 }
+
+.dm-search__results { list-style: none; padding: 0; margin: 12px 0; max-height: 340px; overflow-y: auto; }
+.dm-search__result { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 12px; margin-bottom: 6px; background: var(--bg-secondary, #252732); border: 1px solid transparent; border-radius: 8px; color: inherit; cursor: pointer; }
+.dm-search__result.is-selected, .dm-search__result:focus-visible { border-color: #8597ff; outline: 2px solid #8597ff; }
+.dm-search__result span { opacity: .8; }
+.dm-search__selection { padding: 12px; border-radius: 8px; background: #343950; }
+.dm-search { max-height: 90vh; overflow-y: auto; }
+.dm-search__chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 8px 0 12px; }
+.dm-search__chips li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #8597ff; border-radius: 8px; overflow-wrap: anywhere; }
+.dm-search__chips button { flex-shrink: 0; min-width: 32px; min-height: 32px; background: transparent; color: inherit; border: none; font-size: 20px; cursor: pointer; }
+.dm-search__chips button:focus-visible { outline: 2px solid #8597ff; outline-offset: 2px; }
