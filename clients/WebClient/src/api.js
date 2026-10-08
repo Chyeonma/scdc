@@ -152,6 +152,7 @@ export async function api(path, options = {}) {
     auth = true,
     retry = true,
     signal,
+    expectedActorId,
   } = options;
 
   const headers = { Accept: 'application/json' };
@@ -161,6 +162,9 @@ export async function api(path, options = {}) {
   }
 
   const accessToken = auth ? await getAccessToken() : '';
+  if (expectedActorId !== undefined && session?.user?.id !== expectedActorId) {
+    throw new ApiError('Phiên đăng nhập đã thay đổi.', 401);
+  }
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
@@ -286,4 +290,9 @@ export async function searchUsers(q, { cursor = null, limit = 20, signal } = {})
   const parameters = new URLSearchParams({ q, limit: String(limit) });
   if (cursor !== null) parameters.set('cursor', cursor);
   return api(`/users/search?${parameters}`, { signal });
+}
+
+export function openDirectConversation(peerUserId, { signal } = {}) {
+  return api('/direct-conversations', { method: 'POST', body: { peerUserId }, retry: false, signal,
+    expectedActorId: session?.user?.id ?? null });
 }

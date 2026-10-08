@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using SCDC.BuildingBlocks.Application;
 using SCDC.Contracts.Identity;
+using SCDC.Contracts.Persistence;
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure;
@@ -42,7 +43,8 @@ public static class IdentityModule
             .Validate(options => options.MaxFailedLoginAttempts > 0, "Lockout threshold must be positive.")
             .ValidateOnStart();
 
-        services.AddDbContext<IdentityDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContext<IdentityDbContext>((provider, options) =>
+            options.UseNpgsql(provider.GetRequiredService<ISharedDatabaseSession>().Connection));
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddSingleton<ITokenService, TokenService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
@@ -50,6 +52,8 @@ public static class IdentityModule
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
+        services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
+        services.AddScoped<IHistoricalUserSummaryReader, HistoricalUserSummaryReader>();
         services.AddScoped<UserSearchKeyInitializer>();
         var searchKeyRing = configuration["Modules:Identity:UserSearch:CursorKeyRingPath"]
             ?? Path.Combine(AppContext.BaseDirectory, ".dm-keys", "user-search");

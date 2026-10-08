@@ -426,6 +426,9 @@ Thực hiện duy nhất DM-P1-T02: tạo hoặc lấy một hội thoại duy n
 Repository: E:\Project\SCDC\scdc.
 Tôi cần tự test frontend và backend bằng dữ liệu mẫu bạn chuẩn bị trước bước tiếp theo.
 
+Yêu cầu bổ sung09/10/2026: tạm chỉ chọn một người; chọn người thứ hai thay người thứ nhất. Chọn nhiều người chưa hoạt động. Chỉ bấm Mở hội thoại mới POST; người vừa nhắn tin ở P1-T03/P2-T01.
+Bản bàn giao hiện chạy tại worktree E:\Project\SCDC\dm-message-integration; dùng git rev-parse HEAD và metadata p1-t02-build.json đối chiếu. Giữ thay đổi checkout gốc scdc.
+
 A. Phạm vi, phụ thuộc và branch
 Task trước: DM-P1-T01. Kiểm tra PASS FE/BE và quyền đi tiếp đã có trong phiên/biên bản. Thiếu xác nhận thì chuẩn bị phần độc lập và dừng phần phụ thuộc, không tự điền PASS hoặc hỏi lại quyền đã cấp.
 Branch `feat/dm-p1-t02-open-conversation`. AC-DM-01/12/13; TC-DM-02/12/24; DM-SQL-01.
@@ -459,7 +462,7 @@ D. Toàn bộ 5 subtask cần hoàn tất
 - P1-T02.1 Triển khai shared transaction/UoW và Identity guard actor/peer giữ khóa tới commit; khóa user theo cùng thứ tự UUID. Messaging gọi Contracts, không query bảng Identity trực tiếp.
 - P1-T02.2 Model/mapping/migration space/cặp/member tối thiểu; UUID v7 server, low/high theo network bytes/DB; giữ unique pair và rollback toàn bộ khi lỗi.
 - P1-T02.3 POST `/direct-conversations` create-or-get 200; reject self/peer không hợp lệ, không rò metadata; giải quyết unique conflict bằng đọc lại an toàn.
-- P1-T02.4 UI click kết quả search mở conversation với hai người từ response, empty state thật; đồng thời click/loading/lỗi không tạo item mẫu.
+- P1-T02.4 UI chỉ chọn một người rồi bấm Mở hội thoại để mở conversation với hai người từ response, empty state thật; đồng thời click/loading/lỗi không tạo item mẫu.
 - P1-T02.5 Test A→B/B→A đồng thời, UUID endian, lỗi giữa transaction, guard cạnh revoke; recipe parallel request và SQL đếm pair/member/space.
 
 E. Môi trường và dữ liệu để tôi test
@@ -498,16 +501,19 @@ Các case C01–C04 dưới đây là kế hoạch, trạng thái Chưa chạy. 
 TEST CASE DM-P1-T02-C01 — A mở B và B mở A nhận cùng DM
 Trạng thái ví dụ: Chưa chạy (planned-not-executed).
 Điều kiện trước:
-- A/B active/verified, chưa có pair trong run case
-- Source writer/UI đã triển khai, chưa có send/history
-Dữ liệu cụ thể: peer B.id và A.id lấy từ manifest.
+- Chụp Snapshot A/B; build bàn giao đã có D-AB từ agent nên lane này nghiệm thu get/reopen; tạo mới bổ sung A/C nếu Snapshot0.
+- A/B active verified; chỉ chọn một người; chưa có send/history/inbox loader.
+Dữ liệu cụ thể: A.id=01a114bc-1e4d-74c7-87eb-8db1734f8aea; B.id=01a114bc-2678-7d79-b136-4d944d6a85fc; D-AB=01a11c8f-534c-761c-8d4a-4930c95bee58; C.id=01a114bc-2b41-7c64-8622-aa1694b2de9b.
 Bước kiểm tra frontend:
-1. A tìm exact dm_demo_bao, chọn B để mở conversation.
-2. B ở profile riêng tìm dm_demo_an, chọn A.
-3. Reload/chọn lại peer, so conversation ID qua response POST và hai tên; trạng thái history rỗng chỉ là empty state.
+1. A login dm_demo_an tại FE15300 bằng DmDemo2026!Local → Direct Messages → dấu+ → tìm Bảo; chọn B rồi C, chỉ một thẻ @dm_demo_chi còn, chưa có POST.
+2. Chọn lại B/@dm_demo_bao → bấm Mở hội thoại → Network POST200 cùng D-AB; tiêu đề Bảo Demo, @dm_demo_bao và Chưa có tin nhắn.
+3. B login ở profile độc lập → tìm dm_demo_an → chọn An → Mở hội thoại; POST cùng ID. Reload A cần tìm/mở B lại (inbox loader chưa có), cùng ID; mở thêm một lần không duplicate.
+4. Chụp Snapshot A/C trước; A chọn C/@dm_demo_chi rồi Mở hội thoại; ID khác D-AB, đúng peer username. BE replay cùng cặp, ghi delta mới chỉ khi baseline0.
 Bước kiểm tra backend:
-1. Bearer A: POST /api/v1/direct-conversations {"peerUserId":"<B.id>"}; lưu id=D-AB.
-2. Bearer B: POST cùng route {"peerUserId":"<A.id>"}; A gọi lại POST với B.
+1. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias B
+2. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias B
+3. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias B -PeerAlias A
+4. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias C # sau FE tạo/reopen C, không thêm lane
 Frontend mong đợi: Hai bên mở đúng peer, cùng D-AB; không có tin mẫu để giả lịch sử.
 Backend mong đợi: Mọi POST 200; cùng id, participants đúng A/B; không user C/email/security state.
 Đối soát DB chỉ đọc:
@@ -516,22 +522,25 @@ Backend mong đợi: Mọi POST 200; cùng id, participants đúng A/B; không u
 Bằng chứng cần lưu:
 - Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.
 - Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret.
-Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; các biến thể trong case đều được kiểm tra, có bằng chứng trên build này. Nếu sai, ghi bước, expected/actual và FAIL; thiếu điều kiện kiểm tra ghi Bị chặn, không ghi PASS.
+Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; người dùng xác nhận trên build bàn giao. Thiếu bằng chứng ghi Bị chặn; sai bước ghi FAIL, không tự đi task kế.
 Sau case: Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng.
 
 TEST CASE DM-P1-T02-C02 — Mở đồng thời không tạo pair trùng
 Trạng thái ví dụ: Chưa chạy (planned-not-executed).
 Điều kiện trước:
-- Dùng pair A/S02 chưa có DM để tách ca C01
-- Agent bàn giao runner barrier/start cùng lúc, không dựa vào click ước lượng
-Dữ liệu cụ thể: 20 POST A→S02 và 20 POST S02→A bắt đầu từ cùng barrier.
+- Dùng pair A/S10 chưa có DM; Snapshot trước phải0, runner chạy trước UI. Nếu đã có, đổi đồng nhất S12 hoặc peer chưa dùng; RequireNewPair sẽ từ chối.
+- Runner helper giữ token RAM, barrier40 request; không chạy đồng thời fault cho cùng pair.
+Dữ liệu cụ thể: 20 POST A→S10 và20 POST S10→A; dm_demo_an / dm_demo_search10; password DmDemo2026!Local. Agent trước đó đã chạy A/S02, không lấy replay S02 làm proof create mới.
 Bước kiểm tra frontend:
-1. Mở A và S02 ở hai profile, cùng chọn peer; ghi POST responses.
-2. Chạy runner song song do agent bàn giao, không tự sửa IDs/token.
-3. Mở lại conversation trên UI sau runner, kiểm tra chỉ một lựa chọn pair.
+1. Chạy runner trước; ghi conversationId duy nhất và before/after counts.
+2. A tìm dm_demo_search10 → chọn → Mở hội thoại; S10 profile riêng tìm dm_demo_an → Mở hội thoại; cả hai POST200 cùng ID runner.
+3. A mở lại S10 hai lần, sidebar chỉ một item cùng ID; double click đang loading không gửi request thứ hai.
 Bước kiểm tra backend:
-1. Runner 40 POST /api/v1/direct-conversations đồng thời, mỗi body peerUserId đúng đối phương.
-2. Collect status/id rồi gọi lại một POST từ mỗi actor sau khi runner kết thúc.
+1. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S10
+2. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Concurrent -PeerAlias S10 -RequireNewPair
+3. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias S10
+4. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias S10 -PeerAlias A
+5. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S10
 Frontend mong đợi: Không có conversation trùng cho cùng pair; UI không duplicate sau load/open lại.
 Backend mong đợi: 40 request hợp lệ đều resolve một ID duy nhất; create unique conflict được xử lý thành get, không trả space thiếu dữ liệu.
 Đối soát DB chỉ đọc:
@@ -540,7 +549,7 @@ Backend mong đợi: 40 request hợp lệ đều resolve một ID duy nhất; c
 Bằng chứng cần lưu:
 - Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.
 - Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret.
-Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; các biến thể trong case đều được kiểm tra, có bằng chứng trên build này. Nếu sai, ghi bước, expected/actual và FAIL; thiếu điều kiện kiểm tra ghi Bị chặn, không ghi PASS.
+Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; người dùng xác nhận trên build bàn giao. Thiếu bằng chứng ghi Bị chặn; sai bước ghi FAIL, không tự đi task kế.
 Sau case: Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng.
 
 TEST CASE DM-P1-T02-C03 — Self và peer pending bị từ chối
@@ -554,41 +563,47 @@ Bước kiểm tra frontend:
 2. Search dm_demo_pending, U không xuất hiện.
 3. Thử recipe gọi REST self/pending được agent cung cấp, quay lại UI kiểm tra không có conversation giả mới.
 Bước kiểm tra backend:
-1. Bearer A: POST direct-conversations {"peerUserId":"<A.id>"}; rồi {"peerUserId":"<U.id>"}.
-2. Đối chiếu status/errorCode chính xác đã chốt P0; không gọi route detail chưa triển khai để giả test quyền.
+1. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias A -ExpectedStatus 400
+2. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias U -ExpectedStatus 404
+3. POST peerUserId="00000000-0000-0000-0000-000000000000", "not-a-uuid" và body{} với Bearer A:400 Common.ValidationFailed; valid UUID ngẫu nhiên404 RESOURCE_NOT_FOUND.
+4. Login phiên REST riêng A; logout đúng refreshToken; dùng chính accessToken cũ POST B.id:401 Common.Unauthorized. Nguyên PowerShell có trong biên bản DM-P1-T02.md; không login mới thay token bị revoke.
 Frontend mong đợi: Self/U không được mở từ search, lỗi REST không thêm item giả.
-Backend mong đợi: Cả hai request không 2xx, không participants/conversation mới; status/errorCode theo contract P0 đã chốt và ghi trước test, không chấp nhận 500.
+Backend mong đợi: Self400 INVALID_PEER; U/unknown404 RESOURCE_NOT_FOUND; missing/null/bad/zero UUID400 Common.ValidationFailed; anonymous/revoked401 Common.Unauthorized. Không create pair/space/member.
 Đối soát DB chỉ đọc:
 - Spaces/pairs/member counts không tăng ở hai request bị từ chối.
 - User U vẫn pending và không có session được cấp.
 Bằng chứng cần lưu:
 - Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.
 - Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret.
-Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; các biến thể trong case đều được kiểm tra, có bằng chứng trên build này. Nếu sai, ghi bước, expected/actual và FAIL; thiếu điều kiện kiểm tra ghi Bị chặn, không ghi PASS.
+Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; người dùng xác nhận trên build bàn giao. Thiếu bằng chứng ghi Bị chặn; sai bước ghi FAIL, không tự đi task kế.
 Sau case: Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng.
 
 TEST CASE DM-P1-T02-C04 — Lỗi giữa transaction rollback nguyên tử
 Trạng thái ví dụ: Chưa chạy (planned-not-executed).
 Điều kiện trước:
-- Pair A/S03 mới; fault deterministic sau insert space và trước commit được agent cung cấp
-- Fault riêng DB test, response harness đã chốt
-Dữ liệu cụ thể: peer S03.id; snapshot pair/space/member trước ca.
+- Pair A/S11 mới; Snapshot phải0, FaultOn -RequireNewPair refuse pair cũ; đổi sang alias chưa dùng nếu cần.
+- Test trigger chỉ DB scdc_dm_acceptance_test, đúng pair A/S11, BEFORE INSERT pair sau SaveChanges space; không developer API production.
+Dữ liệu cụ thể: A/S11: dm_demo_an, dm_demo_search11; peer ID resolve manifest bởi helper; chụp actorSpaceCount, pair/member/message/orphan trước ca.
 Bước kiểm tra frontend:
-1. Bật fault rollback cho actor A/peer S03 theo lệnh task.
-2. A tìm S03 và mở conversation; quan sát lỗi, không empty conversation ID giả.
-3. Tắt fault, bấm mở lại; UI mở đúng conversation thật.
+1. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action FaultOn -PeerAlias S11 -RequireNewPair; A tìm dm_demo_search11 → chọn → Mở hội thoại.
+2. Network503 AUTHORITY_UNAVAILABLE; alert Không mở được hội thoại. Hãy thử lại.; giữ một thẻ @dm_demo_search11, không item/ID giả. BE cũng thất bại cùng pair; Snapshot không tăng.
+3. FaultOff trong finally; bấm lại Mở hội thoại trên modal cũ:200, Người tìm11/@dm_demo_search11, một item. BE replay ID/pair đã FE tạo, không tăng thêm.
 Bước kiểm tra backend:
-1. POST direct-conversations {"peerUserId":"<S03.id>"} trong fault; chờ transaction kết thúc.
-2. Query DB rollback trước retry; sau tắt fault POST lại đúng pair.
+1. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S11
+2. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -PeerAlias S11 -ExpectedStatus 503 # trong fault
+3. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S11 # pair0/member0, actorSpace không tăng
+4. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action FaultOff # luôn chạy trong finally
+5. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -PeerAlias S11 # sau FE retry, cùng ID
+6. powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S11 # pair1/member2/message0/orphan0
 Frontend mong đợi: Request lỗi giữ selection/error; mở lại thành công với ID trả từ server.
-Backend mong đợi: Fault không trả success/ID chưa commit; retry sạch 200. Không coi fault503 của harness là auth rejection.
+Backend mong đợi: Fault503 AUTHORITY_UNAVAILABLE, rollback toàn space/pair/member, không trả success. Sau FaultOff, FE retry tạo200; BE replay200 cùng ID và không thêm hàng.
 Đối soát DB chỉ đọc:
-- Sau rollback: zero pair/member/space mới cho ca; không orphan.
-- Sau retry: đúng một pair/space và hai memberships cho A/S03.
+- Trong fault: pair0/member0/message0, orphan0, actorSpaceCount bằng trước.
+- Sau FE retry và BE replay: pair1/member2/message0/orphan0, actorSpace+1; người FE/BE cùng ID.
 Bằng chứng cần lưu:
 - Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.
 - Lưu HTTP status/errorCode, tập ID/version/counts và bằng chứng browser/DB đã lọc token/secret.
-Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; các biến thể trong case đều được kiểm tra, có bằng chứng trên build này. Nếu sai, ghi bước, expected/actual và FAIL; thiếu điều kiện kiểm tra ghi Bị chặn, không ghi PASS.
+Điều kiện PASS: Toàn bộ kỳ vọng FE/BE/DB đúng; người dùng xác nhận trên build bàn giao. Thiếu bằng chứng ghi Bị chặn; sai bước ghi FAIL, không tự đi task kế.
 Sau case: Tắt fault nếu có; giữ dữ liệu và manifest của run để đối soát. Ca cần trạng thái ban đầu khác dùng dữ liệu/run mới, không drop DB hoặc xóa volume ứng dụng.
 
 H. Bàn giao bắt buộc

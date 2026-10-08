@@ -1,6 +1,6 @@
 # Kế hoạch triển khai nhắn tin riêng SCDC
 
-Cập nhật: **08/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../acceptance/direct-messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
+Cập nhật: **09/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../acceptance/direct-messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
 
 Mục tiêu là bàn giao từng task có thể kiểm tra qua **frontend và backend thật**. Sau mỗi task, người dùng tự test với bộ dữ liệu được cung cấp, xác nhận kết quả rồi mới thực hiện task tiếp theo. Agent tự chạy test kỹ thuật trước bàn giao; kết quả tự động không thay xác nhận của người dùng.
 
@@ -174,7 +174,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ## Tổng hợp phase và task
 
-**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; 18 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 đã triển khai/test bởi agent, Chờ người dùng test; 17 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|
@@ -224,23 +224,23 @@ Branch `feat/dm-p1-t01-user-search`. AC-DM-01/16; TC-DM-01/18. Phụ thuộc P0-
 
 **Bạn test BE:** Cùng q qua Swagger/helper; thử 1/2/64/65 UTF-16, `%/_/\`, cursor đổi q hoặc actor; JSON không có email. DB đối chiếu kết quả/rank đủ người và không ghi membership khi search.
 
-**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Đã merge/push vào `message` tại `d18d9a4`, remote/ancestry và smoke đạt; chưa nghiệm thu tạo DM, chưa được giao P1-T02.
+**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Đã merge/push vào `message` tại `d18d9a4`, remote/ancestry và smoke đạt; chưa nghiệm thu tạo DM, P1-T02 đã được giao ngày09/10/2026, chưa được người dùng nghiệm thu.
 
 ### DM-P1-T02 tạo hoặc lấy một hội thoại duy nhất
 
 Branch `feat/dm-p1-t02-open-conversation`. AC-DM-01/12/13; TC-DM-02/12/24; DM-SQL-01.
 
-- [ ] P1-T02.1 Triển khai shared transaction/UoW và Identity guard actor/peer giữ khóa tới commit; khóa user theo cùng thứ tự UUID. Messaging gọi Contracts, không query bảng Identity trực tiếp.
-- [ ] P1-T02.2 Model/mapping/migration space/cặp/member tối thiểu; UUID v7 server, low/high theo network bytes/DB; giữ unique pair và rollback toàn bộ khi lỗi.
-- [ ] P1-T02.3 POST `/direct-conversations` create-or-get 200; reject self/peer không hợp lệ, không rò metadata; giải quyết unique conflict bằng đọc lại an toàn.
-- [ ] P1-T02.4 UI click kết quả search mở conversation với hai người từ response, empty state thật; đồng thời click/loading/lỗi không tạo item mẫu.
-- [ ] P1-T02.5 Test A→B/B→A đồng thời, UUID endian, lỗi giữa transaction, guard cạnh revoke; recipe parallel request và SQL đếm pair/member/space.
+- [x] P1-T02.1 Triển khai shared transaction/UoW và Identity guard actor/peer giữ khóa tới commit; khóa user theo cùng thứ tự UUID. Messaging gọi Contracts, không query bảng Identity trực tiếp.
+- [x] P1-T02.2 Model/mapping/migration space/cặp/member tối thiểu; UUID v7 server, low/high theo network bytes/DB; giữ unique pair và rollback toàn bộ khi lỗi.
+- [x] P1-T02.3 POST `/direct-conversations` create-or-get 200; reject self/peer không hợp lệ, không rò metadata; giải quyết unique conflict bằng đọc lại an toàn.
+- [x] P1-T02.4 UI chỉ chọn một người, bấm Mở hội thoại để mở conversation với hai người từ response, empty state thật; đồng thời click/loading/lỗi không tạo item mẫu.
+- [x] P1-T02.5 Test A→B/B→A đồng thời, UUID endian, lỗi giữa transaction, guard cạnh revoke; recipe parallel request và SQL đếm pair/member/space.
 
 **Bạn test FE:** A chọn B, B chọn A, reload/mở lại cùng D-AB; tên đúng và history rỗng. A chọn C ra D-AC khác. Không có thao tác tự nhắn.
 
 **Bạn test BE:** Hai POST song song nhận cùng ID; đúng hai membership, một pair, không space mồ côi; self/peer pending bị từ chối. Disabled peer được test bằng integration fixture, lượt người dùng E2E ở P6-T02. C không được lấy D-AB từ inbox sau task kế. Task này test outsider với các API đã có, không giả endpoint detail chưa có.
 
-**Gate:** Tạo/lấy đúng qua UI/API/DB, atomic/race đạt. Bạn PASS mới làm inbox.
+**Gate:** Agent đã triển khai/test P1-T02; [biên bản và lệnh C01–C04](../acceptance/direct-messaging/DM-P1-T02.md). Chờ người dùng PASS FE/BE trên build bàn giao mới merge vào message và làm inbox. Checkbox trên chỉ xác nhận implementation/test của agent. Theo yêu cầu09/10/2026, tạm chỉ chọn một người; chọn người khác thay lựa chọn trước, chọn nhiều người chưa hoạt động.
 
 ### DM-P1-T03 inbox dữ liệu thật
 

@@ -1,11 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { searchUsers } from '../api.js';
+import { searchUsers, openDirectConversation, sessionStore } from '../api.js';
 
-export function CreateDmModal({ onClose, initialQuery = '' }) {
+export function CreateDmModal({ onClose, onOpened, initialQuery = '' }) {
   const [q, setQ] = useState(initialQuery);
   const [items, setItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [selected, setSelected] = useState([]);
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState(null);
+  const openingController = useRef(null);
+  const openingRef = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; openingController.current?.abort(); }; }, []);
   const [status, setStatus] = useState('idle');
   const [retryCursor, setRetryCursor] = useState(null);
   const generation = useRef(0);
@@ -48,9 +54,27 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
   }
 
   function toggleRecipient(user) {
-    setSelected(previous => previous.some(item => item.id === user.id)
-      ? previous.filter(item => item.id !== user.id)
-      : [...previous, user]);
+    if (openingRef.current) return;
+    setOpenError(null);
+    setSelected(previous => previous[0]?.id === user.id ? [] : [user]);
+  }
+
+  async function openSelected() {
+    if (openingRef.current || selected.length !== 1) return;
+    openingRef.current = true; setOpening(true); setOpenError(null);
+    const actor = sessionStore.getSnapshot()?.user?.id;
+    const requestController = new AbortController(); openingController.current = requestController;
+    try {
+      const conversation = await openDirectConversation(selected[0].id, { signal: requestController.signal });
+      if (!mounted.current || requestController.signal.aborted || sessionStore.getSnapshot()?.user?.id !== actor) return;
+      onOpened(conversation);
+    } catch (error) {
+      if (mounted.current && !requestController.signal.aborted && sessionStore.getSnapshot()?.user?.id === actor)
+        setOpenError(error.status === 404 ? 'Không thể mở hội thoại với người này.' : error.status === 401 ? 'Phiên đăng nhập không còn hợp lệ. Hãy đăng nhập lại.' : 'Không mở được hội thoại. Hãy thử lại.');
+    } finally {
+      openingRef.current = false;
+      if (mounted.current) setOpening(false);
+    }
   }
 
   return (
@@ -65,14 +89,14 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
           <ul className="dm-search__chips">
             {selected.map(user => <li key={user.id}>
               <span><strong>{user.displayName}</strong> @{user.username}</span>
-              <button type="button" aria-label={`Bỏ chọn @${user.username}`} onClick={() => toggleRecipient(user)}>×</button>
+              <button type="button" aria-label={`Bỏ chọn @${user.username}`} disabled={opening} onClick={() => toggleRecipient(user)}>×</button>
             </li>)}
           </ul>
-          <button type="button" className="btn btn--secondary" onClick={() => setSelected([])}>Bỏ chọn tất cả</button>
+          <button type="button" className="btn btn--secondary" disabled={opening} onClick={() => { setSelected([]); setOpenError(null); }}>Bỏ chọn tất cả</button>
         </section>}
         <label className="form-group">
           <span>Tên tài khoản hoặc tên hiển thị</span>
-          <input aria-describedby="dm-search-hint" value={q} onChange={e => changeQuery(e.target.value)} autoFocus />
+          <input aria-describedby="dm-search-hint" disabled={opening} value={q} onChange={e => changeQuery(e.target.value)} autoFocus />
         </label>
         <p id="dm-search-hint">{searchKey.length > 64 ? 'Từ khóa tối đa 64 đơn vị UTF-16.' : 'Nhập từ 2 đến 64 đơn vị UTF-16 để tìm người.'}</p>
         {status === 'loading' && <p role="status">Đang tìm người…</p>}
@@ -83,13 +107,14 @@ export function CreateDmModal({ onClose, initialQuery = '' }) {
         </div>}
         <ul className="dm-search__results" aria-label="Kết quả tìm người">
           {items.map(user => <li key={user.id}>
-            <button type="button" className={`dm-search__result ${selected.some(item => item.id === user.id) ? 'is-selected' : ''}`} aria-pressed={selected.some(item => item.id === user.id)} onClick={() => toggleRecipient(user)}>
+            <button type="button" className={`dm-search__result ${selected.some(item => item.id === user.id) ? 'is-selected' : ''}`} aria-pressed={selected.some(item => item.id === user.id)} disabled={opening} onClick={() => toggleRecipient(user)}>
               <strong>{selected.some(item => item.id === user.id) && '✓ '}{user.displayName}</strong><span>@{user.username}</span>
             </button>
           </li>)}
         </ul>
         {nextCursor && <button type="button" className="btn btn--secondary" disabled={status === 'loading'} onClick={() => load(searchKey, nextCursor, generation.current)}>Tải thêm</button>}
-        <div className="modal-actions"><button type="button" className="btn btn--secondary" onClick={onClose}>Đóng</button></div>
+        {openError && <p role="alert">{openError}</p>}
+        <div className="modal-actions"><button type="button" className="btn btn--primary" disabled={opening || selected.length !== 1} onClick={openSelected}>{opening ? 'Đang mở…' : 'Mở hội thoại'}</button><button type="button" className="btn btn--secondary" onClick={onClose}>Đóng</button></div>
       </section>
     </div>
   );

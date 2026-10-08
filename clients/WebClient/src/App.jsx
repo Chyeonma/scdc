@@ -21,7 +21,6 @@ import {
 
 import {
   INITIAL_SERVERS,
-  INITIAL_DMS,
   INITIAL_MEMBERS,
   INITIAL_MESSAGES,
   INITIAL_THREADS,
@@ -62,8 +61,8 @@ export default function App() {
   const [servers, setServers] = useState(INITIAL_SERVERS);
   const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
   const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
-  const [dms, setDms] = useState(INITIAL_DMS);
-  const [activeDmId, setActiveDmId] = useState(INITIAL_DMS[0].spaceId);
+  const [dms, setDms] = useState([]);
+  const [activeDmId, setActiveDmId] = useState(null);
 
   // Messages & Threads State
   const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
@@ -93,13 +92,28 @@ export default function App() {
 
   // Initialize or fetch current user on session change
   useEffect(() => {
+    let cancelled = false;
+    setCurrentUser(session?.user ?? null);
     if (session?.user) {
-      setCurrentUser(session.user);
       getMe().then((res) => {
-        if (res) setCurrentUser(res);
+        if (!cancelled && res?.id === session.user.id) setCurrentUser(res);
       }).catch(() => {});
     }
+    return () => { cancelled = true; };
   }, [session]);
+
+  useEffect(() => {
+    setDms([]); setActiveDmId(null); setShowCreateDm(false); setReplyingTo(null); setSearchQuery('');
+  }, [session?.user?.id]);
+
+  function handleOpenedDm(conversation) {
+    const peer = conversation.participants.find(user => user.id !== sessionStore.getSnapshot()?.user?.id);
+    if (!peer) return;
+    const dm = { ...conversation, spaceId: conversation.id, spaceType: 1, user: peer };
+    setDms(previous => [...previous.filter(item => item.spaceId !== dm.spaceId), dm]);
+    setActiveDmId(dm.spaceId); setIsHomeActive(true); setShowCreateDm(false);
+    setRightPanelMode(null); setSearchQuery(''); setReplyingTo(null);
+  }
 
   // Active Server & Channel reference
   const activeServer = useMemo(
@@ -140,7 +154,7 @@ export default function App() {
 
   // SignalR Hub Connection Setup
   useEffect(() => {
-    if (!session?.accessToken || !currentSpaceId) return undefined;
+    if (isHomeActive || !session?.accessToken || !currentSpaceId) return undefined;
 
     let disposed = false;
     const connection = new HubConnectionBuilder()
@@ -206,10 +220,11 @@ export default function App() {
         connection.stop();
       }
     };
-  }, [session, currentSpaceId]);
+  }, [session, currentSpaceId, isHomeActive]);
 
   // Send Message Handler
   function handleSendMessage({ content, replyTo, attachments }) {
+    if (isHomeActive) return;
     const newMessage = {
       id: `msg-${Date.now()}`,
       sequenceNo: Date.now(),
@@ -444,7 +459,7 @@ export default function App() {
         {/* Chat Header */}
         <ChatHeader
           title={isHomeActive ? (activeDm?.name || activeDm?.user?.displayName || 'Tin nhắn trực tiếp') : (activeChannel?.name ? `#${activeChannel.name}` : 'Kênh')}
-          topic={isHomeActive ? (activeDm?.user?.bio || '') : (activeChannel?.topic || '')}
+          topic={isHomeActive ? (activeDm?.user ? `@${activeDm.user.username}` : '') : (activeChannel?.topic || '')}
           icon={isHomeActive ? (activeDm?.spaceType === 2 ? '👥' : '@') : (activeChannel?.visibility === 2 ? '🔒' : activeChannel?.visibility === 3 ? '📢' : '#')}
           connectionState={connectionState}
           showMemberList={rightPanelMode === 'memberList'}
@@ -474,10 +489,10 @@ export default function App() {
               </span>
               <h2>
                 {isHomeActive
-                  ? `Cuộc trò chuyện với ${activeDm?.user?.displayName || activeDm?.name}`
+                  ? (activeDm ? `Cuộc trò chuyện với ${activeDm.user.displayName}` : 'Tin nhắn trực tiếp')
                   : `Chào mừng tới #${activeChannel?.name || 'kênh'}`}
               </h2>
-              <p>Đây là điểm khởi đầu của cuộc trò chuyện này. Hãy gửi lời chào đầu tiên!</p>
+              <p>{isHomeActive ? (activeDm ? (activeDm.lastSequence === '0' ? 'Chưa có tin nhắn.' : 'Lịch sử hội thoại chưa được tải.') : 'Tìm một người để bắt đầu cuộc trò chuyện.') : 'Đây là điểm khởi đầu của cuộc trò chuyện này. Hãy gửi lời chào đầu tiên!'}</p>
             </div>
           ) : (
             currentMessages.map((message, index) => {
@@ -514,16 +529,16 @@ export default function App() {
         </div>
 
         {/* Message Composer */}
-        <MessageComposer
+        {!isHomeActive && <MessageComposer
           channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           onSendMessage={handleSendMessage}
-        />
+        />}
       </main>
 
       {/* COLUMN 4: COLLAPSIBLE RIGHT PANEL (MEMBER LIST / THREAD / PINNED) */}
-      <RightPanel
+      {!isHomeActive && <RightPanel
         mode={rightPanelMode}
         members={members}
         onSelectMember={(mem) => setInspectingUser(mem)}
@@ -535,7 +550,7 @@ export default function App() {
         onClosePinned={() => setRightPanelMode(null)}
         onJumpToMessage={() => {}}
         onUnpinMessage={handlePinMessage}
-      />
+      />}
 
       {/* USER SETTINGS MODAL */}
       {showUserSettings && (
@@ -580,6 +595,7 @@ export default function App() {
         <CreateDmModal
           onClose={() => setShowCreateDm(false)}
           key={session?.user?.id}
+          onOpened={handleOpenedDm}
         />
       )}
 

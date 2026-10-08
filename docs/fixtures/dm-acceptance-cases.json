@@ -283,18 +283,21 @@
           "status": "planned-not-executed",
           "title": "A mở B và B mở A nhận cùng DM",
           "preconditions": [
-            "A/B active/verified, chưa có pair trong run case",
-            "Source writer/UI đã triển khai, chưa có send/history"
+            "Chụp Snapshot A/B; build bàn giao đã có D-AB từ agent nên lane này nghiệm thu get/reopen; tạo mới bổ sung A/C nếu Snapshot0.",
+            "A/B active verified; chỉ chọn một người; chưa có send/history/inbox loader."
           ],
-          "data": "peer B.id và A.id lấy từ manifest.",
+          "data": "A.id=01a114bc-1e4d-74c7-87eb-8db1734f8aea; B.id=01a114bc-2678-7d79-b136-4d944d6a85fc; D-AB=01a11c8f-534c-761c-8d4a-4930c95bee58; C.id=01a114bc-2b41-7c64-8622-aa1694b2de9b.",
           "frontend_steps": [
-            "A tìm exact dm_demo_bao, chọn B để mở conversation.",
-            "B ở profile riêng tìm dm_demo_an, chọn A.",
-            "Reload/chọn lại peer, so conversation ID qua response POST và hai tên; trạng thái history rỗng chỉ là empty state."
+            "A login dm_demo_an tại FE15300 bằng DmDemo2026!Local → Direct Messages → dấu+ → tìm Bảo; chọn B rồi C, chỉ một thẻ @dm_demo_chi còn, chưa có POST.",
+            "Chọn lại B/@dm_demo_bao → bấm Mở hội thoại → Network POST200 cùng D-AB; tiêu đề Bảo Demo, @dm_demo_bao và Chưa có tin nhắn.",
+            "B login ở profile độc lập → tìm dm_demo_an → chọn An → Mở hội thoại; POST cùng ID. Reload A cần tìm/mở B lại (inbox loader chưa có), cùng ID; mở thêm một lần không duplicate.",
+            "Chụp Snapshot A/C trước; A chọn C/@dm_demo_chi rồi Mở hội thoại; ID khác D-AB, đúng peer username. BE replay cùng cặp, ghi delta mới chỉ khi baseline0."
           ],
           "backend_steps": [
-            "Bearer A: POST /api/v1/direct-conversations {\"peerUserId\":\"<B.id>\"}; lưu id=D-AB.",
-            "Bearer B: POST cùng route {\"peerUserId\":\"<A.id>\"}; A gọi lại POST với B."
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias B",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias B",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias B -PeerAlias A",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias C # sau FE tạo/reopen C, không thêm lane"
           ],
           "expected_frontend": "Hai bên mở đúng peer, cùng D-AB; không có tin mẫu để giả lịch sử.",
           "expected_backend": "Mọi POST 200; cùng id, participants đúng A/B; không user C/email/security state.",
@@ -313,18 +316,21 @@
           "status": "planned-not-executed",
           "title": "Mở đồng thời không tạo pair trùng",
           "preconditions": [
-            "Dùng pair A/S02 chưa có DM để tách ca C01",
-            "Agent bàn giao runner barrier/start cùng lúc, không dựa vào click ước lượng"
+            "Dùng pair A/S10 chưa có DM; Snapshot trước phải0, runner chạy trước UI. Nếu đã có, đổi đồng nhất S12 hoặc peer chưa dùng; RequireNewPair sẽ từ chối.",
+            "Runner helper giữ token RAM, barrier40 request; không chạy đồng thời fault cho cùng pair."
           ],
-          "data": "20 POST A→S02 và 20 POST S02→A bắt đầu từ cùng barrier.",
+          "data": "20 POST A→S10 và20 POST S10→A; dm_demo_an / dm_demo_search10; password DmDemo2026!Local. Agent trước đó đã chạy A/S02, không lấy replay S02 làm proof create mới.",
           "frontend_steps": [
-            "Mở A và S02 ở hai profile, cùng chọn peer; ghi POST responses.",
-            "Chạy runner song song do agent bàn giao, không tự sửa IDs/token.",
-            "Mở lại conversation trên UI sau runner, kiểm tra chỉ một lựa chọn pair."
+            "Chạy runner trước; ghi conversationId duy nhất và before/after counts.",
+            "A tìm dm_demo_search10 → chọn → Mở hội thoại; S10 profile riêng tìm dm_demo_an → Mở hội thoại; cả hai POST200 cùng ID runner.",
+            "A mở lại S10 hai lần, sidebar chỉ một item cùng ID; double click đang loading không gửi request thứ hai."
           ],
           "backend_steps": [
-            "Runner 40 POST /api/v1/direct-conversations đồng thời, mỗi body peerUserId đúng đối phương.",
-            "Collect status/id rồi gọi lại một POST từ mỗi actor sau khi runner kết thúc."
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S10",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Concurrent -PeerAlias S10 -RequireNewPair",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias S10",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias S10 -PeerAlias A",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S10"
           ],
           "expected_frontend": "Không có conversation trùng cho cùng pair; UI không duplicate sau load/open lại.",
           "expected_backend": "40 request hợp lệ đều resolve một ID duy nhất; create unique conflict được xử lý thành get, không trả space thiếu dữ liệu.",
@@ -353,11 +359,13 @@
             "Thử recipe gọi REST self/pending được agent cung cấp, quay lại UI kiểm tra không có conversation giả mới."
           ],
           "backend_steps": [
-            "Bearer A: POST direct-conversations {\"peerUserId\":\"<A.id>\"}; rồi {\"peerUserId\":\"<U.id>\"}.",
-            "Đối chiếu status/errorCode chính xác đã chốt P0; không gọi route detail chưa triển khai để giả test quyền."
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias A -ExpectedStatus 400",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -ActorAlias A -PeerAlias U -ExpectedStatus 404",
+            "POST peerUserId=\"00000000-0000-0000-0000-000000000000\", \"not-a-uuid\" và body{} với Bearer A:400 Common.ValidationFailed; valid UUID ngẫu nhiên404 RESOURCE_NOT_FOUND.",
+            "Login phiên REST riêng A; logout đúng refreshToken; dùng chính accessToken cũ POST B.id:401 Common.Unauthorized. Nguyên PowerShell có trong biên bản DM-P1-T02.md; không login mới thay token bị revoke."
           ],
           "expected_frontend": "Self/U không được mở từ search, lỗi REST không thêm item giả.",
-          "expected_backend": "Cả hai request không 2xx, không participants/conversation mới; status/errorCode theo contract P0 đã chốt và ghi trước test, không chấp nhận 500.",
+          "expected_backend": "Self400 INVALID_PEER; U/unknown404 RESOURCE_NOT_FOUND; missing/null/bad/zero UUID400 Common.ValidationFailed; anonymous/revoked401 Common.Unauthorized. Không create pair/space/member.",
           "database_checks": [
             "Spaces/pairs/member counts không tăng ở hai request bị từ chối.",
             "User U vẫn pending và không có session được cấp."
@@ -373,24 +381,28 @@
           "status": "planned-not-executed",
           "title": "Lỗi giữa transaction rollback nguyên tử",
           "preconditions": [
-            "Pair A/S03 mới; fault deterministic sau insert space và trước commit được agent cung cấp",
-            "Fault riêng DB test, response harness đã chốt"
+            "Pair A/S11 mới; Snapshot phải0, FaultOn -RequireNewPair refuse pair cũ; đổi sang alias chưa dùng nếu cần.",
+            "Test trigger chỉ DB scdc_dm_acceptance_test, đúng pair A/S11, BEFORE INSERT pair sau SaveChanges space; không developer API production."
           ],
-          "data": "peer S03.id; snapshot pair/space/member trước ca.",
+          "data": "A/S11: dm_demo_an, dm_demo_search11; peer ID resolve manifest bởi helper; chụp actorSpaceCount, pair/member/message/orphan trước ca.",
           "frontend_steps": [
-            "Bật fault rollback cho actor A/peer S03 theo lệnh task.",
-            "A tìm S03 và mở conversation; quan sát lỗi, không empty conversation ID giả.",
-            "Tắt fault, bấm mở lại; UI mở đúng conversation thật."
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action FaultOn -PeerAlias S11 -RequireNewPair; A tìm dm_demo_search11 → chọn → Mở hội thoại.",
+            "Network503 AUTHORITY_UNAVAILABLE; alert Không mở được hội thoại. Hãy thử lại.; giữ một thẻ @dm_demo_search11, không item/ID giả. BE cũng thất bại cùng pair; Snapshot không tăng.",
+            "FaultOff trong finally; bấm lại Mở hội thoại trên modal cũ:200, Người tìm11/@dm_demo_search11, một item. BE replay ID/pair đã FE tạo, không tăng thêm."
           ],
           "backend_steps": [
-            "POST direct-conversations {\"peerUserId\":\"<S03.id>\"} trong fault; chờ transaction kết thúc.",
-            "Query DB rollback trước retry; sau tắt fault POST lại đúng pair."
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S11",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -PeerAlias S11 -ExpectedStatus 503 # trong fault",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S11 # pair0/member0, actorSpace không tăng",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action FaultOff # luôn chạy trong finally",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Open -PeerAlias S11 # sau FE retry, cùng ID",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/open-conversation.ps1 -Action Snapshot -PeerAlias S11 # pair1/member2/message0/orphan0"
           ],
           "expected_frontend": "Request lỗi giữ selection/error; mở lại thành công với ID trả từ server.",
-          "expected_backend": "Fault không trả success/ID chưa commit; retry sạch 200. Không coi fault503 của harness là auth rejection.",
+          "expected_backend": "Fault503 AUTHORITY_UNAVAILABLE, rollback toàn space/pair/member, không trả success. Sau FaultOff, FE retry tạo200; BE replay200 cùng ID và không thêm hàng.",
           "database_checks": [
-            "Sau rollback: zero pair/member/space mới cho ca; không orphan.",
-            "Sau retry: đúng một pair/space và hai memberships cho A/S03."
+            "Trong fault: pair0/member0/message0, orphan0, actorSpaceCount bằng trước.",
+            "Sau FE retry và BE replay: pair1/member2/message0/orphan0, actorSpace+1; người FE/BE cùng ID."
           ],
           "evidence": [
             "Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.",

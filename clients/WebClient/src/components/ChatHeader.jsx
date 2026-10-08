@@ -35,7 +35,7 @@ export function ChatHeader({
       {/* Action Toolbar */}
       <div className="chat-header__actions">
         {/* Realtime Connection Status Pill */}
-        <span
+        {!isDirectMessage && <span
           className={`connection-pill connection-pill--${connectionState}`}
           title={`Trạng thái kết nối: ${connectionState}`}
         >
@@ -47,8 +47,9 @@ export function ChatHeader({
                 ? 'Đang nối...'
                 : 'Polling'}
           </span>
-        </span>
+        </span>}
 
+        {!isDirectMessage && <>
         {/* Search Bar */}
         <div className="chat-header__search">
           <span className="search-icon">🔍</span>
@@ -82,6 +83,8 @@ export function ChatHeader({
         >
           🧵
         </button>
+
+        </>}
 
         {/* Member List Toggle (for server channels) */}
         {!isDirectMessage && (

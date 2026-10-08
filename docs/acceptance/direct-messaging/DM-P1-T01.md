@@ -311,3 +311,7 @@ Quyền push/merge vào `message` đã cấp; đã fetch và kiểm tra remote t
 - So merged tree với accepted build: chỉ khác docs; source/runtime/config/schema giống bản người dùng duyệt. Sau merge chạy smoke HTTP/DB C01–C04 PASS, FE200/no-store, Swagger200; dataset28 user, DM/member/message counts giữ0/0/0. Không dựng lại image hoặc chạy lại toàn bộ test khi source runtime không đổi; proof browser6/6, unit8/8, backend31/31 giữ mốc ở bảng trên.
 - Worktree tích hợp `E:\Project\SCDC\dm-p1-merge` trên branch message; môi trường test vẫn từ `E:\Project\SCDC\dm-message-integration`, giữ env/keys/volume. Checkout scdc giữ nguyên thay đổi người dùng.
 - Commit tiếp theo chỉ hoàn thiện biên bản merge; final origin/message SHA ghi ở `.dm-acceptance/runs/baseline/p1-integration.json` trong worktree chạy test. P1-T02 chưa được giao hoặc thực hiện; mục Người vừa nhắn tin vẫn theo phụ thuộc P1-T03/P2-T01.
+
+## Điều chỉnh ở task kế ngày09/10/2026
+
+P1-T01 vẫn là hồ sơ PASS của build08/10. Người dùng sau đó yêu cầu tạm chỉ chọn một người và tạo DM ở P1-T02; hành vi nhiều lựa chọn được thay theo yêu cầu mới trong [P1-T02](DM-P1-T02.md). Không dùng kỳ vọng nhiều lựa chọn của build P1-T01 để nghiệm thu build P1-T02.
