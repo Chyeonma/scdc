@@ -5,4 +5,4 @@ Gói MVP-DM tại [hồ sơ MVP](../../../releases/mvp.md#packages); phần hoà
 Chưa có hồ sơ nghiệm thu riêng của gói DM trong thư mục này. Khi khóa một gói, ghi `<gói>/plan.md`; kết quả gắn commit vào `<gói>/acceptance.md` theo [mẫu](../../../templates/release-record.md), rồi dẫn từ [status](../status.md).
 
 
-Gói từng task hiện tại: [kế hoạch DM](../../../plans/direct-messaging.md), [P0 baseline được duyệt](../../../acceptance/direct-messaging/DM-P0-T01.md) và [P1 tìm người chờ test](../../../acceptance/direct-messaging/DM-P1-T01.md). Đây là hồ sơ acceptance task; chưa có release record nghiệm thu toàn MVP-DM.
+Gói từng task hiện tại: [kế hoạch DM](../../../plans/direct-messaging.md), [P0 baseline được duyệt](../../../acceptance/direct-messaging/DM-P0-T01.md) và [P1 tìm người được duyệt FE/BE](../../../acceptance/direct-messaging/DM-P1-T01.md). Đây là hồ sơ acceptance task; chưa có release record nghiệm thu toàn MVP-DM.

@@ -1,6 +1,6 @@
 # DM-P1-T01 — tìm và chọn người nhận
 
-Trạng thái: **Chờ người dùng test FE/BE**. Chỉ thực hiện P1-T01. P0 đã được bạn trả lời “PASS FE/BE và đồng ý baseline P0” ngày 07/10/2026; đã merge/push vào `message` tại `170d959`. P1 chưa được người dùng PASS, chưa merge và chưa thực hiện P1-T02.
+Trạng thái: **Người dùng PASS FE/BE — 08/10/2026; chờ tích hợp vào message**. Chỉ thực hiện P1-T01. P0 đã PASS baseline và tích hợp tại `170d959`. Người dùng trả lời “tôi xác nhận” sau lời đề nghị xác nhận PASS cả FE/BE của P1-T01; gắn với build cuối bàn giao `9d995d055803495075ede6564318ea08b9705bf3`. Chưa thực hiện P1-T02.
 
 ## Bản chạy và phạm vi
 
@@ -9,6 +9,7 @@ Trạng thái: **Chờ người dùng test FE/BE**. Chỉ thực hiện P1-T01. 
 | Branch / base | `feat/dm-p1-t01-user-search` / `message` tại `170d95933190d71df74de6ebcc537a5a8c41ce56` |
 | Worktree thực thi | `E:\Project\SCDC\dm-message-integration`; repository gốc `E:\Project\SCDC\scdc` giữ nguyên thay đổi người dùng |
 | Commit implementation đầu tiên (07/10) | `ca75a0d3ed96b14249d1794f91340808638d33c2` |
+| Build người dùng xác nhận | `9d995d055803495075ede6564318ea08b9705bf3` (cache fix), gồm UI nhiều người tại `93e645c`; bản ghi PASS tiếp theo chỉ đổi docs/contract status |
 | Commit bàn giao / build | Bản sửa chọn nhiều người ngày08/10: đọc `git rev-parse HEAD` trong worktree hoặc `.dm-acceptance/runs/baseline/p1-build.json`. Metadata ghi commit bàn giao, image IDs, test counts và schema hash. Backend/schema vẫn từ implementation07/10; frontend đã dựng lại và chạy6 E2E trên source mới |
 | Remote / PR target | `origin/feat/dm-p1-t01-user-search`; base `message`. Implementation ban đầu `ca75a0d`; bản sửa08/10 được push trên cùng nhánh, remote SHA bàn giao phải trùng metadata. Chưa tạo PR, chưa merge P1 |
 | Frontend | http://localhost:15300 |
@@ -33,7 +34,7 @@ Người dùng báo tìm `Bảo` không ra kết quả ở FE15300. Chẩn đoá
 
 Lượt test tiếp: người dùng thấy2 kết quả nhưng chọn người thứ hai làm mất người thứ nhất, xác nhận modal chỉ có dòng “Đã chọn Bảo Demo (@...)”. Đây là giao diện chọn đơn cũ; backend và FE container hiện tại đúng P1 chọn nhiều người. Agent chạy lại2 ca C01 trên trình duyệt sạch đều PASS. Tab đã mở/cached entry có thể còn giữ bundle cũ; không thể thay JS đang chạy chỉ bằng cập nhật container.
 
-Đã bổ sung `Cache-Control: no-store` cho entry `index.html`, tắt ETag/If-Modified-Since ở entry, giữ headers bảo vệ và cache asset có hash. Nginx `-t` PASS; root, index và SPA fallback trả200/no-store kể cả conditional headers cũ; JS hash mới vẫn200/immutable. Chạy lại6 E2E trên FE sau sửa cache. User cần đóng tab cũ, mở URL mới bên dưới hoặc Ctrl+F5 để nhận entry/bundle mới; user chưa xác nhận PASS.
+Đã bổ sung `Cache-Control: no-store` cho entry `index.html`, tắt ETag/If-Modified-Since ở entry, giữ headers bảo vệ và cache asset có hash. Nginx `-t` PASS; root, index và SPA fallback trả200/no-store kể cả conditional headers cũ; JS hash mới vẫn200/immutable. Chạy lại6 E2E trên FE sau sửa cache. User cần đóng tab cũ, mở URL mới bên dưới hoặc Ctrl+F5 để nhận entry/bundle mới; tại lượt bàn giao này user chưa xác nhận; sau đó đã PASS task ngày08/10/2026.
 
 Mở bản mới: http://localhost:15300/?dm-ui=multi-select-20261008 . Login A và tìm `Bảo`; chọn B/C phải hiện **Đã chọn 2 người**, hai thẻ username có nút × và **Bỏ chọn tất cả**. Nếu vẫn chỉ có dòng tên một người, đang chạy giao diện cũ; ghi URL/actor thực tế và không dùng kết quả đó để nghiệm thu build mới.
 
@@ -137,7 +138,7 @@ ORDER BY u.username COLLATE "C";
 Invoke-DmReadSql $identitySql
 ```
 
-Bằng chứng: build/run, ảnh modal kết quả/selection không token, JSON public fields, IDs khớp manifest và counts không đổi. Agent: **Đạt** qua real API, browser và DB. Người dùng: **Chưa xác nhận**. Sau ca giữ fixture, không tạo DM hoặc reset DB.
+Bằng chứng: build/run, ảnh modal kết quả/selection không token, JSON public fields, IDs khớp manifest và counts không đổi. Agent: **Đạt** qua real API, browser và DB. Người dùng: **Đã xác nhận PASS task FE/BE ngày08/10/2026**; chưa cung cấp biên bản riêng từng biến thể. Sau ca giữ fixture, không tạo DM hoặc reset DB.
 
 ## DM-P1-T01-C02 — 20 + 3 kết quả
 
@@ -172,7 +173,7 @@ Invoke-DmReadSql $pageSql # 23 rows; IDs/order khớp union trang1+2
 Invoke-DmReadSql $countsSql
 ```
 
-Agent: **Đạt**, gồm limit50 và restart cursor. Người dùng: **Chưa xác nhận**. Giữ dataset; không xóa tin/hội thoại để lặp ca. Profile thay đổi trong lúc test thì tìm lại từ trang đầu trước đối soát.
+Agent: **Đạt**, gồm limit50 và restart cursor. Người dùng: **Đã xác nhận PASS task FE/BE ngày08/10/2026**; chưa cung cấp biên bản riêng từng biến thể. Giữ dataset; không xóa tin/hội thoại để lặp ca. Profile thay đổi trong lúc test thì tìm lại từ trang đầu trước đối soát.
 
 ## DM-P1-T01-C03 — biên, Unicode và wildcard literal
 
@@ -204,7 +205,7 @@ Invoke-DmReadSql $countsSql
 
 Integration fixture tạo tên `P%_\ <run>` và decoy `PXYY <run>` để chứng minh literal dương tính, cùng tên NFC/NFD và profile update `ĐẶNG`. Fixture chỉ trong DB `_test`, dọn đúng IDs sau test; không yêu cầu người dùng tự đổi tên B/C. UTF-16 lỗi `a\ud800` được kiểm tra trực tiếp qua Contracts vì URL không biểu diễn surrogate lỗi nguyên trạng; có proof directory validation, không giả đây là request browser.
 
-Agent: **Đạt** theo backend integration/real HTTP/E2E. Người dùng: **Chưa xác nhận**. Giữ source displayName gốc, không sửa fixture để làm số lượng kết quả khớp kỳ vọng sai.
+Agent: **Đạt** theo backend integration/real HTTP/E2E. Người dùng: **Đã xác nhận PASS task FE/BE ngày08/10/2026**; chưa cung cấp biên bản riêng từng biến thể. Giữ source displayName gốc, không sửa fixture để làm số lượng kết quả khớp kỳ vọng sai.
 
 ## DM-P1-T01-C04 — cursor, lỗi API và phản hồi cũ
 
@@ -251,24 +252,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dm-acceptance/user-s
 Get-Content .dm-acceptance/runs/baseline/p1-search-persistence.json -Raw -Encoding UTF8
 ```
 
-Agent: **Đạt**. Người dùng: **Chưa xác nhận**. Sau test phải tắt request blocking, giữ keyring/data/manifest, không reset password hoặc xóa volume để làm token/cursor hợp lệ lại.
+Agent: **Đạt**. Người dùng: **Đã xác nhận PASS task FE/BE ngày08/10/2026**; chưa cung cấp biên bản riêng từng biến thể. Sau test phải tắt request blocking, giữ keyring/data/manifest, không reset password hoặc xóa volume để làm token/cursor hợp lệ lại.
 
 ## Đầu ra và bằng chứng agent
 
 | Phần | Proof đã chạy | Kết quả | Người dùng |
 |---|---|---|---|
-| Backend toàn bộ (07/10, BE source không đổi) | .NET10/container + PostgreSQL thật, `.dm-acceptance/backend-artifacts/test-results/dm-acceptance.trx` | 31/31 | Chưa xác nhận |
-| Frontend unit | `npm.cmd test`, API encode/cursor/abort và503 không retry/mock | 8/8 | Chưa xác nhận |
-| FE production build / API publish | Vite build + Docker .NET publish | Đạt | Chưa xác nhận |
-| C01/C02/C03/C04 browser | Edge154.0.4258.53, 6 Playwright tests trên FE mới08/10, `.dm-acceptance/e2e-p1/results.json`; `browser-metadata.json` và ảnh modal `multi-recipient-selection.png` không token | 6/6 | Chưa xác nhận |
-| HTTP/DB smoke C01–C04 (chạy lại08/10) | `.dm-acceptance/runs/baseline/p1-search-smoke.json` | Đạt, counts0/0/0 không đổi | Chưa xác nhận |
-| Cursor restart | Cùng actor/session/cursor qua restart API thật; `p1-search-persistence.json` | Đạt, trang2 vẫn3 IDs | Chưa xác nhận |
-| Disabled/deleted/unverified-active | Dedicated integration fixture, SQL trạng thái đúng enum/constraint; API search không trả recipient không hợp lệ | Đạt | Chưa xác nhận; manual K disabled thuộc P6-T02 |
-| UTF-16 lỗi / guard Contracts | Gọi directory với surrogate lỗi, sid/stamp sai; không qua mock HTTP | Validation400 / unauthorized | Chưa xác nhận |
+| Backend toàn bộ (07/10, BE source không đổi) | .NET10/container + PostgreSQL thật, `.dm-acceptance/backend-artifacts/test-results/dm-acceptance.trx` | 31/31 | PASS task (08/10) |
+| Frontend unit | `npm.cmd test`, API encode/cursor/abort và503 không retry/mock | 8/8 | PASS task (08/10) |
+| FE production build / API publish | Vite build + Docker .NET publish | Đạt | PASS task (08/10) |
+| C01/C02/C03/C04 browser | Edge154.0.4258.53, 6 Playwright tests trên FE mới08/10, `.dm-acceptance/e2e-p1/results.json`; `browser-metadata.json` và ảnh modal `multi-recipient-selection.png` không token | 6/6 | PASS task (08/10) |
+| HTTP/DB smoke C01–C04 (chạy lại08/10) | `.dm-acceptance/runs/baseline/p1-search-smoke.json` | Đạt, counts0/0/0 không đổi | PASS task (08/10) |
+| Cursor restart | Cùng actor/session/cursor qua restart API thật; `p1-search-persistence.json` | Đạt, trang2 vẫn3 IDs | PASS task (08/10) |
+| Disabled/deleted/unverified-active | Dedicated integration fixture, SQL trạng thái đúng enum/constraint; API search không trả recipient không hợp lệ | Đạt | PASS task; manual K disabled thuộc P6-T02 |
+| UTF-16 lỗi / guard Contracts | Gọi directory với surrogate lỗi, sid/stamp sai; không qua mock HTTP | Validation400 / unauthorized | PASS task (08/10) |
 
 Helper setup đã sửa đọc commit với safe.directory chỉ áp dụng cho đúng path trong từng lệnh, preflight trước khi ghi manifest; không đổi Git config toàn máy. Stop/start/setup/restart và upgrade idempotent đã chạy lại trên stack acceptance.
 
-Bản sửa08/10: giữ nhiều recipient theo ID, không mất khi đổi q/tải thêm/lỗi; xóa riêng hoặc tất cả; đóng modal dọn draft. Unit8/8, build và browser6/6 PASS; không đổi backend/schema. Những proof cursor-restart/integration07/10 là lịch sử cho source BE không đổi, không ghi đã chạy lại toàn bộ31 tests ngày08/10. User chưa test/PASS build mới.
+Bản sửa08/10: giữ nhiều recipient theo ID, không mất khi đổi q/tải thêm/lỗi; xóa riêng hoặc tất cả; đóng modal dọn draft. Unit8/8, build và browser6/6 PASS; không đổi backend/schema. Những proof cursor-restart/integration07/10 là lịch sử cho source BE không đổi, không ghi đã chạy lại toàn bộ31 tests ngày08/10. Người dùng sau đó xác nhận PASS task FE/BE trên bản cache fix `9d995d0` ngày08/10/2026. Xác nhận task không tự tạo log từng bước manual hoặc kết quả31 integration tests do người dùng chạy.
 
 Lỗi đã sửa/kiểm chứng: explicit `cursor=` trước đây bị MVC biến thành null; nay trả400 CURSOR_INVALID. Test fixture dùng đúng Disabled3/Deleted4 và kỳ vọng `Bao` phân biệt khớp username với bỏ dấu displayName. Không còn test fail trên build bàn giao. npm advisory cũ `source-map-js` được ghi ở P0, không cập nhật dependencies ngoài scope P1.
 
@@ -298,4 +299,6 @@ Case/bước: ... | Thao tác: ... | Mong đợi: ... | Thực tế: ...
 Sửa P1-T01 rồi bàn giao để tôi test lại.
 ```
 
-User PASS/FAIL P1: **Chưa có**. Quyền push/merge vào `message` đã cấp; chỉ merge sau user PASS đúng build và xác minh remote. Chưa giao P1-T02. Task dừng ở **Chờ người dùng test**.
+User PASS/FAIL P1: **PASS FE/BE**, ngày08/10/2026. Người dùng trả lời **“tôi xác nhận”** sau lời đề nghị “Nếu P1-T01 đã PASS cả FE/BE, bạn xác nhận để tôi merge vào message”. Build gắn với bản cuối đã bàn giao `9d995d055803495075ede6564318ea08b9705bf3`; người dùng không cung cấp build khác hoặc báo lỗi còn tồn. Xác nhận ở mức task; không tự suy ra biên bản manual chi tiết cho mọi biến thể chưa được gửi.
+
+Quyền push/merge vào `message` đã cấp; đã fetch và kiểm tra remote task đúng accepted build, message tại `170d959`. Commit ghi nhận PASS chỉ đổi tài liệu/trạng thái contract, không đổi runtime/schema. Integration: **chờ merge/push**. Chưa giao hoặc bắt đầu P1-T02; hành vi xác nhận nhiều người ở bước tạo DM sẽ chốt khi task đó được giao, contract vẫn một DM/cặp.

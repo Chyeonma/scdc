@@ -1,6 +1,6 @@
 # Kế hoạch triển khai nhắn tin riêng SCDC
 
-Cập nhật: **07/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../acceptance/direct-messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
+Cập nhật: **08/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../acceptance/direct-messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
 
 Mục tiêu là bàn giao từng task có thể kiểm tra qua **frontend và backend thật**. Sau mỗi task, người dùng tự test với bộ dữ liệu được cung cấp, xác nhận kết quả rồi mới thực hiện task tiếp theo. Agent tự chạy test kỹ thuật trước bàn giao; kết quả tự động không thay xác nhận của người dùng.
 
@@ -174,7 +174,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ## Tổng hợp phase và task
 
-**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đang bàn giao chờ người dùng test; 18 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026, chờ tích hợp vào message; 18 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|
@@ -192,7 +192,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ### DM-P0-T01 môi trường dữ liệu và contract gói
 
-Bản P0 đã được agent dựng/test và có [biên bản cùng hướng dẫn FE/BE](../acceptance/direct-messaging/DM-P0-T01.md), [baseline thiết kế](dm-p0-baseline-design.md). Trạng thái **Chờ người dùng test/review**; chưa user PASS và chưa đi P1.
+Bản P0 đã được agent dựng/test và có [biên bản cùng hướng dẫn FE/BE](../acceptance/direct-messaging/DM-P0-T01.md), [baseline thiết kế](dm-p0-baseline-design.md). Trạng thái **Người dùng PASS FE/BE và baseline P0**; đã tích hợp vào `message` tại `170d959` ngày07/10/2026.
 
 Branch `chore/dm-p0-t01-acceptance-baseline`. Nguồn: contract-4–10, DM-SQL-01–06, hồ sơ MVP. Phụ thuộc: không có task DM trước; Identity hiện có và công cụ local.
 
@@ -214,17 +214,17 @@ Branch `chore/dm-p0-t01-acceptance-baseline`. Nguồn: contract-4–10, DM-SQL-0
 
 Branch `feat/dm-p1-t01-user-search`. AC-DM-01/16; TC-DM-01/18. Phụ thuộc P0-T01 được duyệt.
 
-- [ ] P1-T01.1 Bổ sung contract search do Identity thực hiện, projection không email/security state; kiểm tra actor/session và recipient active/verified.
-- [ ] P1-T01.2 Query q 2–64 UTF-16, case-insensitive/giữ dấu, substring literal cho `%`, `_`, `\`; rank username exact rồi username/ID; cursor bind actor/q/limit và key ring bền.
-- [ ] P1-T01.3 Thêm GET `/users/search`, DTO/ProblemDetails/OpenAPI; kiểm tra q sai, cursor sai và phiên không hợp lệ.
-- [ ] P1-T01.4 Nối UI tìm người thật: loading/empty/error/retry, chống response muộn khi đổi q, hiển thị username với tên trùng; chọn nhiều người theo ID, giữ lựa chọn khi đổi q/tải thêm/lỗi, bỏ từng người hoặc tất cả; chỉ hiển thị selection, chưa bịa conversation ID.
-- [ ] P1-T01.5 Integration/Unicode/pagination test và E2E tìm kiếm; bàn giao request/response đối chiếu.
+- [x] P1-T01.1 Bổ sung contract search do Identity thực hiện, projection không email/security state; kiểm tra actor/session và recipient active/verified.
+- [x] P1-T01.2 Query q 2–64 UTF-16, case-insensitive/giữ dấu, substring literal cho `%`, `_`, `\`; rank username exact rồi username/ID; cursor bind actor/q/limit và key ring bền.
+- [x] P1-T01.3 Thêm GET `/users/search`, DTO/ProblemDetails/OpenAPI; kiểm tra q sai, cursor sai và phiên không hợp lệ.
+- [x] P1-T01.4 Nối UI tìm người thật: loading/empty/error/retry, chống response muộn khi đổi q, hiển thị username với tên trùng; chọn nhiều người theo ID, giữ lựa chọn khi đổi q/tải thêm/lỗi, bỏ từng người hoặc tất cả; chỉ hiển thị selection, chưa bịa conversation ID.
+- [x] P1-T01.5 Integration/Unicode/pagination test và E2E tìm kiếm; bàn giao request/response đối chiếu.
 
 **Bạn test FE:** A tìm `Bảo` thấy B/C phân biệt username; tìm `dm_demo_bao` ưu tiên B; `dm_demo_search` có trang tiếp; không tìm thấy A/U; search không có kết quả và lỗi API có thông báo. Ca K disabled có integration fixture ở task này và lượt người dùng E2E ở P6-T02 khi có helper khóa.
 
 **Bạn test BE:** Cùng q qua Swagger/helper; thử 1/2/64/65 UTF-16, `%/_/\`, cursor đổi q hoặc actor; JSON không có email. DB đối chiếu kết quả/rank đủ người và không ghi membership khi search.
 
-**Gate:** Search FE/BE đúng policy; chưa nghiệm thu tạo DM. Bạn PASS mới làm P1-T02.
+**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Tích hợp vào `message` sau kiểm tra remote/smoke; chưa nghiệm thu tạo DM, chưa được giao P1-T02.
 
 ### DM-P1-T02 tạo hoặc lấy một hội thoại duy nhất
 

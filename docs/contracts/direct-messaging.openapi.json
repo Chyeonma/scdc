@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
     "version": "0.4.0-p1-search",
-    "description": "GET /users/search có implementation DM-P1-T01 và bằng chứng agent; chờ người dùng test FE/BE. Các endpoint hội thoại/tin nhắn và Hub còn là contract dự thảo. Nguồn: docs/features/direct-messaging/README.md và docs/acceptance/direct-messaging/DM-P1-T01.md."
+    "description": "GET /users/search có implementation DM-P1-T01 và bằng chứng agent; người dùng xác nhận PASS FE/BE build9d995d0 ngày08/10/2026. Các endpoint hội thoại/tin nhắn và Hub còn là contract dự thảo. Nguồn: docs/features/direct-messaging/README.md và docs/acceptance/direct-messaging/DM-P1-T01.md."
   },
   "servers": [
     {
@@ -55,7 +55,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-agent-tested-user-acceptance-pending",
+        "x-scdc-implementation": "implemented-agent-tested-user-accepted",
         "parameters": [
           {
             "name": "q",
