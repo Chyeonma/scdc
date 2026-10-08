@@ -1,6 +1,8 @@
 # SCDC — Trạng thái Community
 
-Cập nhật: 2026-10-07. Nguồn duy nhất ghi trạng thái triển khai hiện tại của Community. Quy tắc và use case ở [specs/](specs/README.md); thiết kế ở [design/](design/README.md); bằng chứng lịch sử ở từng hồ sơ nghiệm thu.
+Cập nhật: 2026-10-08. Nguồn duy nhất ghi trạng thái triển khai hiện tại của Community. Quy tắc và use case ở [specs/](specs/README.md); thiết kế ở [design/](design/README.md); bằng chứng lịch sử ở từng hồ sơ nghiệm thu và [bảng đối chiếu test](delivery/verification.md).
+
+Mốc Community MVP đã chọn theo [DEC-118](../../decisions.md#dec-118): tạo/tìm/tham gia, phòng text, lịch sử/gửi/nhận tin và xử lý mất quyền. Điều kiện hoàn tất nằm tại [hồ sơ MVP](../../releases/mvp.md#community-scope). Hiện nền cộng đồng/phòng/quyền đã có trên feature; luồng giao tiếp trong phòng chưa chạy được, nên chưa đạt mốc này. Không tính tỷ lệ hoàn thành từ số UC hoặc số test vì phạm vi các gói khác nhau.
 
 <a id="implementation"></a>
 
@@ -11,9 +13,9 @@ Cập nhật: 2026-10-07. Nguồn duy nhất ghi trạng thái triển khai hi�
 | Tạo cộng đồng — UC-COM-01 | Backend và WebClient đã được kiểm chứng cho gói đã chọn | `feat/community-create-view`; backend `79fa627`, frontend `4203e05`; [nghiệm thu](delivery/create-view/acceptance.md) |
 | List/detail/tư cách — phần UC-COM-03 | Đã kiểm chứng phần danh sách/detail/own membership; chưa đánh dấu toàn bộ UC-COM-03 đạt | Cùng gói tạo/xem; [phạm vi](delivery/create-view/plan.md), [nghiệm thu](delivery/create-view/acceptance.md) |
 | Tìm kiếm và public summary — UC-COM-02 | API tìm kiếm/discovery đã kiểm chứng; nối preview → join trực tiếp; đường gửi request approval còn UC-COM-07 | `feat/community-search`; [thiết kế](design/search.md), [nghiệm thu](delivery/search/acceptance.md) |
-| Tham gia trực tiếp — phần public/immediate UC-COM-06 | API và WebClient đã kiểm chứng; join lặp/đồng thời và rejoin fixture đạt; requests/phòng còn phụ thuộc | `feat/community-join`, backend `e5b5750`, frontend `e0cf116`; [nghiệm thu](delivery/direct-join/acceptance.md) |
-| Leave, requests, invitations, metadata management | Chưa triển khai các gói chức năng | [Lộ trình theo phụ thuộc](delivery/README.md#use-case-delivery) |
-| Role và assignment — phần UC-COM-20/21 | Backend/WebClient quản lý và evaluator domain đã kiểm chứng; chưa đóng phụ thuộc view/thu hồi realtime của toàn bộ UC | `feat/community-permissions`; backend `9a513d1`, WebClient `eae64c3`; [nghiệm thu](delivery/roles/acceptance.md) |
+| Tham gia trực tiếp — phần public/immediate UC-COM-06 | API và WebClient đã kiểm chứng; join lặp/đồng thời và rejoin fixture đạt; metadata phòng theo quyền đã có ở gói phòng, lịch sử/gửi tin còn thiếu | `feat/community-join`, backend `e5b5750`, frontend `e0cf116`; [nghiệm thu](delivery/direct-join/acceptance.md) |
+| Leave, requests, invitations, sửa metadata server/chuyển owner | Chưa triển khai các gói chức năng; sửa metadata phòng đã có ở UC-COM-18 | [Bảng việc còn lại](#work-items) |
+| Role và assignment — phần UC-COM-20/21 | Backend/WebClient, policy view HTTP và ảnh hưởng ACL version đã kiểm chứng; thu hồi realtime/tin phòng còn thiếu | `feat/community-permissions`; backend `9a513d1`, WebClient `eae64c3`; [nghiệm thu](delivery/roles/acceptance.md), [kiểm chứng phòng/ACL](delivery/channels-access/acceptance.md) |
 | Phòng text — phần UC-COM-16/17, metadata UC-COM-18 | Backend/WebClient create/list/detail/edit đã kiểm chứng; chưa có voice, lịch sử hoặc delete | `feat/community-channels`; backend `eaaa2e3`, WebClient `f8d582d`; [nghiệm thu](delivery/channels-access/acceptance.md) |
 | ACL phòng — phần HTTP UC-COM-22 | API/UI snapshot, policy view và guard transaction đã kiểm chứng; subscription/thu hồi realtime còn thiếu | Cùng gói phòng/ACL; [thiết kế](design/channels-access.md), [nghiệm thu](delivery/channels-access/acceptance.md) |
 | Tin phòng, Hub/dispatcher/realtime | Chưa có runtime của gói tích hợp | [Use case tích hợp](specs/integration.md#use-cases) |
@@ -39,10 +41,37 @@ Code Community trên `main` vẫn ở nền module. Chuỗi gói kế thừa: `f
 
 ## Việc còn lại
 
-- Gói phòng text/ACL đã có bằng chứng HTTP/UI, lifecycle create và guard transaction; UC-COM-16 còn voice, UC-COM-17 còn lịch sử, UC-COM-22 và UC-COM-20/21 còn UC-COM-25/subscription/thu hồi. Đề xuất gói tiếp theo UC-COM-19 xóa phòng (Community/space cùng transaction và chặn truy cập), rồi lịch sử/gửi tin/realtime. Phải duyệt scope và proof còn thiếu trước từng gói; chưa bắt đầu các gói này.
-- UC-COM-03 còn phòng/lịch sử và đối soát theo mutation leave/rejoin; UC-COM-02 còn đường gửi request approval của UC-COM-07. Không dùng kết quả search/join để đóng các phụ thuộc còn lại.
-- UC-COM-06 còn đường chuyển approval/pending; join hiện tại trả conflict với approval. Member mới đã có thể xem metadata phòng theo quyền, chưa có lịch sử/gửi tin. Rejoin chỉ kiểm chứng bằng record left fixture; chưa có leave API. Gói role/phòng đã chứng minh FK/CAS epoch và rejoin cleanup tăng ACL version; lifecycle leave còn cần kiểm chứng riêng.
-- Các OQ/ACL-O giữ tại nguồn chủ trì: [Servers](specs/servers.md#gaps), [Memberships](specs/memberships.md#gaps), [Invitations](specs/invitations.md#gaps), [Channels](specs/channels.md#gaps), [Permissions](specs/permissions.md#gaps), [tích hợp](specs/integration.md#gaps). Giữ nguyên quyết định và yêu cầu proof.
-- Những phần thu hồi quyền, Messaging lifecycle, restore và Media có phụ thuộc/bằng chứng riêng theo [thiết kế tích hợp](design/integration.md) và [vòng đời dữ liệu](../../data-lifecycle.md).
+<a id="work-items"></a>
+
+### Công việc để đạt Community MVP
+
+Các hàng dưới đây là gói đề xuất để lập kế hoạch, chưa được duyệt bắt đầu code. Trước mỗi gói cần tham khảo người dùng về scope, thiết kế và cách kiểm chứng theo [quy trình bàn giao](delivery/README.md#use-case-delivery). Đầu mối là phân công kế hoạch theo [DEC-117](../../decisions.md#dec-117), chưa phải xác nhận nhận việc hoặc cam kết lịch. `COM-Wxx` chỉ định danh công việc, không thay mã UC/AC/TC.
+
+| Mã / ưu tiên | UC / phạm vi | Phụ thuộc trực tiếp | Đầu mối kế hoạch | Đầu ra và điều kiện hoàn tất | Trạng thái |
+|---|---|---|---|---|---|
+| COM-W01 / MVP-1 | UC-COM-17, nền tin dùng chung | Identity guard, channel guard và lifecycle create đã có; hợp đồng [Messaging](../../shared/messaging/README.md) | Sáng; Vg rà soát quyền | Migration/model tin, thứ tự per-space, cursor và reader lịch sử có guard; thử phân trang, room ẩn/cross-server, session sai và epoch cũ trên DB thật | Đề xuất; chưa bắt đầu |
+| COM-W02 / MVP-1 | UC-COM-23 gửi/retry | COM-W01; [transaction/lease](design/integration.md#transactions) | Sáng; Vg rà soát Community | Writer dùng guard tới commit; operation chống trùng, tin/sequence/outbox nguyên tử; thử retry/đồng thời/restart và quyền thay đổi tranh commit | Đề xuất; chưa bắt đầu |
+| COM-W03 / MVP-2 | UC-COM-17/23 giao diện lịch sử/gửi | COM-W01/02 | Vg phối hợp Sáng | Mở phòng → lịch sử → gửi → reload với API thật; trạng thái lưu/thất bại rõ; retry do người dùng, đổi tài khoản/mất quyền không phục hồi dữ liệu riêng | Đề xuất; chưa bắt đầu |
+| COM-W04 / MVP-2 | UC-COM-25 nhận tin | COM-W02; hợp đồng realtime/dispatcher của Messaging | Sáng; Thái hỗ trợ bộ chạy | Outbox dispatcher, Hub và subscription có admission; hai tài khoản nhận tin đã commit, dedup và đối soát sau reconnect bằng sequence/cursor; ghi proof mất kết nối | Đề xuất; chưa bắt đầu |
+| COM-W05 / MVP-2 | UC-COM-25 mất quyền; tích hợp UC-COM-20/21/22 | COM-W04; mutation role/ACL và Identity đã có | Sáng + Vg; Thái hỗ trợ đo | HTTP/gửi/subscribe/resume dùng quyền hiện hành; đo kết nối đang mở ngừng truy cập trong ≤5 giây từ commit theo DEC-083, gồm session/account và role/ACL; có race test và fail-close | Đề xuất; chưa bắt đầu |
+| COM-W06 / MVP-3 | UC-COM-03/06/16/17/23/25 toàn luồng | COM-W03/04/05 | Vg + Sáng; Thái bộ chạy | Tạo → tìm → public/immediate join → phòng text → lịch sử/gửi/nhận → mất quyền trên DB/API/Hub thật; hồi quy create/join/search/role/ACL/edit; ghi commit, môi trường, actual result và phần chưa đạt | Đề xuất; chưa bắt đầu |
+| COM-W07 / MVP-3 | Bàn giao Community trong mốc MVP | COM-W06; tích hợp Identity/DM, bộ chạy MVP-SYS | Vg + Sáng + Thái; người kiểm tra ghi trong hồ sơ | Checkout chạy lại theo [hướng dẫn local](development.md), cấu hình/key/ledger rõ, hồ sơ nghiệm thu đối chiếu [gate Community](../../releases/mvp.md#community-acceptance); merge/phát hành cần quyết định riêng | Đề xuất; chưa bắt đầu |
+
+COM-W01 là đề xuất gói tiếp theo theo phạm vi MVP đã chọn; cần thống nhất scope với nền Messaging/DM trước khi thực hiện. COM-W03 và COM-W04 có thể thực hiện song song sau khi hợp đồng COM-W02 ổn định. Kiểm chứng COM-W05 chạy từ khi có Hub, rồi lặp trong toàn luồng COM-W06; guard transaction hiện có chưa chứng minh deadline thu hồi realtime.
+
+### Công việc mở rộng sau phạm vi MVP đã chọn
+
+| Mã | UC / đầu ra | Phụ thuộc và điều kiện hoàn tất | Đầu mối kế hoạch | Trạng thái |
+|---|---|---|---|---|
+| COM-W08 | UC-COM-19 xóa phòng | Lifecycle delete channel/space cùng transaction, operation/outbox và chặn HTTP/Hub; proof tranh gửi/xóa và retention theo [Channels](specs/channels.md) | Vg + Sáng | Chưa bắt đầu |
+| COM-W09 | UC-COM-04/05/07/08 metadata server, join mode và approval | Server/pending writer nguyên tử, private switch kết thúc request và quyền reviewer; proof CAS/approve/cancel/join đồng thời | Vg | Chưa bắt đầu |
+| COM-W10 | UC-COM-09–13 lời mời | Token/lượt dùng/issuer lifetime, mời đích danh và membership epoch; proof consume lượt cuối, thu hồi/accept đồng thời | Vg | Chưa bắt đầu |
+| COM-W11 | UC-COM-14/15 chuyển owner và rời | Ownership/membership/epoch/ACL cleanup nguyên tử; owner không tự rời, stale epoch và thu hồi HTTP/realtime; rejoin fixture đã có chưa thay proof leave API | Vg + Sáng | Chưa bắt đầu |
+| COM-W12 | UC-COM-24 sửa/xóa tin | Messaging writer, quyền tác giả và placeholder/version/outbox; proof CAS/tranh mutation/quyền hiện hành | Sáng; Vg tích hợp UI | Chưa bắt đầu |
+| COM-W13 | Phần voice của UC-COM-16/17/25 và Media | Module/lifecycle Media, admission, provider và cutoff riêng; [đặc tả media](../voice-video/README.md) | Theo gói v1 tại DEC-117 | Chưa bắt đầu |
+
+UC-COM-02 còn đường gửi request approval và UC-COM-06 còn nhánh approval/pending trong phạm vi đầy đủ. UC-COM-03 còn đối soát theo leave/rejoin API. Các phần này vẫn giữ trong đặc tả v1, không dùng kết quả search/join hiện tại để đóng toàn bộ UC.
+
+Các OQ/ACL-O giữ tại nguồn chủ trì: [Servers](specs/servers.md#gaps), [Memberships](specs/memberships.md#gaps), [Invitations](specs/invitations.md#gaps), [Channels](specs/channels.md#gaps), [Permissions](specs/permissions.md#gaps), [tích hợp](specs/integration.md#gaps). Thu hồi quyền, restore và Media giữ proof riêng theo [thiết kế tích hợp](design/integration.md) và [vòng đời dữ liệu](../../data-lifecycle.md).
 
 Sau mỗi gói, cập nhật trang này và ghi hồ sơ nghiệm thu gắn commit. Các trang khác dẫn tới trang này thay vì duy trì thêm bảng tiến độ Community.

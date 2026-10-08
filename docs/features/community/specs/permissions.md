@@ -1,6 +1,6 @@
 # SCDC — Permissions — Vai trò, ACL và kiểm tra quyền
 
-Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
+Cập nhật: 2026-10-08. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu role, role assignment, ACL và policy tính quyền. Evaluator tính trên snapshot, kiểm thử độc lập; checker/guard đọc trạng thái hiện hành và giữ quyền đến commit. Điều kiện tài khoản/phiên do Identity cung cấp qua Contracts.
 
@@ -267,21 +267,21 @@ Các race guard/outbox còn được kiểm chứng tại [TC-COM-22](membership
 
 ## Việc còn lại
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Các mục dưới đây giữ yêu cầu kiểm chứng còn lại, không phải bảng tiến độ. Phần đã triển khai/migration/test trên feature được quản lý tại [status](../status.md), [đối chiếu test](../delivery/verification.md) và hồ sơ nghiệm thu; migration mục tiêu theo [thiết kế](../design/integration.md#schema-migration), retention theo [vòng đời dữ liệu](../../../data-lifecycle.md).
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Cấp quyền | Mô hình/danh mục/giới hạn và quản lý phòng theo DEC-092/098 đã có thiết kế; còn review/migration/guard/đo thu hồi. | OQ-004, OQ-007, OQ-008 |
+| Cấp quyền | Phần chưa chứng minh: writer lịch sử/tin dùng guard, subscription và deadline thu hồi; approval/lời mời/transfer/leave/Media có proof theo gói riêng. Không suy kết quả policy/HTTP thành toàn bộ UC đạt. | OQ-004, OQ-007, OQ-008 |
 
 ### Đầu việc rà soát và kiểm chứng phân quyền
 
 | Mã theo dõi | Thiết kế đã có và việc còn lại | Phần bị ảnh hưởng | Đầu mối dự kiến |
 |---|---|---|---|
-| ACL-O1 | DEC-092 đã chốt @everyone/20 role/union; có API/catalog/fixture, còn review/migration/proof | Tạo phòng, mời, duyệt, đổi cấu hình/quyền xem; quản lý role theo DEC-058 | Vg; Sáng đánh giá thiết kế |
-| ACL-O2 | Có snapshot/accessVersion/epoch và nguyên tử; cần prototype/guard proof, giữ DEC-057/098 | Danh sách phòng, lịch sử, gửi, thời gian thực | Vg, Sáng |
+| ACL-O1 | DEC-092/098 đã chốt; migration, role limit/union/system role và policy view HTTP có proof ở gói role/phòng. Còn tích hợp quyền vào mời/duyệt/join mode và thu hồi tin/realtime | Tạo phòng, mời, duyệt, đổi cấu hình/quyền xem; quản lý role theo DEC-058 | Vg; Sáng đánh giá thiết kế |
+| ACL-O2 | Snapshot/accessVersion/epoch, UI ACL và guard giữ lock tới caller commit đã có proof. Còn writer/history Messaging và Hub thật dùng guard, revoke tranh gửi/subscribe và đối soát reconnect; giữ DEC-057/098 | Danh sách phòng, lịch sử, gửi, thời gian thực | Vg, Sáng |
 | ACL-O3 | Chuyển ngay DEC-076 có lock order/transaction; còn proof transfer/leave | Một owner, quyền chủ cũ/target, không xóa server v1 | Vg |
 | ACL-O4 | Có schema/inbox/expiry/issuer theo DEC-074/087/097; còn review và concurrency proof | Cộng đồng riêng tư | Vg |
-| ACL-O5 | Có registry/guard/outbox/epoch; cần đo chat ≤5 giây, media deadline DEC-099 cần proof SFU | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
+| ACL-O5 | Guard/epoch/outbox lưu DB đã có proof; registry/dispatcher/revoker đang là thiết kế, chưa có runtime. Cần đo chat ≤5 giây trên kết nối đang mở; media deadline DEC-099 cần proof SFU riêng | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
 
 Các mục trên tiếp tục thuộc OQ-003/OQ-004/OQ-007. DM hai người không phụ
 thuộc mô hình vai trò cộng đồng; có thể rà soát phần ACL-01 đến ACL-05

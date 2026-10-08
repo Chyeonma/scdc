@@ -1,6 +1,6 @@
 # SCDC — Servers — Cộng đồng và chủ sở hữu
 
-Cập nhật: 2026-10-07. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
+Cập nhật: 2026-10-08. Đặc tả nghiệp vụ và tiêu chí kiểm chứng; tiến độ hiện tại tại [status.md](../status.md).
 
 Sở hữu metadata, visibility, join mode, tìm kiếm và owner của server. Chuyển owner phối hợp Memberships; public→private kết thúc request qua cùng transaction.
 
@@ -253,4 +253,4 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](integration.md#evidence).
 
 Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../delivery/README.md#use-case-delivery), [migration](../design/integration.md#schema-migration) và [vòng đời dữ liệu](../../../data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
-Private switch cần proof cùng Memberships; transfer cần proof với target leave/Identity guard. Tên/search Unicode, version và operation cần migration và đối chiếu dữ liệu legacy.
+Private switch cần proof cùng Memberships; transfer cần proof với target leave/Identity guard. Tên/search Unicode, version/operation và mapping legacy của create/search đã có bằng chứng tại [đối chiếu test](../delivery/verification.md); không dùng chúng để đóng migration/writer của private switch hoặc transfer. Tiến độ hiện tại chỉ ghi tại [status](../status.md).

@@ -8,7 +8,7 @@ Thiết kế kỹ thuật của thành phần; quy tắc, use case và AC/TC ở
 
 Phần public/immediate và rejoin fixture đã có [thiết kế gói riêng](direct-join.md). Route 202 pending và các transition request/leave bên dưới vẫn là mục tiêu; [tiến độ](../status.md) dẫn tới bằng chứng runtime.
 
-HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) là schema dự thảo, không phải API đang chạy. Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
+HTTP mục tiêu và quy ước chung ở [tích hợp](integration.md#contracts); [OpenAPI Community](../../../contracts/community.openapi.json) chứa contract đầy đủ và metadata trạng thái từng operation. Join public/immediate đã có proof; pending/approval/leave còn mục tiêu theo [status](../status.md). Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](integration.md#transactions).
 
 | Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
 |---|---|---|

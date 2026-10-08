@@ -1,6 +1,6 @@
 # SCDC — Nghiệm thu gói phòng văn bản và ACL
 
-Ngày kiểm chứng: 2026-10-07. Phạm vi [kế hoạch](plan.md), [thiết kế](../../design/channels-access.md). Hồ sơ ghi kết quả theo revision; tiến độ hiện tại tại [status.md](../../status.md).
+Ngày kiểm chứng: 2026-10-07. Phạm vi [kế hoạch](plan.md), [thiết kế](../../design/channels-access.md). Hồ sơ ghi kết quả theo revision; tiến độ hiện tại tại [status.md](../../status.md), UC/AC/TC → test cụ thể tại [verification](../verification.md). Hướng dẫn chạy lại đầy đủ ở [development](../../development.md).
 
 | Phần | Commit trên feat/community-channels | Bằng chứng |
 |---|---|---|
@@ -72,6 +72,6 @@ SCDC_E2E_URL=http://127.0.0.1:15300 SCDC_E2E_DATABASE=scdc_community_channels_te
 
 Đạt phần text create của UC-COM-16, metadata/list của UC-COM-17, metadata edit UC-COM-18 và HTTP ACL của UC-COM-22. Có bằng chứng AC-COM-06/07/16/27, phần view HTTP của AC-COM-11/25/26/42 và TC-ACL-10/12 (trừ subscription/DELETE). Chưa đóng toàn bộ UC có phụ thuộc tin/Media/thu hồi.
 
-UC-COM-19 xóa phòng, voice/Media lifecycle, lịch sử/gửi/sửa/xóa tin, Hub/dispatcher/UC-COM-25 và thu hồi ≤5 giây chưa triển khai. Chưa đo RAM/tải thực tế. Code chưa merge main; người dùng tự push nhánh code/tài liệu. Đề xuất duyệt riêng gói xóa phòng trước khi mở gói lịch sử/gửi tin và realtime.
+UC-COM-19 xóa phòng, voice/Media lifecycle, lịch sử/gửi/sửa/xóa tin, Hub/dispatcher/UC-COM-25 và thu hồi ≤5 giây chưa triển khai tại revision này. Chưa đo RAM/tải thực tế. Code chưa merge main; người dùng tự push nhánh code/tài liệu. Đề xuất xóa phòng trước tin ở thời điểm bàn giao được thay về thứ tự ưu tiên bởi [phạm vi MVP đã chọn sau rà soát](../../../../releases/mvp.md#community-scope): ưu tiên lịch sử/gửi/nhận/mất quyền, xóa phòng thuộc mở rộng. Kết quả kiểm chứng lịch sử bên trên giữ nguyên.
 
 Kiểm tra tài liệu trên main: 87 Markdown/2.161 liên kết nội bộ, 0 lỗi. OpenAPI resolve 530 local refs, giữ nguyên component schemas; chỉ cập nhật metadata sáu route trong gói, DELETE vẫn là mục tiêu.

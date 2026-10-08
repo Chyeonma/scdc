@@ -102,7 +102,9 @@ Mất quyền/rời/xóa phòng xóa cache/tin tạm của scope tương ứng v
 
 ### Schema và migration
 
-| Mã | SQL/source hiện tại | Mapping/đầu việc thiết kế |
+Bảng này đối chiếu baseline code `main` trước chuỗi migration Community với thiết kế đầy đủ, không mô tả schema hiện hành của `feat/community-channels`. Feature đã có ledger 001–004 cho các gói đã chọn; phần triển khai và proof theo [status](../status.md) và [đối chiếu test](../delivery/verification.md). Requests/invitations/delete/realtime ngoài các gói đó tiếp tục là mục tiêu.
+
+| Mã | Baseline main trước migration Community | Mapping/đầu việc thiết kế |
 |---|---|---|
 | <a id="com-sql-01"></a> COM-SQL-01 | servers chưa có visibility/join_mode; description varchar(500), slug bắt buộc | Thêm visibility/join_mode/access_version, description 1.000; slug nội bộ sinh từ ID; backfill visibility/join mode được rà soát theo dữ liệu thực |
 | <a id="com-sql-02"></a> COM-SQL-02 | channel name regex slug, tối thiểu 2 ASCII; topic 500; visibility có read-only | Tên Unicode 1–100 UTF-16, topic 1.000; kind text/voice/default_view/deleted_at/version/access_version riêng; unique tên phòng đang active, ID đã deleted không khôi phục; không đưa read-only vào v1 |
