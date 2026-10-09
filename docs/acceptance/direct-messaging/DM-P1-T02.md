@@ -207,3 +207,5 @@ Xác nhận người dùng C01/C02/C03/C04 FE và BE: **Chưa xác nhận**. Quy
 ## Xác nhận người dùng09/10/2026
 
 Người dùng trả lời: “P1-T02 đã PASS FE và BE; làm tiếp P1-T03”, khi được hỏi nghiệm thu build `ea0c311`. Đây là xác nhận task tạo/mở DM, không phải nghiệm thu gửi tin/inbox/history. Các bảng Chưa xác nhận phía trên giữ trạng thái ở thời điểm bàn giao, chưa có log chi tiết riêng từng bước người dùng. Đã được giao P1-T03; tích hợp P1-T02 vào message trước khi triển khai task kế, giữ source code build được duyệt.
+
+P1-T02 đã merge --no-ff vào message tại `e5170b4bfc41d2f8976a556de3c262cb410e5aea`; commit PASS task `f658d2672402799c09257124fcb3c552f9ccde33` là ancestor. Code services/clients/scripts/database giống build ea0c311. Smoke sau merge: A→B/B→A200 cùng D-AB, self400 INVALID_PEER, pending404 RESOURCE_NOT_FOUND; pair1/member2/orphan0.
