@@ -174,7 +174,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ## Tổng hợp phase và task
 
-**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 đã triển khai/test bởi agent, Chờ người dùng test; 17 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 được người dùng PASS FE/BE build ea0c311 ngày09/10/2026; P1-T03 đã được giao; 17 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|
@@ -240,7 +240,7 @@ Branch `feat/dm-p1-t02-open-conversation`. AC-DM-01/12/13; TC-DM-02/12/24; DM-SQ
 
 **Bạn test BE:** Hai POST song song nhận cùng ID; đúng hai membership, một pair, không space mồ côi; self/peer pending bị từ chối. Disabled peer được test bằng integration fixture, lượt người dùng E2E ở P6-T02. C không được lấy D-AB từ inbox sau task kế. Task này test outsider với các API đã có, không giả endpoint detail chưa có.
 
-**Gate:** Agent đã triển khai/test P1-T02; [biên bản và lệnh C01–C04](../acceptance/direct-messaging/DM-P1-T02.md). Chờ người dùng PASS FE/BE trên build bàn giao mới merge vào message và làm inbox. Checkbox trên chỉ xác nhận implementation/test của agent. Theo yêu cầu09/10/2026, tạm chỉ chọn một người; chọn người khác thay lựa chọn trước, chọn nhiều người chưa hoạt động.
+**Gate:** Người dùng PASS FE/BE build ea0c311 ngày09/10/2026; [biên bản và lệnh C01–C04](../acceptance/direct-messaging/DM-P1-T02.md). Đã đủ điều kiện tích hợp vào message và triển khai inbox P1-T03 theo yêu cầu người dùng. Checkbox trên chỉ xác nhận implementation/test của agent. Theo yêu cầu09/10/2026, tạm chỉ chọn một người; chọn người khác thay lựa chọn trước, chọn nhiều người chưa hoạt động.
 
 ### DM-P1-T03 inbox dữ liệu thật
 

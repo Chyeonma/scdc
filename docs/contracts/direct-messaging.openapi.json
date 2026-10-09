@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
     "version": "0.5.0-p1-open",
-    "description": "GET /users/search đã được người dùng PASS FE/BE P1-T01. POST /direct-conversations được triển khai/test trong P1-T02, chờ người dùng test; docs/acceptance/direct-messaging/DM-P1-T02.md giữ bản chạy và bằng chứng. GET inbox, tin nhắn và Hub vẫn chưa triển khai."
+    "description": "GET search và POST tạo/lấy DM đã được người dùng PASS FE/BE P1-T01/P1-T02 (build ea0c311 ngày09/10/2026). GET inbox P1-T03 đã được giao; tin nhắn và Hub chưa triển khai."
   },
   "servers": [
     {
@@ -166,7 +166,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-agent-tested-user-acceptance-pending",
+        "x-scdc-implementation": "implemented-agent-tested-user-accepted",
         "requestBody": {
           "required": true,
           "content": {

@@ -1,6 +1,6 @@
 # DM-P1-T02 — tạo hoặc lấy một DM duy nhất
 
-Trạng thái: **Chờ người dùng test FE và BE**, ngày09/10/2026. P1-T01 đã được người dùng PASS và tích hợp vào `message`; P1-T02 chỉ được push nhánh task, chưa merge. Phản hồi mới: “Trước tiên chức năng chọn nhiều người sẽ chưa hoạt động, Chỉ chọn 1 người hoạt động, và tạo DM”. Chọn người thứ hai thay người thứ nhất; chỉ bấm **Mở hội thoại** mới gửi POST.
+Trạng thái: **Người dùng PASS FE/BE**, ngày09/10/2026, build `ea0c311163b9d7dc6f80f1488bb935edd886b74d`. P1-T01 đã được người dùng PASS và tích hợp vào `message`; P1-T02 chỉ được push nhánh task, chưa merge. Phản hồi mới: “Trước tiên chức năng chọn nhiều người sẽ chưa hoạt động, Chỉ chọn 1 người hoạt động, và tạo DM”. Chọn người thứ hai thay người thứ nhất; chỉ bấm **Mở hội thoại** mới gửi POST.
 
 ## Task và bản chạy
 
@@ -203,3 +203,7 @@ API image `sha256:6b8de3952ee88aa1b5956d73d364f18f28a97e05a97971a00d92a8ec7ed308
 Test đầu phát hiện validation attribute sai target ở positional record và cleanup lúc provider đã đóng transaction; đã sửa và regression đạt. Test frontend đầu dùng tên mẫu sai so với manifest, sửa lấy tên thật. Một lượt bị agent restart API khi E2E còn chạy; đã sửa FaultOff để cleanup không cần API và chạy lại trên stack ổn định, suite cuối9/9. Dữ liệu DM của agent giữ để đối soát; tài khoản integration chỉ xóa trong scope fixture own IDs, không drop DB/volume.
 
 Xác nhận người dùng C01/C02/C03/C04 FE và BE: **Chưa xác nhận**. Quyền push task đã có; merge `--no-ff` vào `message` chỉ sau PASS trên build bàn giao, fetch lại remote, smoke và xác minh ancestry. Chưa giao/triển khai P1-T03; chưa nghiệm thu toàn UC DM. Ghi phản hồi `PASS DM-P1-T02 | FE: đạt | BE: đạt | Build: <SHA>` hoặc FAIL kèm case/bước/expected/actual.
+
+## Xác nhận người dùng09/10/2026
+
+Người dùng trả lời: “P1-T02 đã PASS FE và BE; làm tiếp P1-T03”, khi được hỏi nghiệm thu build `ea0c311`. Đây là xác nhận task tạo/mở DM, không phải nghiệm thu gửi tin/inbox/history. Các bảng Chưa xác nhận phía trên giữ trạng thái ở thời điểm bàn giao, chưa có log chi tiết riêng từng bước người dùng. Đã được giao P1-T03; tích hợp P1-T02 vào message trước khi triển khai task kế, giữ source code build được duyệt.
