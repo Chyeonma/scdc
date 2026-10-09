@@ -8,7 +8,7 @@ Trạng thái: **Chờ người dùng test FE và BE**. Người dùng đã xác
 |---|---|
 | Task / truy vết | P1-T03.1–.5; AC-DM-01/12, lát cắt inbox của TC-DM-01/12; không nghiệm thu gửi/lịch sử/Hub |
 | Branch / repository | `feat/dm-p1-t03-conversation-inbox`; repo gốc `E:\Project\SCDC\scdc`, worktree chạy `E:\Project\SCDC\dm-message-integration` |
-| Commit implementation/build | `SOURCE_BUILD`; commit docs sau đó không đổi code đã test |
+| Commit implementation/build | `970f03b88e5bf2388926fc153dca2623f1be3d56`; commit docs sau đó không đổi code đã test |
 | Remote task SHA | Xác minh bằng `git ls-remote`; SHA bàn giao cuối cùng nằm trong `.dm-acceptance/runs/baseline/p1-t03-build.json` và `git rev-parse HEAD` |
 | PR / integration | Chưa tạo PR; target `message`. Chưa merge P1-T03; giữ main |
 | Web / API / Swagger | http://localhost:15300 / http://localhost:15026/api/v1 / http://localhost:15026/swagger |
@@ -266,6 +266,8 @@ npx.cmd playwright test --config playwright.dm-p1-t03.config.js
 ```
 
 Không restart/build API/FE giữa E2E; suite tự bật/tắt fault ở ca cuối. Trace/HAR/video/screenshot tắt để không lưu login/token. Report nằm ở `.dm-acceptance/e2e-p1-t03/results.json`; mọi evidence path tính từ worktree.
+
+API image `sha256:422b623719f9ffd33b8017f583b8a47481bd05dff3faf52bb640fe13c298ffc7`; FE image `sha256:c97d31565802f9cf3758033007155ce7a3eab71a18505eb0331065570ae69686`; bundle đang phục vụ `index-CdQ_UjkV.js`. Config/migration, ID fixtures, recipe và các suite kể trên đã được chạy; latest backend50/50 và Edge12/12 không skip. Hồ sơ docs/link:92 Markdown/2212 local links/0errors; catalogue20task/80case giữ parity.
 
 ## Người dùng tự kiểm tra và gate
 
