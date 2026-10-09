@@ -41,6 +41,7 @@ import { CreateDmModal } from './components/CreateDmModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
+import { useConversationInbox } from './useConversationInbox.js';
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
@@ -57,11 +58,15 @@ export default function App() {
   const [userStatus, setUserStatus] = useState('online');
 
   // Navigation State
-  const [isHomeActive, setIsHomeActive] = useState(false);
+  const [isHomeActive, setIsHomeActive] = useState(true);
   const [servers, setServers] = useState(INITIAL_SERVERS);
   const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
   const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
-  const [dms, setDms] = useState([]);
+  const inbox = useConversationInbox(session?.user?.id);
+  const dms = useMemo(() => inbox.items.map(conversation => ({ ...conversation,
+    spaceId: conversation.id, spaceType: 1,
+    user: conversation.participants.find(user => user.id !== session?.user?.id),
+  })), [inbox.items, session?.user?.id]);
   const [activeDmId, setActiveDmId] = useState(null);
 
   // Messages & Threads State
@@ -103,14 +108,18 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
-    setDms([]); setActiveDmId(null); setShowCreateDm(false); setReplyingTo(null); setSearchQuery('');
+    setActiveDmId(null); setIsHomeActive(true); setShowCreateDm(false); setReplyingTo(null); setSearchQuery('');
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    setActiveDmId(previous => dms.some(dm => dm.spaceId === previous) ? previous : dms[0]?.spaceId ?? null);
+  }, [dms]);
 
   function handleOpenedDm(conversation) {
     const peer = conversation.participants.find(user => user.id !== sessionStore.getSnapshot()?.user?.id);
     if (!peer) return;
     const dm = { ...conversation, spaceId: conversation.id, spaceType: 1, user: peer };
-    setDms(previous => [...previous.filter(item => item.spaceId !== dm.spaceId), dm]);
+    inbox.opened(conversation);
     setActiveDmId(dm.spaceId); setIsHomeActive(true); setShowCreateDm(false);
     setRightPanelMode(null); setSearchQuery(''); setReplyingTo(null);
   }
@@ -435,6 +444,7 @@ export default function App() {
         activeChannelId={activeChannelId}
         onSelectChannel={(chId) => setActiveChannelId(chId)}
         dms={dms}
+        inbox={inbox}
         activeDmId={activeDmId}
         onSelectDm={(dmId) => setActiveDmId(dmId)}
         onOpenCreateDm={() => setShowCreateDm(true)}

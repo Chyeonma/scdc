@@ -1,6 +1,6 @@
 # DM-P1-T02 — tạo hoặc lấy một DM duy nhất
 
-Trạng thái: **Người dùng PASS FE/BE**, ngày09/10/2026, build `ea0c311163b9d7dc6f80f1488bb935edd886b74d`. P1-T01 đã được người dùng PASS và tích hợp vào `message`; P1-T02 chỉ được push nhánh task, chưa merge. Phản hồi mới: “Trước tiên chức năng chọn nhiều người sẽ chưa hoạt động, Chỉ chọn 1 người hoạt động, và tạo DM”. Chọn người thứ hai thay người thứ nhất; chỉ bấm **Mở hội thoại** mới gửi POST.
+Trạng thái: **Người dùng PASS FE/BE**, ngày09/10/2026, build `ea0c311163b9d7dc6f80f1488bb935edd886b74d`. P1-T01 đã được người dùng PASS và tích hợp vào `message`; P1-T02 đã merge vào message tại `e5170b4`; các mục bản chạy/test dưới đây giữ hồ sơ thời điểm bàn giao ea0c311. Runtime hiện hành được ghi ở [P1-T03](DM-P1-T03.md). Phản hồi mới: “Trước tiên chức năng chọn nhiều người sẽ chưa hoạt động, Chỉ chọn 1 người hoạt động, và tạo DM”. Chọn người thứ hai thay người thứ nhất; chỉ bấm **Mở hội thoại** mới gửi POST.
 
 ## Task và bản chạy
 

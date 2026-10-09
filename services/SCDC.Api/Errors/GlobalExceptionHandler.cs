@@ -21,7 +21,7 @@ internal sealed class GlobalExceptionHandler(
             httpContext.Request.Path);
 
         // Authentication also consults Identity before the DM controller runs.
-        var authorityUnavailable = HttpMethods.IsPost(httpContext.Request.Method)
+        var authorityUnavailable = (HttpMethods.IsPost(httpContext.Request.Method) || HttpMethods.IsGet(httpContext.Request.Method))
             && string.Equals(httpContext.Request.Path.Value?.TrimEnd('/'), "/api/v1/direct-conversations", StringComparison.OrdinalIgnoreCase)
             && DatabaseAvailability.IsUnavailable(exception);
         var detail = authorityUnavailable

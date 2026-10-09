@@ -667,6 +667,8 @@ D. Toàn bộ 5 subtask cần hoàn tất
 - P1-T03.4 Cache list theo actor và cleanup logout; response cũ không ghi dữ liệu vào actor mới.
 - P1-T03.5 Seed thêm DM A–S để test >20 hội thoại qua API; E2E empty/list/pagination/actor switch.
 
+Điều chỉnh09/10/2026: hiện chỉ chọn một người; chọn người khác thay lựa chọn trước. Giữ override này khi dùng chung lựa chọn search/gần đây.
+
 Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
 E. Môi trường và dữ liệu để tôi test
@@ -705,18 +707,18 @@ Các case C01–C04 dưới đây là kế hoạch, trạng thái Chưa chạy. 
 TEST CASE DM-P1-T03-C01 — Inbox phân biệt A B C theo membership
 Trạng thái ví dụ: Chưa chạy (planned-not-executed).
 Điều kiện trước:
-- Run inbox chỉ có D-AB và D-AC; chưa tạo DM S trong ca này
+- Baseline A có 25 DM A/B, A/C, A/S01-S23; B/C chỉ có DM với A; K chưa có DM
 - A/B/C profile riêng
-Dữ liệu cụ thể: D-AB A/B, D-AC A/C, cả hai chưa có messages.
+Dữ liệu cụ thể: Baseline 25 DM chưa có messages; D-AB A/B và D-AC A/C giữ ID đã tạo.
 Bước kiểm tra frontend:
-1. Login A mở inbox, ghi hai peer B/C và ID.
+1. Login A mở inbox, tải thêm từ 20 lên 25; ghi B/C cùng các peer S và ID.
 2. Login B mở inbox, chỉ có peer A từ D-AB.
 3. Login C mở inbox, chỉ có D-AC; không thấy D-AB biết ID.
 Bước kiểm tra backend:
 1. GET /api/v1/direct-conversations?limit=20 lần lượt bằng A/B/C.
 2. So items.id và participants với manifest/membership query.
-Frontend mong đợi: A thấy hai DM, B/C mỗi bên một DM đúng của mình; không có INITIAL_DMS.
-Backend mong đợi: 200; A tập {D-AB,D-AC}, B {D-AB}, C {D-AC}; empty conversation có lastSequence hợp lệ, không lastMessage giả.
+Frontend mong đợi: A thấy 25 DM sau tải thêm; B/C mỗi bên một DM với A đúng của mình; không có INITIAL_DMS.
+Backend mong đợi: 200; A có 25 DM, B {D-AB}, C {D-AC}; lastSequence="0", lastActivityAt=null, không lastMessage giả.
 Đối soát DB chỉ đọc:
 - Membership join actor cho đúng tập IDs ở từng response.
 - GET list không tạo membership hoặc cấp C quyền D-AB.
@@ -735,7 +737,7 @@ Dữ liệu cụ thể: Run cô lập chỉ tạo 25 DM của A: A/B, A/C và A/
 Bước kiểm tra frontend:
 1. Mở inbox A, ghi 20 items trang đầu.
 2. Bấm tải thêm, ghi 5 items còn lại.
-3. Reload/mở peer bất kỳ rồi về inbox, kiểm tra 25 ID duy nhất không list mock.
+3. Reload/làm mới trả trang đầu20; bấm Tải thêm hội thoại để đủ25 ID duy nhất. Mở peer giữ selection cho tới lần reload mới.
 Bước kiểm tra backend:
 1. GET direct-conversations?limit=20; lưu nextCursor.
 2. GET trang kế cùng limit/cursor; union IDs rồi so memberships A.
@@ -753,20 +755,20 @@ Sau case: Tắt fault nếu có; giữ dữ liệu và manifest của run để 
 TEST CASE DM-P1-T03-C03 — User mới inbox rỗng và API lỗi có retry
 Trạng thái ví dụ: Chưa chạy (planned-not-executed).
 Điều kiện trước:
-- S23 active/verified nhưng chưa tham gia DM trong run cô lập khác
+- K active/verified và chưa có DM trong baseline; không mở DM bằng K ở case này
 - Có fault GET list 503 và tài khoản A có DM
-Dữ liệu cụ thể: S23 empty case; A nonempty recovery case.
+Dữ liệu cụ thể: K=dm_demo_khoa empty case; A=dm_demo_an nonempty recovery case.
 Bước kiểm tra frontend:
-1. Login S23 mới, mở inbox, thấy hướng dẫn tìm người và không item mẫu.
+1. Login K, mở inbox, thấy hướng dẫn tìm người và không item mẫu; modal Người vừa nhắn tin rỗng.
 2. Login A profile khác, bật fault GET list503 rồi mở inbox.
 3. Tắt fault, bấm thử lại, danh sách thật của A trở lại.
 Bước kiểm tra backend:
-1. GET direct-conversations bằng S23 nhận empty; lưu response.
+1. GET direct-conversations bằng K nhận empty; lưu response.
 2. Bearer A GET list trong fault rồi request sạch sau fault.
 Frontend mong đợi: Empty khác error; lỗi có retry; không dùng INITIAL_DMS để lấp response empty/error.
-Backend mong đợi: S23:200 items=[] nextCursor=null; fault:503 theo harness; phục hồi:200 đúng actor.
+Backend mong đợi: K:200 items=[] nextCursor=null; fault API thật:503 AUTHORITY_UNAVAILABLE; phục hồi:200 đúng actor.
 Đối soát DB chỉ đọc:
-- GET không tạo DM/membership S23 khi inbox rỗng.
+- GET không tạo DM/membership K khi inbox rỗng.
 - Fault không làm mất pairs/memberships/messages của A.
 Bằng chứng cần lưu:
 - Ghi commit/build, run và actor; lưu kết quả từng bước FE/BE.

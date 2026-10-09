@@ -174,7 +174,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ## Tổng hợp phase và task
 
-**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 được người dùng PASS FE/BE build ea0c311 ngày09/10/2026; P1-T03 đã được giao; 17 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 được người dùng PASS FE/BE build ea0c311 ngày09/10/2026; P1-T03 đã triển khai và Chờ người dùng test; 16 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|
@@ -224,7 +224,7 @@ Branch `feat/dm-p1-t01-user-search`. AC-DM-01/16; TC-DM-01/18. Phụ thuộc P0-
 
 **Bạn test BE:** Cùng q qua Swagger/helper; thử 1/2/64/65 UTF-16, `%/_/\`, cursor đổi q hoặc actor; JSON không có email. DB đối chiếu kết quả/rank đủ người và không ghi membership khi search.
 
-**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Đã merge/push vào `message` tại `d18d9a4`, remote/ancestry và smoke đạt; chưa nghiệm thu tạo DM, P1-T02 đã được giao ngày09/10/2026, chưa được người dùng nghiệm thu.
+**Gate:** Đã PASS FE/BE build `9d995d0` theo xác nhận người dùng ngày08/10/2026. Đã merge/push vào `message` tại `d18d9a4`, remote/ancestry và smoke đạt; chưa nghiệm thu tạo DM, P1-T02 đã được người dùng PASS FE/BE build ea0c311 ngày09/10/2026 và merge message tại e5170b4.
 
 ### DM-P1-T02 tạo hoặc lấy một hội thoại duy nhất
 
@@ -246,11 +246,11 @@ Branch `feat/dm-p1-t02-open-conversation`. AC-DM-01/12/13; TC-DM-02/12/24; DM-SQ
 
 Branch `feat/dm-p1-t03-conversation-inbox`. AC-DM-01/12, contract danh sách; cần D-AB/D-AC.
 
-- [ ] P1-T03.1 GET `/direct-conversations` chỉ actor member; projection participant, activity và pagination 20/50/cursor protected.
-- [ ] P1-T03.2 Kiểm tra auth từng trang, dedup ID trên UI và refresh trang đầu khi danh sách thay đổi; không hứa snapshot cố định.
-- [ ] P1-T03.3 Thay DM mock bằng loader/inbox thật; loading/empty/error/retry và chọn conversation sau reload. Modal chọn người có mục Người vừa nhắn tin: lấy peer từ hội thoại của actor có lastActivityAt khác null, theo lastActivityAt DESC rồi conversation ID ASC, dedup peer ID, bỏ actor; hiện displayName/username, cho chọn/bỏ chọn chung với kết quả search. Hội thoại chưa có tin không vào mục này; API lỗi có retry, không fallback mock/localStorage lượt chọn.
-- [ ] P1-T03.4 Cache list theo actor và cleanup logout; response cũ không ghi dữ liệu vào actor mới.
-- [ ] P1-T03.5 Seed thêm DM A–S để test >20 hội thoại qua API; E2E empty/list/pagination/actor switch.
+- [x] P1-T03.1 GET `/direct-conversations` chỉ actor member; projection participant, activity và pagination 20/50/cursor protected.
+- [x] P1-T03.2 Kiểm tra auth từng trang, dedup ID trên UI và refresh trang đầu khi danh sách thay đổi; không hứa snapshot cố định.
+- [x] P1-T03.3 Thay DM mock bằng loader/inbox thật; loading/empty/error/retry và chọn conversation sau reload. Modal chọn người có mục Người vừa nhắn tin: lấy peer từ hội thoại của actor có lastActivityAt khác null, theo lastActivityAt DESC rồi conversation ID ASC, dedup peer ID, bỏ actor; hiện displayName/username, cho chọn/bỏ chọn chung với kết quả search. Hội thoại chưa có tin không vào mục này; API lỗi có retry, không fallback mock/localStorage lượt chọn.
+- [x] P1-T03.4 Cache list theo actor và cleanup logout; response cũ không ghi dữ liệu vào actor mới.
+- [x] P1-T03.5 Seed thêm DM A–S để test >20 hội thoại qua API; E2E empty/list/pagination/actor switch.
 
 **Bạn test FE:** A thấy D-AB/D-AC và đủ các trang; B chỉ thấy DM của B; C không thấy D-AB; tài khoản mới inbox rỗng, API lỗi không fallback mock.
 
@@ -258,7 +258,7 @@ Branch `feat/dm-p1-t03-conversation-inbox`. AC-DM-01/12, contract danh sách; c�
 
 Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
-**Gate:** Inbox thật đúng quyền; bạn PASS rồi mới gửi tin.
+**Gate:** Chờ người dùng test FE/BE trên build P1-T03; [biên bản và recipe C01–C04](../acceptance/direct-messaging/DM-P1-T03.md). Checkbox xác nhận implementation/test của agent; chưa merge task vào message và chưa được giao P2-T01.
 
 ## Phase P2 gửi lưu bền và lịch sử
 

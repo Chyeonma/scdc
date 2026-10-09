@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
-    "version": "0.5.0-p1-open",
-    "description": "GET search và POST tạo/lấy DM đã được người dùng PASS FE/BE P1-T01/P1-T02 (build ea0c311 ngày09/10/2026). GET inbox P1-T03 đã được giao; tin nhắn và Hub chưa triển khai."
+    "version": "0.6.0-p1-inbox",
+    "description": "GET search và POST mở DM đã được người dùng PASS FE/BE. GET inbox P1-T03 đã triển khai, chờ người dùng test; gửi tin, lịch sử và Hub chưa triển khai."
   },
   "servers": [
     {
@@ -198,11 +198,11 @@
         "operationId": "listDirectConversations",
         "summary": "Liệt kê DM của chính người gọi",
         "tags": [
-          "Direct messaging draft"
+          "Direct messaging"
         ],
         "responses": {
           "200": {
-            "description": "Thành công; mutation trả sau commit.",
+            "description": "Inbox của actor: lastActivityAt DESC NULLS LAST, ID ASC; chỉ membership active và space chưa xóa.",
             "content": {
               "application/json": {
                 "schema": {
@@ -212,7 +212,7 @@
             }
           },
           "400": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "Common.ValidationFailed cho limit không hợp lệ; CURSOR_INVALID cho cursor sai/hết hạn/chéo actor/limit.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -222,37 +222,7 @@
             }
           },
           "401": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "Common.Unauthorized: cần actor active/verified và phiên hợp lệ; kiểm tra lại mỗi trang.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -262,7 +232,7 @@
             }
           },
           "503": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "AUTHORITY_UNAVAILABLE: không xác nhận được quyền hoặc dữ liệu; không trả inbox giả.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -272,7 +242,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-agent-tested-pending-user-acceptance",
         "parameters": [
           {
             "name": "cursor",
@@ -281,7 +251,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Con trỏ opaque; thuật toán/định dạng cần rà soát."
+            "description": "Cursor Data Protection purpose Messaging.Conversations.v1, gắn actor/limit/scope direct-inbox và vị trí activity/ID; TTL 24h cố định kể từ trang đầu; chuỗi rỗng cũng bị từ chối. Dùng keyring persistent chung, purpose tách search."
           },
           {
             "name": "limit",
@@ -306,7 +276,8 @@
           "503": [
             "AUTHORITY_UNAVAILABLE"
           ]
-        }
+        },
+        "x-scdc-acceptance-record": "docs/acceptance/direct-messaging/DM-P1-T03.md"
       }
     },
     "/direct-conversations/{id}/messages": {

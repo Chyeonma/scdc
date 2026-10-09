@@ -296,3 +296,10 @@ export function openDirectConversation(peerUserId, { signal } = {}) {
   return api('/direct-conversations', { method: 'POST', body: { peerUserId }, retry: false, signal,
     expectedActorId: session?.user?.id ?? null });
 }
+
+export function listDirectConversations({ cursor = null, limit = 20, signal,
+  expectedActorId = session?.user?.id ?? null } = {}) {
+  const parameters = new URLSearchParams({ limit: String(limit) });
+  if (cursor !== null) parameters.set('cursor', cursor);
+  return api(`/direct-conversations?${parameters}`, { signal, expectedActorId });
+}
