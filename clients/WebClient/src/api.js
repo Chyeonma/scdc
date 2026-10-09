@@ -309,3 +309,10 @@ export function sendDirectMessage(conversationId, clientMessageId, content, { si
     method: 'POST', body: { clientMessageId, content }, retry: false, signal, expectedActorId,
   });
 }
+
+export function getDirectMessages(conversationId, { before = null, after = null, through = null, limit = 50,
+  signal, expectedActorId = session?.user?.id ?? null } = {}) {
+  const parameters = new URLSearchParams({ limit: String(limit) });
+  for (const [key, value] of Object.entries({ before, after, through })) if (value !== null) parameters.set(key, value);
+  return api(`/direct-conversations/${conversationId}/messages?${parameters}`, { signal, expectedActorId });
+}

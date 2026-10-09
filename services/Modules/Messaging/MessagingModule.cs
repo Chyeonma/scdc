@@ -21,6 +21,7 @@ public static class MessagingModule
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddScoped<IConversationInbox, ConversationInbox>();
         services.AddScoped<ITextMessageSender, TextMessageSender>();
+        services.AddScoped<IMessageHistory, MessageHistory>();
         services.AddSingleton<SCDC.Modules.Messaging.Infrastructure.Security.MessageFingerprint>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;

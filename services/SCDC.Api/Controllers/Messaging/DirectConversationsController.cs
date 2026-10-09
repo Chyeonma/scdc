@@ -8,8 +8,20 @@ namespace SCDC.Api.Controllers.Messaging;
 
 [Authorize]
 [Route("api/v1/direct-conversations")]
-public sealed class DirectConversationsController(IDirectConversationService service, IConversationInbox inbox, ITextMessageSender sender) : ApiControllerBase
+public sealed class DirectConversationsController(IDirectConversationService service, IConversationInbox inbox, ITextMessageSender sender, IMessageHistory history) : ApiControllerBase
 {
+    [HttpGet("{conversationId:guid}/messages")]
+    [ProducesResponseType<MessagePage>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessagePage>> History(Guid conversationId, [FromQuery, Range(1, 100)] int limit = 50,
+        [FromQuery] string? before = null, [FromQuery] string? after = null, [FromQuery] string? through = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (Request.Query.ContainsKey("before")) before = Request.Query["before"].ToString();
+        if (Request.Query.ContainsKey("after")) after = Request.Query["after"].ToString();
+        if (Request.Query.ContainsKey("through")) through = Request.Query["through"].ToString();
+        return FromResult(await history.ReadAsync(new(User.GetUserId(), User.GetSessionId(),
+            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, limit, before, after, through), cancellationToken));
+    }
     [HttpGet]
     [ProducesResponseType<DirectConversationPage>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

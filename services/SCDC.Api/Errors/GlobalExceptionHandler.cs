@@ -9,7 +9,7 @@ internal sealed class GlobalExceptionHandler(
     ILogger<GlobalExceptionHandler> logger,
     IProblemDetailsService problemDetailsService) : IExceptionHandler
 {
-    private static bool IsMessageSend(string? path)
+    private static bool IsMessageRoute(string? path)
     {
         var parts = path?.Trim('/').Split('/');
         return parts is { Length: 5 } && parts[0].Equals("api", StringComparison.OrdinalIgnoreCase)
@@ -31,7 +31,7 @@ internal sealed class GlobalExceptionHandler(
         // Authentication also consults Identity before the DM controller runs.
         var authorityUnavailable = (HttpMethods.IsPost(httpContext.Request.Method) || HttpMethods.IsGet(httpContext.Request.Method))
             && (string.Equals(httpContext.Request.Path.Value?.TrimEnd('/'), "/api/v1/direct-conversations", StringComparison.OrdinalIgnoreCase)
-                || (HttpMethods.IsPost(httpContext.Request.Method) && IsMessageSend(httpContext.Request.Path.Value)))
+                || IsMessageRoute(httpContext.Request.Path.Value))
             && DatabaseAvailability.IsUnavailable(exception);
         var detail = authorityUnavailable
             ? "The service cannot confirm this request. Please try again."
