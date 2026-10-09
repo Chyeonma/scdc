@@ -8,6 +8,7 @@ export function SubSidebar({
   activeChannelId,
   onSelectChannel,
   dms,
+  inbox,
   activeDmId,
   onSelectDm,
   onOpenCreateDm,
@@ -170,6 +171,15 @@ export function SubSidebar({
         </div>
 
         {/* DM List */}
+        <div className="dm-inbox-controls">
+          <button type="button" className="btn btn--secondary" disabled={inbox.status === 'loading'} onClick={inbox.refresh}>Làm mới hội thoại</button>
+          {inbox.status === 'loading' && <p role="status">Đang tải hội thoại…</p>}
+          {inbox.status === 'success' && dms.length === 0 && <p role="status">Chưa có hội thoại. Nhấn + để tìm người nhận.</p>}
+          {inbox.status === 'error' && <div role="alert">
+            <p>{inbox.error?.status === 400 ? 'Danh sách đã hết hạn. Hãy làm mới hội thoại.' : 'Không tải được hội thoại. Hãy thử lại.'}</p>
+            {inbox.error?.status !== 400 && <button type="button" className="btn btn--secondary" onClick={inbox.retry}>Thử lại hội thoại</button>}
+          </div>}
+        </div>
         <nav className="dm-list" aria-label="Danh sách tin nhắn trực tiếp">
           {dms.map((dm) => {
             const isActive = dm.spaceId === activeDmId;
@@ -214,6 +224,7 @@ export function SubSidebar({
             );
           })}
         </nav>
+        {inbox.nextCursor && inbox.status !== 'error' && <button type="button" className="btn btn--secondary" disabled={inbox.status === 'loading'} onClick={inbox.loadMore}>Tải thêm hội thoại</button>}
       </div>
 
       {/* User Dock */}

@@ -420,12 +420,12 @@
           "status": "planned-not-executed",
           "title": "Inbox phân biệt A B C theo membership",
           "preconditions": [
-            "Run inbox chỉ có D-AB và D-AC; chưa tạo DM S trong ca này",
+            "Baseline A có 25 DM A/B, A/C, A/S01-S23; B/C chỉ có DM với A; K chưa có DM",
             "A/B/C profile riêng"
           ],
-          "data": "D-AB A/B, D-AC A/C, cả hai chưa có messages.",
+          "data": "Baseline 25 DM chưa có messages; D-AB A/B và D-AC A/C giữ ID đã tạo.",
           "frontend_steps": [
-            "Login A mở inbox, ghi hai peer B/C và ID.",
+            "Login A mở inbox, tải thêm từ 20 lên 25; ghi B/C cùng các peer S và ID.",
             "Login B mở inbox, chỉ có peer A từ D-AB.",
             "Login C mở inbox, chỉ có D-AC; không thấy D-AB biết ID."
           ],
@@ -433,8 +433,8 @@
             "GET /api/v1/direct-conversations?limit=20 lần lượt bằng A/B/C.",
             "So items.id và participants với manifest/membership query."
           ],
-          "expected_frontend": "A thấy hai DM, B/C mỗi bên một DM đúng của mình; không có INITIAL_DMS.",
-          "expected_backend": "200; A tập {D-AB,D-AC}, B {D-AB}, C {D-AC}; empty conversation có lastSequence hợp lệ, không lastMessage giả.",
+          "expected_frontend": "A thấy 25 DM sau tải thêm; B/C mỗi bên một DM với A đúng của mình; không có INITIAL_DMS.",
+          "expected_backend": "200; A có 25 DM, B {D-AB}, C {D-AC}; lastSequence=\"0\", lastActivityAt=null, không lastMessage giả.",
           "database_checks": [
             "Membership join actor cho đúng tập IDs ở từng response.",
             "GET list không tạo membership hoặc cấp C quyền D-AB."
@@ -457,7 +457,7 @@
           "frontend_steps": [
             "Mở inbox A, ghi 20 items trang đầu.",
             "Bấm tải thêm, ghi 5 items còn lại.",
-            "Reload/mở peer bất kỳ rồi về inbox, kiểm tra 25 ID duy nhất không list mock."
+            "Reload/làm mới trả trang đầu20; bấm Tải thêm hội thoại để đủ25 ID duy nhất. Mở peer giữ selection cho tới lần reload mới."
           ],
           "backend_steps": [
             "GET direct-conversations?limit=20; lưu nextCursor.",
@@ -480,23 +480,23 @@
           "status": "planned-not-executed",
           "title": "User mới inbox rỗng và API lỗi có retry",
           "preconditions": [
-            "S23 active/verified nhưng chưa tham gia DM trong run cô lập khác",
+            "K active/verified và chưa có DM trong baseline; không mở DM bằng K ở case này",
             "Có fault GET list 503 và tài khoản A có DM"
           ],
-          "data": "S23 empty case; A nonempty recovery case.",
+          "data": "K=dm_demo_khoa empty case; A=dm_demo_an nonempty recovery case.",
           "frontend_steps": [
-            "Login S23 mới, mở inbox, thấy hướng dẫn tìm người và không item mẫu.",
+            "Login K, mở inbox, thấy hướng dẫn tìm người và không item mẫu; modal Người vừa nhắn tin rỗng.",
             "Login A profile khác, bật fault GET list503 rồi mở inbox.",
             "Tắt fault, bấm thử lại, danh sách thật của A trở lại."
           ],
           "backend_steps": [
-            "GET direct-conversations bằng S23 nhận empty; lưu response.",
+            "GET direct-conversations bằng K nhận empty; lưu response.",
             "Bearer A GET list trong fault rồi request sạch sau fault."
           ],
           "expected_frontend": "Empty khác error; lỗi có retry; không dùng INITIAL_DMS để lấp response empty/error.",
-          "expected_backend": "S23:200 items=[] nextCursor=null; fault:503 theo harness; phục hồi:200 đúng actor.",
+          "expected_backend": "K:200 items=[] nextCursor=null; fault API thật:503 AUTHORITY_UNAVAILABLE; phục hồi:200 đúng actor.",
           "database_checks": [
-            "GET không tạo DM/membership S23 khi inbox rỗng.",
+            "GET không tạo DM/membership K khi inbox rỗng.",
             "Fault không làm mất pairs/memberships/messages của A."
           ],
           "evidence": [

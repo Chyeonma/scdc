@@ -347,6 +347,10 @@ CREATE INDEX ix_chat_spaces_recent
     ON messaging.spaces (last_activity_at DESC NULLS LAST)
     WHERE status = 1;
 
+CREATE INDEX ix_dm_inbox_order ON messaging.spaces
+    ((last_activity_at IS NOT NULL) DESC, last_activity_at DESC, id ASC)
+    WHERE space_type=1 AND status<>3 AND deleted_at IS NULL;
+
 COMMENT ON TABLE messaging.spaces IS 'Container thong nhat: 1=DM, 2=group chat, 3=server channel.';
 COMMENT ON COLUMN messaging.spaces.last_message_id IS 'Projection de doc nhanh; duoc cap nhat cung transaction voi message va outbox.';
 

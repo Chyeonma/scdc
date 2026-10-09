@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { searchUsers, openDirectConversation, sessionStore } from '../api.js';
+import { useConversationInbox } from '../useConversationInbox.js';
 
 export function CreateDmModal({ onClose, onOpened, initialQuery = '' }) {
+  const actorId = sessionStore.getSnapshot()?.user?.id;
+  const recent = useConversationInbox(actorId);
+  const recentPeople = [...new Map(recent.items.filter(item => item.lastActivityAt !== null)
+    .flatMap(item => item.participants.filter(user => user.id !== actorId)).map(user => [user.id, user])).values()];
   const [q, setQ] = useState(initialQuery);
   const [items, setItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
@@ -99,6 +104,16 @@ export function CreateDmModal({ onClose, onOpened, initialQuery = '' }) {
           <input aria-describedby="dm-search-hint" disabled={opening} value={q} onChange={e => changeQuery(e.target.value)} autoFocus />
         </label>
         <p id="dm-search-hint">{searchKey.length > 64 ? 'Từ khóa tối đa 64 đơn vị UTF-16.' : 'Nhập từ 2 đến 64 đơn vị UTF-16 để tìm người.'}</p>
+        {!searchKey && <section aria-label="Người vừa nhắn tin" className="dm-search__recent">
+          <h3>Người vừa nhắn tin</h3>
+          {recent.status === 'loading' && <p role="status">Đang tải người vừa nhắn tin…</p>}
+          {recent.status === 'success' && recentPeople.length === 0 && <p role="status">Chưa có người vừa nhắn tin.</p>}
+          {recent.status === 'error' && <div role="alert"><p>Không tải được người vừa nhắn tin.</p><button type="button" className="btn btn--secondary" onClick={recent.error?.status === 400 ? recent.refresh : recent.retry}>Thử lại người vừa nhắn tin</button></div>}
+          <ul className="dm-search__results">
+            {recentPeople.map(user => <li key={user.id}><button type="button" className="dm-search__result" aria-pressed={selected.some(item => item.id === user.id)} disabled={opening} onClick={() => toggleRecipient(user)}><strong>{user.displayName}</strong><span>@{user.username}</span></button></li>)}
+          </ul>
+          {recent.nextCursor && recent.items.every(item => item.lastActivityAt !== null) && recent.status !== 'error' && <button type="button" className="btn btn--secondary" disabled={recent.status === 'loading'} onClick={recent.loadMore}>Tải thêm người vừa nhắn tin</button>}
+        </section>}
         {status === 'loading' && <p role="status">Đang tìm người…</p>}
         {status === 'success' && items.length === 0 && <p role="status">Không tìm thấy người phù hợp.</p>}
         {status === 'error' && <div role="alert">

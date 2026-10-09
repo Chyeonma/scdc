@@ -19,6 +19,7 @@ public static class MessagingModule
         services.AddDbContext<MessagingDbContext>((provider, options) =>
             options.UseNpgsql(provider.GetRequiredService<ISharedDatabaseSession>().Connection));
         services.AddScoped<IDirectConversationService, DirectConversationService>();
+        services.AddScoped<IConversationInbox, ConversationInbox>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

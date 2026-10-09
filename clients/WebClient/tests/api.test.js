@@ -230,3 +230,24 @@ test('actor switch during preflight refresh cancels a queued DM before any POST'
   refresh.resolve(response(200, rotatedSession));
   await rejected; assert.equal(requests, 1);
 });
+
+test('inbox encodes cursor/limit, forwards cancellation and exposes503', async () => {
+  const signal = new AbortController().signal; let requests = 0;
+  const tab = await browser(rotatedSession).openTab(async (url, options) => {
+    requests++; const parsed = new URL(url, 'http://localhost');
+    assert.equal(parsed.pathname, '/api/v1/direct-conversations');
+    assert.equal(parsed.searchParams.get('cursor'), 'a+b/c='); assert.equal(parsed.searchParams.get('limit'), '20');
+    assert.equal(options.signal, signal); assert.equal(options.method, 'GET');
+    return response(503, { errorCode: 'AUTHORITY_UNAVAILABLE' });
+  });
+  await assert.rejects(tab.listDirectConversations({ cursor: 'a+b/c=', signal }), e => e.status === 503);
+  assert.equal(requests, 1);
+});
+
+test('inbox cannot continue with another actor after a401 refresh', async () => {
+  const tab = await browser(rotatedSession).openTab(async url => {
+    if (url === '/api/v1/auth/refresh') return response(200, { ...rotatedSession, user: { id: 'other' } });
+    assert.equal(url, '/api/v1/direct-conversations?limit=20'); return response(401, {});
+  });
+  await assert.rejects(tab.listDirectConversations(), e => e.status === 401);
+});
