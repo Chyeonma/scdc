@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using SCDC.BuildingBlocks.Infrastructure;
+using SCDC.BuildingBlocks.Application.Results;
 
 namespace SCDC.Api.Errors;
 
@@ -18,7 +20,16 @@ internal sealed class GlobalExceptionHandler(
             httpContext.Request.Method,
             httpContext.Request.Path);
 
-        var descriptor = ApiErrorDefaults.Unexpected;
+        // Authentication also consults Identity before the DM controller runs.
+        var authorityUnavailable = HttpMethods.IsPost(httpContext.Request.Method)
+            && string.Equals(httpContext.Request.Path.Value?.TrimEnd('/'), "/api/v1/direct-conversations", StringComparison.OrdinalIgnoreCase)
+            && DatabaseAvailability.IsUnavailable(exception);
+        var detail = authorityUnavailable
+            ? "The service cannot confirm this request. Please try again."
+            : "An unexpected error occurred while processing the request.";
+        var descriptor = authorityUnavailable
+            ? ApiErrorDefaults.FromError(Error.ServiceUnavailable("AUTHORITY_UNAVAILABLE", detail))
+            : ApiErrorDefaults.Unexpected;
         httpContext.Response.StatusCode = descriptor.Status;
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
@@ -28,7 +39,7 @@ internal sealed class GlobalExceptionHandler(
             ProblemDetails = ApiProblemDetailsFactory.Create(
                 httpContext,
                 descriptor,
-                "An unexpected error occurred while processing the request.")
+                detail)
         });
     }
 }

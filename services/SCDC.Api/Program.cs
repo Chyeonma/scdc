@@ -5,10 +5,15 @@ using SCDC.Api.OpenApi;
 using SCDC.Modules.Community;
 using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
+using SCDC.BuildingBlocks.Infrastructure;
+using SCDC.Contracts.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<ISharedDatabaseSession>(provider => new SharedDatabaseSession(
+    provider.GetRequiredService<IConfiguration>().GetConnectionString("Database")
+        ?? throw new InvalidOperationException("ConnectionStrings:Database must be configured.")));
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
@@ -37,7 +42,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "SCDC modular monolith. Identity v1 is active; Community and Messaging are at foundation stage."
+        Description = "SCDC modular monolith. Identity v1 and direct conversation create-or-get are active; Community remains at foundation stage."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {

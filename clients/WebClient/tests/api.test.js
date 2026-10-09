@@ -202,3 +202,31 @@ test('search 503 is surfaced without retry or mock fallback', async () => {
   await assert.rejects(tab.searchUsers('Bảo'), error => error.status === 503 && error.problem.errorCode === 'AUTHORITY_UNAVAILABLE');
   assert.equal(requests, 1);
 });
+
+
+test('opening a DM never refreshes/replays a failed mutation and forwards cancellation', async () => {
+  const abort = new AbortController(); let requests = 0;
+  const tab = await browser(rotatedSession).openTab(async (url, options) => {
+    requests++; assert.equal(url, '/api/v1/direct-conversations');
+    assert.equal(options.method, 'POST'); assert.equal(options.signal, abort.signal);
+    assert.equal(JSON.parse(options.body).peerUserId, 'peer-id');
+    return response(401, { errorCode: 'Common.Unauthorized' });
+  });
+  await assert.rejects(tab.openDirectConversation('peer-id', { signal: abort.signal }), error => error.status === 401);
+  assert.equal(requests, 1);
+});
+
+test('actor switch during preflight refresh cancels a queued DM before any POST', async () => {
+  const app = browser(); const started = deferred(); const refresh = deferred();
+  let requests = 0;
+  const first = await app.openTab(async url => {
+    requests++; assert.equal(url, '/api/v1/auth/refresh'); started.resolve(); return refresh.promise;
+  });
+  const second = await app.openTab(async () => { throw new Error('Unexpected request'); });
+  const opening = first.openDirectConversation('peer-id');
+  const rejected = assert.rejects(opening, error => error.status === 401);
+  await started.promise;
+  second.emitSession({ ...rotatedSession, refreshToken: 'other-actor-refresh', user: { id: 'user-2' } });
+  refresh.resolve(response(200, rotatedSession));
+  await rejected; assert.equal(requests, 1);
+});

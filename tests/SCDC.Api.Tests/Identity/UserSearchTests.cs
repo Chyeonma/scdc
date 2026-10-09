@@ -14,6 +14,7 @@ using SCDC.Api.Tests.Infrastructure;
 
 namespace SCDC.Api.Tests.Identity;
 
+[Collection("DM database")]
 public sealed class UserSearchTests(UserSearchFixture fixture) : IClassFixture<UserSearchFixture>
 {
     [Fact]
@@ -166,7 +167,7 @@ public sealed class UserSearchTests(UserSearchFixture fixture) : IClassFixture<U
     [Fact]
     public async Task Contracts_guard_rejects_mismatched_session_and_invalid_UTF16_without_HTTP_binding()
     {
-        using var scope = fixture.Factory.Services.CreateScope();
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
         var directory = scope.ServiceProvider.GetRequiredService<IUserSearchDirectory>();
         var actor = fixture.Actor;
         var request = new UserSearchRequest(actor.Id, actor.SessionId, actor.SecurityStamp, "ab");

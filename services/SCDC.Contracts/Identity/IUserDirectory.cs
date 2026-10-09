@@ -9,4 +9,6 @@ public interface IUserDirectory
         CancellationToken cancellationToken);
 }
 
-public sealed record UserSummary(Guid Id, string Username, string DisplayName);
+public sealed record UserSummary(Guid Id, string Username, string DisplayName,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    string? Availability = null);

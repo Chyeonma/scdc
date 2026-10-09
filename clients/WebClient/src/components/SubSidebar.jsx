@@ -184,6 +184,7 @@ export function SubSidebar({
               <button
                 type="button"
                 key={dm.spaceId}
+                title={dm.user ? `${dm.user.displayName} (@${dm.user.username})` : dm.name}
                 className={`dm-item ${isActive ? 'is-active' : ''}`}
                 onClick={() => onSelectDm(dm.spaceId)}
               >
@@ -191,7 +192,7 @@ export function SubSidebar({
                   <span className="avatar avatar--sm">
                     {initials(dm.name || dm.user?.displayName || dm.user?.username)}
                   </span>
-                  {dm.spaceType === 1 && (
+                  {dm.spaceType === 1 && dm.user?.status && (
                     <span className="status-dot status-dot--sm" style={{ backgroundColor: statusColor }} />
                   )}
                 </div>
@@ -207,6 +208,7 @@ export function SubSidebar({
                   {dm.lastMessage && (
                     <p className="dm-item__preview">{dm.lastMessage}</p>
                   )}
+                  {dm.user?.username && <p className="dm-item__preview">@{dm.user.username}</p>}
                 </div>
               </button>
             );

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
-    "version": "0.4.0-p1-search",
-    "description": "GET /users/search có implementation DM-P1-T01 và bằng chứng agent; người dùng xác nhận PASS FE/BE build9d995d0 ngày08/10/2026. Các endpoint hội thoại/tin nhắn và Hub còn là contract dự thảo. Nguồn: docs/features/direct-messaging/README.md và docs/acceptance/direct-messaging/DM-P1-T01.md."
+    "version": "0.5.0-p1-open",
+    "description": "GET search và POST tạo/lấy DM đã được người dùng PASS FE/BE P1-T01/P1-T02 (build ea0c311 ngày09/10/2026). GET inbox P1-T03 đã được giao; tin nhắn và Hub chưa triển khai."
   },
   "servers": [
     {
@@ -112,11 +112,11 @@
         "operationId": "openDirectConversation",
         "summary": "Tạo hoặc lấy DM duy nhất của cặp",
         "tags": [
-          "Direct messaging draft"
+          "Direct messaging"
         ],
         "responses": {
           "200": {
-            "description": "Thành công; mutation trả sau commit.",
+            "description": "Create hoặc get đều 200 sau commit; đúng hai participant, UUIDv7 khi tạo mới; empty lastSequence=\"0\", lastActivityAt=null.",
             "content": {
               "application/json": {
                 "schema": {
@@ -126,7 +126,7 @@
             }
           },
           "400": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "Common.ValidationFailed cho thiếu/null/UUID sai hoặc zero; INVALID_PEER cho self.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -136,17 +136,7 @@
             }
           },
           "401": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "Common.Unauthorized cho actor/session/stamp/expiry không hợp lệ, kể cả guard recheck trong transaction.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -156,27 +146,7 @@
             }
           },
           "404": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "RESOURCE_NOT_FOUND cho peer không tồn tại/không đủ điều kiện tạo mới hoặc membership/resource không hợp lệ; không tiết lộ lý do.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -186,7 +156,7 @@
             }
           },
           "503": {
-            "description": "ProblemDetails theo DEC-061; mã lỗi chi tiết là đề xuất trong đặc tả DM.",
+            "description": "AUTHORITY_UNAVAILABLE khi dependency PostgreSQL không xác nhận được request; fail closed, không auto replay.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -196,7 +166,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-agent-tested-user-accepted",
         "requestBody": {
           "required": true,
           "content": {
@@ -221,7 +191,8 @@
           "404": [
             "RESOURCE_NOT_FOUND"
           ]
-        }
+        },
+        "x-scdc-acceptance-record": "docs/acceptance/direct-messaging/DM-P1-T02.md"
       },
       "get": {
         "operationId": "listDirectConversations",
