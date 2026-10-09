@@ -832,6 +832,8 @@ Branch cụ thể: feat/dm-p2-t01-persist-text-message. Nhánh tích hợp/PR ta
 Giữ quy tắc DM hiện hành: text tối đa 2.000 UTF-16 sau CRLF/CR thành LF, không trim/NFC body; không lưu body sửa cũ trong edit/outbox/log. Mutation không tự replay sau refresh/reconnect; retry giữ clientMessageId/content ban đầu. Actor/member/author kiểm tra ở server; read/author edit-delete không đòi peer active, send mới kiểm tra peer. Draft/cache theo actor/conversation trong RAM tab. MVP một API host, không tự mở rộng scope sang group/chat phòng/file/reaction/read-state/block/moderation/media/microservice.
 Nếu reuse nhánh cũ, ghi source commit và đối chiếu contract/policy mới; không merge cả chuỗi nhánh cũ. Các subtask cùng task dùng chung branch/PR. Commit conventional chứa task ID, stage danh sách file thuộc task; PR hướng message có migration, dữ liệu, FE/BE test và trạng thái Chờ người dùng test. Quyền push nhánh task và merge vào message đã được cấp; không chuyển PR sang main hoặc merge nhánh Messaging cũ ngoài task.
 
+Bản triển khai09/10/2026 và recipe test thật: docs/acceptance/direct-messaging/DM-P2-T01.md. Đây là bằng chứng agent, vẫn chờ người dùng PASS FE/BE trước merge/task kế. Chọn người theo override09/10/2026: chỉ một người.
+
 B. Tài liệu và source
 Đọc AGENTS.md áp dụng và các tài liệu/source trong repository:
 - docs/plans/direct-messaging.md, mục task này và các điều kiện chung của kế hoạch.
@@ -884,7 +886,7 @@ F2. Regression bổ sung DM-RECENT-01 theo yêu cầu08/10/2026 — Chưa chạy
 - A gửi "RECENT01: chào Bảo" vào D-AB với UUIDv4 mới, đợi200/commit rồi refresh inbox/modal A: chỉ B (@dm_demo_bao), chưa có C. GET list A có D-AB.lastActivityAt khác null; D-AC vẫn null.
 - A gửi "RECENT02: chào Chi" vào D-AC bằng UUIDv4 khác; đợi200 rồi refresh: C (@dm_demo_chi) trước B. Hai người cùng displayName nhưng khác ID/username, không gộp theo tên.
 - B gửi "RECENT03: trả lời An" vào D-AB bằng UUIDv4 thứ ba; đợi200 rồi refresh A: B trước C. B/C mở modal riêng: mỗi người chỉ thấy A từ hội thoại của mình; C không thấy peer B qua D-AB.
-- Chọn B từ mục gần đây, tìm dm_demo_bao: đã chọn đúng1 B, không thêm bản sao. Chọn thêm C thì có2 thẻ; bỏ B ở kết quả search cũng bỏ B trong selection/mục gần đây. Không tạo group DM.
+- Chọn B từ mục gần đây, tìm dm_demo_bao: đã chọn đúng1 B, không thêm bản sao. Chọn C thì thay B, chỉ có1 thẻ theo yêu cầu09/10/2026; bỏ C ở kết quả search cũng bỏ C trong selection. Không tạo group DM.
 - Query API và DB đối soát đúng membership, lastActivityAt/order và ID; delta tin của run=3, D-AB=2, D-AC=1. Gửi lỗi có chủ ý trước commit không thêm tin hoặc đổi lastActivityAt/thứ tự; mỗi request mới dùng UUIDv4 mới, recipe fault có bật/tắt và scope run.
 - Lỗi tải danh sách có retry, không hiện người mock/lượt chọn localStorage. Reload giữ lịch sử gần đây từ server; logout/đổi actor dọn cache/selection. Refresh chủ động; không yêu cầu realtime chưa tới phase.
 - Lưu build, FE/BE actual, IDs/timestamps/counts không token. Chỉ PASS khi người dùng test; proof P1-T03 chỉ empty/permission chưa thay proof thứ tự bằng tin commit thật ở đây.
