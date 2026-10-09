@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
     "version": "0.7.0-p2-text-send",
-    "description": "GET search, POST mở DM và GET inbox đã được người dùng nghiệm thu. POST gửi văn bản P2-T01 đã triển khai, chờ người dùng test FE/BE; history và Hub chưa triển khai."
+    "description": "GET search, POST mở DM và GET inbox đã được người dùng nghiệm thu. POST gửi văn bản P2-T01 đã được người dùng nghiệm thu ngày10/10/2026; history và Hub chưa triển khai."
   },
   "servers": [
     {
@@ -520,7 +520,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-agent-tested-awaiting-user-acceptance",
+        "x-scdc-implementation": "implemented-user-accepted",
         "parameters": [
           {
             "name": "id",

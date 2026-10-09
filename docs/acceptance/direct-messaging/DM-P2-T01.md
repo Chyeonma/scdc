@@ -296,3 +296,7 @@ npx.cmd playwright test --config playwright.dm-p2-t01.config.js --grep 'C02/C03'
 Agent login browser bằng `dm_demo_bao`, đọc inbox200 và mở đúng hội thoại `01a11c8f-534c-761c-8d4a-4930c95bee58`: inbox lastSequence="2", timeline0row, thông báo “Lịch sử hội thoại chưa được tải.” Bằng chứng không chứa token/body: `.dm-acceptance/runs/p2proof/receiver-diagnosis-20261010.json`.
 
 Nguồn nguyên nhân: `DmChat` chỉ có rows trong RAM từ response POST của tab gửi. Controller chưa có GET history, UI chưa tải message khi mở DM. Luồng B mở hội thoại và đọc tin đã lưu thuộc P2-T02, không sửa bằng mock/copy message giữa tài khoản. P2-T02 sẽ bổ sung GET latest/before/after có guard/cursor và UI tải lịch sử/reload theo kế hoạch, sau xác nhận chuyển task của người dùng. Nhận tin tức thời khi đang mở tab còn thuộc phase realtime.
+
+## Nghiệm thu và cho phép task kế — 10/10/2026
+
+Người dùng xác nhận: “Đồng ý; C02 PASS thì làm P2-T02”. Điều kiện C02 đã đạt theo kiểm thử FE/BE ngày10/10 ở trên; người dùng xác nhận các phần khác đều ổn. Ghi nhận **P2-T01 được nghiệm thu**, cho phép tích hợp vào `message` và thực hiện duy nhất P2-T02. Các mốc Chưa xác nhận phía trên là trạng thái tại thời điểm bàn giao, được thay thế bởi xác nhận này. Code sản phẩm được nghiệm thu: `3aa251b471b7c9e236b49ea67ec3920b78399b46`; bằng chứng tái kiểm thử: `9a77b22`. Không suy nghiệm thu từ im lặng.
