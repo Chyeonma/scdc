@@ -256,3 +256,43 @@ try { npx.cmd playwright test --config playwright.dm-p2-t01.config.js } finally 
 ```
 
 Trạng thái nghiệm thu: người dùng **Chưa xác nhận** C01/C02/C03/C04/RECENT FE và BE trên build P2. Khi có PASS FE/BE mới cập nhật biên bản, merge task vào `message`, chạy smoke và chờ giao task kế. Không suy PASS từ câu hỏi hoặc im lặng.
+
+## Kiểm thử lại C02 và phản hồi người dùng — 10/10/2026
+
+Người dùng yêu cầu: “Bạn test DM-P2-T01-C02 và xác nhận cho tôi đi bạn, mọi thứ khác đều ổn”, đồng thời báo An gửi cho Bảo nhưng Bảo chưa thấy tin. Agent đã kiểm thử lại C02 trên runtime của code `3aa251b471b7c9e236b49ea67ec3920b78399b46`, bản bàn giao `968e6ea`. Lần này chỉ thêm bằng chứng/tài liệu, không đổi code sản phẩm.
+
+**Kết quả C02: PASS FE và BE theo kiểm thử agent được người dùng yêu cầu.** Phần khác ghi nhận nguyên lời người dùng “mọi thứ khác đều ổn”; chưa coi đây là giao thực hiện P2-T02. Đã gửi câu hỏi xác nhận nghiệm thu/chuyển task vì cần triển khai loader để Bảo xem tin.
+
+| Biến thể BE | UTF-16 raw → normalized | HTTP | Kết quả |
+|---|---|---|---|
+| a×2.000 |2.000→2.000 |200 |PASS |
+| emoji×1.000 |2.000→2.000 |200 |PASS |
+| nhiều dòng LF |3→3 |200 |PASS |
+| CRLF |4→3 |200 |PASS |
+| CR |3→3 |200 |PASS |
+| raw2.001 có CRLF |2.001→2.000 |200 |PASS |
+| M03 có khoảng trắng đầu/cuối |25→25 |200, giữ nguyên |PASS |
+| ký tự tổ hợp |2→2 |200, không NFC |PASS |
+| ký tự dựng sẵn |1→1 |200, không NFC |PASS |
+| a×2.001 |2.001→2.001 |400 CONTENT_TOO_LONG |PASS, không mutation |
+| emoji×1.001 |2.002→2.002 |400 CONTENT_TOO_LONG |PASS, không mutation |
+
+BE dùng pair `p2final` A/S07, payload lane `c02oct10` với UUID mới mỗi file: baseline0, kết thúc9 message/operation/outbox, counter9. Sau mỗi request hợp lệ đối chiếu nguyên content và dạng chuỗi sequence/version; sau mỗi request lỗi so message/operation/outbox/counter/lastMessageId/activity không đổi. Dữ liệu/bằng chứng giữ trong `.dm-acceptance/runs/p2proof/c02-retest-20261010.json`.
+
+FE chạy lại test `C02/C03 full client corpus blocks invalid sends; preserved spaces, HTML and emoji commit safely` bằng Edge/Chromium thật tại15300: **1/1 PASS, 7,8 giây**. Test dùng pair riêng `p2final` A/S01; input quá dài bị chặn trước POST, draft giữ nguyên; valid trả content đúng chuẩn hóa. Hai lane này tách khỏi pair baseline An/Bảo của người dùng.
+
+Lệnh browser đã thực thi:
+
+```powershell
+Set-Location E:\Project\SCDC\dm-message-integration\clients\WebClient
+$env:DM_P2_SEND_RUN='p2final'
+npx.cmd playwright test --config playwright.dm-p2-t01.config.js --grep 'C02/C03'
+```
+
+### Chẩn đoán Bảo chưa thấy tin
+
+Đọc DB pair baseline A/B có2 message do An gửi, sequence1/2,2 SendOperation,2 outbox, lastSequence2. Không mất dữ liệu và không gửi thêm tin vào pair này khi chẩn đoán.
+
+Agent login browser bằng `dm_demo_bao`, đọc inbox200 và mở đúng hội thoại `01a11c8f-534c-761c-8d4a-4930c95bee58`: inbox lastSequence="2", timeline0row, thông báo “Lịch sử hội thoại chưa được tải.” Bằng chứng không chứa token/body: `.dm-acceptance/runs/p2proof/receiver-diagnosis-20261010.json`.
+
+Nguồn nguyên nhân: `DmChat` chỉ có rows trong RAM từ response POST của tab gửi. Controller chưa có GET history, UI chưa tải message khi mở DM. Luồng B mở hội thoại và đọc tin đã lưu thuộc P2-T02, không sửa bằng mock/copy message giữa tài khoản. P2-T02 sẽ bổ sung GET latest/before/after có guard/cursor và UI tải lịch sử/reload theo kế hoạch, sau xác nhận chuyển task của người dùng. Nhận tin tức thời khi đang mở tab còn thuộc phase realtime.
