@@ -258,7 +258,7 @@ Branch `feat/dm-p1-t03-conversation-inbox`. AC-DM-01/12, contract danh sách; c�
 
 Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
-**Gate:** Người dùng đã nghiệm thu build9e47033 ngày09/10/2026; [biên bản và recipe C01–C04](../acceptance/direct-messaging/DM-P1-T03.md). Đủ điều kiện tích hợp vào message. P2/P3 chưa được triển khai; người dùng giao P4-T01 nhưng cần xác định phạm vi các tiền đề còn thiếu trước khi làm phần phụ thuộc.
+**Gate:** Người dùng đã nghiệm thu build9e47033 ngày09/10/2026; [biên bản và recipe C01–C04](../acceptance/direct-messaging/DM-P1-T03.md). Đã merge --no-ff vào message tại acce838; source giống build đã nghiệm thu, smoke API/DB PASS. P2/P3 chưa được triển khai; người dùng giao P4-T01 nhưng cần xác định phạm vi các tiền đề còn thiếu trước khi làm phần phụ thuộc.
 
 ## Phase P2 gửi lưu bền và lịch sử
 

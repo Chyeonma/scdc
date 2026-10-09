@@ -1,6 +1,6 @@
 # DM-P1-T03 — inbox dữ liệu thật
 
-Trạng thái: **Người dùng đã nghiệm thu**, ngày09/10/2026, bản bàn giao `9e47033`. Người dùng đã xác nhận “P1-T02 đã PASS FE và BE; làm tiếp P1-T03” trên build `ea0c311`. P1-T02 đã merge `--no-ff` vào `message` tại `e5170b4`; base P1-T03 là `1a2ec28c8fd87c7ddb2fc1eb81198f017d7a9f63`. P1-T03 chưa merge, chưa triển khai P2.
+Trạng thái: **Người dùng đã nghiệm thu**, ngày09/10/2026, bản bàn giao `9e47033`. Người dùng đã xác nhận “P1-T02 đã PASS FE và BE; làm tiếp P1-T03” trên build `ea0c311`. P1-T02 đã merge `--no-ff` vào `message` tại `e5170b4`; base P1-T03 là `1a2ec28c8fd87c7ddb2fc1eb81198f017d7a9f63`. P1-T03 đã merge `--no-ff` vào message tại `acce8386e4f5bd45287a8e81bc0cf06ea298fe8f`; P2/P3 chưa triển khai.
 
 ## Task và bản chạy
 
@@ -285,3 +285,7 @@ Phản hồi cần ghi: `PASS DM-P1-T03 | FE: đạt | BE: đạt | Build: <SHA>
 ## Xác nhận người dùng09/10/2026
 
 Người dùng phản hồi: “tôi nghiệm thu và thực hiện DM-P4-T01”, sau khi được thông báo bản P1-T03 `9e47033` còn chờ nghiệm thu. Ghi nhận nghiệm thu bản đã bàn giao; các bảng Chưa xác nhận phía trên giữ hồ sơ lúc bàn giao, không tự bịa log chi tiết từng bước. Code triển khai là `970f03b`, bản bàn giao `9e47033` chỉ thêm docs. Quyền tích hợp P1-T03 vào message đã có; chưa có code hoặc bằng chứng nghiệm thu P2/P3 để bắt đầu phần phụ thuộc P4-T01.
+
+P1-T03 tích hợp không conflict tại `acce8386e4f5bd45287a8e81bc0cf06ea298fe8f`; task acceptance commit `00017fcca9bec0f4af1bfb6516607b6e7aa47a6d` là ancestor. Đối chiếu services/clients/scripts/database với build9e47033 không có diff. Smoke đầu chưa chạy được vì Docker Linux engine đang tắt; agent khởi động lại trước push message.
+
+Smoke sau tích hợp đã PASS sau khi khởi động Docker: A25DM trang20+5, B1=D-AB, C1=D-AC, K0; API/DB cùng IDs và thứ tự; cursor chéoactor400 CURSOR_INVALID, anonymous401; counts25pair/50member/0message giữ nguyên. Không thay đổi source/config/schema của bản đã nghiệm thu.
