@@ -20,6 +20,8 @@ public static class MessagingModule
             options.UseNpgsql(provider.GetRequiredService<ISharedDatabaseSession>().Connection));
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddScoped<IConversationInbox, ConversationInbox>();
+        services.AddScoped<ITextMessageSender, TextMessageSender>();
+        services.AddSingleton<SCDC.Modules.Messaging.Infrastructure.Security.MessageFingerprint>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

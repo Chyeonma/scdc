@@ -303,3 +303,9 @@ export function listDirectConversations({ cursor = null, limit = 20, signal,
   if (cursor !== null) parameters.set('cursor', cursor);
   return api(`/direct-conversations?${parameters}`, { signal, expectedActorId });
 }
+
+export function sendDirectMessage(conversationId, clientMessageId, content, { signal, expectedActorId = session?.user?.id ?? null } = {}) {
+  return api(`/direct-conversations/${conversationId}/messages`, {
+    method: 'POST', body: { clientMessageId, content }, retry: false, signal, expectedActorId,
+  });
+}

@@ -264,13 +264,15 @@ Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **n
 
 ### DM-P2-T01 gửi văn bản và validation
 
+**Đã triển khai và agent test; chờ người dùng nghiệm thu FE/BE.** [Biên bản P2-T01](../acceptance/direct-messaging/DM-P2-T01.md) có lệnh/sample và C01–C04/RECENT. Checkbox dưới đây chỉ trạng thái triển khai; chưa merge message hoặc giao P2-T02.
+
 Branch `feat/dm-p2-t01-persist-text-message`. AC-DM-02/09/11/19/21; TC-TEXT-01–05, TC-DM-03/14/21/23; DM-SQL-02–06.
 
-- [ ] P2-T01.1 Migration counter/conversation_sequence, SendOperation/fingerprint, tombstone-compatible constraint và outbox ID/version; không ghi `message_edits.previous_content`.
-- [ ] P2-T01.2 Validator client/server theo fixture Unicode; HMAC key/version tách key ring; same-key retry trả trạng thái hiện hành, payload khác conflict ngay từ writer đầu tiên.
-- [ ] P2-T01.3 Guard actor/member/peer, thứ tự khóa thống nhất; counter + message + operation + outbox/projection cùng transaction, rollback không để trạng thái dở.
-- [ ] P2-T01.4 POST `/direct-conversations/{id}/messages`; API wrapper `retry:false`; UI sending/sent/error, tạm và response merge cùng ID; chỉ text, không API Hub mutation.
-- [ ] P2-T01.5 Backend/FE/E2E send và biên content; bàn giao SQL đọc message/operation/outbox và hiện trạng chưa có realtime/history đầy đủ. Kiểm thử Người vừa nhắn tin trên run riêng D-AB/D-AC ban đầu rỗng: commit thật A→B, A→C, B→A; mục gần đây của A lần lượt chỉ B, C→B, B→C. Refresh inbox/modal sau mỗi commit, đối chiếu API và DB; gửi lỗi trước commit không đổi thứ tự.
+- [x] P2-T01.1 Migration counter/conversation_sequence, SendOperation/fingerprint, tombstone-compatible constraint và outbox ID/version; không ghi `message_edits.previous_content`.
+- [x] P2-T01.2 Validator client/server theo fixture Unicode; HMAC key/version tách key ring; same-key retry trả trạng thái hiện hành, payload khác conflict ngay từ writer đầu tiên.
+- [x] P2-T01.3 Guard actor/member/peer, thứ tự khóa thống nhất; counter + message + operation + outbox/projection cùng transaction, rollback không để trạng thái dở.
+- [x] P2-T01.4 POST `/direct-conversations/{id}/messages`; API wrapper `retry:false`; UI sending/sent/error, tạm và response merge cùng ID; chỉ text, không API Hub mutation.
+- [x] P2-T01.5 Backend/FE/E2E send và biên content; bàn giao SQL đọc message/operation/outbox và hiện trạng chưa có realtime/history đầy đủ. Kiểm thử Người vừa nhắn tin trên run riêng D-AB/D-AC ban đầu rỗng: commit thật A→B, A→C, B→A; mục gần đây của A lần lượt chỉ B, C→B, B→C. Refresh inbox/modal sau mỗi commit, đối chiếu API và DB; gửi lỗi trước commit không đổi thứ tự.
 
 **Bạn test FE:** A gửi M01/M02/M03/M04 thấy sent sau response; L2000/E2000 nhận, L2001/E2002/EMPTY bị từ chối; HTML không chạy. DB lỗi/fault trước commit hiện lỗi, không báo sent.
 
@@ -535,3 +537,7 @@ Branch `chore/dm-p8-t03-release-handoff`. Phụ thuộc: gói Identity/email, c�
 [Bộ prompt từng task](direct-messaging-prompts.md) có prompt chung và 20 prompt riêng. Mỗi prompt chỉ chạy một task, bàn giao bản FE/BE test được rồi dừng. [Mẫu biên bản](../templates/dm-task-acceptance.md) yêu cầu tách kết quả agent và người dùng, ghi build/actor/dataset/UI/request/DB proof và lỗi.
 
 Task đầu cần giao khi bắt đầu là **DM-P0-T01**. Nếu nhánh cũ có phần tương thích, reuse trong task đúng phạm vi để giảm công viết lại; vẫn phải qua cùng gate frontend/backend. Kế hoạch này giữ mọi task Chưa làm cho đến khi thực thi và được kiểm tra theo quy trình trên.
+
+### Xác nhận chuyển P2 ngày10/10/2026
+
+P2-T01 được người dùng nghiệm thu có điều kiện C02 PASS. Agent đã tái kiểm thử C02 PASS FE/BE; người dùng trả lời “Đồng ý; C02 PASS thì làm P2-T02”. Tích hợp P2-T01 vào `message`, chỉ thực hiện P2-T02 và bàn giao FE/BE trước task kế. Xem [biên bản P2-T01](../acceptance/direct-messaging/DM-P2-T01.md).

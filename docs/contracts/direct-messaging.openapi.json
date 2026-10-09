@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
-    "version": "0.6.0-p1-inbox",
-    "description": "GET search, POST mở DM và GET inbox đã được người dùng nghiệm thu; gửi tin, lịch sử và Hub chưa triển khai."
+    "version": "0.7.0-p2-text-send",
+    "description": "GET search, POST mở DM và GET inbox đã được người dùng nghiệm thu. POST gửi văn bản P2-T01 đã được người dùng nghiệm thu ngày10/10/2026; history và Hub chưa triển khai."
   },
   "servers": [
     {
@@ -520,7 +520,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-user-accepted",
         "parameters": [
           {
             "name": "id",
@@ -565,7 +565,8 @@
             "OPERATION_CONFLICT",
             "OPERATION_UNVERIFIABLE"
           ]
-        }
+        },
+        "description": "REST mutation không tự replay khi lỗi mạng/401. UUIDv4 scoped theo conversation/actor. Chuẩn hóa CRLF/CR thành LF, giữ khoảng trắng, không NFC; tối đa 2000 UTF-16 theo Unicode17 pinned fixture. Counter/message/SendOperation/outbox ID-version/projection commit cùng transaction. Retry cùng UUID/body dùng key gốc và trả DTO hiện hành; body khác 409. Send mới cần peer eligible; retry đã commit không cần peer active. Chưa có Hub hoặc GET history ở P2-T01."
       }
     },
     "/direct-conversations/{id}/messages/{messageId}": {

@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Content Include="../../docs/fixtures/text-validation.json" Link="fixtures/text-validation.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../docs/fixtures/dm-fingerprint.json" Link="fixtures/dm-fingerprint.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

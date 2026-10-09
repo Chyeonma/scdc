@@ -251,3 +251,27 @@ test('inbox cannot continue with another actor after a401 refresh', async () => 
   });
   await assert.rejects(tab.listDirectConversations(), e => e.status === 401);
 });
+
+test('text POST preserves original UUID/body and never replays on401 or503', async () => {
+  for (const status of [401, 503]) {
+    let requests = 0; const signal = new AbortController().signal;
+    const tab = await browser(rotatedSession).openTab(async (url, options) => {
+      requests++; assert.equal(url, '/api/v1/direct-conversations/space-id/messages');
+      assert.equal(options.method, 'POST'); assert.equal(options.signal, signal);
+      assert.deepEqual(JSON.parse(options.body), { clientMessageId: 'operation-id', content: '  a\nb  ' });
+      return response(status, { errorCode: 'failure' });
+    });
+    await assert.rejects(tab.sendDirectMessage('space-id', 'operation-id', '  a\nb  ', { signal }), e => e.status === status);
+    assert.equal(requests, 1);
+  }
+});
+
+test('actor switch during text preflight prevents the queued mutation', async () => {
+  const app = browser(); const started = deferred(); const refresh = deferred(); let requests = 0;
+  const first = await app.openTab(async url => { requests++; assert.equal(url, '/api/v1/auth/refresh'); started.resolve(); return refresh.promise; });
+  const second = await app.openTab(async () => { throw new Error('Unexpected request'); });
+  const sending = first.sendDirectMessage('space-id', 'operation-id', 'hello');
+  const rejected = assert.rejects(sending, e => e.status === 401);
+  await started.promise; second.emitSession({ ...rotatedSession, refreshToken: 'actor-2', user: { id: 'user-2' } });
+  refresh.resolve(response(200, rotatedSession)); await rejected; assert.equal(requests, 1);
+});
