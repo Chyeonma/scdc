@@ -31,7 +31,7 @@ services:
       Cors__AllowedOrigins__0: http://localhost:${DM_WEB_PORT:-15300}
       Modules__Identity__UserSearch__CursorKeyRingPath: /app/dm-keys/cursor
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-acceptance
-      # Fingerprint/history settings reserved for later Messaging tasks.
+      # Fingerprints are active for the P2 text writer.
       Modules__Messaging__CursorKeyRingPath: /app/dm-keys/cursor
       Modules__Messaging__FingerprintKeyDirectory: /app/dm-keys/hmac
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
@@ -64,8 +64,11 @@ services:
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Identity__UserSearch__CursorKeyRingPath: /artifacts/user-search-keys
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-integration-tests
+      Modules__Messaging__FingerprintKeyDirectory: /test-hmac
+      Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
     volumes:
       - .:/workspace:ro
+      - ./.dm-acceptance/keyrings/hmac:/test-hmac:ro
       - ./.dm-acceptance/backend-artifacts:/artifacts
       - dm-test-nuget:/root/.nuget/packages
     depends_on:

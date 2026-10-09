@@ -6,7 +6,8 @@ internal sealed class ChatSpace
     public short SpaceType { get; set; } = 1;
     public short Status { get; set; } = 1;
     public Guid? CreatedByUserId { get; set; }
-    public long? LastMessageSequence { get; set; }
+    public long? LastMessageSequence { get; set; } = 0;
+    public Guid? LastMessageId { get; set; }
     public DateTimeOffset? LastActivityAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }

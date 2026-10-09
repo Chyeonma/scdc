@@ -2536,3 +2536,13 @@ button:disabled {
 .dm-search__chips li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #8597ff; border-radius: 8px; overflow-wrap: anywhere; }
 .dm-search__chips button { flex-shrink: 0; min-width: 32px; min-height: 32px; background: transparent; color: inherit; border: none; font-size: 20px; cursor: pointer; }
 .dm-search__chips button:focus-visible { outline: 2px solid #8597ff; outline-offset: 2px; }
+
+.dm-text-content { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.dm-text-message { margin: 12px 16px; padding: 12px; border-radius: 8px; background: var(--bg-secondary, #292b31); }
+.dm-text-message[data-status="error"] { border: 1px solid #ed4245; }
+.dm-text-message small, .dm-history-note { color: #b5bac1; }
+.dm-text-composer textarea { width: 100%; min-height: 72px; resize: vertical; box-sizing: border-box; color: #f2f3f5; background: #383a40; border: 1px solid #555; border-radius: 8px; padding: 12px; }
+.dm-composer-actions { display: flex; justify-content: space-between; margin-top: 8px; align-items: center; }
+.dm-text-composer button, .dm-text-message button { padding: 8px 16px; background: #5865f2; color: white; border: 0; border-radius: 4px; cursor: pointer; }
+.dm-text-composer button:disabled { opacity: .5; cursor: default; }
+.dm-text-composer [role="alert"] { color: #ffa4a7; margin: 8px 0; }

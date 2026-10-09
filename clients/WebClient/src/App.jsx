@@ -41,6 +41,7 @@ import { CreateDmModal } from './components/CreateDmModal.jsx';
 import { InviteModal } from './components/InviteModal.jsx';
 import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
+import { DmChat } from './components/DmChat.jsx';
 import { useConversationInbox } from './useConversationInbox.js';
 
 export default function App() {
@@ -490,8 +491,12 @@ export default function App() {
           statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
         />
 
+        <div style={{ display: isHomeActive ? 'contents' : 'none' }}>
+          <DmChat key={session.user.id} actorId={session.user.id}
+            author={currentUser || session.user} conversation={activeDm} onCommitted={inbox.refresh} />
+        </div>
         {/* Message Timeline */}
-        <div className="chat-timeline">
+        {!isHomeActive && <div className="chat-timeline">
           {currentMessages.length === 0 ? (
             <div className="timeline-empty">
               <span className="timeline-empty__icon">
@@ -536,7 +541,7 @@ export default function App() {
             })
           )}
           <div ref={timelineEndRef} />
-        </div>
+        </div>}
 
         {/* Message Composer */}
         {!isHomeActive && <MessageComposer
