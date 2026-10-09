@@ -174,7 +174,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ## Tổng hợp phase và task
 
-**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 được người dùng PASS FE/BE build ea0c311 ngày09/10/2026; P1-T03 đã triển khai và Chờ người dùng test; 16 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
+**DM-P0-T01 đã được người dùng PASS và tích hợp vào message; DM-P1-T01 đã được người dùng PASS FE/BE build `9d995d0` ngày08/10/2026 và tích hợp vào message tại `d18d9a4`; DM-P1-T02 được người dùng PASS FE/BE build ea0c311 ngày09/10/2026; P1-T03 đã được người dùng nghiệm thu build9e47033 ngày09/10/2026; 16 task còn lại Chưa làm**. Phụ thuộc mặc định là task ngay trước trong bảng; mỗi mũi chuyển phải qua xác nhận FE/BE của người dùng. Không cam kết lịch khi chưa có kết quả task đầu.
 
 | Phase | Task theo thứ tự | Mốc bàn giao |
 |---|---|---|
@@ -258,7 +258,7 @@ Branch `feat/dm-p1-t03-conversation-inbox`. AC-DM-01/12, contract danh sách; c�
 
 Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
-**Gate:** Chờ người dùng test FE/BE trên build P1-T03; [biên bản và recipe C01–C04](../acceptance/direct-messaging/DM-P1-T03.md). Checkbox xác nhận implementation/test của agent; chưa merge task vào message và chưa được giao P2-T01.
+**Gate:** Người dùng đã nghiệm thu build9e47033 ngày09/10/2026; [biên bản và recipe C01–C04](../acceptance/direct-messaging/DM-P1-T03.md). Đủ điều kiện tích hợp vào message. P2/P3 chưa được triển khai; người dùng giao P4-T01 nhưng cần xác định phạm vi các tiền đề còn thiếu trước khi làm phần phụ thuộc.
 
 ## Phase P2 gửi lưu bền và lịch sử
 

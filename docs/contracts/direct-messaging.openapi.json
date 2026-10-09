@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
     "version": "0.6.0-p1-inbox",
-    "description": "GET search và POST mở DM đã được người dùng PASS FE/BE. GET inbox P1-T03 đã triển khai, chờ người dùng test; gửi tin, lịch sử và Hub chưa triển khai."
+    "description": "GET search, POST mở DM và GET inbox đã được người dùng nghiệm thu; gửi tin, lịch sử và Hub chưa triển khai."
   },
   "servers": [
     {
@@ -242,7 +242,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-agent-tested-pending-user-acceptance",
+        "x-scdc-implementation": "implemented-agent-tested-user-accepted",
         "parameters": [
           {
             "name": "cursor",

@@ -1,6 +1,6 @@
 # DM-P1-T03 — inbox dữ liệu thật
 
-Trạng thái: **Chờ người dùng test FE và BE**. Người dùng đã xác nhận “P1-T02 đã PASS FE và BE; làm tiếp P1-T03” trên build `ea0c311`. P1-T02 đã merge `--no-ff` vào `message` tại `e5170b4`; base P1-T03 là `1a2ec28c8fd87c7ddb2fc1eb81198f017d7a9f63`. P1-T03 chưa merge, chưa triển khai P2.
+Trạng thái: **Người dùng đã nghiệm thu**, ngày09/10/2026, bản bàn giao `9e47033`. Người dùng đã xác nhận “P1-T02 đã PASS FE và BE; làm tiếp P1-T03” trên build `ea0c311`. P1-T02 đã merge `--no-ff` vào `message` tại `e5170b4`; base P1-T03 là `1a2ec28c8fd87c7ddb2fc1eb81198f017d7a9f63`. P1-T03 chưa merge, chưa triển khai P2.
 
 ## Task và bản chạy
 
@@ -281,3 +281,7 @@ API image `sha256:422b623719f9ffd33b8017f583b8a47481bd05dff3faf52bb640fe13c298ff
 Quyền push task/merge message đã có. P1-T03 chỉ push nhánh task; merge `--no-ff` vào message sau người dùng PASS FE/BE trên build này, fetch kiểm tra remote SHA/ancestry và smoke sau merge. Chưa được người dùng giao P2-T01. Chức năng gửi/lịch sử/Hub và thứ tự gần đây bằng tin thật chưa được nghiệm thu.
 
 Phản hồi cần ghi: `PASS DM-P1-T03 | FE: đạt | BE: đạt | Build: <SHA>`; nếu FAIL, kèm case/bước/expected/actual. Agent sửa cùng branch và bàn giao lại; không chuyển task khi chưa có PASS.
+
+## Xác nhận người dùng09/10/2026
+
+Người dùng phản hồi: “tôi nghiệm thu và thực hiện DM-P4-T01”, sau khi được thông báo bản P1-T03 `9e47033` còn chờ nghiệm thu. Ghi nhận nghiệm thu bản đã bàn giao; các bảng Chưa xác nhận phía trên giữ hồ sơ lúc bàn giao, không tự bịa log chi tiết từng bước. Code triển khai là `970f03b`, bản bàn giao `9e47033` chỉ thêm docs. Quyền tích hợp P1-T03 vào message đã có; chưa có code hoặc bằng chứng nghiệm thu P2/P3 để bắt đầu phần phụ thuộc P4-T01.
