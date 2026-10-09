@@ -832,7 +832,7 @@ Branch cụ thể: feat/dm-p2-t01-persist-text-message. Nhánh tích hợp/PR ta
 Giữ quy tắc DM hiện hành: text tối đa 2.000 UTF-16 sau CRLF/CR thành LF, không trim/NFC body; không lưu body sửa cũ trong edit/outbox/log. Mutation không tự replay sau refresh/reconnect; retry giữ clientMessageId/content ban đầu. Actor/member/author kiểm tra ở server; read/author edit-delete không đòi peer active, send mới kiểm tra peer. Draft/cache theo actor/conversation trong RAM tab. MVP một API host, không tự mở rộng scope sang group/chat phòng/file/reaction/read-state/block/moderation/media/microservice.
 Nếu reuse nhánh cũ, ghi source commit và đối chiếu contract/policy mới; không merge cả chuỗi nhánh cũ. Các subtask cùng task dùng chung branch/PR. Commit conventional chứa task ID, stage danh sách file thuộc task; PR hướng message có migration, dữ liệu, FE/BE test và trạng thái Chờ người dùng test. Quyền push nhánh task và merge vào message đã được cấp; không chuyển PR sang main hoặc merge nhánh Messaging cũ ngoài task.
 
-Bản triển khai09/10/2026 và recipe test thật: docs/acceptance/direct-messaging/DM-P2-T01.md. Đây là bằng chứng agent, vẫn chờ người dùng PASS FE/BE trước merge/task kế. Chọn người theo override09/10/2026: chỉ một người.
+Bản triển khai09/10/2026 và recipe test thật: docs/acceptance/direct-messaging/DM-P2-T01.md. P2-T01 đã được người dùng nghiệm thu ngày10/10/2026 và merge message tại ea941a7. Chọn người theo override09/10/2026: chỉ một người.
 
 B. Tài liệu và source
 Đọc AGENTS.md áp dụng và các tài liệu/source trong repository:
@@ -1031,6 +1031,7 @@ Tôi cần tự test frontend và backend bằng dữ liệu mẫu bạn chuẩn
 A. Phạm vi, phụ thuộc và branch
 Task trước: DM-P2-T01. Kiểm tra PASS FE/BE và quyền đi tiếp đã có trong phiên/biên bản. Thiếu xác nhận thì chuẩn bị phần độc lập và dừng phần phụ thuộc, không tự điền PASS hoặc hỏi lại quyền đã cấp.
 Branch `feat/dm-p2-t02-message-history`. AC-DM-03/07/12/18/21; TC-DM-03/04/15/20/25.
+Bản triển khai và recipe test thật ngày10/10/2026: docs/acceptance/direct-messaging/DM-P2-T02.md. Bằng chứng agent tách khỏi gate người dùng; chưa merge trước khi tôi PASS FE/BE.
 Branch cụ thể: feat/dm-p2-t02-message-history. Nhánh tích hợp/PR target: message. Base là origin/message đã kiểm tra và đã tích hợp task trước được tôi PASS FE/BE; nếu task trước chưa merge, không tự dùng stacked branch khi chưa được phép.
 Giữ quy tắc DM hiện hành: text tối đa 2.000 UTF-16 sau CRLF/CR thành LF, không trim/NFC body; không lưu body sửa cũ trong edit/outbox/log. Mutation không tự replay sau refresh/reconnect; retry giữ clientMessageId/content ban đầu. Actor/member/author kiểm tra ở server; read/author edit-delete không đòi peer active, send mới kiểm tra peer. Draft/cache theo actor/conversation trong RAM tab. MVP một API host, không tự mở rộng scope sang group/chat phòng/file/reaction/read-state/block/moderation/media/microservice.
 Nếu reuse nhánh cũ, ghi source commit và đối chiếu contract/policy mới; không merge cả chuỗi nhánh cũ. Các subtask cùng task dùng chung branch/PR. Commit conventional chứa task ID, stage danh sách file thuộc task; PR hướng message có migration, dữ liệu, FE/BE test và trạng thái Chờ người dùng test. Quyền push nhánh task và merge vào message đã được cấp; không chuyển PR sang main hoặc merge nhánh Messaging cũ ngoài task.
