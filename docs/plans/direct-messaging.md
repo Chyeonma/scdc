@@ -302,11 +302,13 @@ Branch `feat/dm-p2-t02-message-history`. AC-DM-03/07/12/18/21; TC-DM-03/04/15/20
 
 Branch `feat/dm-p3-t01-manual-retry`. AC-DM-06/08/21; TC-DM-05–08/23.
 
-- [ ] P3-T01.1 UI failed action giữ clientMessageId/content bất biến; nút Thử lại không tạo ID mới; nội dung muốn đổi phải là thao tác mới.
-- [ ] P3-T01.2 Tắt automatic mutation replay ở 401/refresh/network/reconnect; GET vẫn được refresh theo policy.
-- [ ] P3-T01.3 Fault harness local/test: rollback trước commit, drop response sau commit, delayed response/401; không thêm fault controls vào flow sản phẩm.
-- [ ] P3-T01.4 Correlate tin tạm/response theo actor+clientMessageId; retry cùng khóa trả ID hiện hành, không duplicate dòng.
-- [ ] P3-T01.5 E2E/network fault và DB count, recipes để người dùng lặp lỗi; tắt fault xác nhận recovery.
+- [x] P3-T01.1 UI failed action giữ clientMessageId/content bất biến; nút Thử lại không tạo ID mới; nội dung muốn đổi phải là thao tác mới.
+- [x] P3-T01.2 Tắt automatic mutation replay ở 401/refresh/network/reconnect; GET vẫn được refresh theo policy.
+- [x] P3-T01.3 Fault harness local/test: rollback trước commit, drop response sau commit, delayed response/401; không thêm fault controls vào flow sản phẩm.
+- [x] P3-T01.4 Correlate tin tạm/response theo actor+clientMessageId; retry cùng khóa trả ID hiện hành, không duplicate dòng.
+- [x] P3-T01.5 E2E/network fault và DB count, recipes để người dùng lặp lỗi; tắt fault xác nhận recovery.
+
+Triển khai P3-T01 và kiểm chứng agent tại [biên bản P3-T01](../acceptance/direct-messaging/DM-P3-T01.md); checkbox ghi phần implementation, **chưa là người dùng PASS**. P2-T02 được người dùng PASS FE/BE ngày10/10/2026, đã merge/push vào `message` tại `b4d814d`. P3-T01 **Chờ người dùng test FE/BE**, chưa merge `message`, chưa mở P3-T02/P4. Actual Hub event/reconnect trong AC-DM-21/TC-DM-23 chờ P4; hiện chứng minh merge bằng GET thật và response retry.
 
 **Bạn test FE:** Fault trước commit → failed; bật mạng không tự gửi; bấm Retry mới sent. Drop response sau commit → failed/unknown; Retry đúng một dòng. Nhập cùng nội dung lần mới vẫn tạo tin thứ hai với khóa mới.
 

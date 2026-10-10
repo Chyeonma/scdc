@@ -6,7 +6,7 @@ Cập nhật: 2026-10-10. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-
 
 Đặc tả đầy đủ cho [v1](../../releases/v1.md); [MVP](../../releases/mvp.md) chọn luồng nhắn tin nền để bắt đầu trong một API host. Các quy tắc áp dụng của luồng được chọn vẫn giữ; transaction/guard xuyên Identity–Messaging được rà soát khi chuyển sang [microservice ở v1](../../architecture.md#target) theo DEC-116.
 
-Quy tắc cốt lõi đã xác nhận. UX và hợp đồng được dẫn từ [tổng quan](README.md) còn đề xuất; P1-T02 đã được người dùng PASS FE/BE và tích hợp vào message. GET inbox P1-T03 được người dùng nghiệm thu build9e47033 ngày09/10/2026; gửi văn bản P2-T01 đã được người dùng nghiệm thu ngày10/10/2026; lịch sử P2-T02 đã triển khai, chờ người dùng nghiệm thu FE/BE; Hub chưa triển khai. Các ca TC chưa có kết quả chạy được ghi nhận.
+Quy tắc cốt lõi đã xác nhận. UX và hợp đồng được dẫn từ [tổng quan](README.md) còn đề xuất; P1-T02 đã được người dùng PASS FE/BE và tích hợp vào message. GET inbox P1-T03 được người dùng nghiệm thu build9e47033 ngày09/10/2026; gửi văn bản P2-T01 và lịch sử P2-T02 đã được người dùng nghiệm thu ngày10/10/2026. P3-T01 đã triển khai và chờ người dùng test FE/BE; Hub chưa triển khai. Các ca TC chưa có kết quả chạy được ghi nhận.
 
 Module thực hiện DM là **Messaging**. [Cơ chế Messaging](../../shared/messaging/README.md), [thiết kế chi tiết](../../shared/messaging/README.md#detailed-design) và [ca TC-TEXT](../../shared/messaging/text.md#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](../community/specs/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
 
@@ -54,3 +54,11 @@ FE tự tải latest khi mở/reload, tải tin cũ và giữ điểm cuộn, c�
 ### Nghiệm thu lịch sử ngày10/10/2026
 
 Người dùng xác nhận P2-T02 PASS FE/BE trên bản `9a2b345` (code `a66f7d9`), đồng ý tích hợp vào `message` và làm P3-T01. Các đoạn chờ nghiệm thu phía trên là mốc bàn giao trước xác nhận.
+
+## Retry chủ động DM-P3-T01 — 10/10/2026
+
+P2-T02 đã merge/push vào `message` tại `b4d814d`. Branch `feat/dm-p3-t01-manual-retry` từ base này giữ operation UUID/content/draft revision bất biến; Retry dùng operation cũ, composer cho tạo operation mới, không tự replay POST sau401/network/timeout. Deadline15 giây nghĩa là chưa xác nhận kết quả. Actor/conversation/UUID phải khớp response; latest GET giữ version cao hơn đã biết của ID trong trang, reply muộn không xóa draft mới. Logout xóa RAM theo policy.
+
+Fault controls chỉ ở local scripts/tests: rollback trước commit, drop reply sau API200/commit thật, delayed POST/GET và injected401; guard revoked còn được kiểm tra bằng phiên bị thu hồi thật. [Biên bản P3-T01](../../acceptance/direct-messaging/DM-P3-T01.md) có C01–C04, TC-DM-08/current edit-tombstone bằng fixture SQL thuộc run, race GET/retry, URL/ID/account của dataset p3user và các lệnh FE/BE/DB chi tiết. **Chờ người dùng test FE/BE**, chưa merge P3 vào message. Actual Hub event/reconnect/resume của AC-DM-21/TC-DM-23 chờ P4; không coi proof GET hoặc acceptance riêng task là toàn UC/phase hoàn tất.
+
+Người dùng đã nghiệm thu P3-T01 PASS FE/BE build `156cb32` ngày10/10/2026, cho phép tích hợp `message` và thực hiện P3-T02. Các trạng thái chờ của P3-T01 phía trên ghi theo thời điểm bàn giao trước xác nhận.

@@ -24,6 +24,19 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test('cancellation during token preflight prevents a queued send after refresh completes', async () => {
+  const started = deferred(), refresh = deferred(), controller = new AbortController(); let calls = 0;
+  const tab = await browser().openTab(async url => {
+    calls++; assert.equal(url, '/api/v1/auth/refresh'); started.resolve(); return refresh.promise;
+  });
+  const pending = tab.sendDirectMessage('AB', 'operation', 'hello', { signal: controller.signal });
+  const rejected = assert.rejects(pending, error => error.name === 'AbortError');
+  await started.promise; controller.abort(); refresh.resolve(response(200, rotatedSession));
+  await rejected; assert.equal(calls, 1);
+  await assert.rejects(tab.sendDirectMessage('AB', 'operation', 'hello', { signal: controller.signal }));
+  assert.equal(calls, 1);
+});
+
 function browser(initialSession = expiredSession) {
   const storage = new Map(initialSession ? [[sessionKey, JSON.stringify(initialSession)]] : []);
   const tabs = new Set();
