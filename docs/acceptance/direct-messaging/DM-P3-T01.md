@@ -1,6 +1,6 @@
 # DM-P3-T01 — retry chủ động khi chưa rõ kết quả
 
-Trạng thái: **Chờ người dùng test FE/BE**. Người dùng xác nhận ngày10/10/2026: “P2-T02 đã PASS FE/BE; nghiệm thu và làm P3-T01.” P2-T02 đã merge `--no-ff`, push và xác minh nhánh `message` tại `b4d814d73541afc7f13981115155dd27cec1949e`. P3-T01 dùng đúng base này; chưa merge P3 vào `message`, chưa thực hiện P3-T02/P4.
+Trạng thái hiện tại: **Người dùng PASS FE/BE**, build `156cb32` (code `ab93864`), xác nhận ngày10/10/2026. Đã merge/push `message` tại `a3fea4e56f86169a0e583b0ed5eaec1898fccf63`; smoke Node53/53, H121/bigint và proxyhealth PASS. Các phần Chờ phía dưới lưu mốc bàn giao trước nghiệm thu; xem xác nhận cuối hồ sơ. P3-T02 được giao riêng, không suy PASS realtime/P4.
 
 ## Task và bản chạy
 

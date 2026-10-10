@@ -308,7 +308,7 @@ Branch `feat/dm-p3-t01-manual-retry`. AC-DM-06/08/21; TC-DM-05–08/23.
 - [x] P3-T01.4 Correlate tin tạm/response theo actor+clientMessageId; retry cùng khóa trả ID hiện hành, không duplicate dòng.
 - [x] P3-T01.5 E2E/network fault và DB count, recipes để người dùng lặp lỗi; tắt fault xác nhận recovery.
 
-Triển khai P3-T01 và kiểm chứng agent tại [biên bản P3-T01](../acceptance/direct-messaging/DM-P3-T01.md); checkbox ghi phần implementation, **chưa là người dùng PASS**. P2-T02 được người dùng PASS FE/BE ngày10/10/2026, đã merge/push vào `message` tại `b4d814d`. P3-T01 **Chờ người dùng test FE/BE**, chưa merge `message`, chưa mở P3-T02/P4. Actual Hub event/reconnect trong AC-DM-21/TC-DM-23 chờ P4; hiện chứng minh merge bằng GET thật và response retry.
+Triển khai P3-T01 và kiểm chứng agent tại [biên bản P3-T01](../acceptance/direct-messaging/DM-P3-T01.md); checkbox ghi phần implementation, **chưa là người dùng PASS**. P2-T02 được người dùng PASS FE/BE ngày10/10/2026, đã merge/push vào `message` tại `b4d814d`. P3-T01 đã được người dùng PASS FE/BE build `156cb32` ngày10/10/2026, merge/push vào `message` tại `a3fea4e`. P3-T02 được giao riêng; P4 chưa thực hiện. Actual Hub event/reconnect trong AC-DM-21/TC-DM-23 chờ P4; hiện chứng minh merge bằng GET thật và response retry.
 
 **Bạn test FE:** Fault trước commit → failed; bật mạng không tự gửi; bấm Retry mới sent. Drop response sau commit → failed/unknown; Retry đúng một dòng. Nhập cùng nội dung lần mới vẫn tạo tin thứ hai với khóa mới.
 
@@ -320,17 +320,19 @@ Triển khai P3-T01 và kiểm chứng agent tại [biên bản P3-T01](../accep
 
 Branch `test/dm-p3-t02-concurrency-and-keys`. TC-DM-02/15/24/25; fixtures fingerprint; DM-SQL-01–06.
 
-- [ ] P3-T02.1 Deterministic barrier giữ writer thứ nhất chưa commit, writer thứ hai chờ; kiểm tra counter/commit và rollback, không dùng sleep ngẫu nhiên làm proof.
-- [ ] P3-T02.2 Test fingerprint byte-order/hash/constant-time path, CRLF normalization; key rotation gửi mới/retry cũ, thiếu key 503 không tạo tin.
-- [ ] P3-T02.3 Migration legacy giữ đọc lịch sử; operation không fingerprint không bịa từ content hiện hành, retry trả OPERATION_UNVERIFIABLE; migration chạy lại không phá DB.
-- [ ] P3-T02.4 Kiểm tra UI khi hai send/response đảo thứ tự và key unavailable; lỗi có thử lại chủ động, không mất tin/counter.
-- [ ] P3-T02.5 Bàn giao runner song song/barrier, fixture key tổng hợp không commit key thật, SQL invariants và report.
+- [x] P3-T02.1 Deterministic barrier giữ writer thứ nhất chưa commit, writer thứ hai chờ; kiểm tra counter/commit và rollback, không dùng sleep ngẫu nhiên làm proof.
+- [x] P3-T02.2 Test fingerprint byte-order/hash/constant-time path, CRLF normalization; key rotation gửi mới/retry cũ, thiếu key 503 không tạo tin.
+- [x] P3-T02.3 Migration legacy giữ đọc lịch sử; operation không fingerprint không bịa từ content hiện hành, retry trả OPERATION_UNVERIFIABLE; migration chạy lại không phá DB.
+- [x] P3-T02.4 Kiểm tra UI khi hai send/response đảo thứ tự và key unavailable; lỗi có thử lại chủ động, không mất tin/counter.
+- [x] P3-T02.5 Bàn giao runner song song/barrier, fixture key tổng hợp không commit key thật, SQL invariants và report.
 
 **Bạn test FE:** A1/A2 gửi hai tin đồng thời, B reload thấy đúng hai tin theo sequence; ngắt key mới rồi retry cũ có kết quả đúng, key thiếu hiện lỗi và không thêm dòng sent giả.
 
 **Bạn test BE:** Chạy runner giữ transaction theo hướng dẫn; không có trang history bỏ sót commit trễ; rollback không tạo operation/outbox; hash khớp fixture, retry key cũ hoạt động sau restart/rotation; legacy retry không trùng.
 
 **Gate:** Đồng thời/keys/migration có proof API/DB và UI tương ứng; bạn PASS rồi mới realtime.
+
+P3-T02 đã triển khai5subtask và agent kiểm chứng backend76/76, Node53/53, build và Edge5/5; [biên bản P3-T02](../acceptance/direct-messaging/DM-P3-T02.md) có run FE/BE riêng, UUID/ID và từng recipe. Checkbox chỉ ghi implementation. **Chờ người dùng test FE/BE P3-T02**, chưa merge message/chưa làm P4. TC-DM-25 REST/cursor đã kiểm chứng; Hub reconnect/catchup tự động và dispatcher DM-SQL-06 còn chờ P4, không coi toànTC/UC đã PASS.
 
 ## Phase P4 realtime và reconnect
 
