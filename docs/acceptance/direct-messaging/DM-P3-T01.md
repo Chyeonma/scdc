@@ -327,6 +327,10 @@ Test backend mới ban đầu dùng Assert.Equal trên hai JsonElement ID nên b
 - Không thực hiện DM-P3-T02 hoặc P4 trong task này. Nội dung phản hồi nghiệm thu nên gồm build, case FE/BE PASS/FAIL, bước lỗi và UUID/ID đã lọc secret.
 - Kết luận: **Chờ người dùng test DM-P3-T01**.
 
+## Người dùng nghiệm thu — 10/10/2026
+
+Người dùng xác nhận: “P3-T01 đã PASS FE/BE; nghiệm thu và làm P3-T02.” Build nghiệm thu `156cb32275feecc2b24a6d7bc0199056d5b821af`, code `ab93864`, FE asset `index-pm6lhpkq.js`. Các trạng thái Chờ/Chưa xác nhận phía trên là mốc bàn giao và được thay thế bởi xác nhận này. Được phép tích hợp riêng P3-T01 vào `message`, thực hiện duy nhất P3-T02 rồi dừng để người dùng test.
+
 ```powershell
 git -c safe.directory=E:/Project/SCDC/dm-message-integration rev-parse HEAD
 git -c safe.directory=E:/Project/SCDC/dm-message-integration ls-remote --heads origin refs/heads/feat/dm-p3-t01-manual-retry refs/heads/message
