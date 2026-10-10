@@ -250,3 +250,7 @@ Set-Location E:\Project\SCDC\dm-message-integration\clients\WebClient
 $env:DM_P2_HISTORY_RUN='p2huser'
 npx.cmd playwright test --config playwright.dm-p2-t02.config.js --grep '^C01'
 ```
+
+## Người dùng nghiệm thu P2-T02 — 10/10/2026
+
+Người dùng xác nhận: “P2-T02 đã PASS FE/BE; nghiệm thu và làm P3-T01.” Bản được nghiệm thu: `9a2b345`, code `a66f7d9`, FE asset `index-68H9GSBu.js`. Các trạng thái Chờ/Chưa xác nhận phía trên ghi theo thời điểm bàn giao và được thay thế bởi xác nhận này. Được phép tích hợp riêng P2-T02 vào `message`, triển khai duy nhất P3-T01 và dừng chờ người dùng test task đó.

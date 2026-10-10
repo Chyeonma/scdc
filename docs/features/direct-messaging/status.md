@@ -50,3 +50,7 @@ P2-T01 đã merge/push vào `message` tại `ea941a7`, chứa xác nhận `9401a
 FE tự tải latest khi mở/reload, tải tin cũ và giữ điểm cuộn, có lỗi/retry và Làm mới tin nhắn. Bảo đọc được tin An đã lưu qua GET; nhận tức thời vẫn thuộc P4. RAM tách actor, abort/generation bỏ response cũ; merge ID/version chính xác bằng BigInt, giữ send mới nếu response latest cũ về muộn. Làm mới tải lại50 tin mới nhất; các trang cũ tải lại bằng Tải tin cũ hơn.
 
 [Biên bản P2-T02](../../acceptance/direct-messaging/DM-P2-T02.md) cung cấp dataset H121/bigint, các lệnh và từng case FE/BE cụ thể. **Chờ người dùng test FE/BE P2-T02**, chưa merge `message` và chưa làm P3/P4. Không suy toàn bộ AC/TC hoặc use case hoàn tất từ lát cắt lịch sử này.
+
+### Nghiệm thu lịch sử ngày10/10/2026
+
+Người dùng xác nhận P2-T02 PASS FE/BE trên bản `9a2b345` (code `a66f7d9`), đồng ý tích hợp vào `message` và làm P3-T01. Các đoạn chờ nghiệm thu phía trên là mốc bàn giao trước xác nhận.
