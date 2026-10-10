@@ -1,10 +1,11 @@
 ﻿[CmdletBinding()]
-param()
+param([string]$ProofRun='p2proof')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'Common.psm1') -Force -DisableNameChecking
 Assert-DmDatabase
 $paths=Get-DmPaths
+$proofFolder=Get-DmRunPath $ProofRun
 $OutputEncoding=[System.Text.UTF8Encoding]::new($false)
 $prefix='scdc_dm_p2_'+[guid]::NewGuid().ToString('N').Substring(0,8)
 $upgrade=$prefix+'_upgrade_test'
@@ -60,7 +61,7 @@ SELECT json_build_object('legacyMessages',(SELECT count(*) FROM messaging.messag
  $current=$freshProof | ConvertFrom-Json
  if (-not $current.conversationSequencePresent -or -not $current.sendOperationsPresent -or $current.messageCount -ne 0) { throw 'Fresh schema invariant failed.' }
  $evidence=[pscustomobject]@{acceptedBaseline='6e9ea045aaea5b87734265f0cbbb050c01842203';upgrade=$proof;fresh=$current;tombstoneAccepted=$true;replayPassed=$true}
- Write-DmJson (Join-Path (Get-DmRunPath 'p2proof') 'migration.json') $evidence
+ Write-DmJson (Join-Path $proofFolder 'migration.json') $evidence
  $evidence | ConvertTo-Json -Depth 8
 } finally {
  # Only the exact two new, randomly named proof databases are disposable.
