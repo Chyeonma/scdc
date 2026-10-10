@@ -275,3 +275,25 @@ test('actor switch during text preflight prevents the queued mutation', async ()
   await started.promise; second.emitSession({ ...rotatedSession, refreshToken: 'actor-2', user: { id: 'user-2' } });
   refresh.resolve(response(200, rotatedSession)); await rejected; assert.equal(requests, 1);
 });
+
+test('history URL encodes protected cursors and frontier; cancellation and503 reach the caller', async () => {
+  const signal = new AbortController().signal;
+  const tab = await browser(rotatedSession).openTab(async (url, options) => {
+    const parsed = new URL(url, 'http://localhost');
+    assert.equal(parsed.pathname, '/api/v1/direct-conversations/space/messages');
+    assert.equal(parsed.searchParams.get('after'), 'a+b/c=');
+    assert.equal(parsed.searchParams.get('through'), '9007199254740993');
+    assert.equal(parsed.searchParams.get('limit'), '50'); assert.equal(options.method, 'GET'); assert.equal(options.signal, signal);
+    return response(503, { errorCode: 'AUTHORITY_UNAVAILABLE' });
+  });
+  await assert.rejects(tab.getDirectMessages('space', { after: 'a+b/c=', through: '9007199254740993', signal }), e => e.status === 503);
+});
+
+test('history request cannot replay as another actor after401 refresh', async () => {
+  let gets = 0;
+  const tab = await browser(rotatedSession).openTab(async url => {
+    if (url === '/api/v1/auth/refresh') return response(200, { ...rotatedSession, user: { id: 'other' } });
+    gets++; return response(401, {});
+  });
+  await assert.rejects(tab.getDirectMessages('space'), e => e.status === 401); assert.equal(gets, 1);
+});

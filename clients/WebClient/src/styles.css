@@ -2538,6 +2538,9 @@ button:disabled {
 .dm-search__chips button:focus-visible { outline: 2px solid #8597ff; outline-offset: 2px; }
 
 .dm-text-content { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.dm-text-timeline { overflow-anchor: none; }
+.dm-history-actions { position: sticky; top: 0; z-index: 1; display: flex; gap: 8px; padding: 8px 16px; background: var(--bg-secondary, #292b31); }
+.dm-history-actions button, .dm-text-timeline [role="alert"] button { padding: 8px 12px; cursor: pointer; }
 .dm-text-message { margin: 12px 16px; padding: 12px; border-radius: 8px; background: var(--bg-secondary, #292b31); }
 .dm-text-message[data-status="error"] { border: 1px solid #ed4245; }
 .dm-text-message small, .dm-history-note { color: #b5bac1; }

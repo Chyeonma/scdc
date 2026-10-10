@@ -2,11 +2,11 @@
 
 Tổ chức lại: 2026-10-07. Đây là nguồn trạng thái và khoảng trống triển khai DM; cơ chế dùng chung không tự chứng minh một tính năng đã hoàn tất.
 
-Cập nhật: 2026-10-09. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
+Cập nhật: 2026-10-10. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
 
 Đặc tả đầy đủ cho [v1](../../releases/v1.md); [MVP](../../releases/mvp.md) chọn luồng nhắn tin nền để bắt đầu trong một API host. Các quy tắc áp dụng của luồng được chọn vẫn giữ; transaction/guard xuyên Identity–Messaging được rà soát khi chuyển sang [microservice ở v1](../../architecture.md#target) theo DEC-116.
 
-Quy tắc cốt lõi đã xác nhận. UX và hợp đồng được dẫn từ [tổng quan](README.md) còn đề xuất; P1-T02 đã được người dùng PASS FE/BE và tích hợp vào message. GET inbox P1-T03 được người dùng nghiệm thu build9e47033 ngày09/10/2026; gửi văn bản P2-T01 đã được người dùng nghiệm thu ngày10/10/2026; lịch sử và Hub chưa triển khai. Các ca TC chưa có kết quả chạy được ghi nhận.
+Quy tắc cốt lõi đã xác nhận. UX và hợp đồng được dẫn từ [tổng quan](README.md) còn đề xuất; P1-T02 đã được người dùng PASS FE/BE và tích hợp vào message. GET inbox P1-T03 được người dùng nghiệm thu build9e47033 ngày09/10/2026; gửi văn bản P2-T01 đã được người dùng nghiệm thu ngày10/10/2026; lịch sử P2-T02 đã triển khai, chờ người dùng nghiệm thu FE/BE; Hub chưa triển khai. Các ca TC chưa có kết quả chạy được ghi nhận.
 
 Module thực hiện DM là **Messaging**. [Cơ chế Messaging](../../shared/messaging/README.md), [thiết kế chi tiết](../../shared/messaging/README.md#detailed-design) và [ca TC-TEXT](../../shared/messaging/text.md#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](../community/specs/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
 
@@ -16,10 +16,10 @@ Module thực hiện DM là **Messaging**. [Cơ chế Messaging](../../shared/me
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; search/cursor và frontend thật đã có proof P1-T01, được người dùng PASS; mở DM P1-T02 đã được người dùng nghiệm thu; inbox P1-T03 đã nghiệm thu; gửi P2-T01 chờ người dùng test. | OQ-005 |
+| Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; search/cursor và frontend thật đã có proof P1-T01, được người dùng PASS; mở DM P1-T02 đã được người dùng nghiệm thu; inbox P1-T03 đã nghiệm thu; gửi P2-T01 đã nghiệm thu ngày10/10/2026. | OQ-005 |
 | Lưu giữ | DEC-103–109 chốt account lock/no self-delete, TTL và restore placeholder; có [chính sách chung](../../data-lifecycle.md), còn review/migration/sổ độc lập/worker/restore proof. | OQ-005/011, DATA-GAP |
 | Thử lại/đồng thời | Rà soát và thử nghiệm hợp đồng chống trùng, khóa theo hội thoại, xung đột sửa/xóa và dọn dữ liệu. | OQ-005, OQ-008 |
-| Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; đã có bảng text-policy và fixture theo DEC-090; client/server26 corpus đã được agent kiểm chứng trong P2-T01; chờ người dùng nghiệm thu. | OQ-005 |
+| Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; đã có bảng text-policy và fixture theo DEC-090; client/server26 corpus đã được agent kiểm chứng trong P2-T01; người dùng đã nghiệm thu ngày10/10/2026. | OQ-005 |
 | Chất lượng | Ngưỡng và ma trận đã chốt DEC-082/083; còn cấu hình/build/thiết bị và kết quả đo. | OQ-007 |
 
 Đã bổ sung [OpenAPI dự thảo](../../contracts/direct-messaging.openapi.json) ngày2026-10-04; baseline P0 đã được duyệt, search P1-T01 được người dùng PASS và POST mở DM P1-T02 đã được người dùng nghiệm thu, GET inbox P1-T03 đã được người dùng nghiệm thu; phần tin nhắn/Hub vẫn dự thảo. Schema dùng `x-scdc-utf16-length` vì minLength/maxLength của JSON Schema không tự biểu diễn phép đếm UTF-16. `clientMessageId` UUIDv4, ID server UUIDv7 theo DEC-081; ví dụ là dữ liệu minh họa, không phải ID của dữ liệu thật. Cách biểu diễn SQL hiện tại dùng chat space/`sequence_no`; thiết kế logic dùng conversation/sequence. Cần rà soát ánh xạ, unique key theo tác giả và commit order trước triển khai, không coi seed/schema hiện tại là đã chứng minh hợp đồng đề xuất.
@@ -42,3 +42,15 @@ GET `/api/v1/direct-conversations` trả DM thật theo membership, phân trang2
 POST `/api/v1/direct-conversations/{id}/messages` lưu message/sequence/SendOperation/HMAC/outbox/projection cùng transaction. Validator Unicode17 và giới hạn2.000 UTF-16, retry cùng UUID/body không nhân đôi, body khác409, thiếu key503. Guard actor/session/member và peer cho send mới; retry committed trả trạng thái hiện hành dù peer unavailable. FE có khung nhập thật, pending/sent/error, retry chủ động và draft RAM theo actor/conversation. Người vừa nhắn tin được kiểm chứng bằng writer thật A→B/A→C/B→A, reload và fault rollback.
 
 [Biên bản P2-T01](../../acceptance/direct-messaging/DM-P2-T01.md) có62backend/42client/6browser tests, fresh/upgrade/replay migration và C01–C04/RECENT với lệnh mẫu. **Đã được người dùng nghiệm thu ngày10/10/2026**, sau C02 PASS FE/BE theo yêu cầu; cho phép merge `message` và thực hiện P2-T02. AC-DM-02 mới đạt phần gửi, phần người nhận/lịch sử thuộc P2-T02; chưa tuyên bố hoàn tất toàn use case. Full lost-response/retry UI thuộc P3; dispatcher/Hub/reconnect thuộc P4. Các đoạn P1 ở trên ghi trạng thái theo mốc bàn giao P1.
+
+## Lịch sử DM-P2-T02 — 10/10/2026
+
+P2-T01 đã merge/push vào `message` tại `ea941a7`, chứa xác nhận `9401ab5`. P2-T02 dùng branch `feat/dm-p2-t02-message-history` từ đúng base này. GET history latest/before/after/through kiểm tra actor/session/membership từng trang, chốt counter sau khóa space, cursor Data Protection `Messaging.History.v1` hạn24h và giữ key ring. Trang mặc định50/tối đa100, sequence/version là chuỗi số; current DTO gồm tombstone và author unavailable.
+
+FE tự tải latest khi mở/reload, tải tin cũ và giữ điểm cuộn, có lỗi/retry và Làm mới tin nhắn. Bảo đọc được tin An đã lưu qua GET; nhận tức thời vẫn thuộc P4. RAM tách actor, abort/generation bỏ response cũ; merge ID/version chính xác bằng BigInt, giữ send mới nếu response latest cũ về muộn. Làm mới tải lại50 tin mới nhất; các trang cũ tải lại bằng Tải tin cũ hơn.
+
+[Biên bản P2-T02](../../acceptance/direct-messaging/DM-P2-T02.md) cung cấp dataset H121/bigint, các lệnh và từng case FE/BE cụ thể. **Chờ người dùng test FE/BE P2-T02**, chưa merge `message` và chưa làm P3/P4. Không suy toàn bộ AC/TC hoặc use case hoàn tất từ lát cắt lịch sử này.
+
+### Nghiệm thu lịch sử ngày10/10/2026
+
+Người dùng xác nhận P2-T02 PASS FE/BE trên bản `9a2b345` (code `a66f7d9`), đồng ý tích hợp vào `message` và làm P3-T01. Các đoạn chờ nghiệm thu phía trên là mốc bàn giao trước xác nhận.

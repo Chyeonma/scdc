@@ -284,11 +284,11 @@ Branch `feat/dm-p2-t01-persist-text-message`. AC-DM-02/09/11/19/21; TC-TEXT-01�
 
 Branch `feat/dm-p2-t02-message-history`. AC-DM-03/07/12/18/21; TC-DM-03/04/15/20/25.
 
-- [ ] P2-T02.1 GET messages latest/before/after bootstrap theo counter committed; default 50/max100, items tăng sequence, protected cursor và mốc through đúng contract.
-- [ ] P2-T02.2 Key ring bền; cursor gắn actor/conversation/direction/filter/limit/expiry; reject before+after, cursor bị sửa/dùng chéo; auth từng trang.
-- [ ] P2-T02.3 UI load latest/load older/scroll ổn định, loading/error/retry không bỏ tin đang thấy; không dùng sequence difference làm unread.
-- [ ] P2-T02.4 Tạo H121 qua writer, B offline rồi login; bind message ID thật vào manifest.
-- [ ] P2-T02.5 Test lịch sử không thiếu/trùng, rollback/late commit, bigint lớn và restart key ring; UI/API/DB cùng tập ID.
+- [x] P2-T02.1 GET messages latest/before/after bootstrap theo counter committed; default 50/max100, items tăng sequence, protected cursor và mốc through đúng contract.
+- [x] P2-T02.2 Key ring bền; cursor gắn actor/conversation/direction/filter/limit/expiry; reject before+after, cursor bị sửa/dùng chéo; auth từng trang.
+- [x] P2-T02.3 UI load latest/load older/scroll ổn định, loading/error/retry không bỏ tin đang thấy; không dùng sequence difference làm unread.
+- [x] P2-T02.4 Tạo H121 qua writer, B offline rồi login; bind message ID thật vào manifest.
+- [x] P2-T02.5 Test lịch sử không thiếu/trùng, rollback/late commit, bigint lớn và restart key ring; UI/API/DB cùng tập ID.
 
 **Bạn test FE:** B mở lại D-AB thấy M01 dù offline lúc gửi; A mở D-HIST thấy H121 đủ ba trang, scroll không nhảy; reload API không mất history; lỗi tải thêm vẫn giữ trang đang thấy.
 
@@ -541,3 +541,7 @@ Task đầu cần giao khi bắt đầu là **DM-P0-T01**. Nếu nhánh cũ có 
 ### Xác nhận chuyển P2 ngày10/10/2026
 
 P2-T01 được người dùng nghiệm thu có điều kiện C02 PASS. Agent đã tái kiểm thử C02 PASS FE/BE; người dùng trả lời “Đồng ý; C02 PASS thì làm P2-T02”. Tích hợp P2-T01 vào `message`, chỉ thực hiện P2-T02 và bàn giao FE/BE trước task kế. Xem [biên bản P2-T01](../acceptance/direct-messaging/DM-P2-T01.md).
+
+### Bàn giao lịch sử P2-T02 ngày10/10/2026
+
+Base `message` đã tích hợp P2-T01 tại `ea941a7`. P2-T02 đã có API history, UI loader, H121 qua writer và kiểm thử kỹ thuật; [biên bản P2-T02](../acceptance/direct-messaging/DM-P2-T02.md) ghi kết quả và cách người dùng test. Các checkbox P2-T02 là việc triển khai đã làm; gate người dùng FE/BE vẫn **Chờ xác nhận**, chưa merge và không tự làm P3/P4.
