@@ -13,8 +13,8 @@ Trạng thái: **Chờ người dùng test FE/BE**. Ngày10/10/2026 người dù
 | Frontend / API / Swagger | <http://localhost:15300> / <http://localhost:15026/api/v1> / <http://localhost:15026/swagger> |
 | Docker project / DB | `scdc-dm-acceptance` / `scdc_dm_acceptance_test`, PostgreSQL18 |
 | FE asset đang phục vụ | `/assets/index-68H9GSBu.js` |
-| API image | `sha256:ed821cdc40aa8f5376d462f87ad9236130cd667a4eaacadd09144e43b04a6d52` |
-| FE image | `sha256:a639ea0f255a46ae8675c816f5d581fa22eebcb01f6818718c2985985550c855` |
+| API image | `sha256:93050df47fc5eaf79e90eac85b9512b23a96b1e940de5d1ea2c741961b8a8467` |
+| FE image | `sha256:2ca48fda90d069e3d7cc66c2b49bc9e52ad13f7a67bd008050cd00c0233a7c83` |
 | Migration | Không thêm migration; dùng schema/counter/index đã nghiệm thu P2-T01 |
 | Key ring | Giữ `.dm-acceptance/keyrings/cursor`, application `SCDC.UserSearch.dm-acceptance`, purpose `Messaging.History.v1` |
 | Gate | Chưa merge P2-T02; dừng chờ người dùng PASS/FAIL FE và BE trên bản bàn giao |
@@ -29,7 +29,7 @@ Giới hạn legacy: row thiếu author/client ID không đáp ứng MessageResp
 
 ## Mở môi trường và dữ liệu mẫu
 
-Chạy trong PowerShell terminal, truyền Action rõ ràng:
+Chạy trong PowerShell terminal, truyền Action rõ ràng. Dùng script ở **dm-message-integration** cho bản P2-T02. Checkout `E:\Project\SCDC\scdc` hiện còn ở P0 (`ca4e5c7`); chạy Start/build từ checkout đó sẽ phục vụ lại bản cũ, không có API tìm người. Các checkout dùng chung Docker project/cổng, nên chỉ khởi động từ thư mục bàn giao dưới đây:
 
 ```powershell
 Set-Location E:\Project\SCDC\dm-message-integration
@@ -68,7 +68,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dm-acceptance\hist
 
 ## C01 — latest50, before50 và before21
 
-**FE:** Login A run p2huser → bấm dấu + → nhập đúng `dm_demo_search12_p2huser` → chọn dòng có username này → Mở hội thoại. Chờ hết Đang tải tin nhắn. Ban đầu đúng50 dòng HIST-072…121. Cuộn để thấy HIST-072, ghi vị trí dòng này, bấm Tải tin cũ hơn: thêm HIST-022…071 và dòng đang xem giữ vị trí. Bấm lần nữa: thêm HIST-001…021, tổng121 dòng đúng thứ tự, không còn nút tải cũ. Reload mở lại: latest50 được tải từ server; bấm hai lần tải cũ lại đủ121.
+**FE:** Vào `http://localhost:15300`, Ctrl+F5. Đăng xuất tài khoản hiện tại nếu có, đăng nhập username **`dm_demo_an_p2huser`**, password **`DmDemo2026!Local`**. Kiểm tra góc dưới bên trái hiển thị `@dm_demo_an_p2huser` → bấm dấu + → nhập đúng `dm_demo_search12_p2huser` → chọn dòng có username này → Mở hội thoại. Chờ hết Đang tải tin nhắn. Ban đầu đúng50 dòng HIST-072…121. Cuộn để thấy HIST-072, ghi vị trí dòng này, bấm Tải tin cũ hơn: thêm HIST-022…071 và dòng đang xem giữ vị trí. Bấm lần nữa: thêm HIST-001…021, tổng121 dòng đúng thứ tự, không còn nút tải cũ. Reload mở lại: latest50 được tải từ server; bấm hai lần tải cũ lại đủ121.
 
 **BE:** Copy cả block sau. Helper tự login/logout ở RAM và không in token. Không giữ cookie/token trong file response:
 
@@ -236,3 +236,17 @@ Bạn ghi cho từng C01–C04: commit/build, FE PASS/FAIL, BE PASS/FAIL, bướ
 Code đã push thành công; `git ls-remote --heads origin feat/dm-p2-t02-message-history message` xác minh remote code SHA `a66f7d9a7c90077e736d245b696c89fe749cf9ea` và `message` SHA `ea941a7504f0230038ca391bb935832c3d1daa05`. Commit hồ sơ bàn giao tiếp theo chỉ đổi docs; metadata ignored `runs/p2hist/p2-t02-build.json` ghi `handoverCommit`/`remoteCommit` thực tế sau push và xác minh HEAD cuối. Không tạo PR trong lượt này; target nếu tạo là `message`.
 
 P2-T01 commit nghiệm thu `9401ab5` là ancestor của `message` merge `ea941a7`; smoke writer/read trên bản kế thừa đạt trong70 backend tests. Baseline A/B vẫn2 message/2operation/2outbox/counter2 sau triển khai history; browser B thấy đúng hai ID cũ, trước/sau reload. P2-T02 chưa là ancestor của `message`, vì còn chờ người dùng test.
+
+## Kiểm tra lại C01 theo phản hồi không thấy người dùng — 10/10/2026
+
+Người dùng báo không tìm thấy `dm_demo_search12_p2huser`. Đọc DB xác nhận tài khoản cùng ID `01a122f3-a7fc-730a-93aa-4ceed62e9946`, status1 và email đã verified, không bị xóa hoặc thiếu seed. Runtime tại15300/15026 đang dùng image khác bản bàn giao, FE asset `index-B7nUc0-P.js`; GET `/users/search?q=dm_demo_search12_p2huser&limit=20` trả404 Common.NotFound cả API trực tiếp và proxy FE. Checkout `scdc` vẫn ở P0 `ca4e5c7`. Đây là lỗi bản chạy không có route tìm người, không phải không có tài khoản mẫu.
+
+Đã build/start từ `E:\Project\SCDC\dm-message-integration`, giữ PostgreSQL volume và các ID/tin có sẵn. Compose working_dir đã xác minh thuộc đúng thư mục này; image mới cập nhật ở bảng bản chạy (manifest image thay đổi khi rebuild, source sản phẩm vẫn `a66f7d9`). API search qua FE trả200 với đúng một kết quả username/ID trên.
+
+Browser Edge/Chromium chạy riêng `C01` trên **run p2huser của người dùng**, login An → dấu + tìm đúng username → chọn/mở hội thoại →50/100/121 tin, thứ tự/ID/label và điểm cuộn: **1/1 PASS, 2,6 giây**. Không gửi thêm tin hoặc Setup lại run. Report giữ ở `.dm-acceptance/runs/p2huser/browser-c01-recheck.json`, chẩn đoán tại `search-runtime-recheck.json`. Gate người dùng vẫn Chờ xác nhận; không merge hay triển khai task kế.
+
+```powershell
+Set-Location E:\Project\SCDC\dm-message-integration\clients\WebClient
+$env:DM_P2_HISTORY_RUN='p2huser'
+npx.cmd playwright test --config playwright.dm-p2-t02.config.js --grep '^C01'
+```
