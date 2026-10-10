@@ -14,3 +14,12 @@ export function mergeDmMessages(previous, incoming) {
     return BigInt(a.sequence) < BigInt(b.sequence) ? -1 : BigInt(a.sequence) > BigInt(b.sequence) ? 1 : 0;
   });
 }
+
+export function mergeDmLatestPage(previous, page) {
+  const visibleIds = new Set(page.items.map(message => message.id));
+  // Preserve newer versions for IDs in this page, including a retry that won a GET race.
+  const retained = previous.filter(row => visibleIds.has(row.id) || !row.id
+    || row.status === 'sending' || row.status === 'error'
+    || row.sequence && BigInt(row.sequence) > BigInt(page.throughSequence));
+  return mergeDmMessages(retained, page.items);
+}

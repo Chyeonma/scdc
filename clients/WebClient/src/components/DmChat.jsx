@@ -1,7 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getDirectMessages, sendDirectMessage, sessionStore } from '../api.js';
 import { validateDmText } from '../dmTextPolicy.js';
-import { mergeDmMessages } from '../dmHistory.js';
+import { mergeDmLatestPage, mergeDmMessages } from '../dmHistory.js';
+import { createDmOperation, sendDmOperation } from '../dmSendOperation.js';
 
 const errors = {
   CONTENT_EMPTY: 'Nhập nội dung có ký tự hiển thị.',
@@ -61,9 +62,7 @@ export function DmChat({ actorId, author, conversation, onCommitted }) {
       const node = timeline.current;
       scrollChange.current = { id: space, older, top: beforeScroll?.top ?? node?.scrollTop ?? 0,
         height: beforeScroll?.height ?? node?.scrollHeight ?? 0 };
-      update(space, s => ({ ...s, rows: mergeDmMessages(older ? s.rows : s.rows.filter(row => !row.id
-        || row.status === 'sending' || row.status === 'error'
-        || row.sequence && BigInt(row.sequence) > BigInt(page.throughSequence)), page.items),
+      update(space, s => ({ ...s, rows: older ? mergeDmMessages(s.rows, page.items) : mergeDmLatestPage(s.rows, page),
         nextCursor: page.nextCursor, resumeCursor: older ? s.resumeCursor : page.resumeCursor,
         throughSequence: page.throughSequence, historyLoading: false, historyLoaded: true, historyError: null }));
     } catch (error) {
@@ -80,23 +79,29 @@ export function DmChat({ actorId, author, conversation, onCommitted }) {
       update(id, s => ({ ...s, validationError: errors[validation.error] })); return;
     }
     const space = id;
-    const operation = existing || { clientMessageId: crypto.randomUUID(), content: validation.content, author };
+    const operation = existing ? existing.operation : createDmOperation(actorId, space, validation.content, state.draftRevision || 0);
+    if (!operation || operation.actorId !== actorId || operation.conversationId !== space) return;
     locked.current.add(space);
     const request = new AbortController(); requests.current.add(request);
     update(space, s => ({ ...s, validationError: null, rows: existing
-      ? s.rows.map(row => row.clientMessageId === operation.clientMessageId ? { ...row, status: 'sending', error: null } : row)
-      : [...s.rows, { ...operation, status: 'sending' }] }));
+      ? s.rows.map(row => !row.id && row.author?.id === actorId && row.clientMessageId === operation.clientMessageId
+        ? { ...row, status: 'sending', error: null } : row)
+      : [...s.rows, { clientMessageId: operation.clientMessageId, content: operation.content, author, operation, status: 'sending' }] }));
     try {
-      const response = await sendDirectMessage(space, operation.clientMessageId, operation.content,
-        { signal: request.signal, expectedActorId: actorId });
+      const response = await sendDmOperation(operation, sendDirectMessage, { signal: request.signal });
       if (!active.current || request.signal.aborted || sessionStore.getSnapshot()?.user?.id !== actorId) return;
-      update(space, s => ({ ...s, draft: validateDmText(s.draft).content === operation.content ? '' : s.draft,
+      update(space, s => ({ ...s, draft: (s.draftRevision || 0) === operation.draftRevision
+        && validateDmText(s.draft).content === operation.content ? '' : s.draft,
         rows: mergeDmMessages(s.rows, [response]) }));
       onCommitted();
     } catch (error) {
       if (!active.current || request.signal.aborted || sessionStore.getSnapshot()?.user?.id !== actorId) return;
-      update(space, s => ({ ...s, rows: s.rows.map(row => !row.id && row.clientMessageId === operation.clientMessageId
-        ? { ...row, status: 'error', error: error?.problem?.errorCode || error?.errorCode || 'Không xác nhận được kết quả gửi.' } : row) }));
+      const code = error?.problem?.errorCode || error?.errorCode;
+      const detail = code === 'SEND_TIMEOUT' ? 'Quá 15 giây chờ phản hồi; tin có thể đã được lưu.'
+        : error?.status === 401 ? 'Yêu cầu bị từ chối (401). Kiểm tra phiên trước khi thử gửi lại.'
+        : code || 'Không xác nhận được kết quả gửi.';
+      update(space, s => ({ ...s, rows: s.rows.map(row => !row.id && row.author?.id === actorId && row.clientMessageId === operation.clientMessageId
+        ? { ...row, status: 'error', error: detail } : row) }));
     } finally { locked.current.delete(space); requests.current.delete(request); }
   }
   if (!conversation) return <div className="chat-timeline timeline-empty">Tìm một người để bắt đầu cuộc trò chuyện.</div>;
@@ -110,7 +115,7 @@ export function DmChat({ actorId, author, conversation, onCommitted }) {
       {state.historyError && <div role="alert">Không tải được lịch sử ({state.historyError}). Tin đang xem được giữ lại.
         <button type="button" onClick={() => loadHistory(state.historyError === 'CURSOR_INVALID' ? false : state.failedOlder)}>Thử tải lại</button></div>}
       {state.rows.length === 0 && state.historyLoaded && <div className="timeline-empty"><h2>Cuộc trò chuyện với {conversation.user?.displayName}</h2><p>Chưa có tin nhắn.</p></div>}
-      {state.rows.map(row => <article className="dm-text-message" key={row.id || row.clientMessageId} data-status={row.status} data-message-id={row.id} data-sequence={row.sequence}>
+      {state.rows.map(row => <article className="dm-text-message" key={row.id || `${row.author?.id}:${row.clientMessageId}`} data-status={row.status} data-message-id={row.id} data-sequence={row.sequence}>
         <strong>{row.author?.displayName || row.author?.username}</strong>
         <p className="dm-text-content">{row.content ?? 'Tin nhắn đã bị xóa.'}</p>
         <small role="status">{row.status === 'sent' ? (row.author?.id === actorId ? 'Đã gửi' : 'Đã lưu') : row.status === 'sending' ? 'Đang gửi…' : `Gửi chưa được xác nhận: ${row.error}`}</small>
@@ -119,12 +124,16 @@ export function DmChat({ actorId, author, conversation, onCommitted }) {
     </div>
     <div className="composer-container dm-text-composer">
       <textarea aria-label="Nội dung tin nhắn" placeholder={`Nhắn tin cho ${conversation.user?.displayName || 'người nhận'}`}
-        value={state.draft} disabled={busy || unresolved} onChange={e => update(id, s => ({ ...s, draft: e.target.value, validationError: null }))}
+        value={state.draft} disabled={busy} onChange={e => update(id, s => ({ ...s, draft: e.target.value,
+          draftRevision: (s.draftRevision || 0) + 1, validationError: null }))}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send(); } }} />
       <div className="dm-composer-actions"><span>{validation.content?.length ?? state.draft.length}/2000 UTF-16</span>
-        <button type="button" disabled={busy || unresolved} onClick={() => send()}>Gửi</button></div>
+        <button type="button" disabled={busy} onClick={() => send()}>{unresolved ? 'Gửi tin mới' : 'Gửi'}</button>
+        {unresolved && <button type="button" disabled={busy} onClick={() => update(id, s => ({ ...s, draft: '',
+          draftRevision: (s.draftRevision || 0) + 1, validationError: null }))}>Soạn tin mới</button>}</div>
       {state.validationError && <p role="alert">{state.validationError}</p>}
-      {unresolved && <p role="alert">Nội dung được giữ lại. Bấm “Thử gửi lại” để xác nhận cùng thao tác gửi.</p>}
+      {unresolved && <p role="alert">Tin chưa xác nhận giữ nguyên nội dung và khóa gửi. “Thử gửi lại” xác nhận cùng thao tác;
+        “Gửi tin mới” tạo thao tác mới từ khung soạn.</p>}
     </div>
   </>;
 }

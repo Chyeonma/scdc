@@ -161,7 +161,9 @@ export async function api(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
+  signal?.throwIfAborted();
   const accessToken = auth ? await getAccessToken() : '';
+  signal?.throwIfAborted();
   if (expectedActorId !== undefined && session?.user?.id !== expectedActorId) {
     throw new ApiError('Phiên đăng nhập đã thay đổi.', 401);
   }

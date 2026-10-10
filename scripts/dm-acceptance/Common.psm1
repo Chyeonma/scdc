@@ -47,7 +47,7 @@ function Initialize-DmConfig([int]$WebPort=15300, [int]$ApiPort=15026, [int]$Pos
     }
     $config=Get-DmConfig
     if ($config.DM_WEB_PORT -eq $config.DM_API_PORT -or $config.DM_WEB_PORT -eq $config.DM_POSTGRES_PORT -or $config.DM_API_PORT -eq $config.DM_POSTGRES_PORT) { throw 'Acceptance ports must differ.' }
-    Write-Host 'Local config/key created or preserved; no secret printed. Cursor ring is reserved, not active in P0.'
+    Write-Host 'Local config/key created or preserved; no secret printed. Active features depend on the checkout used to build the acceptance stack.'
 }
 
 function Invoke-DmCompose([string[]]$Arguments) {
