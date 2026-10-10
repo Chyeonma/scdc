@@ -395,3 +395,7 @@ Bước: ... | Expected: ... | Actual/status/errorCode/UUID/ID: ...
 ```
 
 Sau PASS mới fetch/xác minh build đã duyệt, merge riêngtask `--no-ff` vào`message`, smoke/push/ancestry rồi đi task được giao. Quyền merge đã cấp có điều kiện; không merge main/phát hành. Gate UC/realtime/thiết bị mobile thật/dispatcher còn mở, không suy PASS toànphase từ task này.
+
+## Người dùng nghiệm thu — 10/10/2026
+
+Người dùng xác nhận: “P3-T02 đã PASS FE/BE; nghiệm thu và làm P4-T01.” Build `d4f16699d7916a9ee7d55afd9eda47a93f62d376`, code `4102955`, asset `index-pm6lhpkq.js`. Các phần Chờ phía trên lưu mốc bàn giao; xác nhận này thay thế trạng thái đó, cho phép merge riêng P3-T02 vào message và thực hiện riêng P4-T01. Không coi acceptance task là PASS Hub/realtime chưa triển khai.
