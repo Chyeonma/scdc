@@ -35,7 +35,7 @@ help:
 	  '  make up ENGINE=podman   Dùng Podman và Compose provider đã cài.' \
 	  '  Dùng cùng ENGINE cho down/status/logs/db/compose-check.' \
 	  '  Có thể override COMPOSE, ví dụ COMPOSE="podman-compose".' \
-	  '  Windows: chạy Make trong WSL; lệnh PowerShell xem docs/development.md.' \
+	  '  Windows: chạy Make trong WSL; lệnh PowerShell xem docs/guides/development.md.' \
 	  '' \
 	  '  make docs-sync FROM=main' \
 	  '      Chép toàn bộ docs/ từ main vào nhánh hiện tại, đưa vào staging.' \

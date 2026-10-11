@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
     "version": "0.2.0-draft",
-    "description": "Hợp đồng DM đề xuất, endpoint chưa triển khai. Chính sách DEC-068–071 và công nghệ DEC-081 đã chốt; schema/lỗi/mapping SQL cần rà soát cùng mock và thử nghiệm. Nguồn nghiệp vụ: docs/features/direct-messaging/README.md. Thiết kế chi tiết 2026-10-04: DEC-090/091, resumeCursor, fingerprint và mapping SQL; chưa có implementation."
+    "description": "Hợp đồng DM đề xuất, endpoint chưa triển khai. Chính sách DEC-068–071 và công nghệ DEC-081 đã chốt; schema/lỗi/mapping SQL cần rà soát cùng mock và thử nghiệm. Nguồn nghiệp vụ: docs/features/messaging/direct-messaging.md. Thiết kế chi tiết 2026-10-04: DEC-090/091, resumeCursor, fingerprint và mapping SQL; chưa có implementation."
   },
   "servers": [
     {

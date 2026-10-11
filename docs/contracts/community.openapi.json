@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Community, permissions and channel text — target design",
     "version": "0.1.0-draft",
-    "description": "Target Community/Messaging contract. Create/view, public immediate join, public search, role/assignment management and the text-channel metadata/ACL package are implemented on feature branches; per-operation metadata and docs/features/community/status.md identify the selected scope. Voice creation, channel deletion, pending requests, invitations, message history/writers and realtime remain target design. No server deletion endpoint in v1."
+    "description": "Community and channel-messaging contract. Create/view, public immediate join, public search, role/assignment and text-channel metadata/ACL capabilities are merged into main. Per-operation metadata identifies implemented and partial scope; topic documents describe current limits. Feature-branch fields retain development provenance. Voice creation, channel deletion, pending requests, invitations, message history/writers and realtime remain target design. No server deletion endpoint in v1."
   },
   "servers": [
     {
@@ -54,7 +54,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "valid account/session",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -65,7 +65,7 @@
             "$ref": "#/components/parameters/Limit"
           }
         ],
-        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-design-document": "../features/community/servers.md",
         "x-scdc-feature-branch": "feat/community-create-view"
       },
       "post": {
@@ -133,7 +133,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "active verified account",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "requestBody": {
@@ -146,7 +146,7 @@
             }
           }
         },
-        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-design-document": "../features/community/servers.md",
         "x-scdc-feature-branch": "feat/community-create-view"
       }
     },
@@ -188,7 +188,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "active verified account and valid session",
         "x-scdc-retry": "GET may retry after refresh; invalid cursor requires starting from the first page.",
         "parameters": [
@@ -203,7 +203,7 @@
           }
         ],
         "x-scdc-runtime-branch": "feat/community-search",
-        "x-scdc-design-document": "../features/community/design/search.md"
+        "x-scdc-design-document": "../features/community/servers.md"
       }
     },
     "/servers/{serverId}": {
@@ -244,7 +244,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "public summary or active membership; hidden private -> 404",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -252,7 +252,7 @@
             "$ref": "#/components/parameters/serverId"
           }
         ],
-        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-design-document": "../features/community/servers.md",
         "x-scdc-feature-branch": "feat/community-create-view"
       },
       "patch": {
@@ -350,7 +350,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "own existing membership row, including left",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -358,7 +358,7 @@
             "$ref": "#/components/parameters/serverId"
           }
         ],
-        "x-scdc-design-document": "../features/community/design/create-view.md",
+        "x-scdc-design-document": "../features/community/memberships.md",
         "x-scdc-feature-branch": "feat/community-create-view"
       }
     },
@@ -410,7 +410,7 @@
             }
           }
         },
-        "x-scdc-implementation": "partial-on-feature-branch",
+        "x-scdc-implementation": "partial-on-main",
         "x-scdc-access": "current public server",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -419,7 +419,7 @@
           }
         ],
         "x-scdc-runtime-branch": "feat/community-join",
-        "x-scdc-design-document": "../features/community/design/direct-join.md"
+        "x-scdc-design-document": "../features/community/memberships.md"
       }
     },
     "/servers/{serverId}/join-requests/me": {
@@ -1562,7 +1562,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "member; filter channel view on every page",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1577,7 +1577,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-channels",
-        "x-scdc-design-document": "../features/community/design/channels-access.md"
+        "x-scdc-design-document": "../features/community/channels.md"
       },
       "post": {
         "operationId": "createChannel",
@@ -1626,7 +1626,7 @@
             }
           }
         },
-        "x-scdc-implementation": "partial-on-feature-branch",
+        "x-scdc-implementation": "partial-on-main",
         "x-scdc-access": "manage_channels",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1645,7 +1645,7 @@
           }
         },
         "x-scdc-feature-branch": "feat/community-channels",
-        "x-scdc-design-document": "../features/community/design/channels-access.md"
+        "x-scdc-design-document": "../features/community/channels.md"
       }
     },
     "/servers/{serverId}/channels/{channelId}": {
@@ -1686,7 +1686,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1698,7 +1698,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-channels",
-        "x-scdc-design-document": "../features/community/design/channels-access.md"
+        "x-scdc-design-document": "../features/community/channels.md"
       },
       "patch": {
         "operationId": "updateChannel",
@@ -1737,7 +1737,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "manage_channels AND channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1759,7 +1759,7 @@
           }
         },
         "x-scdc-feature-branch": "feat/community-channels",
-        "x-scdc-design-document": "../features/community/design/channels-access.md"
+        "x-scdc-design-document": "../features/community/channels.md"
       },
       "delete": {
         "operationId": "deleteChannel",
@@ -1845,7 +1845,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "manage_channel_access AND channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1857,7 +1857,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-channels",
-        "x-scdc-design-document": "../features/community/design/channels-access.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       },
       "put": {
         "operationId": "replaceChannelAccess",
@@ -1896,7 +1896,7 @@
             }
           }
         },
-        "x-scdc-implementation": "partial-on-feature-branch",
+        "x-scdc-implementation": "partial-on-main",
         "x-scdc-access": "manage_channel_access AND channel view",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1918,7 +1918,7 @@
           }
         },
         "x-scdc-feature-branch": "feat/community-channels",
-        "x-scdc-design-document": "../features/community/design/channels-access.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       }
     },
     "/servers/{serverId}/roles": {
@@ -1959,7 +1959,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner OR manage_channel_access",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -1974,7 +1974,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       },
       "post": {
         "operationId": "createRole",
@@ -2023,7 +2023,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2042,7 +2042,7 @@
           }
         },
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       }
     },
     "/servers/{serverId}/roles/{roleId}": {
@@ -2083,7 +2083,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner; custom role only",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2105,7 +2105,7 @@
           }
         },
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       },
       "delete": {
         "operationId": "deleteRole",
@@ -2137,7 +2137,7 @@
             "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented."
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner; custom role only",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2152,7 +2152,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       }
     },
     "/servers/{serverId}/members": {
@@ -2193,7 +2193,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner OR manage_channel_access",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2208,7 +2208,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       }
     },
     "/servers/{serverId}/members/{userId}/roles": {
@@ -2249,7 +2249,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner; active target membership",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2261,7 +2261,7 @@
           }
         ],
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       },
       "put": {
         "operationId": "replaceMemberRoles",
@@ -2300,7 +2300,7 @@
             }
           }
         },
-        "x-scdc-implementation": "implemented-on-feature-branch",
+        "x-scdc-implementation": "implemented-on-main",
         "x-scdc-access": "owner; active target/current membershipId",
         "x-scdc-retry": "GET may retry after refresh; mutation requires retry:false and explicit user action. Create operations keep clientOperationId.",
         "parameters": [
@@ -2322,7 +2322,7 @@
           }
         },
         "x-scdc-feature-branch": "feat/community-permissions",
-        "x-scdc-design-document": "../features/community/design/roles.md"
+        "x-scdc-design-document": "../features/community/access-control.md"
       }
     },
     "/servers/{serverId}/channels/{channelId}/messages": {

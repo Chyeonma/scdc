@@ -1,58 +1,54 @@
-# SCDC — Community
+# Community
 
-Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Tài liệu tổ chức theo hành trình tạo/tham gia cộng đồng, mở phòng và giao tiếp. Mã UC-COM dùng để truy vết hành trình; module thực hiện được ghi trong từng use case.
+Community sở hữu cộng đồng, membership, lời mời, metadata/vòng đời phòng và quyền. Messaging sở hữu tin phòng, lịch sử và Hub chat; Identity cung cấp trạng thái tài khoản/phiên. Vị trí tài liệu và prefix route không đổi ranh giới module.
 
-Community sở hữu cộng đồng, membership, phòng và quyền. Messaging sở hữu tin nhắn và Hub chat. Vị trí tài liệu và prefix route không thay ranh giới module.
+Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Mã UC-COM truy vết hành trình người dùng; module thực hiện được ghi trong từng use case.
 
-## Bắt đầu từ đâu
+## Mục lục
 
-| Cần tìm | Đọc |
+| Chủ đề | Nội dung |
 |---|---|
-| Đã triển khai gì, ở nhánh nào, bước tiếp theo | [Trạng thái Community](status.md) |
-| Community MVP gồm gì và khi nào được coi hoàn tất | [Phạm vi và gate MVP](../../releases/mvp.md#community-scope) |
-| Việc còn lại, ưu tiên, phụ thuộc và đầu mối | [Bảng công việc](status.md#work-items) |
-| Chạy API/UI, database và kiểm thử theo nhánh | [Hướng dẫn local Community](development.md) |
-| UC/AC/TC nào có test thực tế, phần nào chưa chứng minh | [Đối chiếu bằng chứng](delivery/verification.md) |
-| Quy tắc nghiệp vụ và use case | [Danh mục và truy vết](specs/README.md) |
-| Cấu trúc module, API, dữ liệu và transaction | [Thiết kế Community](design/README.md) |
-| Chọn gói và cách thực hiện | [Các gói triển khai](delivery/README.md) |
-| Phạm vi gói tạo/xem | [Kế hoạch](delivery/create-view/plan.md) |
-| Thiết kế gói tạo/xem | [Thiết kế](design/create-view.md) |
-| Kết quả kiểm chứng gói tạo/xem | [Nghiệm thu](delivery/create-view/acceptance.md) |
-| Gói tham gia trực tiếp public/immediate | [Kế hoạch](delivery/direct-join/plan.md), [thiết kế](design/direct-join.md), [nghiệm thu](delivery/direct-join/acceptance.md) |
-| Gói tìm kiếm cộng đồng công khai | [Kế hoạch](delivery/search/plan.md), [thiết kế](design/search.md), [nghiệm thu](delivery/search/acceptance.md) |
-| Gói vai trò và quyền quản lý | [Kế hoạch](delivery/roles/plan.md), [thiết kế](design/roles.md), [nghiệm thu](delivery/roles/acceptance.md) |
-| Gói phòng text và ACL | [Kế hoạch](delivery/channels-access/plan.md), [thiết kế](design/channels-access.md), [nghiệm thu](delivery/channels-access/acceptance.md) |
+| [Cộng đồng và chủ sở hữu](servers.md) | Tạo, discovery, metadata/visibility/join mode, ownership và phần đọc tư cách |
+| [Thành viên](memberships.md) | Join/request/approval/leave/rejoin, membership epoch |
+| [Lời mời](invitations.md) | Link, token/lượt/hạn, mời đích danh và transition |
+| [Phòng](channels.md) | Create/list/detail/edit/delete, kind và lifecycle phối hợp Messaging/Media |
+| [Vai trò và quyền truy cập](access-control.md) | Role/assignment, policy view, ACL snapshot, quyền quản lý và guard |
+| [Tin phòng](../messaging/channel-messaging.md) | History/send/edit/delete, realtime, reconnect và mất quyền; Messaging thực hiện |
+
+Mỗi chủ đề giữ quy tắc, use case, UX, thiết kế dữ liệu/API, tiêu chí kiểm chứng và trạng thái theo khả năng. Bảng trạng thái phân biệt phần hiện có, mục tiêu và phần chưa chứng minh; không tính tiến độ từ số UC/test.
+
+| Tài liệu liên quan | Nội dung |
+|---|---|
+| [Cấu trúc và cơ chế Community](../../system/community.md) | Tổ chức backend, điều kiện chung, transaction/guard, operation, version/epoch, cursor và migration |
+| [Hướng dẫn Community](../../guides/community-development.md) | Cấu hình, local database/API/UI, runner và kiểm thử |
+| [Truy vết mã](traceability.md) | Liên kết COM/UC/API/AC/TC đến nguồn định nghĩa |
+| [Hồ sơ kiểm chứng](../../records/verification/community/README.md) | Bằng chứng theo commit, main-merge và phần chưa chứng minh |
+| [Phạm vi MVP](../../releases/mvp.md#community-scope) | Khả năng được chọn và gate hoàn tất Community |
+| [Kế hoạch công việc](../../project/planning.md#community-work-items) | COM-W01–13, ưu tiên/phụ thuộc và đầu mối kế hoạch |
 
 <a id="requirements"></a>
 
 ## Phạm vi và hành trình
 
-Đặc tả đầy đủ cho [v1](../../releases/v1.md). [MVP](../../releases/mvp.md) chọn các gói tạo/tham gia/phòng text trước trong một API host. Gửi file trong phòng để sang đợt sau theo DEC-023; thoại/video và chia sẻ màn hình có [đặc tả riêng](../voice-video/README.md). Phạm vi theo mốc được quản lý ở hồ sơ release, không tạo bản sao quy tắc cho từng mốc.
+Đặc tả đầy đủ cho [v1](../../releases/v1.md); [MVP](../../releases/mvp.md) chọn luồng tạo/tìm/tham gia → phòng text → lịch sử/gửi/nhận → xử lý mất quyền trong một API host. Gửi file trong phòng để đợt sau theo DEC-023; thoại/video và chia sẻ màn hình theo [Media](../media/README.md).
 
 1. Tìm cộng đồng công khai hoặc mở liên kết mời.
 2. Tham gia ngay, gửi yêu cầu chờ duyệt hoặc dùng lời mời hợp lệ theo cấu hình.
-3. Xem những phòng được cấp quyền và lịch sử tương ứng.
-4. Gửi/sửa/xóa tin văn bản theo quyền và nhận cập nhật.
-5. Rời cộng đồng theo điều kiện tư cách/ownership.
+3. Xem phòng và lịch sử được cấp quyền.
+4. Gửi/sửa/xóa tin theo quyền và nhận cập nhật.
+5. Rời theo điều kiện tư cách/ownership.
 
-## Các thành phần
+<a id="use-cases"></a>
 
-| Thành phần | Trách nhiệm | Nghiệp vụ | Thiết kế |
-|---|---|---|---|
-| Servers | Metadata, visibility, search, join mode, ownership | [Servers](specs/servers.md) | [Thiết kế](design/servers.md) |
-| Memberships | Tư cách/epoch, tham gia, request, duyệt và rời | [Memberships](specs/memberships.md) | [Thiết kế](design/memberships.md) |
-| Invitations | Link mời và lời mời đích danh | [Invitations](specs/invitations.md) | [Thiết kế](design/invitations.md) |
-| Channels | Metadata, loại phòng và vòng đời | [Channels](specs/channels.md) | [Thiết kế](design/channels.md) |
-| Permissions | Vai trò, quyền quản lý và quyền xem phòng | [Permissions](specs/permissions.md) | [Thiết kế](design/permissions.md) |
-| Tích hợp | Điều kiện chung, tin phòng và realtime xuyên module | [Use case/UX/AC/TC](specs/integration.md) | [Giao dịch/API/schema](design/integration.md) |
+## Use case và module thực hiện
+
+Danh mục UC-COM, module thực hiện, API và AC/TC nằm tại [bảng truy vết](traceability.md#use-case-coverage). Quy tắc và luồng chi tiết nằm trong chủ đề được liên kết từ bảng.
+
+<a id="quy-ước-duy-trì"></a>
 
 ## Quy ước duy trì
 
-- Mỗi quy tắc/use case/AC/TC có một nguồn định nghĩa trong `specs/`; trang truy vết chỉ dẫn liên kết. Giữ nguyên mã khi di chuyển tài liệu.
-- `design/` mô tả cách thực hiện và phân biệt thiết kế mục tiêu với phần được gói hiện hành chọn. Quyết định sản phẩm vẫn giữ mã tại [decisions.md](../../decisions.md).
-- `status.md` là nguồn trạng thái hiện tại của Community. Các trang tổng quan, project và kiến trúc dẫn tới đó.
-- `delivery/<gói>/plan.md` giữ scope, phụ thuộc và tiêu chí; `acceptance.md` giữ bằng chứng gắn commit đã thử. Kết quả lịch sử không được diễn giải thành kết quả của mọi revision sau này.
-- Hợp đồng máy đọc ở `docs/contracts/`, fixture ở `docs/fixtures/`; fixture không thay bằng chứng chạy. Archive giữ lịch sử đã thay thế; Git giữ lịch sử chỉnh sửa.
-
-Accounts, Direct Messaging và Media cùng dùng bố cục README/status/specs/design/delivery. Community giữ đặc tả theo thành phần; [Messaging dùng chung](../../shared/messaging/README.md) giữ cơ chế xử lý tin, còn quyền và hành trình tin phòng nằm ở phần tích hợp Community.
+- Mỗi quy tắc/use case/AC/TC có một nguồn tại chủ đề; giữ nguyên mã khi thay vị trí.
+- OpenAPI/schema giữ contract máy đọc; SQL giữ DDL thực thi; fixture giữ dữ liệu kiểm chứng. Chủ đề giải thích quyết định và dẫn đến các artefact này.
+- Hồ sơ kiểm chứng giữ nguyên kết quả lịch sử theo revision. Thay đổi hiện trạng cập nhật tại chủ đề, không sửa kết luận cũ thành kết quả mới.
+- Quyết định dự án giữ mã tại [decision records](../../records/decisions/README.md); release chỉ chọn phạm vi và gate, không chép lại quy tắc.

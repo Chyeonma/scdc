@@ -1,19 +1,9 @@
 # Module Messaging
 
-Module sở hữu **DM và tin nhắn trong phòng**, gồm lưu/gửi/lịch sử,
-sửa/xóa, chống trùng và Hub chat. Community cung cấp membership/quyền phòng;
-Identity cung cấp điều kiện tài khoản/phiên qua `SCDC.Contracts`.
+Module sở hữu schema `messaging`: space, participant, message và vòng đời tin. Community cung cấp quyền phòng; Identity cung cấp tài khoản/phiên qua [SCDC.Contracts](../../SCDC.Contracts).
 
-Tài liệu tổ chức theo hành trình người dùng:
+## Tài liệu
 
-- [Direct Messaging](../../../docs/features/direct-messaging/README.md): hành trình và quyền truy cập riêng của DM.
-- [Messaging dùng chung](../../../docs/shared/messaging/README.md): nội dung tin, persistence/fingerprint/transaction, history/cursor và realtime.
-- [Tích hợp tin phòng](../../../docs/features/community/specs/integration.md#responsibilities): áp dụng cơ chế Messaging vào phòng cộng đồng, gồm [UC-COM-23](../../../docs/features/community/specs/integration.md#uc-com-23), [UC-COM-24](../../../docs/features/community/specs/integration.md#uc-com-24) và phối hợp realtime [UC-COM-25](../../../docs/features/community/specs/integration.md#uc-com-25).
-
-UC-COM là mã truy vết hành trình; tin phòng được thực hiện trong Messaging.
-Source vẫn đăng ký descriptor Foundation. `IChatSpaceLifecycle` đã có implementation tạo space phòng trong transaction do Community truyền vào; Messaging chỉ ghi schema mình sở hữu. Phần này hỗ trợ gói phòng văn bản, chưa có writer tin, API lịch sử/gửi/sửa/xóa hoặc Hub hoạt động. Admission tin tương lai dùng `IChannelAccessGuard` giữ khóa cùng transaction và kiểm tra hạn lease trước commit; xem [thiết kế gói phòng](../../../docs/features/community/design/channels-access.md).
-
-Ranh giới module và trạng thái source nằm trong [kiến trúc](../../../docs/architecture.md#boundaries).
-Setup và lệnh kiểm thử nằm trong [hướng dẫn phát triển](../../../docs/development.md).
-
-Module sở hữu schema `messaging`; giao tiếp liên module qua `SCDC.Contracts`.
+- [Các chủ đề Messaging](../../../docs/features/messaging/README.md): DM, tin phòng, nội dung, lưu trữ và đồng bộ; hiện trạng nằm trong từng chủ đề.
+- [Kiến trúc](../../../docs/system/architecture.md#boundaries): ranh giới module và lifecycle liên module.
+- [Phát triển](../../../docs/guides/development.md): setup và lệnh kiểm thử.

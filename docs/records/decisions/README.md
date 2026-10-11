@@ -1,0 +1,249 @@
+<a id="scdc--quyết-định-và-vấn-đề-còn-mở"></a>
+
+# SCDC — Hồ sơ quyết định
+
+Nguồn định nghĩa mã DEC, bối cảnh và quyết định bị thay thế. Hành vi hiện hành nằm trong tài liệu chủ đề; các mã OQ nằm tại [vấn đề còn mở](../../project/open-questions.md).
+
+Giữ mã và nội dung truy vết của quyết định bị thay thế.
+
+Các quyết định lịch sử trước DEC-114 dùng tên “MVP” cho bản đầy đủ nay gọi là **v1**. Giữ nguyên nội dung/ngày của quyết định cũ; DEC-114 thêm mốc MVP nhỏ phía trước và chuyển media sang mốc v1, không xóa các quy tắc nghiệp vụ. DEC-116 thay thời điểm chuyển microservice của DEC-115: MVP một API host, microservice ở v1. DEC-117 cập nhật phân công phát triển của DEC-013 và cách cân tải; thẩm quyền phát hành/vận hành vẫn theo DEC-111 và các vấn đề còn mở.
+
+<a id="mục-lục"></a>
+
+## Mục lục
+
+- [Quyết định](#decisions)
+- [Vấn đề còn mở](../../project/open-questions.md#open-questions)
+- [Lịch sử cập nhật](#changes)
+
+<a id="decisions"></a>
+
+<a id="1-quyết-định"></a>
+
+## Quyết định
+
+| Chủ đề | Quyết định |
+|---|---|
+| [Sản phẩm, nguồn lực và mốc bàn giao](#dec-project) | 14 DEC |
+| [Kiến trúc và hợp đồng tích hợp](#dec-architecture) | 7 DEC |
+| [Tài khoản và phiên](#dec-accounts) | 15 DEC |
+| [Nhắn tin và nội dung](#dec-messaging) | 19 DEC |
+| [Community, membership và quyền](#dec-community) | 34 DEC |
+| [Thoại, video và chia sẻ màn hình](#dec-media) | 14 DEC |
+| [Chất lượng, nghiệm thu và vận hành](#dec-quality) | 7 DEC |
+| [Vòng đời dữ liệu và backup/restore](#dec-data) | 6 DEC |
+
+<a id="dec-project"></a>
+
+<a id="sản-phẩm-nguồn-lực-và-mốc-bàn-giao"></a>
+
+### Sản phẩm, nguồn lực và mốc bàn giao
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-002"></a>DEC-002 | Phục vụ nhóm bạn và cộng đồng không giới hạn chủ đề. | REQ-001. | Đã thống nhất |
+| <a id="dec-003"></a>DEC-003 | Phát triển phiên bản đầu trên trình duyệt web. | REQ-003. | Đã thống nhất |
+| <a id="dec-006"></a>DEC-006 | Phát hành công khai và cho phép người dùng tự đăng ký. | REQ-010. | Đã thống nhất |
+| <a id="dec-008"></a>DEC-008 | Dùng mốc khoảng 3 tháng từ ngày khởi động làm mục tiêu tiến độ. | REQ-011; cần kiểm tra AS-001, AS-002, AS-008 khi lập kế hoạch chi tiết. | Mục tiêu lập kế hoạch |
+| <a id="dec-009"></a>DEC-009 | Giữ dự toán ban đầu 500.000.000 VNĐ làm mốc đối chiếu khi lập dự toán điều chỉnh. | COST-001 đến COST-005; AS-001 không còn phù hợp với nhân sự hiện có, cần tính lại công sức. | Cần ước lượng lại |
+| <a id="dec-010"></a>DEC-010 | Dùng bộ tiêu chí thành công sơ bộ làm đầu vào xây dựng điều kiện nghiệm thu. | SUC-001 đến SUC-006; cần cụ thể hóa trong đặc tả yêu cầu. | Đã thống nhất ở mức sơ bộ |
+| <a id="dec-012"></a>DEC-012 | Đội ngũ gồm Vg, Sáng và Thái. | Danh sách nhân sự tại SCDC-ORG-001; công suất đã cập nhật 3–4 ngày/tuần theo DEC-088, thay mô tả toàn thời gian trước đây. | Đã ghi nhận; công suất cập nhật |
+| <a id="dec-013"></a>DEC-013 | Vg là trưởng nhóm/đại diện sản phẩm, phụ trách kiến trúc tổng thể, lựa chọn công nghệ, UX/UI, trực tiếp lập trình và hướng dẫn Thái; Sáng phụ trách kỹ thuật backend, trực tiếp lập trình cùng Vg; Thái phụ trách frontend và kiểm thử, cần đào tạo và hướng dẫn. | Vai trò ghi nhận ban đầu tại SCDC-ORG-001. Phân công backend/frontend/QA được thay bằng [DEC-117](#dec-117) ngày 2026-10-06; giữ lịch sử, Vg tiếp tục là trưởng nhóm và quyết định các vấn đề quan trọng. | Đã thay thế về phân công; giữ lịch sử |
+| <a id="dec-014"></a>DEC-014 | Ưu tiên nhắn tin riêng giữa hai người trước, tiếp tục hành trình tham gia cộng đồng để hình thành nền tảng cho các tính năng tiếp theo. | Đầu vào đại diện sản phẩm ngày 2026-09-30 tại SCDC-DIS-001; không thay đổi phạm vi phiên bản đầu. | Đã ghi nhận định hướng ưu tiên |
+| <a id="dec-015"></a>DEC-015 | Tổ chức cộng đồng bằng nhiều phòng theo chủ đề trước. | Lựa chọn của đại diện sản phẩm ngày 2026-09-30 tại SCDC-DIS-001; chưa đưa luồng thảo luận riêng trong phòng vào ưu tiên ban đầu. | Đã xác định hướng tổ chức chủ đề |
+| <a id="dec-030"></a>DEC-030 | Không tổ chức khảo sát người dùng bên ngoài trong đợt hiện tại; tiếp tục đặc tả từ đầu vào của đại diện sản phẩm và ghi rõ các giả định chưa kiểm chứng. | Đại diện sản phẩm quyết định ngày 2026-09-30; SCDC-DIS-001 là đầu vào, SCDC-FR-DM-001 và SCDC-FR-COM-001 là bản nháp đặc tả. Kiểm thử và nghiệm thu vẫn theo SCDC-PRC-001. | Áp dụng cho đợt hiện tại |
+| <a id="dec-088"></a>DEC-088 | Ngày bắt đầu dự kiến 2026-10-05; mỗi người khoảng 3–4 ngày/tuần làm đủ ngày. Ngân sách mang tính tượng trưng, được phép điều chỉnh mô hình để dễ đọc. | Người dùng cung cấp ngày 2026-10-04 trong trả lời câu hỏi lịch/nguồn lực; 8 giờ/ngày và baseline 3,5 ngày/tuần là giả định lập lịch, chưa phải số liệu chấm công. Thay cơ sở toàn thời gian 5 ngày/tuần trước đây. | Đã xác nhận đầu vào; lịch/đơn giá còn là ước lượng |
+| <a id="dec-114"></a>DEC-114 | Thêm MVP trước bản đầy đủ đã đặc tả: MVP gồm Identity, Community và Direct Messaging để triển khai theo phạm vi hẹp hơn; bản đầy đủ mang tên v1, gồm gọi điện/phòng thoại, video và chia sẻ màn hình. | Vg xác nhận ngày 2026-10-06: ban đầu dự kiến một bản phát hành; nay cần thêm mốc nhỏ phía trước, media đưa vào v1. Giữ mã/quy tắc đã có; [MVP](../../releases/mvp.md) chọn luồng theo gói, [v1](../../releases/v1.md) kế thừa đặc tả đầy đủ. Phân công được cập nhật tại DEC-117; danh sách UC/AC MVP và lịch chi tiết còn cần khóa. | Đã xác nhận hai mốc và nhóm tính năng; chưa khóa chi tiết MVP |
+| <a id="dec-117"></a>DEC-117 | Phân công theo gói bàn giao: Vg giữ quyết định quan trọng, Identity còn lại và Community; Sáng sở hữu DM/nền tin phòng, sau đó lifecycle/UI điều khiển media; Thái sở hữu Email Worker, môi trường/CI/bộ chạy, sau đó provider/SDK/thiết bị media. Chuyển microservice ở v1 chia cho cả ba theo phần sở hữu. | Cập nhật kế hoạch theo yêu cầu cân tải của Vg ngày 2026-10-06, thay phân công phát triển DEC-013. [Nhân sự](../../project/planning.md#team) và [công suất](../../project/planning.md#capacity) tính cả học, review/hướng dẫn, tích hợp và tự kiểm thử; phân bổ 80% công suất, giữ 20% dự phòng, điều chỉnh theo kết quả và ngày công thực tế. Tỷ lệ là giả định lập kế hoạch, chưa chứng minh công sức bằng nhau hoặc cam kết lịch; không chọn người duyệt/người trực production thay DEC-111. | Đã cập nhật phân công kế hoạch; công sức/lịch còn OQ-009 |
+| <a id="dec-118"></a>DEC-118 | Community MVP chọn luồng tạo/tìm/tham gia public/immediate, phòng text, lịch sử/gửi/nhận tin và xử lý mất quyền. Giữ các chức năng role/ACL đã có và kiểm thử hồi quy; các nhánh approval/lời mời, quản lý server/owner/leave, xóa phòng, sửa/xóa tin và voice theo dõi cho mở rộng/v1. | Người dùng chọn luồng tối thiểu trong trả lời về phạm vi MVP ngày 2026-10-07. [Phạm vi và gate](../../releases/mvp.md#community-scope), [công việc](../../project/planning.md#community-work-items). Giữ quy tắc v1, ranh giới module và DEC-083; trước mỗi gói tiếp tục tham khảo người dùng về scope/thiết kế/proof. Không xác nhận nghiệm thu, lịch, phạm vi Identity/DM hoặc quyền merge/phát hành. | Đã chọn phạm vi chức năng Community; gói triển khai/kiểm chứng còn cần khóa |
+
+<a id="dec-architecture"></a>
+
+<a id="kiến-trúc-và-hợp-đồng-tích-hợp"></a>
+
+### Kiến trúc và hợp đồng tích hợp
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-001"></a>DEC-001 | Tái sử dụng thành phần sẵn có phù hợp với yêu cầu và kiến trúc mục tiêu. | Cần đánh giá chất lượng, khả năng tích hợp và công sức điều chỉnh trong thiết kế kỹ thuật. | Chưa xác định thành phần cụ thể |
+| <a id="dec-007"></a>DEC-007 | Yêu cầu microservices cho phiên bản đầu trước đây. | Được thay thế ngày 2026-10-03 bởi DEC-060; yêu cầu hiện hành ngày 2026-10-06 được ghi riêng tại DEC-116, không phục hồi quyết định lịch sử này. | Đã thay thế; giữ lịch sử |
+| <a id="dec-060"></a>DEC-060 | Phát hành MVP bằng Modular Monolith; tách microservices ở đợt sau. | Đại diện sản phẩm xác nhận ngày 2026-10-03; thay DEC-007. “MVP” khi đó là bản đầy đủ nay gọi v1. Được thay thế ngày 2026-10-06 bởi DEC-115; [DEC-116](#dec-116) sau đó chốt một host cho MVP nhỏ và microservice cho v1. Source vẫn monolith, chưa được chuyển đổi. | Đã thay thế về mục tiêu; giữ lịch sử |
+| <a id="dec-061"></a>DEC-061 | API dùng ProblemDetails với `errorCode`, `traceId` và `errors` khi có lỗi trường. | Đại diện sản phẩm chọn định dạng của API hiện tại ngày 2026-10-03. Hợp đồng đề xuất được cập nhật theo quy ước tại architecture.md; schema endpoint tương lai vẫn cần rà soát. | Đã xác nhận định dạng lỗi |
+| <a id="dec-081"></a>DEC-081 | DM/tin phòng dùng REST để thao tác dữ liệu, SignalR `/hubs/chat` nhận cập nhật, giữ Bearer hiện tại; server UUIDv7, clientMessageId UUIDv4; cursor opaque được bảo vệ, sequence/version dạng chuỗi số. | Người dùng chốt ngày 2026-10-04. Cursor phải bảo mật nội dung và chống sửa; không chỉ encode Base64. Công nghệ đã chọn chưa đồng nghĩa Hub/API triển khai. | Đã xác nhận |
+| <a id="dec-115"></a>DEC-115 | MVP phải đáp ứng kiến trúc microservice theo yêu cầu môn học; không có yêu cầu bổ sung về số service, DB riêng, API Gateway, broker hoặc Kubernetes. | Ghi nhận ngày 2026-10-06, thay DEC-060 về mục tiêu. Thời điểm từ MVP được thay bằng [DEC-116](#dec-116) theo yêu cầu tiếp theo của Vg; yêu cầu môn học vẫn được đáp ứng ở v1. Phương án Identity API và Chat API chứa Community/Messaging còn là đề xuất, chưa có chuyển đổi code. | Đã thay thế về thời điểm; giữ lịch sử |
+| <a id="dec-116"></a>DEC-116 | MVP giữ một API host Modular Monolith với Identity, Community và Direct Messaging; chuyển sang microservice thuộc v1, cùng bản hoàn thiện và media. | Vg yêu cầu ngày 2026-10-06; thay thời điểm của DEC-115, giữ phạm vi DEC-114. Môn học chỉ yêu cầu microservice, không thêm số service, DB riêng, Gateway, broker hoặc Kubernetes. Ranh giới/dữ liệu/hợp đồng mạng phải được chốt và kiểm chứng trong [gói kiến trúc v1](../../releases/v1.md); phương án hai API chưa được duyệt, source chưa chuyển đổi. | Đã xác nhận mốc kiến trúc; thiết kế còn OQ-008 |
+
+<a id="dec-accounts"></a>
+
+<a id="tài-khoản-và-phiên"></a>
+
+### Tài khoản và phiên
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-036"></a>DEC-036 | Đợt đầu dùng cả email và tên tài khoản cho tài khoản người dùng. | Đại diện sản phẩm chọn “Cả email lẫn tên tài khoản” ngày 2026-09-30; DEC-054 ngày 2026-10-03 đã xác nhận đăng ký có email/tên tài khoản, đăng nhập bằng một trong hai với mật khẩu và quy tắc hồ sơ; trường tên hiển thị được đồng bộ tại DEC-062. | Đã được cụ thể hóa bởi DEC-054 |
+| <a id="dec-041"></a>DEC-041 | Người dùng phải xác minh email trước khi được nhắn tin. | Đại diện sản phẩm trả lời ngày 2026-09-30; DEC-051 chốt trước xác minh chỉ dùng xác minh/khôi phục; cách gửi, thời hạn và bảo vệ liên kết còn cần thiết kế. | Đã xác định điều kiện nhắn tin |
+| <a id="dec-042"></a>DEC-042 | Đợt đầu có luồng đặt lại mật khẩu qua email. | Đại diện sản phẩm trả lời ngày 2026-09-30; thời hạn hiệu lực và quy tắc bảo vệ liên kết đặt lại cần thiết kế. | Đã xác định kênh khôi phục |
+| <a id="dec-051"></a>DEC-051 | Tài khoản chưa xác minh email chỉ dùng xác minh email hoặc khôi phục mật khẩu, chưa vào các chức năng ứng dụng. | Đại diện sản phẩm chọn ngày 2026-10-03; cụ thể hóa phần còn mở của DEC-041 tại SCDC-FR-ACC-001. | Đã xác nhận |
+| <a id="dec-054"></a>DEC-054 | Đăng ký bằng email, tên tài khoản và mật khẩu; đăng nhập bằng email hoặc tên tài khoản. Tên tài khoản duy nhất, chưa cho đổi ở đợt đầu; tên hiển thị được đổi; email không công khai. | Đại diện sản phẩm xác nhận bộ quy tắc ngày 2026-10-03, thay phần diễn giải chưa xác nhận của DEC-036; trường đăng ký được bổ sung bởi DEC-062. | Đã xác nhận |
+| <a id="dec-062"></a>DEC-062 | Luồng đăng ký thu email, tên tài khoản, tên hiển thị và mật khẩu; tên hiển thị có thể đổi sau. | Đại diện sản phẩm yêu cầu dùng lựa chọn đã có trong source ngày 2026-10-03. Đã đối chiếu AuthScreen, RegisterRequest và IdentityValidation: `displayName` bắt buộc. Bổ sung trường đăng ký cho DEC-054, giữ nguyên quy tắc đăng nhập và định danh. | Đã đồng bộ theo lựa chọn trong source |
+| <a id="dec-063"></a>DEC-063 | Tên tài khoản 3–32 ký tự ASCII chữ/số/dấu chấm/gạch dưới, duy nhất không phân biệt hoa/thường và chưa cho đổi; tên hiển thị Unicode 1–64; email duy nhất sau trim/chuyển chữ thường, chưa cho đổi trong MVP. | Người dùng chọn bộ quy tắc đề xuất ngày 2026-10-04. Phép đếm tên hiển thị được cụ thể hóa theo lựa chọn sau cùng tại DEC-068. | Đã xác nhận |
+| <a id="dec-064"></a>DEC-064 | Giữ chính sách mật khẩu hiện tại: 8–128 theo `.Length` của .NET, ít nhất một chữ và một số; sai 5 lần khóa đăng nhập 15 phút. | Người dùng chọn giữ chính sách hiện tại ngày 2026-10-04; không tự đổi phép đếm, trim hoặc chuẩn hóa mật khẩu. | Đã xác nhận |
+| <a id="dec-065"></a>DEC-065 | Access token 15 phút, phiên tối đa 30 ngày; liên kết xác minh/reset một lần, hạn 30 phút; gửi lại sau tối thiểu 60 giây và vô hiệu liên kết cũ cùng mục đích. Đổi/reset mật khẩu thu hồi mọi phiên. | Người dùng chọn các mốc đề xuất ngày 2026-10-04. Refresh không kéo dài thời hạn phiên; ngưỡng rate limit bổ sung và thu hồi realtime thuộc thiết kế. | Đã xác nhận |
+| <a id="dec-066"></a>DEC-066 | Hồ sơ MVP giữ tên hiển thị, giới thiệu ngắn tối đa 500 theo giới hạn hiện tại, ngôn ngữ và múi giờ; username/email không đổi, chưa thêm tải ảnh đại diện. | Người dùng chọn giữ các trường hiện có ngày 2026-10-04. API hiện tại được mô tả tại Accounts. | Đã xác nhận |
+| <a id="dec-067"></a>DEC-067 | MVP chỉ khôi phục qua email đã đăng ký; không có kênh khôi phục khác hoặc quy trình khôi phục thủ công khi mất quyền truy cập email. | Người dùng chọn ngày 2026-10-04. Không thay DEC-051: tài khoản chưa xác minh vẫn được khôi phục nhưng không tự trở thành đã xác minh. Source hiện chưa cấp reset token cho tài khoản chưa xác minh; ghi chênh lệch tại Accounts. | Đã xác nhận |
+| <a id="dec-089"></a>DEC-089 | Ngưỡng limiter bổ sung cho tài khoản giữ ở dạng đề xuất để quyết định sau; chưa xác nhận thành chính sách sản phẩm. | Người dùng chọn ngày 2026-10-04. Không thay cooldown 60 giây và lockout 5 lần/15 phút đã chốt DEC-064/065; ngưỡng bổ sung tiếp tục theo dõi tại OQ-002. | Đã xác nhận việc hoãn lựa chọn ngưỡng |
+| <a id="dec-103"></a>DEC-103 | MVP chưa bổ sung thao tác người dùng tự xóa tài khoản. | Người dùng chọn ngày 2026-10-04. Không suy trạng thái Deleted/cột deleted_at hoặc FK cascade hiện có thành API xóa tài khoản; xóa/anonymize tài khoản cần thiết kế và quyết định riêng ở đợt sau. | Đã xác nhận phạm vi |
+| <a id="dec-104"></a>DEC-104 | Tài khoản bị khóa không truy cập ứng dụng; người khác còn quyền vẫn đọc được tin đã gửi, nhưng không gửi DM/gọi mới tới tài khoản đó. Khóa không tự xóa nội dung; mở khóa không khôi phục phiên cũ. | Người dùng chốt ngày 2026-10-04. Khóa tài khoản khác lockout đăng nhập 15 phút DEC-064; không xác nhận thêm người/công cụ/quyền quản trị đang mở ở OQ-011. | Đã xác nhận hành vi |
+| <a id="dec-113"></a>DEC-113 | Giữ hành vi mật khẩu trùng hiện tại: đổi mật khẩu khi đã đăng nhập từ chối mật khẩu mới trùng hiện tại; đặt lại qua liên kết cho phép trùng nếu đúng policy. Reset thành công vẫn consume token, đổi security stamp và thu hồi mọi phiên, không tự xác minh email. | Người dùng chọn ngày 2026-10-05 khi rà soát use case Identity. Không thêm kiểm tra lịch sử mật khẩu; không đổi policy DEC-064 hoặc phạm vi thu hồi DEC-065. [ACC-016 và use case](../../features/accounts/README.md), AC-ACC-22/TC-ACC-19 cần kiểm chứng. | Đã xác nhận hành vi; chưa chạy kiểm thử |
+
+<a id="dec-messaging"></a>
+
+<a id="nhắn-tin-và-nội-dung"></a>
+
+### Nhắn tin và nội dung
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-004"></a>DEC-004 | Hỗ trợ nhắn tin trong phòng thuộc server và tin riêng giữa hai người. | REQ-004, REQ-005; REQ-006 được loại khỏi phạm vi tại phiên bản 1.3. | Đã thống nhất |
+| <a id="dec-016"></a>DEC-016 | Cho phép tìm người nhận bằng tên tài khoản và nhắn tin riêng ngay, không yêu cầu kết bạn hoặc cùng cộng đồng. | Đại diện sản phẩm chọn phương án 1 ngày 2026-09-30 tại SCDC-DIS-001; cách tìm theo một phần tên được làm rõ tại DEC-019, ngoại lệ còn cần đặc tả. | Đã xác định cách bắt đầu hội thoại riêng |
+| <a id="dec-017"></a>DEC-017 | Đợt triển khai nhắn tin riêng đầu tiên chỉ hỗ trợ tin nhắn văn bản. | Đại diện sản phẩm chọn phương án 1 ngày 2026-09-30 tại SCDC-DIS-001; nội dung hình ảnh và file tài liệu cần xác định ở đợt sau. | Đã xác định nội dung cho đợt đầu |
+| <a id="dec-018"></a>DEC-018 | Để việc xử lý khi người nhận không muốn nhận tin từ một tài khoản cụ thể sang đợt sau. | Đại diện sản phẩm chọn phương án 3 ngày 2026-09-30 tại SCDC-DIS-001; cơ chế cụ thể chưa được xác định. | Đã xác định thứ tự triển khai |
+| <a id="dec-019"></a>DEC-019 | Cho tìm người để nhắn riêng theo một phần tên tài khoản hoặc tên hiển thị. | Đại diện sản phẩm làm rõ ngày 2026-09-30 tại SCDC-DIS-001; tên tài khoản duy nhất theo DEC-054 dùng phân biệt tên hiển thị; chi tiết tìm kiếm còn cần rà soát. | Đã xác định trường và cách khớp tìm kiếm |
+| <a id="dec-020"></a>DEC-020 | Trong đợt DM đầu, người gửi có thể sửa tin văn bản của mình bất cứ lúc nào với dấu “Đã sửa”, và xóa cho cả hai người với dòng “Tin nhắn đã bị xóa”. | Đại diện sản phẩm làm rõ ngày 2026-09-30 tại SCDC-DIS-001; DEC-052 chốt chỉ giữ bản nội dung mới nhất; DEC-053 chốt giới hạn nội dung. | Đã xác định thao tác và hiển thị |
+| <a id="dec-021"></a>DEC-021 | Hiển thị trạng thái đã gửi khi hệ thống đã lưu tin và lỗi gửi khi không lưu được; khi lỗi, người gửi bấm thử lại. | Đại diện sản phẩm làm rõ ngày 2026-09-30 tại SCDC-DIS-001; hành vi khi người nhận vắng mặt ở DEC-035, kết quả chống trùng ở DEC-037; cơ chế kỹ thuật còn mở. | Đã xác định ý nghĩa trạng thái và cách thử lại |
+| <a id="dec-023"></a>DEC-023 | Để gửi file tài liệu trong phòng theo chủ đề sang đợt sau. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; thời điểm và quy tắc file chưa xác định. | Đã xác định thứ tự triển khai |
+| <a id="dec-034"></a>DEC-034 | Tin nhắn văn bản trong phòng ở đợt đầu cho người gửi sửa và xóa như tin riêng. | Đại diện sản phẩm trả lời ngày 2026-09-30; áp dụng dấu “Đã sửa”, dòng thay thế khi xóa và trạng thái gửi của DEC-020, DEC-021. | Đã xác định thao tác tin trong phòng |
+| <a id="dec-035"></a>DEC-035 | Tin nhắn đã được hệ thống lưu khi người nhận chưa mở ứng dụng phải xuất hiện trong hội thoại khi người nhận mở lại. | Đại diện sản phẩm xác nhận qua ví dụ A gửi cho B ngày 2026-09-30; áp dụng cho DM, và lịch sử phòng được xem khi thành viên có quyền truy cập. | Đã xác định hành vi ngoại tuyến |
+| <a id="dec-037"></a>DEC-037 | Khi người gửi bấm thử lại sau kết quả không rõ, hệ thống chỉ tạo một tin nhắn cho cùng thao tác gửi. | Đại diện sản phẩm chọn ngày 2026-09-30; cách thực hiện kỹ thuật và thời hạn khóa chống trùng cần thiết kế. | Đã xác định kết quả mong muốn |
+| <a id="dec-052"></a>DEC-052 | Khi sửa tin DM, chỉ giữ nội dung mới nhất, không cung cấp lịch sử bản cũ; vẫn hiển thị “Đã sửa”. | Đại diện sản phẩm chọn ngày 2026-10-03; áp dụng cho tin phòng theo nguyên tắc sửa/xóa như DM ở DEC-034. Chính sách sao lưu/lưu giữ vẫn thuộc OQ-011. | Đã xác nhận |
+| <a id="dec-053"></a>DEC-053 | Tin văn bản DM và phòng tối đa 2.000 ký tự, cho xuống dòng và emoji, từ chối tin rỗng hoặc chỉ có khoảng trắng. | Đại diện sản phẩm chọn ngày 2026-10-03; phép đếm đã chốt UTF-16 tại DEC-068, fixture cần kiểm chứng. | Đã xác nhận quy tắc sản phẩm |
+| <a id="dec-068"></a>DEC-068 | Đếm giới hạn tin DM, tin phòng và tên hiển thị theo số đơn vị UTF-16 như `.Length` của .NET / `string.length` của JavaScript; không đếm grapheme. | Người dùng chọn rõ UTF-16 ngày 2026-10-04 sau câu hỏi dùng chung ba loại nội dung. Emoji/ký tự tổ hợp có thể dùng nhiều đơn vị; cụ thể hóa DEC-053 và lựa chọn định danh ở DEC-063. | Đã xác nhận |
+| <a id="dec-069"></a>DEC-069 | Tìm người bằng từ khóa 2–64 UTF-16, một phần username/displayName, không phân biệt hoa/thường nhưng phân biệt dấu; ưu tiên username khớp đúng; mỗi trang mặc định 20, tối đa 50. | Người dùng chọn phương án đề xuất ngày 2026-10-04; thuật toán cursor và phép so khớp Unicode cần thiết kế/kiểm chứng. | Đã xác nhận |
+| <a id="dec-070"></a>DEC-070 | MVP không tự hết hạn tin DM/tin phòng. Người gửi vẫn sửa/xóa theo quy tắc đã chốt. | Người dùng chọn không tự hết hạn ngày 2026-10-04; không tự suy thành giữ backup vô hạn hoặc chính sách xóa tài khoản. | Đã xác nhận |
+| <a id="dec-071"></a>DEC-071 | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng, dùng nút Gửi. | Người dùng chọn cách gửi theo thiết bị ngày 2026-10-04; áp dụng composer DM/tin phòng dùng chung. | Đã xác nhận |
+| <a id="dec-090"></a>DEC-090 | Tin DM/phòng chuẩn hóa CRLF/CR thành LF trước đếm 2.000 UTF-16; từ chối UTF-16 lỗi và tin chỉ khoảng trắng/ký tự vô hình; giữ nguyên tiếng Việt/emoji/ZWJ trong tin có nội dung. | Người dùng chốt ngày 2026-10-04; bộ Unicode cụ thể hóa tại [text-policy.json](../../fixtures/text-policy.json), fixture được dẫn trong [DM](../../features/messaging/direct-messaging.md#tests). Không trim/NFC nội dung tin; kiểm chứng implementation còn là gói triển khai. | Đã xác nhận |
+| <a id="dec-091"></a>DEC-091 | Bản nháp DM chưa bấm Gửi chỉ giữ trong bộ nhớ của tab, theo tài khoản/hội thoại; giữ khi chuyển hội thoại, mất khi reload/đóng tab/đăng xuất; không lưu nội dung vào localStorage/IndexedDB. | Người dùng chọn ngày 2026-10-04 sau giải thích. Tin đã gửi vẫn lưu máy chủ; tin đã bấm gửi nhưng kết quả chưa rõ được xử lý riêng bằng clientMessageId và đồng bộ lịch sử. Không đổi cách lưu token phiên hiện tại. | Đã xác nhận |
+
+<a id="dec-community"></a>
+
+<a id="community-membership-và-quyền"></a>
+
+### Community, membership và quyền
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-022"></a>DEC-022 | Cho tham gia cộng đồng qua liên kết mời và tìm kiếm. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; cộng đồng hiển thị và điều kiện tham gia còn mở. | Đã xác định hai cách tiếp cận |
+| <a id="dec-024"></a>DEC-024 | Chỉ cộng đồng công khai xuất hiện trong tìm kiếm. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; quyền thay đổi trạng thái công khai còn cần đặc tả. | Đã xác định phạm vi hiển thị |
+| <a id="dec-025"></a>DEC-025 | Cộng đồng công khai mới tạo mặc định cho vào ngay; cộng đồng có thể cấu hình chờ duyệt. Liên kết mời hợp lệ cho vào ngay dù cộng đồng yêu cầu duyệt khi tham gia qua tìm kiếm. | Đại diện sản phẩm làm rõ ngày 2026-09-30 tại SCDC-DIS-001; người được đổi cấu hình và thời hạn mời ở DEC-029/028, quyền thu hồi ở DEC-044; phân quyền chi tiết còn mở. | Đã xác định mặc định và ngoại lệ lời mời |
+| <a id="dec-026"></a>DEC-026 | Chỉ chủ sở hữu hoặc người được cấp quyền mới tạo phòng theo chủ đề. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; ma trận quyền chi tiết còn mở. | Đã xác định điều kiện tạo phòng |
+| <a id="dec-027"></a>DEC-027 | Thành viên chỉ nhìn thấy phòng theo chủ đề mà mình được cấp quyền xem. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; quyền xem mặc định được chốt tại DEC-033, ma trận quyền chi tiết còn mở. | Đã xác định nguyên tắc hiển thị |
+| <a id="dec-028"></a>DEC-028 | Người tạo liên kết mời được chọn thời hạn hiệu lực. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; quyền tạo ở DEC-031, quyền thu hồi ở DEC-044; giá trị thời hạn cụ thể còn mở. | Đã xác định khả năng đặt thời hạn |
+| <a id="dec-029"></a>DEC-029 | Chủ sở hữu và người được cấp quyền có thể đổi chế độ tham gia cộng đồng giữa vào ngay và chờ duyệt. | Đại diện sản phẩm chọn ngày 2026-09-30 tại SCDC-DIS-001; ma trận quyền chi tiết còn mở. | Đã xác định người được đổi chế độ |
+| <a id="dec-031"></a>DEC-031 | Chỉ chủ sở hữu và người được cấp quyền được tạo liên kết mời vào cộng đồng. | Đại diện sản phẩm trả lời ngày 2026-09-30; quyền thu hồi được chốt ở DEC-044, cách cấp/thu hồi vai trò còn mở tại OQ-004. | Đã xác định quyền tạo lời mời |
+| <a id="dec-032"></a>DEC-032 | Chỉ chủ sở hữu và người được cấp quyền được duyệt yêu cầu tham gia cộng đồng. | Đại diện sản phẩm trả lời ngày 2026-09-30; quy tắc từ chối và hủy yêu cầu còn mở. | Đã xác định quyền duyệt |
+| <a id="dec-033"></a>DEC-033 | Phòng theo chủ đề mới tạo mặc định cho mọi thành viên xem được, trừ khi giới hạn quyền. | Đại diện sản phẩm trả lời ngày 2026-09-30; cách cấu hình quyền chi tiết còn mở. | Đã xác định quyền xem mặc định |
+| <a id="dec-038"></a>DEC-038 | Thành viên mới vào cộng đồng được xem lịch sử cũ của phòng mà mình được phép xem. | Đại diện sản phẩm chọn ngày 2026-09-30; quy tắc khi rời/mất quyền còn mở. | Đã xác định quyền lịch sử khi tham gia |
+| <a id="dec-039"></a>DEC-039 | Chủ sở hữu và người được cấp quyền được thay đổi danh sách người có quyền xem phòng. | Đại diện sản phẩm chọn ngày 2026-09-30; mô hình vai trò, ngoại lệ cá nhân và người quản lý vai trò được chốt tại DEC-055–058. | Đã xác định người quản lý quyền xem |
+| <a id="dec-040"></a>DEC-040 | Trong đợt đầu, mọi thành viên có quyền xem phòng đều được gửi tin văn bản trong phòng đó. | Đại diện sản phẩm chọn ngày 2026-09-30; chưa có quyền chỉ đọc riêng. | Đã xác định quyền gửi mặc định |
+| <a id="dec-043"></a>DEC-043 | Có thể tham gia cộng đồng riêng tư bằng liên kết mời hoặc được thêm trực tiếp. | Đại diện sản phẩm trả lời ngày 2026-09-30; người có quyền thêm trực tiếp và hành vi lời mời còn mở. | Đã xác định hai cách tham gia |
+| <a id="dec-044"></a>DEC-044 | Người có quyền tạo liên kết mời có thể thu hồi liên kết trước hạn. | Đại diện sản phẩm trả lời ngày 2026-09-30; quyền tạo theo DEC-031. | Đã xác định quyền thu hồi |
+| <a id="dec-045"></a>DEC-045 | Thành viên thường có thể tự rời cộng đồng. | Đại diện sản phẩm trả lời ngày 2026-09-30; quyền truy cập sau khi rời và việc tham gia lại cần đặc tả. | Đã xác định quyền rời |
+| <a id="dec-055"></a>DEC-055 | Cấp quyền quản lý cộng đồng và quyền xem phòng qua vai trò, có ngoại lệ từng thành viên ở phòng. | Đại diện sản phẩm chọn ngày 2026-10-03; mô hình dữ liệu/cách cấu hình được rà soát ở SCDC-FR-ACL-001. | Đã xác nhận mô hình quyền |
+| <a id="dec-056"></a>DEC-056 | Chủ sở hữu luôn được xem mọi phòng trong cộng đồng của mình, kể cả phòng giới hạn thành viên. | Đại diện sản phẩm chọn ngày 2026-10-03; không vượt qua điều kiện tài khoản/phiên, không áp dụng cho DM hoặc cộng đồng khác. | Đã xác nhận |
+| <a id="dec-057"></a>DEC-057 | Khi quyền xem từ các vai trò xung đột, từ chối thắng; ngoại lệ của cá nhân được áp dụng sau cùng. | Đại diện sản phẩm chọn ngày 2026-10-03; chủ sở hữu vẫn theo DEC-056. | Đã xác nhận thứ tự ưu tiên |
+| <a id="dec-058"></a>DEC-058 | Chỉ chủ sở hữu cộng đồng được tạo/sửa vai trò và gán/thu hồi vai trò của thành viên ở đợt đầu. | Đại diện sản phẩm chọn ngày 2026-10-03; người được giao các quyền quản lý khác không tự có quyền quản lý vai trò. | Đã xác nhận |
+| <a id="dec-072"></a>DEC-072 | Tài khoản đã xác minh được tạo cộng đồng; tên 2–100, mô tả tối đa 1.000; công khai/riêng tư, mặc định công khai. Chỉ chủ sở hữu sửa tên/mô tả/chế độ công khai. | Người dùng chọn phương án đề xuất ngày 2026-10-04; chế độ vào ngay/chờ duyệt vẫn theo DEC-029. | Đã xác nhận |
+| <a id="dec-073"></a>DEC-073 | Người có quyền duyệt được từ chối; người gửi xem trạng thái và hủy yêu cầu đang chờ; sau từ chối/hủy được gửi yêu cầu mới. | Người dùng chọn đầy đủ thao tác ngày 2026-10-04; một yêu cầu pending mỗi cặp user/cộng đồng là ràng buộc kỹ thuật để rà soát. | Đã xác nhận |
+| <a id="dec-074"></a>DEC-074 | Thêm trực tiếp vào cộng đồng riêng tư dùng lời mời đích danh do chủ sở hữu/người có quyền tạo mời gửi; chỉ thành thành viên khi người nhận chấp nhận. | Người dùng chọn cần chấp nhận ngày 2026-10-04; cụ thể hóa DEC-043. Chưa nhận lời thì không có quyền đọc phòng. | Đã xác nhận |
+| <a id="dec-075"></a>DEC-075 | Link mời chọn hạn 1 giờ/1 ngày/7 ngày/không hết hạn, mặc định 7 ngày; có giới hạn lượt dùng hoặc không giới hạn; người có quyền tạo mời được thu hồi. | Người dùng chọn bộ lựa chọn ngày 2026-10-04; maxUses có giá trị nguyên dương hoặc null, ngưỡng kỹ thuật tối đa còn cần thiết kế. | Đã xác nhận |
+| <a id="dec-076"></a>DEC-076 | Chủ sở hữu chỉ rời sau khi chuyển quyền cho thành viên đã xác minh/đang hoạt động; chuyển có hiệu lực ngay, không cần người nhận chấp nhận. | Người dùng chọn chuyển ngay ngày 2026-10-04. Chỉ một chủ sở hữu trong mỗi giao dịch, chủ cũ vẫn là thành viên đến khi tự rời. | Đã xác nhận |
+| <a id="dec-077"></a>DEC-077 | Phòng có tên 1–100, chủ đề tối đa 1.000; chủ sở hữu/người có quyền quản lý phòng được tạo/sửa/xóa. Xóa ngừng truy cập tin/cuộc gọi, giữ dữ liệu theo chính sách lưu giữ; MVP chưa khôi phục phòng. | Người dùng chọn quy tắc đề xuất ngày 2026-10-04; không đồng nghĩa xóa vật lý toàn bộ dữ liệu/backup. | Đã xác nhận |
+| <a id="dec-087"></a>DEC-087 | Thành viên rời tham gia lại theo join mode hiện hành và vai trò mặc định; mời đích danh hạn 7 ngày, người nhận được từ chối và người mời được hủy pending. | Người dùng chốt ngày 2026-10-04; không phục hồi role cũ khi rejoin; lịch sử phòng vẫn theo DEC-038 khi được quyền xem. | Đã xác nhận |
+| <a id="dec-092"></a>DEC-092 | Mỗi cộng đồng có @everyone tự áp cho mọi thành viên, không xóa và không cấp quyền quản lý; tối đa 20 vai trò tự tạo, tên 1–64 UTF-16. Quyền quản lý cộng dồn từ các vai trò; quyền xem phòng giữ thuật toán DEC-056/057. | Người dùng chốt ngày 2026-10-04. Chỉ owner quản lý vai trò theo DEC-058; không thêm quyền sửa/xóa tin người khác. | Đã xác nhận |
+| <a id="dec-093"></a>DEC-093 | Tìm cộng đồng công khai theo một phần tên, q 2–100 UTF-16, không phân biệt hoa/thường nhưng phân biệt dấu; ưu tiên tên khớp đúng, trang mặc định 20/tối đa 50. Tên cộng đồng/phòng, mô tả và chủ đề đếm UTF-16. | Người dùng chốt ngày 2026-10-04; giữ giới hạn tên/mô tả/chủ đề DEC-072/077. Search key/cursor và truy vấn là thiết kế kỹ thuật. | Đã xác nhận |
+| <a id="dec-094"></a>DEC-094 | MVP chưa có thao tác xóa toàn bộ cộng đồng; vẫn có xóa phòng và chuyển chủ sở hữu. | Người dùng chọn ngày 2026-10-04. Không suy cột deleted/archived trong SQL là tính năng được bàn giao; lưu giữ dữ liệu sau xóa phòng/tài khoản vẫn ở OQ-011. | Đã xác nhận phạm vi |
+| <a id="dec-095"></a>DEC-095 | Tên cộng đồng/phòng/vai trò cho tiếng Việt và emoji, trim đầu/cuối, từ chối trống/vô hình. Tên cộng đồng được trùng; tên phòng/vai trò duy nhất trong cùng cộng đồng, không phân biệt hoa/thường nhưng phân biệt dấu. | Người dùng chốt ngày 2026-10-04. ID vẫn là UUID; key chuẩn hóa/unique và migration phải được rà soát, không dùng regex slug hiện tại thay quy tắc tên. | Đã xác nhận |
+| <a id="dec-096"></a>DEC-096 | Chuyển cộng đồng từ công khai sang riêng tư hủy yêu cầu tham gia đang chờ và báo lý do cho người gửi; giữ thành viên hiện tại và lời mời hợp lệ. | Người dùng chọn ngày 2026-10-04; đổi visibility và kết thúc pending cùng transaction, không để duyệt request cũ sau chuyển private. | Đã xác nhận |
+| <a id="dec-097"></a>DEC-097 | Lời mời đã phát hành còn hiệu lực không tự mất hiệu lực khi người tạo rời cộng đồng hoặc mất quyền tạo mời; dùng tới hạn/hết lượt/bị thu hồi. | Người dùng chọn ngày 2026-10-04. Quyền tạo/duyệt/hủy/thu hồi vẫn kiểm tra theo actor tại thời điểm thao tác; creator metadata không là điều kiện hiệu lực mới. | Đã xác nhận |
+| <a id="dec-098"></a>DEC-098 | Tạo phòng mới cần quyền quản lý phòng; sửa/xóa hoặc đổi cấu hình xem một phòng có sẵn còn cần quyền xem phòng đó. Quyền quản lý không tự làm thấy phòng bị ẩn; owner luôn xem theo DEC-056. | Người dùng chọn ngày 2026-10-04. Áp dụng cả metadata/config API; không mở endpoint quản lý để lộ phòng bị ẩn. | Đã xác nhận |
+
+<a id="dec-media"></a>
+
+<a id="thoại-video-và-chia-sẻ-màn-hình"></a>
+
+### Thoại, video và chia sẻ màn hình
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-005"></a>DEC-005 | Hỗ trợ phòng thoại trong server và gọi riêng giữa hai người, có video và chia sẻ màn hình. | REQ-007, REQ-008, REQ-009. | Đã thống nhất |
+| <a id="dec-046"></a>DEC-046 | Người nhận cuộc gọi riêng phải bấm chấp nhận trước khi cuộc gọi bắt đầu. | Đại diện sản phẩm trả lời ngày 2026-09-30; thời gian đổ chuông và cách xử lý không trả lời còn mở. | Đã xác định bước nhận cuộc gọi |
+| <a id="dec-047"></a>DEC-047 | Để việc lưu cuộc gọi nhỡ trong hội thoại riêng sang đợt sau. | Đại diện sản phẩm trả lời ngày 2026-09-30; đợt đầu vẫn cần hiển thị kết quả không được nhận ở phiên gọi hiện tại. | Đã xác định thứ tự triển khai |
+| <a id="dec-048"></a>DEC-048 | Thành viên nhìn thấy phòng thoại có thể vào phòng ngay. | Đại diện sản phẩm trả lời ngày 2026-09-30; người không có quyền xem phòng vẫn không được vào. | Đã xác định quyền vào phòng thoại |
+| <a id="dec-049"></a>DEC-049 | Đợt đầu cho phép nhiều người chia sẻ màn hình cùng lúc trong một phòng thoại. | Đại diện sản phẩm trả lời ngày 2026-09-30; số luồng tối đa và tải cần thử nghiệm để chốt. | Đã xác định khả năng chia sẻ đồng thời |
+| <a id="dec-050"></a>DEC-050 | Khi mất mạng trong cuộc gọi và mạng trở lại, ứng dụng tự kết nối lại. | Đại diện sản phẩm trả lời ngày 2026-09-30; thời gian chờ và trường hợp không thể khôi phục còn mở. | Đã xác định cách khôi phục kết nối |
+| <a id="dec-078"></a>DEC-078 | Gọi riêng được tới tài khoản đã xác minh đủ điều kiện DM; mỗi người chỉ ở một cuộc gọi/phòng thoại; vắng mặt/bận báo rõ, không lưu cuộc gọi nhỡ; đổ chuông tối đa 30 giây. | Người dùng chốt ngày 2026-10-04; cần đồng bộ trạng thái nhiều thiết bị và xử lý accept/cancel đồng thời. | Đã xác nhận |
+| <a id="dec-079"></a>DEC-079 | Media MVP tối đa 10 người/phòng thoại, 20 người gọi đồng thời toàn hệ thống kể cả gọi riêng, 2 nguồn màn hình đồng thời/phòng; mỗi người một camera và một nguồn màn hình. | Người dùng chốt giới hạn 10/20/2 ngày 2026-10-04; 20 trở thành giới hạn sản phẩm cần kiểm thử, không còn chỉ là AS-006. | Đã xác nhận |
+| <a id="dec-080"></a>DEC-080 | Mất mạng tự reconnect tối đa 30 giây, giữ chỗ trong thời gian này; quá hạn kết thúc phiên tham gia, người dùng có thể gọi/vào lại. | Người dùng chọn 30 giây ngày 2026-10-04; slot giữ chỗ tính vào giới hạn DEC-079. | Đã xác nhận |
+| <a id="dec-084"></a>DEC-084 | Media MVP chọn LiveKit tự host. | Người dùng chọn ngày 2026-10-04. Phải kiểm chứng ngăn token cũ join lại khi phiên/quyền bị thu hồi; remove participant trên self-host không tự vô hiệu JWT. Chưa có hạ tầng/SFU hoặc kết quả thử. | Đã xác nhận lựa chọn; cần thử nghiệm |
+| <a id="dec-099"></a>DEC-099 | Media phải ngừng phát/nhận và chặn vào lại trong tối đa 5 giây từ lúc đăng xuất/thu hồi phiên, mất quyền hoặc xóa phòng có hiệu lực; không xác nhận được quyền thì dừng media liên quan. | Người dùng chốt ngày 2026-10-04 sau giải thích tác động khi authority lỗi. Fail-close có thể gián đoạn user còn quyền; ngưỡng cần proof trên LiveKit tự host, không suy đóng websocket là ngừng WebRTC. | Đã xác nhận mục tiêu; chưa đo |
+| <a id="dec-100"></a>DEC-100 | Cuộc gọi đến báo ở các phiên desktop online đủ điều kiện; phiên accept đầu tiên thắng, các phiên khác ngừng đổ chuông. Một khi tham gia, tab/thiết bị khác báo bận, không tự chuyển hoặc chiếm phiên. | Người dùng chốt ngày 2026-10-04; participation gắn phiên/client instance, coordinator chống race accept/join. Không bổ sung handoff thiết bị MVP. | Đã xác nhận |
+| <a id="dec-101"></a>DEC-101 | Vào cuộc gọi/phòng thoại với micro/camera mặc định tắt, chưa chia sẻ màn hình; cho vào chỉ để nghe dù chưa cấp quyền micro, người dùng tự bật từng nguồn. | Người dùng chốt ngày 2026-10-04. UI và quyền publish phải phản ánh thiết bị thực tế; nguồn không tự mở khi nhận thông báo cuộc gọi. | Đã xác nhận |
+| <a id="dec-102"></a>DEC-102 | Chia sẻ màn hình MVP chỉ truyền hình; tiếng nói qua micro. Truyền âm thanh của tab/ứng dụng để đợt sau. | Người dùng chốt ngày 2026-10-04; không cấp nguồn screen_share_audio trong grant MVP, không coi browser trả audio là quyền tự phát nguồn đó. | Đã xác nhận phạm vi |
+
+<a id="dec-quality"></a>
+
+<a id="chất-lượng-nghiệm-thu-và-vận-hành"></a>
+
+### Chất lượng, nghiệm thu và vận hành
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-059"></a>DEC-059 | Chuẩn bị giao diện tài khoản và DM cho desktop và trình duyệt điện thoại, có bố cục thích ứng. | Đại diện sản phẩm chọn ngày 2026-10-03; danh sách trình duyệt/phiên bản, thiết bị và ngưỡng chất lượng cần xác định, không suy thành hỗ trợ media trên mọi thiết bị. | Đã xác nhận phạm vi giao diện |
+| <a id="dec-082"></a>DEC-082 | Desktop Chrome/Edge/Firefox/Safari với 2 phiên bản ổn định gần nhất tại nghiệm thu; Chrome Android/Safari iOS cho Accounts/DM/Community. Media MVP cam kết trên desktop, điện thoại ở đợt sau. | Người dùng chọn phạm vi đề xuất ngày 2026-10-04; ghi phiên bản/OS/thiết bị cụ thể khi khóa build nghiệm thu. Cụ thể hóa DEC-059. | Đã xác nhận |
+| <a id="dec-083"></a>DEC-083 | Tải chat 100 online trong 60 phút: API/gửi→lưu p95 ≤500 ms, lưu→hiển thị online p95 ≤1 giây, lỗi dịch vụ <1%, thu hồi kết nối mở ≤5 giây; không mất/trùng tin hoặc truy cập trái quyền. | Người dùng chốt mục tiêu ngày 2026-10-04; phương pháp đo ở release-operations, chưa có kết quả đáp ứng. 100 là mức test, chưa thành giới hạn online sản phẩm. | Đã xác nhận |
+| <a id="dec-085"></a>DEC-085 | Mạng thử mỗi máy upload ≥10 Mbps/download ≥20 Mbps, RTT ≤100 ms, loss ≤1%: join p95 ≤5 giây, thành công ≥99%, audio p95 ≤300 ms, video/share p95 ≤500 ms; camera 720p/30fps, share 720p/15fps. | Người dùng chốt mục tiêu ngày 2026-10-04; điều kiện/phương pháp đo ở release-operations, chưa có kết quả đáp ứng. | Đã xác nhận mục tiêu |
+| <a id="dec-110"></a>DEC-110 | Không phát hành khi còn lỗi bảo mật, sai quyền, mất/trùng dữ liệu, lỗi hành trình chính hoặc chỉ tiêu bắt buộc chưa đạt/chưa kiểm chứng. Lỗi giao diện nhỏ có thể để lại khi ghi ảnh hưởng, người phụ trách và hạn sửa. | Người dùng chốt ngày 2026-10-04. Phân loại/gate/hồ sơ ở [nghiệm thu](../../releases/acceptance.md#release-gates); không dùng cách tiếp tục tạm thời hoặc fixture để thay tiêu chí bắt buộc. | Đã xác nhận điều kiện phát hành |
+| <a id="dec-111"></a>DEC-111 | Chưa chọn người xác nhận nghiệm thu và quyết định mở phát hành. | Người dùng trả lời “Chưa chốt người duyệt” ngày 2026-10-04. Tiếp tục soạn hồ sơ/runbook; giữ trống người duyệt, không giao mặc định cho người dùng hoặc Vg. Phải chọn trước khi ký nghiệm thu/phát hành thật; không ảnh hưởng phân công chuẩn bị kiểm thử hiện có. | Đã ghi nhận chưa chọn; còn OQ-011 |
+| <a id="dec-112"></a>DEC-112 | MVP chưa làm trang quản trị riêng; khóa/mở khóa tài khoản qua quy trình kỹ thuật có phân quyền và audit. Không cấp quyền đọc DM hoặc sửa/xóa tin thay tác giả. | Người dùng chốt phạm vi ngày 2026-10-04. Công cụ/guard/audit/receipt và kiểm chứng DEC-104 còn phải triển khai; tên người quyết định/thực hiện và lịch trực chưa được chọn. [RB-ACCOUNT](../../guides/operations.md#account-support) là thiết kế quy trình, không ủy quyền SQL tay hoặc cấp quyền production. | Đã xác nhận phạm vi; phân công còn mở |
+
+<a id="dec-data"></a>
+
+<a id="vòng-đời-dữ-liệu-và-backuprestore"></a>
+
+### Vòng đời dữ liệu và backup/restore
+
+| Mã | Quyết định | Căn cứ hoặc điều kiện áp dụng | Trạng thái |
+|---|---|---|---|
+| <a id="dec-086"></a>DEC-086 | PostgreSQL: RPO ≤15 phút, RTO ≤4 giờ, giữ backup 30 ngày; base backup/WAL phải thử restore trước phát hành. | Người dùng chốt ngày 2026-10-04. Không thay DEC-070 về tin online không tự hết hạn; topology/tool/storage và bằng chứng restore còn thiếu. | Đã xác nhận mục tiêu |
+| <a id="dec-105"></a>DEC-105 | Nội dung phòng đã xóa được giữ online, chưa đặt thời hạn xóa nội dung. Phòng vẫn không truy cập/khôi phục trong MVP; dữ liệu và ID không tự hết hạn. | Người dùng chọn ngày 2026-10-04 thay vì đề xuất purge sau 30 ngày. Backup vẫn theo DEC-086; không đồng nghĩa dữ liệu phòng bị xóa theo tuổi backup. | Đã xác nhận |
+| <a id="dec-106"></a>DEC-106 | Log kỹ thuật online giữ 14 ngày; audit bảo mật/thao tác quản lý online giữ 90 ngày. IP/user-agent thô trong audit giữ 7 ngày rồi bỏ; log/audit không chứa nội dung tin, mật khẩu hoặc token. | Người dùng chốt ngày 2026-10-04. Mốc IP audit không thay metadata thiết bị của phiên đang hoạt động; backup DB có policy riêng DEC-086. | Đã xác nhận |
+| <a id="dec-107"></a>DEC-107 | Chi tiết dữ liệu kỹ thuật đã kết thúc giữ thêm 7 ngày rồi dọn: phiên/token hết hiệu lực, email/outbox đã xử lý và metadata media terminal. Giữ khóa chống trùng, tombstone và dấu thu hồi cần thiết; không dọn sớm used refresh token của phiên còn hoạt động. | Người dùng chốt ngày 2026-10-04. Chỉ dọn khi terminal/quiesced/ack thực sự; không dùng TTL làm thời hạn hiệu lực mới hoặc xóa payload đang xử lý. Email envelope đã không dùng được vẫn dọn theo thiết kế Accounts. | Đã xác nhận |
+| <a id="dec-108"></a>DEC-108 | Sau restore phải áp lại mọi xóa/thu hồi trước mở ứng dụng. Tin đã sửa sau mốc restore nhưng mất bản mới nhất hiển thị “Nội dung chưa khôi phục được”, không phục vụ lại bản nội dung cũ. | Người dùng chốt ngày 2026-10-04. Cần sổ bảo vệ độc lập chỉ ID/version, không lưu nội dung vào log; schema/worker/restore và RPO/RTO cần proof. Không tự coi intent chưa commit là đã xóa/thu hồi. | Đã xác nhận hành vi; chưa diễn tập |
+| <a id="dec-109"></a>DEC-109 | Mốc giữ backup 30 ngày DEC-086 là tuổi tối đa mỗi artefact backup/WAL; không giữ thêm bản nền cũ hơn để hứa PITR đủ mọi thời điểm trong 30 ngày. | Người dùng chọn ngày 2026-10-04 sau làm rõ khác biệt tuổi artefact/cửa sổ phục hồi. Cửa sổ PITR thực tế đo theo base/WAL còn hợp lệ; không thay RPO 15 phút/RTO 4 giờ. Copy hoặc restore không reset tuổi bản lưu cũ. | Đã xác nhận cách áp dụng |
+
+Tài liệu liên quan: [yêu cầu ban đầu](../../project/overview.md#requirements),
+[Project Brief](../../project/overview.md#scope), [dự toán và giả định](../../project/planning.md#budget).
+
+
+<a id="changes"></a>
+
+<a id="3-thay-đổi-trong-lần-hợp-nhất"></a>
+
+## Lịch sử cập nhật
+
+| Ngày | Thay đổi | Tác động |
+|---|---|---|
+| 2026-09-27 | Loại nhóm chat riêng ngoài server và cuộc gọi trong nhóm đó | REQ-006 không được dùng lại; SCP-005/006/007 chỉ có các ngữ cảnh còn trong phạm vi |
+| 2026-09-30 | Không khảo sát bên ngoài trong đợt này | DEC-030; đầu vào từ đại diện sản phẩm chưa phải bằng chứng người dùng |
+| 2026-10-03 | Hợp nhất tài liệu; xác nhận DEC-060/061 và đồng bộ DEC-062 theo source | Cập nhật mục tiêu kiến trúc, API lỗi, form đăng ký; không đổi code hoặc đánh dấu nghiệm thu |
+| 2026-10-04 | Chi tiết hóa chính sách MVP, công nghệ, chất lượng, backup và đầu vào kế hoạch theo trả lời của người dùng | DEC-063–098; cập nhật Accounts, DM, Community, Media, vận hành, nguồn lực và readiness; ghi riêng chênh lệch implementation và bằng chứng còn thiếu |
+| 2026-10-05 | Bổ sung 12 use case Identity, truy vết 16 quy tắc tài khoản, đối chiếu source/test và chốt hành vi mật khẩu trùng | DEC-113; bổ sung ACC-016/AC-ACC-22/TC-ACC-19. UC-ACC-12 dẫn chiếu khóa/mở khóa kỹ thuật DEC-104/112/RB-ACCOUNT. Chưa sửa mã hoặc chạy kiểm thử sản phẩm; các chênh lệch API/UI và bằng chứng còn thiếu được ghi tại Accounts. |
+| 2026-10-06 | Thêm mốc MVP nhỏ trước bản đầy đủ v1; ghi ràng buộc microservice của môn học | DEC-114/115; thêm roadmap và hồ sơ từng mốc, giữ đặc tả đầy đủ/mã truy vết, cập nhật cách gọi bản đầy đủ và trạng thái mục tiêu/hiện trạng kiến trúc. Chưa thay code, hợp đồng wire, phân công đã nhận việc hoặc kết quả nghiệm thu. |
+| 2026-10-06 | Chuyển microservice sang v1 và cân lại phân công | DEC-116 thay thời điểm DEC-115; DEC-117 thay phân công phát triển DEC-013. MVP một host; Vg làm Identity/Community, Sáng DM/nền tin phòng, Thái email/môi trường/công cụ. v1 chia chuyển service và media theo phần sở hữu; kế hoạch tính học/review/kiểm thử và 20% dự phòng. Đồng bộ hồ sơ mốc, kiến trúc và kế hoạch; chưa đổi code, xác nhận lịch hoặc quyền vận hành. |
+| 2026-10-08 | Ghi nhận phạm vi Community MVP đã chọn ngày 2026-10-07 và làm rõ tài liệu hiện hành | DEC-118 ghi lựa chọn của người dùng; bổ sung gate, công việc/phụ thuộc/đầu ra, hướng dẫn local và đối chiếu test theo commit. Sửa mô tả đã lỗi thời về feature so với main; giữ hồ sơ nghiệm thu lịch sử và phần v1. Thay đổi tài liệu này không triển khai hoặc kiểm thử thêm chức năng. |
+| 2026-10-11 | Tổ chức tài liệu theo chủ đề | Hợp nhất quy tắc/UX/dữ liệu/API/thiết kế/hiện trạng; bổ sung nền UI, database, tổ chức code và môi trường. OQ tách khỏi DEC; kết quả kiểm chứng giữ theo revision. [Bản đồ chuyển đổi](../migrations/2026-10-11.md). |
+
+DEC-011 không nằm trong danh sách quyết định hiện hành của hồ sơ gốc; mã này không được cấp lại. OQ-013 đã xử lý theo DEC-030; trạng thái các OQ khác tại [vấn đề còn mở](../../project/open-questions.md).
+
+Khi thay đổi quyết định: ghi lý do, người xác nhận, ngày và mã bị thay thế; cập nhật requirement, scope, thiết kế, hợp đồng và ca kiểm thử bị ảnh hưởng trong cùng thay đổi. Lịch sử trao đổi chi tiết nằm trong [hồ sơ lưu trữ](../../archive/README.md).
