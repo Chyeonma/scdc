@@ -1029,6 +1029,9 @@ CREATE TABLE integration.outbox_events (
     published_at      timestamptz,
     attempt_count     integer NOT NULL DEFAULT 0,
     last_error        text,
+    lease_token       uuid,
+    lease_expires_at  timestamptz,
+    CONSTRAINT ck_outbox_events_lease CHECK ((lease_token IS NULL) = (lease_expires_at IS NULL)),
     CONSTRAINT ck_outbox_events_payload CHECK (jsonb_typeof(payload) = 'object'),
     CONSTRAINT ck_outbox_events_attempts CHECK (attempt_count >= 0),
     CONSTRAINT ck_outbox_events_available CHECK (available_at >= occurred_at)
@@ -1039,6 +1042,8 @@ CREATE INDEX ix_outbox_events_pending
     WHERE published_at IS NULL;
 CREATE INDEX ix_outbox_events_aggregate
     ON integration.outbox_events (aggregate_type, aggregate_id, aggregate_version);
+CREATE INDEX ix_outbox_events_dispatch ON integration.outbox_events(available_at,lease_expires_at,occurred_at,id)
+ WHERE published_at IS NULL AND event_type='Messaging.MessageChanged';
 
 COMMENT ON TABLE integration.outbox_events IS 'Event duoc insert cung transaction nghiep vu, sau do worker publish.';
 

@@ -53,6 +53,7 @@ public static class IdentityModule
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
         services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
+        services.AddScoped<IAuthenticatedSessionReader, AuthenticatedSessionReader>();
         services.AddScoped<IHistoricalUserSummaryReader, HistoricalUserSummaryReader>();
         services.AddScoped<UserSearchKeyInitializer>();
         var searchKeyRing = configuration["Modules:Identity:UserSearch:CursorKeyRingPath"]
@@ -83,6 +84,15 @@ public static class IdentityModule
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnMessageReceived = context =>
+                    {
+                        // Browsers cannot set an Authorization header on the WebSocket handshake.
+                        // Never accept query credentials on REST or another Hub route.
+                        if (context.Request.Path == "/hubs/chat" && context.Request.Method == "GET"
+                            && context.Request.Query.TryGetValue("access_token", out var token))
+                            context.Token = token.ToString();
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = ValidateSessionAsync
                 };
             });
@@ -114,6 +124,8 @@ public static class IdentityModule
                 && session.RevokedAt == null
                 && session.ExpiresAt > now
                 && session.User.Status == UserStatus.Active
+                && session.User.DeletedAt == null
+                && session.User.Emails.Any(email => email.IsPrimary && email.VerifiedAt != null)
                 && session.User.SecurityState != null
                 && session.User.SecurityState.SecurityStamp == securityStamp,
                 context.HttpContext.RequestAborted);

@@ -8,8 +8,19 @@ namespace SCDC.Api.Controllers.Messaging;
 
 [Authorize]
 [Route("api/v1/direct-conversations")]
-public sealed class DirectConversationsController(IDirectConversationService service, IConversationInbox inbox, ITextMessageSender sender, IMessageHistory history) : ApiControllerBase
+public sealed class DirectConversationsController(IDirectConversationService service, IConversationInbox inbox, ITextMessageSender sender, IMessageHistory history, IMessageMutator mutator) : ApiControllerBase
 {
+    [HttpPatch("{conversationId:guid}/messages/{messageId:guid}")]
+    [ProducesResponseType<MessageResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessageResponse>> Edit(Guid conversationId, Guid messageId, EditMessageRequest request,
+        CancellationToken token) => FromResult(await mutator.MutateAsync(new(User.GetUserId(), User.GetSessionId(),
+            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, messageId, request.ExpectedVersion, request.Content, false), token));
+
+    [HttpDelete("{conversationId:guid}/messages/{messageId:guid}")]
+    [ProducesResponseType<MessageResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MessageResponse>> Delete(Guid conversationId, Guid messageId, [FromQuery, Required] string expectedVersion,
+        CancellationToken token) => FromResult(await mutator.MutateAsync(new(User.GetUserId(), User.GetSessionId(),
+            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, messageId, expectedVersion, null, true), token));
     [HttpGet("{conversationId:guid}/messages")]
     [ProducesResponseType<MessagePage>(StatusCodes.Status200OK)]
     public async Task<ActionResult<MessagePage>> History(Guid conversationId, [FromQuery, Range(1, 100)] int limit = 50,
@@ -54,6 +65,10 @@ public sealed class DirectConversationsController(IDirectConversationService ser
 }
 
 public sealed record OpenDirectConversationRequest([Required] Guid? PeerUserId);
+[System.Text.Json.Serialization.JsonUnmappedMemberHandling(System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+public sealed record EditMessageRequest(
+    [property: System.Text.Json.Serialization.JsonConverter(typeof(DmContentConverter))] string? Content,
+    [Required] string ExpectedVersion);
 
 public sealed record SendMessageRequest([Required] Guid? ClientMessageId,
     [property: System.Text.Json.Serialization.JsonConverter(typeof(DmContentConverter))] string? Content);

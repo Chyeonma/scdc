@@ -493,7 +493,8 @@ export default function App() {
 
         <div style={{ display: isHomeActive ? 'contents' : 'none' }}>
           <DmChat key={session.user.id} actorId={session.user.id}
-            author={currentUser || session.user} conversation={activeDm} onCommitted={inbox.refresh} />
+            author={currentUser || session.user} conversation={isHomeActive ? activeDm : null}
+            onCommitted={inbox.refresh} onConnectionState={setConnectionState} />
         </div>
         {/* Message Timeline */}
         {!isHomeActive && <div className="chat-timeline">

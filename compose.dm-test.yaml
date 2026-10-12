@@ -35,6 +35,7 @@ services:
       Modules__Messaging__CursorKeyRingPath: /app/dm-keys/cursor
       Modules__Messaging__FingerprintKeyDirectory: /app/dm-keys/hmac
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+      Modules__Messaging__Dispatcher__DevelopmentControlDirectory: /app/dm-dispatcher
     ports:
       - "127.0.0.1:${DM_API_PORT:-15026}:8080"
     depends_on:
@@ -43,6 +44,7 @@ services:
     volumes:
       - ./.dm-acceptance/keyrings/cursor:/app/dm-keys/cursor
       - ./.dm-acceptance/keyrings/hmac:/app/dm-keys/hmac:ro
+      - ./.dm-acceptance/dispatcher:/app/dm-dispatcher
 
   web-client:
     build:
@@ -66,6 +68,8 @@ services:
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-integration-tests
       Modules__Messaging__FingerprintKeyDirectory: /test-hmac
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+      # Integration cases explicitly drive the dispatcher; avoid global fixture races.
+      Modules__Messaging__Dispatcher__Enabled: "false"
     volumes:
       - .:/workspace:ro
       - ./.dm-acceptance/keyrings/hmac:/test-hmac:ro

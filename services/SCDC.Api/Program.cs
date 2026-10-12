@@ -7,8 +7,11 @@ using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
 using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.Contracts.Persistence;
+using SCDC.Modules.Messaging.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
+// Query credentials in WebSocket handshakes must never reach request-start diagnostics.
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ISharedDatabaseSession>(provider => new SharedDatabaseSession(
@@ -42,7 +45,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "SCDC modular monolith. Identity v1 and direct conversation create-or-get are active; Community remains at foundation stage."
+        Description = "SCDC modular monolith. Direct messaging text, history, edit/delete and authenticated SignalR are active; Community remains at foundation stage."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -87,6 +90,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat", options => options.CloseOnAuthenticationExpiration = true);
 
 await app.RunAsync();
 

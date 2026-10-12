@@ -21,16 +21,9 @@ export function UserSettingsModal({
   const [savingPassword, setSavingPassword] = useState(false);
 
   // Sessions state
-  const [sessions, setSessions] = useState([
-    {
-      id: 'sess-current',
-      deviceName: 'Trình duyệt hiện tại (Linux / Chrome)',
-      createdByIp: '127.0.0.1',
-      lastSeenAt: new Date().toISOString(),
-      isCurrent: true,
-    }
-  ]);
+  const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [sessionError, setSessionError] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'sessions') {
@@ -40,13 +33,14 @@ export function UserSettingsModal({
 
   async function loadSessions() {
     setLoadingSessions(true);
+    setSessionError(null);
     try {
       const data = await getSessions();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setSessions(data);
       }
     } catch {
-      // Fallback session
+      setSessionError('Không tải được danh sách phiên. Hãy thử lại.');
     } finally {
       setLoadingSessions(false);
     }
@@ -107,7 +101,7 @@ export function UserSettingsModal({
   }
 
   async function handleLogoutAll() {
-    if (!confirm('Bạn có chắc chắn muốn đăng xuất khỏi tất cả thiết bị khác không?')) return;
+    if (!confirm('Đăng xuất tất cả thiết bị, bao gồm thiết bị này?')) return;
     try {
       await logoutAll();
       notify?.('success', 'Đã đăng xuất toàn bộ thiết bị.');
@@ -306,13 +300,15 @@ export function UserSettingsModal({
               <div className="sessions-header-action">
                 <p>Danh sách các thiết bị hiện đang đăng nhập vào tài khoản của bạn.</p>
                 <button type="button" className="btn btn--danger btn-sm" onClick={handleLogoutAll}>
-                  Đăng xuất tất cả thiết bị khác
+                  Đăng xuất tất cả thiết bị
                 </button>
               </div>
 
               <div className="sessions-list">
+                {loadingSessions && <p role="status">Đang tải phiên đăng nhập…</p>}
+                {sessionError && <p role="alert">{sessionError} <button type="button" onClick={loadSessions}>Thử lại</button></p>}
                 {sessions.map((sess) => (
-                  <div className="session-card" key={sess.id}>
+                  <div className="session-card" key={sess.id} data-session-id={sess.id}>
                     <span className="session-icon">💻</span>
                     <div className="session-info">
                       <strong>{sess.deviceName || 'Thiết bị không xác định'}</strong>

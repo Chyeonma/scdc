@@ -318,3 +318,14 @@ export function getDirectMessages(conversationId, { before = null, after = null,
   for (const [key, value] of Object.entries({ before, after, through })) if (value !== null) parameters.set(key, value);
   return api(`/direct-conversations/${conversationId}/messages?${parameters}`, { signal, expectedActorId });
 }
+
+export function editDirectMessage(conversationId, messageId, content, expectedVersion, { signal, expectedActorId = session?.user?.id ?? null } = {}) {
+  return api(`/direct-conversations/${conversationId}/messages/${messageId}`, {
+    method: 'PATCH', body: { content, expectedVersion }, retry: false, signal, expectedActorId,
+  });
+}
+export function deleteDirectMessage(conversationId, messageId, expectedVersion, { signal, expectedActorId = session?.user?.id ?? null } = {}) {
+  return api(`/direct-conversations/${conversationId}/messages/${messageId}?expectedVersion=${encodeURIComponent(expectedVersion)}`, {
+    method: 'DELETE', retry: false, signal, expectedActorId,
+  });
+}
