@@ -1,11 +1,12 @@
 # SCDC — Hợp đồng máy đọc
 
-OpenAPI và JSON Schema mô tả cấu trúc dữ liệu trao đổi. Chủ đề sở hữu ý nghĩa, quyền, luồng, ngoại lệ và tiêu chí kiểm chứng; không chép lại toàn bộ schema vào Markdown.
+OpenAPI, JSON Schema và Protobuf mô tả cấu trúc dữ liệu trao đổi. Chủ đề sở hữu ý nghĩa, quyền, luồng, ngoại lệ và tiêu chí kiểm chứng; không chép lại toàn bộ schema vào Markdown.
 
 ## Danh mục
 
 | Artefact | Chủ đề sở hữu | Trạng thái |
 |---|---|---|
+| gRPC/Protobuf v1 | [Nguồn `.proto` — D46](../system/api-conventions.md#v1-grpc-contract-sources), [Project hợp đồng C# — D47](../system/backend.md#v1-grpc-code-generation) | Đã chọn vị trí nguồn và project hợp đồng theo DEC-164/165; chưa có file `.proto` hoặc mã sinh |
 | [Account recovery](account-recovery.openapi.json) | [Liên kết email](../features/accounts/email-links.md), [Khôi phục mật khẩu](../features/accounts/password-recovery.md) | Contract mục tiêu; đối chiếu endpoint hiện có và resend chưa triển khai |
 | [Direct Messaging](direct-messaging.openapi.json) | [DM](../features/messaging/direct-messaging.md) | Thiết kế dự thảo; chưa có DM API runtime |
 | [Chat realtime](chat-realtime.schema.json) | [Đồng bộ tin](../features/messaging/synchronization.md) | Catalogue ứng dụng SignalR; không phải wire frame; chưa có Hub runtime |

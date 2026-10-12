@@ -133,6 +133,7 @@ Ngoài phạm vi bản hoàn thiện v1:
 
 - Nhóm chat riêng ngoài server và cuộc gọi trong loại nhóm này.
 - Ứng dụng cài đặt riêng trên desktop và thiết bị di động.
+- Triển khai và nghiệm thu backup PostgreSQL/WAL, PITR và khôi phục DB từ backup; chuyển sang sau v1 theo [phạm vi backup](../releases/v1.md#backup-scope), DEC-156.
 
 Các chức năng bổ sung được đánh giá theo quy trình quản lý thay đổi.
 
@@ -142,7 +143,7 @@ Các chức năng bổ sung được đánh giá theo quy trình quản lý thay
 
 | Nội dung | Giá trị |
 |---|---|
-| Kiến trúc | MVP một API host Modular Monolith; microservice thuộc v1 theo DEC-116. Phương án ranh giới tại [kiến trúc](../system/architecture.md#target) còn cần chốt, chưa có chuyển đổi code. |
+| Kiến trúc | MVP một API host Modular Monolith; microservice thuộc v1 theo DEC-116. Ranh giới tại [kiến trúc](../system/architecture.md#service-boundaries) đã chốt theo DEC-119; thiết kế dữ liệu/giao tiếp/triển khai còn mở, chưa chuyển đổi code. |
 | Thời gian mục tiêu | Khoảng 3 tháng từ ngày khởi động. Ngày bắt đầu dự kiến 2026-10-05 theo DEC-088; lịch còn là đề xuất, chưa cam kết phát hành. |
 | Ngân sách minh họa | 250.000.000 VNĐ từ phương án 16 tuần trước khi tách MVP/v1; giữ làm cơ sở dự toán cũ theo DEC-088, không là báo giá/trần được duyệt. Mốc 500 triệu giữ trong lịch sử. |
 | Nhân sự hiện có | Vg, Sáng và Thái dự kiến mỗi người 3–4 ngày/tuần, đủ ngày làm việc, từ 2026-10-05 theo DEC-088. Theo DEC-117, Vg giữ quyết định quan trọng và Identity/Community; Sáng sở hữu DM/nền tin phòng; Thái sở hữu email worker/môi trường/công cụ, sau đó provider/SDK media. Chi tiết tại [phân công](planning.md#team) và [công suất](planning.md#capacity). |
@@ -183,7 +184,7 @@ Nội dung chi tiết và điều kiện chấp nhận của từng kết quả 
 | SUC-005 | v1 đáp ứng kiến trúc microservice theo DEC-116, giữ quyền sở hữu dữ liệu và khả năng triển khai độc lập; MVP giữ ranh giới module trong một API host. | v1 có hồ sơ ranh giới service, hợp đồng, dữ liệu và bằng chứng chạy/triển khai các API độc lập, cùng hồi quy luồng MVP; source hiện tại chưa chuyển đổi. |
 | SUC-006 | Sản phẩm sẵn sàng cho phát hành công khai. | Kết quả kiểm thử, nghiệm thu và xác nhận khả năng vận hành. |
 
-Chỉ tiêu định lượng đã chốt tại DEC-082/083/085/086; chính sách dữ liệu và cách áp dụng tuổi backup ở DEC-103–109; điều kiện lỗi tồn ở DEC-110. Môi trường, dữ liệu tải, kết quả chạy và người duyệt DEC-111 cần hoàn tất trước nghiệm thu/phát hành thực tế.
+Chỉ tiêu định lượng đã chốt tại DEC-082/083/085; chính sách dữ liệu ở DEC-103–109; điều kiện lỗi tồn ở DEC-110. DEC-156 hoãn triển khai và nghiệm thu backup/khôi phục DB cùng các mục tiêu DEC-086/109 sang sau v1, không hoãn retention online, quyền truy cập, chống trùng hoặc rollback ứng dụng. Môi trường, dữ liệu tải, kết quả chạy và người duyệt DEC-111 cần hoàn tất trước nghiệm thu/phát hành thực tế.
 
 | Nội dung cần chốt | Đầu ra cần có | Theo dõi |
 |---|---|---|
@@ -191,6 +192,7 @@ Chỉ tiêu định lượng đã chốt tại DEC-082/083/085/086; chính sách
 | Hiệu năng và tải | Độ trễ API/gửi–nhận theo percentile, tỷ lệ lỗi, dataset, thời lượng tải và cấu hình đo | OQ-007 |
 | Chất lượng media | Độ trễ, âm thanh/hình ảnh, số người/luồng, mạng và thời gian reconnect | OQ-006/OQ-007 |
 | Thu hồi quyền/phiên | Thời hạn hiệu lực trên HTTP và kết nối đang mở, cách đo | OQ-007/OQ-008 |
-| Lưu giữ và khôi phục | [Chính sách dữ liệu](../system/data-lifecycle.md) DEC-103–109, RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày đã chốt; còn công cụ, cửa sổ PITR thực tế và bằng chứng restore | OQ-011 |
+| Lưu giữ online | [Chính sách dữ liệu](../system/data-lifecycle.md) DEC-103–109; triển khai và kiểm chứng retention, xóa nội dung, chống trùng và quyền trong v1 | OQ-011 |
+| Backup và khôi phục DB — sau v1 | Giữ mục tiêu RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày cho đợt triển khai sau v1; công cụ, cửa sổ PITR và bằng chứng restore chưa có. [Phạm vi theo DEC-156](../releases/v1.md#backup-scope) | OQ-011 |
 
 1.000 tài khoản và 100 người trực tuyến là giả định dự toán, không phải giới hạn đăng ký/online. Ngày 2026-10-04, 20 người gọi đồng thời trở thành giới hạn media v1 theo DEC-079; chưa có kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.

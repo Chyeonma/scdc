@@ -1,10 +1,38 @@
 # Lưu và thay đổi tin
 
-Messaging sở hữu tin, sequence, SendOperation và outbox cho DM và tin phòng. Tài liệu này giữ model, transaction, retry, sửa/xóa và trạng thái client. [Nội dung văn bản](text-policy.md) và [đồng bộ](synchronization.md) là các cơ chế liên quan.
+Messaging sở hữu tin, sequence, SendOperation và outbox cho DM và tin phòng. Tài liệu này giữ cách tiếp nhận tin, model, transaction, retry, sửa/xóa và trạng thái client. [Nội dung văn bản](text-policy.md) và [đồng bộ](synchronization.md) là các cơ chế liên quan.
+
+Backup/restore, sổ bảo vệ độc lập và placeholder phát sinh từ restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Lưu bền qua restart, retention online, khóa, version, tombstone và chống trùng vẫn thuộc v1.
 
 ## Trạng thái và phạm vi
 
 Đây là thiết kế mục tiêu, chưa có writer tin hoặc bằng chứng gửi/sửa/xóa theo hợp đồng này. Các ví dụ cặp user/recipient và `conversationId` minh họa DM; tin phòng dùng Messaging space tương ứng channel và [guard Community](channel-messaging.md#channel-admission). Không suy schema/fixture hiện có thành hành vi runtime.
+
+<a id="v1-message-intake"></a>
+
+## D08 — Tiếp nhận tin và khả năng chuyển sang hàng đợi
+
+Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-125](../../records/decisions/README.md#dec-125). Quyết định áp dụng cho gửi tin DM/tin phòng trong kiến trúc v1; chưa triển khai writer hoặc đổi API.
+
+**A — Ghi trực tiếp:** WebClient gửi REST tới Messaging. Sau kiểm tra quyền, writer ghi tin, SendOperation, sequence và outbox trong cùng transaction của DB Messaging; trả kết quả thành công sau commit. Bộ phát cập nhật xử lý outbox sau đó theo [hợp đồng đồng bộ](synchronization.md#contract-9). Outbox bảo vệ việc phát cập nhật của tin đã lưu; không tiếp nhận thay request chưa tới được Messaging hoặc chưa commit.
+
+**B — Hàng đợi tiếp nhận:** phương án chuyển đổi về sau. Một thành phần tiếp nhận bền lưu lệnh trước khi worker gọi writer. Chỉ giảm phụ thuộc vào writer đang hoạt động nếu thành phần tiếp nhận và hàng đợi có thể nhận lệnh khi writer ngừng. Chưa chọn thành phần, broker hoặc vị trí chạy.
+
+### Điều kiện thiết kế để chuyển sang B
+
+- Tách transport nhận request khỏi use case ghi tin. REST hiện tại và worker tương lai phải dùng chung quy tắc nghiệp vụ, không tạo hai cách ghi khác nhau.
+- Giữ `clientMessageId`, payload ban đầu và khóa chống trùng qua retry hoặc đổi transport. Tra lại thao tác đã commit trả tin hiện hành/tombstone theo [hợp đồng gửi](#contract-7).
+- Mọi đường ghi kiểm tra quyền tới commit theo [D05/D06](../../system/access-revocation.md#v1-authorization-coordination). Lệnh nằm trong hàng đợi không giữ quyền gửi mãi; mất quyền trước khi ghi có thể làm lệnh bị từ chối.
+- Writer quyết định sequence trong transaction, theo thứ tự commit của từng hội thoại. Thứ tự broker hoặc thời điểm client gửi không thay sequence chuẩn.
+- Giữ nghĩa “Đã gửi” là tin đã commit. Khi bổ sung B, phải phân biệt lệnh được tiếp nhận với tin đã lưu; xác nhận của broker không phải kết quả ghi tin.
+
+### Công việc khi chuyển sang B
+
+Trước khi triển khai B, chốt hợp đồng tiếp nhận/kết quả, giới hạn backlog, xử lý quá tải, phạm vi từng đợt chuyển đổi và rollback. Kiểm chứng quyền, chống trùng và sequence khi hai đường cùng tồn tại hoặc còn lệnh đang xử lý; timeout không chứng minh lệnh đã rollback. Không phát lại lịch sử như lệnh gửi mới. Cần kiểm chứng retry trùng, mất phản hồi, worker khởi động lại và thu hồi quyền trong lúc chuyển đổi.
+
+Đây là yêu cầu giữ khả năng chuyển đổi, chưa là thiết kế migration hoàn chỉnh hoặc cam kết chỉ cần bật cấu hình. Không cần triển khai trước broker hay worker tiếp nhận. Hàng đợi giúp lưu đệm tải tăng đột biến; năng lực xử lý và giới hạn backlog vẫn cần đo theo [mẫu tải](https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling).
+
+D08 độc lập với [D07 — truyền lệnh thu hồi](../../system/access-revocation.md#v1-revocation-transport). Tự động thử lại ở client, lưu tin chờ qua reload và trạng thái đã nhận/đã xem chưa được chọn thêm; [chính sách client hiện hành](#client-state) vẫn áp dụng.
 
 <a id="contract-4"></a>
 
@@ -29,7 +57,7 @@ Sửa tin thay nội dung hiện hành và tăng `version`; không tạo bảng 
 sử nội dung cũ (DEC-052). Xóa tin đặt `content=null`, giữ tombstone, ID,
 tác giả, thời điểm và khóa thao tác; tăng `version` khi xóa lần đầu. Không lưu nội dung
 tin trong log, audit hoặc payload sự kiện để vô tình tạo lịch sử sửa.
-Tin không tự hết hạn DEC-070; chưa self-delete account DEC-103, khóa không xóa lịch sử DEC-104. Backup/WAL tối đa tuổi 30 ngày DEC-086/109; restore mất bản sửa mới nhất trả placeholder DEC-108. [Vòng đời dữ liệu](../../system/data-lifecycle.md#restore) là nguồn chuẩn; chỉ bản mới nhất không phải cam kết xóa ngay mọi backup hoặc dữ liệu người nhận tự sao chép.
+Tin không tự hết hạn DEC-070; chưa self-delete account DEC-103, khóa không xóa lịch sử DEC-104. Thiết kế sau v1 giữ backup/WAL tối đa tuổi 30 ngày DEC-086/109 và trả placeholder khi restore mất bản sửa mới nhất theo DEC-108. [Vòng đời dữ liệu](../../system/data-lifecycle.md#restore) là nguồn chuẩn; chỉ bản mới nhất không phải cam kết xóa ngay mọi backup hoặc dữ liệu người nhận tự sao chép.
 
 <a id="contract-7"></a>
 
@@ -90,13 +118,15 @@ Chuẩn hóa cặp user theo so sánh unsigned từng byte UUID ở thứ tự R
 
 Fingerprint v1 dùng HMAC-SHA256, key ngẫu nhiên riêng tối thiểu 32 byte; lưu `fingerprint_version,key_id,fingerprint` trong SendOperation. Input binary gồm ASCII domain `SCDC.Send.v1` + byte 0, UUID space/author/client theo network order, độ dài UTF-8 content dạng UInt32 big-endian, rồi UTF-8 content đã chuẩn hóa. Không serialize JSON tùy thứ tự field, không đưa thời gian hoặc access token vào fingerprint. So sánh hash constant-time; không dùng SHA-256 không khóa để lưu dấu vết nội dung ngắn dễ đoán.
 
-Retry tra SendOperation trước, lấy đúng key/version từng dùng để tính lại fingerprint; không so với nội dung message hiện hành sau sửa/xóa. Rotation chỉ đổi key cho thao tác mới; giữ key cũ cho mọi SendOperation còn tồn tại và backup 30 ngày liên quan. Key thiếu/không đọc được trả 503 `FINGERPRINT_KEY_UNAVAILABLE`, không tạo tin mới hoặc giả 409 payload conflict. HMAC key tách khỏi key ring cursor/email; không lưu secret trong DB/docs.
+Retry tra SendOperation trước, lấy đúng key/version từng dùng để tính lại fingerprint; không so với nội dung message hiện hành sau sửa/xóa. Rotation chỉ đổi key cho thao tác mới; v1 giữ key cũ cho mọi SendOperation còn tồn tại. Giữ khóa cho cửa sổ backup 30 ngày liên quan áp dụng sau v1. Key thiếu/không đọc được trả 503 `FINGERPRINT_KEY_UNAVAILABLE`, không tạo tin mới hoặc giả 409 payload conflict. HMAC key tách khỏi key ring cursor/email; không lưu secret trong DB/docs.
 
 Thứ tự khóa thống nhất: Identity user rows theo UUID → chat space → message/operation → outbox. [IAccountAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) đã có implementation Identity: kiểm tra actor active/verified, session/stamp/expiry và giữ share lock trên user trong transaction của caller, tương thích với `LockUserAsync` dùng NO KEY UPDATE. [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) đã quản lý shared connection/transaction trong BuildingBlocks; Messaging không JOIN bảng Identity.
 
+Các khóa xuyên module và shared transaction ở đoạn trên thuộc nền monolith MVP. Khi tách v1, không truyền transaction qua mạng hoặc đọc DB Identity/Community từ Messaging; thay bằng [hàng rào ghi D05](../../system/access-revocation.md#v1-authorization-coordination). Một RPC kiểm tra quyền riêng lẻ không đủ bảo vệ quyền tới commit. Giao thức chi tiết và proof còn mở.
+
 Writer DM chưa tích hợp các thành phần này. Hợp đồng kiểm tra/giữ trạng thái recipient cho nhánh gửi mới còn cần bổ sung, cùng cách khóa actor/recipient theo thứ tự UUID. Read/retry đã commit và author edit/delete không đòi peer active; nhánh tạo tin mới kiểm tra recipient trong cùng transaction. Caller phải giữ guard tới commit và kiểm tra hạn phiên ngay trước commit; proof race thu hồi/gửi của DM vẫn chưa có.
 
-Gửi: dưới guard actor/space lock, tra operation; retry đúng trả tin hiện hành/tombstone/placeholder sau restore, kể cả peer đã bị khóa, nếu actor còn quyền đọc. Khóa mới: kiểm tra peer đủ điều kiện dưới guard đã giữ, tăng counter của space, insert message/operation/outbox và cập nhật projection trong cùng transaction. Khi rollback mọi thay đổi biến mất; writer sau chỉ cấp counter khi writer trước commit/rollback. Read-committed đủ cho writer đã có khóa; snapshot phân trang là mốc sequence, không phải lịch sử nội dung cũ.
+Gửi: dưới guard actor/space lock, tra operation; retry đúng trả tin hiện hành/tombstone, kể cả peer đã bị khóa, nếu actor còn quyền đọc. Nhánh placeholder sau restore áp dụng sau v1. Khóa mới: kiểm tra peer đủ điều kiện dưới guard đã giữ, tăng counter của space, insert message/operation/outbox và cập nhật projection trong cùng transaction. Khi rollback mọi thay đổi biến mất; writer sau chỉ cấp counter khi writer trước commit/rollback. Read-committed đủ cho writer đã có khóa; snapshot phân trang là mốc sequence, không phải lịch sử nội dung cũ.
 
 Sửa/xóa dùng compare-and-update version trong transaction. Kiểm tra membership/tác giả trước cả delete lặp; message không thuộc space trả 404, tác giả khác 403. Deleted rồi PATCH trả 409 `MESSAGE_DELETED`; DELETE lặp trả tombstone hiện hành sau auth, không tăng version lần nữa. PATCH cùng nội dung chuẩn hóa hiện hành là no-op nếu expectedVersion đúng; không tạo dấu “Đã sửa” hoặc outbox mới chỉ vì click lại. Sai expectedVersion trả 409 `VERSION_CONFLICT`, UI tải lại trang đang hiển thị; không thêm HTTP thứ tám chỉ để đọc một message.
 
@@ -104,7 +134,7 @@ Sửa/xóa dùng compare-and-update version trong transaction. Kiểm tra member
 
 ### Vòng đời và placeholder bổ sung
 
-`UserSummary.availability` tùy chọn phục vụ projection lịch sử; search vẫn chỉ user active đủ điều kiện. `Message.contentState` có available/deleted/unavailable_after_restore: nhánh unavailable bắt buộc contentState, content=null/deletedAt=null, version không dưới protection floor; không biến thành tác giả đã xóa. History/realtime dùng cùng schema, actor-author còn quyền được PATCH body mới bằng expectedVersion hiện hành. Migration restore_redacted_at/constraint/key ring/sổ bảo vệ theo [thiết kế chung](../../system/data-lifecycle.md#restore) chưa triển khai. Guard và outbox dispatcher phải dùng purpose read/author-mutation/send; không lấy peer active làm điều kiện chung cho mọi thao tác.
+`UserSummary.availability` tùy chọn phục vụ projection lịch sử; search vẫn chỉ user active đủ điều kiện. `Message.contentState` có available/deleted/unavailable_after_restore. Nhánh unavailable sau restore thuộc sau v1: bắt buộc contentState, content=null/deletedAt=null, version không dưới protection floor; không biến thành tác giả đã xóa. History/realtime dùng cùng schema, actor-author còn quyền được PATCH body mới bằng expectedVersion hiện hành. Migration restore_redacted_at, constraint placeholder và sổ bảo vệ độc lập theo [thiết kế chung](../../system/data-lifecycle.md#restore) chưa triển khai, thuộc sau v1. Giữ khóa, version, tombstone và dedup cho dữ liệu hiện hành vẫn thuộc v1. Guard và outbox dispatcher phải dùng purpose read/author-mutation/send; không lấy peer active làm điều kiện chung cho mọi thao tác.
 
 <a id="mapping-dữ-liệu-và-migration"></a>
 

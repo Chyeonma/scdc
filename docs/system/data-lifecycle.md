@@ -2,9 +2,9 @@
 
 # SCDC — Vòng đời dữ liệu
 
-Cập nhật: 2026-10-06. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
+Cập nhật: 2026-10-12. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
 
-Đây là phạm vi dữ liệu đầy đủ của [v1](../releases/v1.md). [MVP](../releases/mvp.md#acceptance) chọn gói và tiêu chí áp dụng; không cần triển khai mọi worker/restore/media trước gói đầu. Các quy tắc quyền, lưu tin và nội dung được luồng MVP sử dụng vẫn giữ theo nguồn chuẩn; thiết kế transaction/guard cần rà soát khi chuyển sang microservice ở v1 theo DEC-116.
+Chính sách dữ liệu online áp dụng cho [v1](../releases/v1.md). Gói backup/restore, sổ bảo vệ độc lập và nhánh placeholder chỉ phục vụ restore chuyển sang [sau v1](../releases/v1.md#backup-scope) theo [DEC-156](../records/decisions/README.md#dec-156); giữ thiết kế dưới đây để triển khai ở giai đoạn đó. [MVP](../releases/mvp.md#acceptance) chọn gói và tiêu chí áp dụng; không cần triển khai mọi worker/media trước gói đầu. Các quy tắc quyền, lưu tin và nội dung được luồng MVP sử dụng vẫn giữ theo nguồn chuẩn; thiết kế transaction/guard cần rà soát khi chuyển sang microservice ở v1 theo DEC-116.
 
 <a id="mục-lục"></a>
 
@@ -31,11 +31,11 @@ Cập nhật: 2026-10-06. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. 
 | Tin đang lưu | Không tự hết hạn DM/tin phòng (DEC-070); chỉ bản nội dung mới nhất, xóa thay bằng tombstone (DEC-020/034/052) |
 | Tài khoản | Chưa có tự xóa tài khoản v1 (DEC-103); khóa không xóa tin, chặn sử dụng/tương tác mới và mở khóa cần đăng nhập mới (DEC-104) |
 | Phòng đã xóa | Không truy cập/khôi phục (DEC-077); giữ nội dung online chưa đặt hạn purge (DEC-105); không có xóa server v1 (DEC-094) |
-| Backup | RPO ≤15 phút/RTO ≤4 giờ (DEC-086); tuổi tối đa mỗi backup/WAL 30 ngày DEC-109, không hứa PITR đủ mọi thời điểm tròn 30 ngày |
+| Backup — sau v1 | Giữ mục tiêu RPO ≤15 phút/RTO ≤4 giờ (DEC-086), tuổi tối đa mỗi backup/WAL 30 ngày DEC-109; triển khai/kiểm chứng hoãn theo DEC-156. Không hứa PITR đủ mọi thời điểm tròn 30 ngày |
 | Bộ nhớ tab | Bản nháp DM chỉ RAM (DEC-091); đóng tab/reload/đăng xuất mất bản nháp; token phiên vẫn theo thiết kế Accounts hiện tại |
 | Log/audit | Log kỹ thuật 14 ngày, audit 90 ngày, IP/user-agent audit 7 ngày theo DEC-106; policy online, backup riêng |
 | Dữ liệu kỹ thuật terminal | Dọn payload/chi tiết sau 7 ngày, giữ dedup/tombstone cần thiết, refresh family active theo DEC-107 |
-| Restore | Áp lại xóa/thu hồi; mất bản sửa mới nhất thì “Nội dung chưa khôi phục được”, không đưa bản cũ trở lại theo DEC-108 |
+| Restore — sau v1 | Khi triển khai, áp lại xóa/thu hồi; mất bản sửa mới nhất thì “Nội dung chưa khôi phục được”, không đưa bản cũ trở lại theo DEC-108/156 |
 
 Các mốc giữ log/dọn dữ liệu không tự thay thời hạn hiệu lực của token hoặc ngưỡng thu hồi chat/media. “Giữ dữ liệu” không cấp quyền đọc cho người đã rời/mất quyền hoặc cho người vận hành. “Xóa nội dung online” trong tài liệu là bỏ nội dung khỏi các bảng/đường phục vụ của ứng dụng; không hứa ghi đè mọi byte cũ trên đĩa, WAL hoặc backup ngay cùng thời điểm.
 
@@ -77,7 +77,7 @@ Các TTL online tính từ timestamp nghiệp vụ, không reset khi restore, ch
 
 ### Tuổi backup và cửa sổ PITR
 
-DEC-109 chọn tuổi artefact tối đa 30×24 giờ, không kéo dài vì cần một anchor base cũ. Tuổi gốc lấy base backup start time/WAL segment close time trong catalogue được xác thực, không lấy thời điểm copy/upload mới để reset tuổi. Giữ base backup đã kiểm tra và chuỗi WAL tương ứng **trong giới hạn tuổi này**; khi một set hết hạn, bỏ set/các đoạn không còn dependency của set hợp lệ khác. Công cụ/topology cần chứng minh luôn có base mới hợp lệ trước set cũ hết hạn.
+Gói backup/restore thuộc giai đoạn sau v1 theo [DEC-156](../records/decisions/README.md#dec-156). DEC-109 chọn tuổi artefact tối đa 30×24 giờ, không kéo dài vì cần một anchor base cũ. Tuổi gốc lấy base backup start time/WAL segment close time trong catalogue được xác thực, không lấy thời điểm copy/upload mới để reset tuổi. Giữ base backup đã kiểm tra và chuỗi WAL tương ứng **trong giới hạn tuổi này**; khi một set hết hạn, bỏ set/các đoạn không còn dependency của set hợp lệ khác. Công cụ/topology cần chứng minh luôn có base mới hợp lệ trước set cũ hết hạn.
 
 Mốc PITR sớm nhất là base hợp lệ sớm nhất có WAL liên tục, không tự bằng now−30 ngày. Backup hằng ngày có thể làm cửa sổ thực tế ngắn hơn 30 ngày; báo earliest/latest recoverable point và missing segment, không ghi “phục hồi mọi thời điểm 30 ngày” khi chỉ giữ artefact ≤30 ngày. Nếu chưa có base mới đúng hạn thì báo chưa đạt backup/RPO/RTO và xử lý, không tự giữ artefact quá tuổi hoặc xóa WAL còn cần bởi base hợp lệ.
 
@@ -139,6 +139,8 @@ Tách payload khỏi marker: outbox/inbox/operation có thể bỏ payload/kết
 
 ## 6. Bảo vệ dữ liệu sau restore — thiết kế cần proof
 
+Phần này là thiết kế cho gói sau v1 theo [phạm vi backup/restore](../releases/v1.md#backup-scope), gồm sổ bảo vệ độc lập, receipt và diễn tập. v1 chưa triển khai quy trình restore từ backup; hàng rào quyền/epoch và marker chống trùng trong DB owner vẫn theo [thiết kế thu hồi](access-revocation.md#v1-authorization-coordination).
+
 Theo [PostgreSQL 18 PITR](https://www.postgresql.org/docs/18/continuous-archiving.html), phục hồi dùng base backup và chuỗi WAL, có thể chọn mốc trước hiện tại. Restore có thể đưa lại trạng thái/nội dung trước xóa hoặc thu hồi. Backup DB vì vậy không thể là nguồn duy nhất của sổ các hành động phải áp lại sau recovery point.
 
 <a id="sổ-bảo-vệ-độc-lập"></a>
@@ -162,7 +164,7 @@ Thiết kế giao thức đề xuất, chưa chứng minh atomicity giữa hai k
 3. Sau commit, hoàn tất receipt committed ở kho độc lập rồi trả thành công. Nếu response/receipt mất, thao tác có thể đã commit: đọc marker và retry cùng ID, không tạo một mutation mới hoặc thông báo “đã rollback” khi chưa biết. Thu hồi vẫn tính từ commit DB, không từ lúc sổ nhận receipt.
 4. Restore gặp prepared chưa có kết luận phải đối chiếu marker/WAL/bằng chứng tin cậy. Nếu không xác nhận được committed hay aborted thì giữ scope liên quan chưa mở truy cập, không tự áp một intent chưa commit để xóa dữ liệu, cũng không tự coi nó aborted để phục hồi quyền. RTO 4 giờ phải được thử cả trường hợp này; chưa có proof thì chưa xác nhận đạt.
 
-Outbox đơn thuần gửi sổ về sau không đủ: có cửa sổ DB đã xóa/thu hồi nhưng chưa ghi bền ngoài recovery point. API không được hứa đã hoàn tất bảo vệ restore khi receipt chưa bền. Kho sổ lỗi: từ chối mutation mới cần bảo vệ trước commit hoặc trả kết quả chưa rõ sau commit, không bỏ qua để “ghi sau”. Hạ tầng/race proof là điều kiện phát hành, không tuyên bố giao thức này đã chạy.
+Outbox đơn thuần gửi sổ về sau không đủ: có cửa sổ DB đã xóa/thu hồi nhưng chưa ghi bền ngoài recovery point. API không được hứa đã hoàn tất bảo vệ restore khi receipt chưa bền. Kho sổ lỗi: từ chối mutation mới cần bảo vệ trước commit hoặc trả kết quả chưa rõ sau commit, không bỏ qua để “ghi sau”. Hạ tầng/race proof là điều kiện hoàn tất gói restore sau v1, không là gate v1 hoặc bằng chứng giao thức này đã chạy.
 
 <a id="thứ-tự-khôi-phục-để-diễn-tập"></a>
 
@@ -210,9 +212,9 @@ Nguồn: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../..
 | DATA-GAP-01 | Review policy DEC-103–109/matrix/source mapping, cadence/budget dọn và phạm vi quyền người chạy job |
 | DATA-GAP-02 | Projection lịch sử/guard theo DEC-104, mở khóa không sống lại phiên; actor edit/delete khi peer bị khóa |
 | DATA-GAP-03 | Migration worker/index/terminal payload/dedup marker; batch rollback/crash, family FK/reuse và cooldown |
-| DATA-GAP-04 | Chọn kho sổ/key/checkpoint, proof hai kho và prepared/committed/aborted/unknown; không có gap mất hành động bảo vệ |
-| DATA-GAP-05 | Diễn tập restore/floor/generation/email/media/quota và trường hợp mất bản sửa; đo RPO/RTO, lưu bằng chứng |
-| DATA-GAP-06 | Cấu hình backup/WAL/log/audit retention đúng policy, xác nhận cửa sổ có thể restore và dọn dependency an toàn |
+| DATA-GAP-04 — sau v1 | Chọn kho sổ/key/checkpoint phục vụ restore, proof hai kho và prepared/committed/aborted/unknown; không có gap mất hành động bảo vệ |
+| DATA-GAP-05 — sau v1 | Diễn tập restore/floor/generation/email/media/quota và trường hợp mất bản sửa; đo RPO/RTO, lưu bằng chứng |
+| DATA-GAP-06 | v1: retention log/audit online đúng policy. Sau v1: cấu hình backup/WAL, xác nhận cửa sổ có thể restore và dọn dependency an toàn |
 
 <a id="acceptance"></a>
 
@@ -221,6 +223,8 @@ Nguồn: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../..
 ## 8. Tiêu chí và kiểm thử
 
 Tất cả ca chưa chạy. Dữ liệu thử phải dùng tài khoản/tin giả; fixture chỉ là kỳ vọng và phép tính policy, không kết quả chạy DB/job/restore.
+
+Phạm vi v1 giữ các nhánh online, gồm quyền, tombstone/chống trùng, cleanup và bảo vệ log. AC-DATA-10–13/15–16 và TC-DATA-07–12 thuộc gói restore sau v1. AC-DATA-14 tách retention log/audit online trong v1 với đo backup/RPO/RTO sau v1; TC-DATA-03 chỉ chạy nhánh xóa/retry/cleanup online trong v1. Phần restore của các ca khác cũng áp dụng sau v1, không đánh dấu được hoãn là đã đạt.
 
 [data-lifecycle.json](../fixtures/data-lifecycle.json) có 22 vector retention, 12 vector truy cập, 15 vector restore, 10 trường hợp schema message và 6 kịch bản fault/transition. Record mẫu chỉ minh họa hình dạng; hash/signature giả không được dùng làm bằng chứng xác thực.
 
@@ -264,4 +268,4 @@ Tất cả ca chưa chạy. Dữ liệu thử phải dùng tài khoản/tin gi�
 
 ## 9. Đầu vào còn mở
 
-DEC-103–109 đã chốt phạm vi/hành vi, TTL online và tuổi artefact backup/WAL. Tool/store, cửa sổ PITR thực tế, kho sổ/key ring, scope quyền worker, projection/placeholder migration và proof còn DATA-GAP. DEC-112 chốt quản trị kỹ thuật/no admin UI; người trực/thẩm quyền thao tác và người duyệt DEC-111 vẫn mở OQ-011. [Nghiệm thu/runbook](../releases/acceptance.md) có checklist và mẫu hồ sơ; chính sách dữ liệu không thay phân công. File này là nguồn chuẩn vòng đời, các đặc tả tính năng dẫn về đây.
+DEC-103–109 đã chốt phạm vi/hành vi, TTL online và tuổi artefact backup/WAL. [DEC-156](../records/decisions/README.md#dec-156) chuyển công cụ/kho backup, cửa sổ PITR, sổ bảo vệ, phục hồi khóa, placeholder phục vụ restore và proof tương ứng sang sau v1. Projection, quyền worker, lưu bền key ring và retention online vẫn cần đối chiếu theo phạm vi v1; các đầu việc còn tại DATA-GAP. DEC-112 chốt quản trị kỹ thuật/no admin UI; người trực/thẩm quyền thao tác và người duyệt DEC-111 vẫn mở OQ-011. [Nghiệm thu/runbook](../releases/acceptance.md) có checklist và mẫu hồ sơ; chính sách dữ liệu không thay phân công. File này là nguồn chuẩn vòng đời, các đặc tả tính năng dẫn về đây.

@@ -1,6 +1,6 @@
 # SCDC — Chất lượng và phương pháp đo
 
-Ngưỡng đầy đủ áp dụng cho v1. MVP chọn tiêu chí theo phạm vi tại [hồ sơ MVP](../releases/mvp.md); chưa có kết quả đo hệ thống trong lần cấu trúc lại tài liệu.
+Các ngưỡng áp dụng cho v1, trừ mục tiêu backup/khôi phục DB được hoãn theo [phạm vi backup](../releases/v1.md#backup-scope), DEC-156. MVP chọn tiêu chí theo phạm vi tại [hồ sơ MVP](../releases/mvp.md); chưa có kết quả đo hệ thống trong lần cấu trúc lại tài liệu.
 
 <a id="quality-targets"></a>
 
@@ -21,7 +21,7 @@ DEC-082: desktop Chrome/Edge/Firefox/Safari, hai phiên bản ổn định gần
 | Vào cuộc gọi | p95 ≤5 giây; thành công ≥99% | DEC-085/101; từ bấm join/accept tới connected/khả năng nhận luồng, không bắt cấp mic/camera ban đầu; ≥100 lần hợp lệ, busy/full đo riêng; bật nguồn và cấp quyền capture đo riêng |
 | Độ trễ media | Audio p95 ≤300 ms; video/share p95 ≤500 ms | Dùng tín hiệu âm thanh và frame timestamp thử, không nội dung người dùng; ghi độ lệch đồng hồ/phương pháp đo |
 | Hình ảnh | Camera mục tiêu 720p/30fps; share 720p/15fps | Mạng mỗi máy upload ≥10/download ≥20 Mbps, RTT ≤100 ms, loss ≤1%; ghi resolution/FPS thực tế và tỷ lệ thời gian đạt, không suy từ cấu hình capture |
-| Khôi phục DB | RPO ≤15 phút; RTO ≤4 giờ; tuổi artefact backup/WAL ≤30 ngày | DEC-086/109; đo actual earliest/latest recovery point, không hứa PITR mọi mốc tròn 30 ngày; restore áp lại bảo vệ DEC-108 |
+| Khôi phục DB — sau v1 | RPO ≤15 phút; RTO ≤4 giờ; tuổi artefact backup/WAL ≤30 ngày | Mục tiêu DEC-086/109 giữ cho đợt triển khai backup sau v1 theo DEC-156; chưa có bằng chứng đo. Khi triển khai, đo cửa sổ khôi phục thực tế và áp lại bảo vệ DEC-108, không hứa PITR mọi mốc tròn 30 ngày |
 
 Kịch bản chat theo DEC-083: 100 người online liên tục 60 phút sau warm-up 5 phút; riêng các ca chức năng âm tính/fault injection có nhãn. Workload kỹ thuật đề xuất: 1.000 tài khoản, 500 DM, 20 cộng đồng/50 phòng text và 100.000 tin preload, trong đó hai hội thoại/phòng có ít nhất 10.000 tin để thử nhiều trang. Trong 100 người online, 80 người ở 40 DM và 20 người ở các phòng có đúng quyền; mỗi người gửi một tin/10 giây, khoảng 10 tin/giây và 36.000 tin mới trong 60 phút. Mỗi client tải trang lịch sử/30 giây; chèn sửa/xóa một tin của chính mình/5 phút. Ghi độ dài nội dung/thời điểm, không dùng tài khoản/DM thật.
 

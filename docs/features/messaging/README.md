@@ -6,7 +6,7 @@ Messaging phụ trách DM và tin trong phòng Community. Identity cung cấp da
 |---|---|
 | [Nhắn tin riêng](direct-messaging.md) | Tìm người, hội thoại hai người, quyền DM, UI, API và AC/TC |
 | [Tin phòng](channel-messaging.md) | UC-COM-23/24/25, quyền phòng, API/Hub và kiểm chứng tích hợp |
-| [Lưu và thay đổi tin](message-lifecycle.md) | Model, transaction, sequence, chống trùng, sửa/xóa và state client |
+| [Lưu và thay đổi tin](message-lifecycle.md) | Tiếp nhận tin, chuyển sang hàng đợi, transaction, chống trùng, sửa/xóa và state client |
 | [Lịch sử và đồng bộ](synchronization.md) | Cursor/history, outbox, Hub, reconnect và thu hồi |
 | [Nội dung văn bản](text-policy.md) | Unicode, UTF-16, pipeline validation và TC-TEXT |
 

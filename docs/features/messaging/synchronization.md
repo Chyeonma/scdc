@@ -91,7 +91,7 @@ Dispatcher claim outbox bằng lease, lấy message hiện hành qua Messaging, 
 
 [IAccountAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) và shared [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) đã có trong source cho guard actor và transaction một host. Consumer DM/Hub chưa được tích hợp. Phần còn cần thiết kế/triển khai gồm guard recipient khi gửi mới, `IUserSearchDirectory` cho search/profile, `IAuthenticatedSessionReader` cho realtime và mở rộng `IRealtimeAccessRevoker` theo session/user/space.
 
-Identity giữ dữ liệu bảo mật; Messaging giữ registry/Hub. `IUserDirectory` hiện chỉ trả active user summary, không chứng minh verified/valid session; không thay guard bằng summary khác null. Hub và outbox dispatcher còn chưa có runtime; Redis scale-out chỉ là phương án khi có quyết định riêng.
+Identity giữ dữ liệu bảo mật; Messaging giữ registry/Hub chat. Media control giữ Hub riêng theo [D11](../media/participation-lifecycle.md#v1-media-realtime). Hub và worker ban đầu chạy cùng API của owner theo [D12/D13](../../system/backend.md#v1-realtime-hosting); mỗi service có một bản chạy hoạt động theo [D21](../../system/environments.md#v1-service-replicas). `IUserDirectory` hiện chỉ trả active user summary, không chứng minh verified/valid session; không thay guard bằng summary khác null. Hub và outbox dispatcher còn chưa có runtime; không bổ sung backplane chỉ để phối hợp nhiều bản Hub trong cấu hình này. Redis scale-out cho mở rộng sau cần quyết định riêng.
 
 ### Xác thực SignalR
 

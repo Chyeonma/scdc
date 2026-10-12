@@ -2,6 +2,8 @@
 
 Phần tin phòng của SCP-005; UC-COM-23/24 và phần chat của UC-COM-25. Messaging sở hữu tin/Hub/dispatcher; Community sở hữu channel, membership và quyền; Identity cung cấp phiên. Vg giữ UI Community và quyền/lifecycle phòng, Sáng cung cấp nền Messaging; Thái cung cấp dataset/bộ chạy.
 
+Backup/restore và placeholder sau restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và thu hồi quyền vẫn thuộc v1.
+
 ## Trạng thái và phạm vi bàn giao
 
 [MVP](../../releases/mvp.md#community-scope) đã chọn lịch sử/gửi/nhận tin và xử lý mất quyền. Sửa/xóa tin UC-COM-24 thuộc phần mở rộng/v1. Chưa có writer tin phòng hoặc Hub được kiểm chứng; nền tạo phòng/ACL và guard đã có bằng chứng riêng tại [Community](../community/channels.md), không chứng minh chat/realtime đã đạt.
@@ -142,6 +144,8 @@ Hub vẫn `/hubs/chat`; schema riêng [community-realtime.schema.json](../../con
 
 Thông báo `CommunityChanged` chỉ chứa eventId/serverId/accessVersion và yêu cầu UI tải lại metadata/quyền; không mang tên phòng bị ẩn, danh sách thành viên/role hay nội dung tin. `MembershipChanged`, `JoinRequestChanged`, `MemberInvitationChanged` định tuyến đến đúng người và manager còn quyền theo user/session, không cần người ngoài subscribe server. Server tự gỡ subscription khi mất quyền, không trông chờ client xử lý thông báo. Client merge version theo từng resource; sự kiện thu hồi có membershipId cũ không được xóa cache của epoch rejoin mới. Reconnect subscribe lại rồi REST bù trang/tải lại tin cũ để nhận edit/delete.
 
+Khi tách service v1, sự kiện phục vụ thông báo Community → Messaging chuyển qua outbox/worker/gRPC theo [D27](../../system/api-conventions.md#v1-integration-event-transport). Hợp đồng giao nhận nội bộ cần thiết kế riêng; không đồng nhất với schema thông báo browser hoặc thay kiểm tra quyền trước phát.
+
 <a id="acceptance"></a>
 
 <a id="tiêu-chí-chấp-nhận"></a>
@@ -194,4 +198,4 @@ Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../../records
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Nhắn tin phòng | Dùng chung text/HMAC/sequence/cursor DM; REST/realtime đã có schema, chưa có writer/mock/proof; mất quyền không xóa nội dung, room deleted giữ chưa đặt hạn theo DEC-105; restore placeholder dùng chung schema DEC-108, còn DATA-GAP proof. | OQ-005, OQ-011 |
+| Nhắn tin phòng | Dùng chung text/HMAC/sequence/cursor DM; REST/realtime đã có schema, chưa có writer/mock/proof; mất quyền không xóa nội dung, room deleted giữ chưa đặt hạn theo DEC-105. Restore placeholder dùng chung schema DEC-108 và proof backup/restore áp dụng sau v1 theo DEC-156. | OQ-005, OQ-011 |

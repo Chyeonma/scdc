@@ -45,7 +45,9 @@ Schema mục tiêu tại [media.openapi.json](../../contracts/media.openapi.json
 
 Leave, state/grant/heartbeat của participation dùng [hợp đồng lifecycle](participation-lifecycle.md#contracts); camera/share dùng [hợp đồng nguồn](video-screen-sharing.md#contracts). Mọi request đọc snapshot cũng kiểm tra quyền hiện hành.
 
-Đề xuất thêm `IMediaRoomLifecycle` trong Contracts: tạo room DB rỗng cho voice channel cùng transaction Community create, đánh dấu closing khi xóa; chưa provision SFU khi room rỗng. Nhờ vậy GET phòng thoại chưa có người vẫn trả snapshot rỗng, không giả 404 phòng không tồn tại. Migration backfill room cho voice channel hiện có; vòng đời Media/Community qua shared scope, không tham chiếu implementation hoặc gọi SFU trong transaction. Interface/schema/source hiện chưa có.
+Theo [D14](../community/channels.md#v1-channel-provisioning), v1 chuẩn bị room DB rỗng tại Media trước khi báo tạo voice channel hoàn tất. GET phòng thoại chưa có người trả snapshot rỗng, không giả 404 phòng không tồn tại; bước chuẩn bị dữ liệu chưa provision SFU, giữ quota hoặc cấp token. Community giữ tiến độ bền và điều phối theo [D15](../community/channels.md#v1-channel-creation-coordination); gọi gRPC trực tiếp và nhận kết quả sau Media commit theo [D16](../community/channels.md#v1-channel-preparation-transport). Hợp đồng mạng chi tiết, schema/backfill và phục hồi chưa chốt.
+
+Đề xuất `IMediaRoomLifecycle` tạo room cùng transaction Community create và đánh dấu closing khi xóa trước đây giả định một host/database. Không áp shared scope nguyên trạng cho database riêng v1; hợp đồng xóa xuyên service còn mở. Interface/schema/source hiện chưa có.
 
 Room/participation/epoch/counter là model dùng chung ở [lifecycle](participation-lifecycle.md#data); room generation đang mở của mỗi channel là duy nhất. Không gọi provider trong transaction Community create/delete.
 

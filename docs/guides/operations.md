@@ -2,9 +2,9 @@
 
 # SCDC — Hướng dẫn thao tác vận hành
 
-Cập nhật: 2026-10-04. Phạm vi SCP-008; DEC-110/111/112. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [release-operations.md](../releases/acceptance.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](../system/data-lifecycle.md#policy).
+Cập nhật: 2026-10-12. Phạm vi SCP-008; DEC-110/111/112/156/170. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](../system/data-lifecycle.md#policy).
 
-Runbook thuộc bản hoàn thiện [v1](../releases/v1.md), kế thừa bộ tài liệu đầy đủ trước đây được gọi là MVP. Mốc [MVP mới](../releases/mvp.md) bắt đầu từ ba tính năng nền và bộ chạy/kiểm tra theo scope; không phải mọi tình huống media/restore trong file này đều là điều kiện cho gói đầu.
+Runbook dùng theo phạm vi của [v1](../releases/v1.md) và giai đoạn sau v1. Backup/restore, retention backup và kiểm chứng RPO/RTO được chuyển [sau v1](../releases/v1.md#backup-scope) theo DEC-156; các bước tương ứng dưới đây là thiết kế cho giai đoạn đó. Mốc [MVP](../releases/mvp.md) bắt đầu từ ba tính năng nền và bộ chạy/kiểm tra theo scope.
 
 <a id="mục-lục"></a>
 
@@ -35,7 +35,7 @@ Mỗi lần thao tác cần có người thực hiện đã được cấp quy�
 | Bản chạy | Commit, checksum/digest artefact Web/API, schema/migration và phiên bản thành phần media nếu có |
 | Cấu hình | Phiên bản cấu hình đã bỏ secrets; tham chiếu kho secrets và key ID, không giá trị khóa |
 | Truy cập | Người thực hiện, vai trò, tài khoản kỹ thuật đúng phạm vi và đầu mối thay thế |
-| Khôi phục | Bản ứng dụng trước, ma trận tương thích schema, base/WAL hợp lệ và bằng chứng restore |
+| Quay lại/khôi phục | v1: bản ứng dụng trước, ma trận tương thích schema và khóa còn dùng được; sau v1 bổ sung base/WAL hợp lệ và bằng chứng restore |
 | Điều khiển | Cách đóng/mở ingress, ngừng ghi theo scope, tạm dừng email/outbox/admission và fencing media |
 | Quan sát | Dashboard, nguồn thời gian, trace/error ID, cảnh báo và nơi lưu hồ sơ hạn chế truy cập |
 | Lệnh thực tế | Manifest, đường dẫn và lệnh đã diễn tập trên cấu hình được chọn; còn thiếu thì ghi “Chưa có” |
@@ -44,15 +44,15 @@ Mỗi lần thao tác cần có người thực hiện đã được cấp quy�
 
 ### Đối chiếu repo hiện tại
 
-| Hiện có | Giới hạn cần xử lý trước production |
+| Hiện có | Giới hạn cần xử lý theo phạm vi phát hành |
 |---|---|
-| [compose.yaml](../../compose.yaml) có Web/API/PostgreSQL | Development, publish cổng DB, credentials local và SQL init/seed; chưa có HTTPS, kho secrets, WAL archiving hoặc media |
+| [compose.yaml](../../compose.yaml) có Web/API/PostgreSQL | Development, publish cổng DB, credentials local và SQL init/seed; chưa có HTTPS, kho secrets hoặc media. WAL archiving thuộc sau v1 |
 | [Dockerfile API](../../services/SCDC.Api/Dockerfile) và [Web](../../clients/WebClient/Dockerfile) | Có bước build; chưa có manifest production và bản artefact đã khóa digest cho một đợt phát hành |
 | [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs) trả healthy/module stage | Không truy vấn DB hoặc kiểm tra worker; HTTP 200 không chứng minh ứng dụng dùng được |
 | [Nginx](../../clients/WebClient/nginx.conf) có `/healthz`, proxy API/hub | `/healthz` chỉ trả chuỗi tĩnh; access log mặc định cần kiểm tra query nhạy cảm trước dùng production |
 | [Program.cs](../../services/SCDC.Api/Program.cs) và [IdentityModule](../../services/Modules/Identity/IdentityModule.cs) | Swagger bật trong Development; cần cấu hình proxy/HTTPS/CORS và thử đường truy cập thực tế |
 | [appsettings.json](../../services/SCDC.Api/appsettings.json) | Connection string/signing key trống; `ExposeDevelopmentTokens` mặc định false, chưa có kiểm tra cấm bật ngoài Development |
-| Identity và các gói Community đã có nghiệp vụ trên `main`; Messaging có nền module/lifecycle tạo space | Các nhánh tin nhắn/realtime chưa được tích hợp vào `main`; chưa có media, worker retention hoặc sổ bảo vệ độc lập. Xem [phạm vi và bằng chứng Community](../features/community/README.md) trước khi nghiệm thu |
+| Identity và các gói Community đã có nghiệp vụ trên `main`; Messaging có nền module/lifecycle tạo space | Các nhánh tin nhắn/realtime chưa được tích hợp vào `main`; chưa có media hoặc worker retention. Sổ bảo vệ độc lập phục vụ restore thuộc sau v1. Xem [phạm vi và bằng chứng Community](../features/community/README.md) trước khi nghiệm thu |
 
 Chi tiết cấu hình có trong [hướng dẫn phát triển](development.md#configuration). Production phải kiểm tra giá trị cấu hình thực sự được nạp: environment phù hợp, signing key riêng, token Development tắt, origin hợp lệ, domain liên kết email đúng và DB không mở trực tiếp cho browser. Kiểm tra từ response/log đã lọc; không dump toàn environment hoặc connection string vào hồ sơ.
 
@@ -72,17 +72,19 @@ Kết quả hai endpoint chỉ là tín hiệu tiến trình/proxy. Kiểm tra D
 
 ## 2. RB-DEPLOY — Triển khai bản mới
 
-**Đầu vào:** [hồ sơ phát hành](../records/templates/release-record.md), bản chạy đã khóa, người duyệt, kế hoạch migration/rollback và cửa sổ thao tác. **Dừng trước thao tác:** chưa đủ điều kiện phát hành, backup/restore chưa kiểm chứng hoặc không biết schema cũ tương thích đến đâu.
+Các đợt cập nhật hiện tại thực hiện theo [chính sách offline](../system/environments.md#v1-offline-updates), DEC-170: ngừng phục vụ trong thời gian thay đổi và kiểm tra, mở lại sau khi đạt.
 
-1. Đối chiếu đúng môi trường và artefact đã duyệt; ghi schema/build trước thay đổi. Xác nhận backup/WAL và checkpoint sổ bảo vệ còn hợp lệ, cùng đường truy cập kho keys để khôi phục.
+**Đầu vào:** [hồ sơ phát hành](../records/templates/release-record.md), bản chạy đã khóa, người duyệt, kế hoạch migration/rollback và cửa sổ thao tác. **Dừng trước thao tác:** chưa đủ điều kiện phát hành trong phạm vi hoặc không biết schema cũ tương thích đến đâu. Backup/restore chỉ là đầu vào bắt buộc khi đã nằm trong phạm vi sau v1.
+
+1. Đối chiếu đúng môi trường và artefact đã duyệt; ghi schema/build trước thay đổi, kiểm tra persistence dữ liệu và kho keys qua restart. Khi phạm vi có backup/restore sau v1, xác nhận thêm backup/WAL, checkpoint sổ bảo vệ và đường truy cập keys để khôi phục.
 2. Diễn tập staging với migration thực tế; chạy [bộ smoke](../releases/acceptance.md#smoke), kiểm tra secrets không xuất hiện trong response/log, key ring còn dùng sau restart. Ghi lệnh thực tế và mã thoát, không lưu token trong lệnh/hồ sơ.
-3. Xác nhận thời điểm và người thực hiện. Đóng ghi/ingress theo kế hoạch migration; media admission ngừng cấp mới nếu có restart/generation thay đổi. Không đánh dấu slot đã nhả trước khi node cũ ngừng truyền.
+3. Xác nhận thời điểm và người thực hiện. Đóng ingress và ngừng phục vụ; dừng an toàn API/worker/job ghi, chờ transaction đang chạy kết thúc hoặc xác định trạng thái trước bước tiếp theo. Giữ DB và thành phần cần cho migration/đối soát hoạt động, giữ volume và keys. Media admission ngừng cấp mới; kết thúc/fence phiên bị ảnh hưởng theo kế hoạch, không đánh dấu slot đã nhả trước khi node cũ ngừng truyền.
 4. Áp migration đã duyệt một lần theo công cụ được chọn, rồi triển khai artefact/cấu hình. Thất bại phải xác định trạng thái thực tế; không chạy lại một migration có kết quả không rõ hoặc tạo lại schema từ SQL init.
 5. Kiểm tra schema/build, kết nối DB, worker, proxy/API/hub, email và admission. Chạy smoke bằng tài khoản thử đúng môi trường; đối chiếu lỗi/backlog/quyền và ghi bằng chứng.
 6. Mở lại các đường đã đóng khi kiểm tra đạt và người có thẩm quyền xác nhận. Đề xuất theo dõi tăng cường 30 phút đầu; thời lượng được ghi trong kế hoạch từng lần, không thay kiểm thử tải 60 phút.
 7. Ghi kết quả thực tế, downtime, migration, quyết định và đầu mối tiếp nhận; nếu không đạt, giữ phần ảnh hưởng đóng và chuyển RB-ROLLBACK hoặc runbook sự cố tương ứng.
 
-**Kết thúc:** bản đúng artefact, smoke đạt, quyền/token/epoch đúng, backlog có thể xử lý, backup tiếp tục và hồ sơ đã bàn giao. Mở đăng ký công khai là quyết định riêng sau nghiệm thu; deploy thành công chưa tự cho phép mở đăng ký.
+**Kết thúc:** bản đúng artefact, smoke đạt, quyền/token/epoch đúng, backlog có thể xử lý và hồ sơ đã bàn giao; sau v1 kiểm tra backup tiếp tục khi đã triển khai. Mở đăng ký công khai là quyết định riêng sau nghiệm thu; deploy thành công chưa tự cho phép mở đăng ký.
 
 <a id="rollback"></a>
 
@@ -90,15 +92,17 @@ Kết quả hai endpoint chỉ là tín hiệu tiến trình/proxy. Kiểm tra D
 
 ## 3. RB-ROLLBACK — Quay lại bản ứng dụng trước
 
+Thực hiện offline theo [chính sách cập nhật](../system/environments.md#v1-offline-updates). Khi đã chuyển dữ liệu MVP sang v1 và v1 có ghi mới, đối chiếu phần chênh lệch theo [D52](../system/database.md#v1-mvp-data-cutover) trước khi cân nhắc quay về nguồn cũ.
+
 **Kích hoạt:** smoke trọng yếu thất bại, truy cập trái quyền, dữ liệu sai hoặc lỗi dịch vụ tăng sau deploy. Người có quyền xử lý sự cố được cô lập ảnh hưởng trong phạm vi đã cấp; người quyết định rollback phải có tên trong kế hoạch, chưa tự gán tại tài liệu này.
 
 1. Đóng phần ghi/truy cập bị ảnh hưởng, ghi mốc cuối còn tốt và bản hiện tại. Giữ bằng chứng đã lọc và đánh dấu các thao tác có kết quả chưa rõ; không tự replay mutation.
 2. Đối chiếu ma trận app–schema–key–generation. Nếu bản cũ còn đọc/ghi đúng schema mới và giữ đầy đủ thu hồi/floor/admission gate, dùng đường rollback ứng dụng đã diễn tập.
-3. Nếu schema đã thay đổi không tương thích hoặc không thể giữ các bảo vệ hiện hành, chọn forward fix hoặc RB-RESTORE theo kế hoạch đã duyệt. Không tự đảo migration hoặc restore DB chỉ để quay lại giao diện cũ.
-4. Deploy artefact/cấu hình cũ phù hợp nhưng giữ key ring, deny marker, bảo vệ restore và quyền hiện hành. Media cần fence generation cũ; không bỏ admission/quota gate để làm phiên cũ hoạt động.
+3. Nếu schema đã thay đổi không tương thích hoặc không thể giữ các bảo vệ hiện hành, giữ phần ảnh hưởng đóng và xử lý theo phương án forward fix đã duyệt. RB-RESTORE chỉ áp dụng sau v1 khi có đường restore được triển khai/kiểm chứng. Không tự đảo migration hoặc restore DB chỉ để quay lại giao diện cũ.
+4. Deploy artefact/cấu hình cũ phù hợp nhưng giữ key ring, deny marker và quyền hiện hành; giữ bảo vệ restore khi đã triển khai sau v1. Media cần fence generation cũ; không bỏ admission/quota gate để làm phiên cũ hoạt động.
 5. Chạy smoke, kiểm tra dữ liệu/thao tác đã commit trong thời gian bản lỗi chạy và token/cursor cũ. Chỉ mở lại khi có kết quả và xác nhận; theo dõi như sau deploy.
 
-**Kết thúc:** bản hoạt động, không hạ version/quyền hoặc hồi sinh nội dung đã xóa, thao tác chưa rõ đã được đối chiếu. Restore DB là thao tác riêng có thể mất dữ liệu theo recovery point, cần ghi phạm vi mất và người chấp nhận trong hồ sơ.
+**Kết thúc:** bản hoạt động, không hạ version/quyền hoặc hồi sinh nội dung đã xóa, thao tác chưa rõ đã được đối chiếu. Restore DB thuộc [giai đoạn sau v1](../releases/v1.md#backup-scope), là thao tác riêng có thể mất dữ liệu theo recovery point; khi thực hiện cần ghi phạm vi mất và người chấp nhận trong hồ sơ.
 
 <a id="service-incident"></a>
 
@@ -148,6 +152,8 @@ Kết quả hai endpoint chỉ là tín hiệu tiến trình/proxy. Kiểm tra D
 <a id="7-rb-restore--backup-và-khôi-phục-dữ-liệu"></a>
 
 ## 7. RB-RESTORE — Backup và khôi phục dữ liệu
+
+Toàn bộ RB-RESTORE áp dụng sau v1 theo [DEC-156](../releases/v1.md#backup-scope). Chưa có công cụ hay kết quả diễn tập được xác nhận; mục này không là điều kiện hoàn tất hoặc bước deploy bắt buộc của v1. Chính sách mục tiêu DEC-086/108/109 vẫn được giữ cho giai đoạn triển khai backup.
 
 <a id="kiểm-tra-backup"></a>
 
@@ -208,13 +214,13 @@ DEC-112 đã chốt chưa có trang quản trị riêng; khóa/mở khóa qua qu
 
 | Nhịp | Công việc | Bằng chứng tối thiểu |
 |---|---|---|
-| Tự động liên tục khi có hệ thống giám sát | Lỗi/latency/quyền, backlog, WAL/archive, dung lượng, key/certificate expiry | Tín hiệu, ngưỡng, thời điểm, cảnh báo và người nhận được cấu hình |
-| Mỗi ngày trong phạm vi trực được chọn | Xem cảnh báo chưa xử lý, backup/WAL, cleanup và delivery; kiểm tra dashboard/smoke tổng hợp | Check ID, thời điểm, người thực hiện, lỗi và hồ sơ tiếp nhận |
-| Mỗi tuần | Tăng trưởng DB/log/backup/băng thông, chi phí, lỗi lặp và các đầu việc sắp tới hạn | Số liệu và hành động có người/hạn xử lý |
-| Trước phát hành, sau thay đổi lớn về schema/topology | Smoke, rollback/restore phù hợp và bàn giao quyền/cấu hình | Hồ sơ phát hành/diễn tập cùng build và cấu hình |
-| Đề xuất mỗi tháng | Diễn tập restore đầy đủ và kiểm tra các đường nhận cảnh báo | RPO/RTO thực đo, floor/generation, quyền và danh sách phần chưa đạt |
+| Tự động liên tục khi có hệ thống giám sát | Lỗi/latency/quyền, backlog, dung lượng, key/certificate expiry; sau v1 bổ sung WAL/archive | Tín hiệu, ngưỡng, thời điểm, cảnh báo và người nhận được cấu hình |
+| Mỗi ngày trong phạm vi trực được chọn | Xem cảnh báo chưa xử lý, cleanup và delivery, dashboard/smoke; sau v1 bổ sung backup/WAL | Check ID, thời điểm, người thực hiện, lỗi và hồ sơ tiếp nhận |
+| Mỗi tuần | Tăng trưởng DB/log/băng thông, chi phí, lỗi lặp và đầu việc sắp tới hạn; sau v1 bổ sung backup | Số liệu và hành động có người/hạn xử lý |
+| Trước phát hành, sau thay đổi lớn về schema/topology | Smoke, rollback ứng dụng và bàn giao quyền/cấu hình; restore khi thuộc phạm vi sau v1 | Hồ sơ phát hành/diễn tập cùng build và cấu hình |
+| Đề xuất mỗi tháng, sau v1 | Diễn tập restore đầy đủ và kiểm tra các đường nhận cảnh báo liên quan | RPO/RTO thực đo, floor/generation, quyền và danh sách phần chưa đạt |
 
-Lịch hàng ngày/hàng tuần/hàng tháng là đề xuất để nhóm chọn công suất, không cam kết hỗ trợ 24/7. Nhóm hiện dự kiến 3–4 ngày full time/tuần/người; cần chỉ rõ người nhận cảnh báo ngoài lịch làm việc và khả năng đạt RTO 4 giờ. Không loại thời gian chờ người khỏi hồ sơ để làm số liệu trông đạt; nếu không đáp ứng thì ghi chưa đạt và đưa ra quyết định vận hành trước phát hành.
+Lịch hàng ngày/hàng tuần/hàng tháng là đề xuất để nhóm chọn công suất, không cam kết hỗ trợ 24/7. Nhóm hiện dự kiến 3–4 ngày full time/tuần/người; cần chỉ rõ người nhận cảnh báo ngoài lịch làm việc. Khi triển khai backup sau v1, đo cả thời gian chờ người để đánh giá RTO 4 giờ; chưa đo hoặc không đáp ứng thì ghi chưa đạt.
 
 Bàn giao phải có người chính/thay thế nhận việc, giờ/phạm vi trực, kênh nhận sự cố đã thống nhất, quyền dashboard/host/backup/keys theo phạm vi, nơi tìm runbook và kết quả diễn tập. Chỉ ghi tham chiếu kho secrets, không chép secrets vào tài liệu bàn giao. Công việc không có người nhận giữ trạng thái “Chưa bàn giao”.
 
@@ -229,8 +235,8 @@ Ngưỡng cảnh báo dưới đây là cấu hình vận hành để thử, kh�
 | API/chat | p95 vượt 500 ms hoặc lỗi bất thường ≥1% trong 5 phút | Kiểm tra dependency, trace, DB lock và backlog; tách lỗi validation khỏi 5xx |
 | Thu hồi | Connection còn nhận nội dung quá 5 giây sau commit | Ngừng định tuyến phần ảnh hưởng, cô lập nguyên nhân, ghi sự cố truy cập |
 | Outbox chat/email | Sự kiện cũ nhất chưa xử lý >60 giây / delivery sắp hết hạn | Kiểm tra lease/worker/provider; không phát lại mutation gửi tin |
-| WAL/backup | Điểm dữ liệu đã lưu trễ >10 phút hoặc backup ngày thất bại | Kiểm tra kho lưu, network và dung lượng; khôi phục archiving trước khi vượt RPO |
-| Dung lượng | Đĩa DB/backup dùng >80%, >90% là khẩn | Dự báo tốc độ tăng, mở rộng/dọn theo retention; không xóa WAL đang cần |
+| WAL/backup — sau v1 | Điểm dữ liệu đã lưu trễ >10 phút hoặc backup ngày thất bại | Kiểm tra kho lưu, network và dung lượng; khôi phục archiving trước khi vượt RPO |
+| Dung lượng | Đĩa DB dùng >80%, >90% là khẩn; sau v1 theo dõi thêm kho backup | Dự báo tốc độ tăng, mở rộng/dọn theo retention; không xóa WAL đang cần |
 | Media | Kết nối hợp lệ thất bại >1% hoặc slot không được giải phóng | Kiểm tra SFU/TURN/admission/coordinator; dừng cấp mới nếu không xác nhận được quyền |
 
 Sự cố dùng [mẫu hồ sơ](../records/templates/incident-record.md), ghi thời điểm đầu tiên có ảnh hưởng/phát hiện/xác nhận, phạm vi, người xử lý, hành động/quyết định và bằng chứng phục hồi. M1/M2/M3 dùng cùng [phân loại tác động](../releases/acceptance.md#defects); số liệu thực tế phải thể hiện cả thời gian chờ. Tên người trực, giờ trực và thời hạn phản hồi chưa được chốt; không coi đây là SLA hỗ trợ 24/7.
@@ -241,7 +247,7 @@ Quy trình: xác nhận/cô lập ảnh hưởng → kiểm tra trace và depend
 
 ### Vòng đời và cảnh báo retention
 
-Policy online: log kỹ thuật 14 ngày, audit 90 ngày, IP/user-agent audit 7 ngày; chi tiết kỹ thuật terminal/ack/quiesced 7 ngày, giữ dedup/deny marker và active refresh family theo [ma trận dữ liệu](../system/data-lifecycle.md#inventory). Chưa có worker thực thi hoặc số liệu dung lượng. Cảnh báo đề xuất: oldest eligible payload quá retain_until >24 giờ; email envelope invalid còn >60 giây; journal prepared/receipt chưa kết luận; backup set hết hạn mà chưa có base mới verified. Job trễ không gia hạn quyền/token hoặc cho phép dữ liệu cũ được phục vụ.
+Policy online: log kỹ thuật 14 ngày, audit 90 ngày, IP/user-agent audit 7 ngày; chi tiết kỹ thuật terminal/ack/quiesced 7 ngày, giữ dedup/deny marker và active refresh family theo [ma trận dữ liệu](../system/data-lifecycle.md#inventory). Chưa có worker thực thi hoặc số liệu dung lượng. Cảnh báo đề xuất: oldest eligible payload quá retain_until >24 giờ; email envelope invalid còn >60 giây. Sau v1 bổ sung cảnh báo journal prepared/receipt của sổ bảo vệ restore chưa kết luận và backup set hết hạn mà chưa có base mới verified. Job trễ không gia hạn quyền/token hoặc cho phép dữ liệu cũ được phục vụ.
 
 <a id="phạm-vi-quản-trị-đã-chốt-phân-công-còn-mở"></a>
 
@@ -262,8 +268,8 @@ Khi xử lý khóa tài khoản, runbook dự kiến ghi actor, user ID, lý do,
 | RLS-GAP-01 | Người duyệt/người thực hiện/người trực và thay thế, lịch/kênh trực | Người được chọn nhận việc và quyền; DEC-111 vẫn chưa chọn người duyệt |
 | RLS-GAP-02 | Provider/domain/topology/tài nguyên, manifest production, artefact và secrets/key store | Staging/production tách biệt, cấu hình thực nạp đúng, runbook có lệnh đã diễn tập |
 | RLS-GAP-03 | Ma trận browser/thiết bị/dataset, bộ chạy và phép đo | Chạy AC/TC trong scope, trace/clock/sample tin cậy; hồ sơ có bằng chứng, không chỉ fixture |
-| RLS-GAP-04 | Dependency readiness, metrics/log lọc, cảnh báo và đường nhận | Lỗi DB/worker/archive/media được phát hiện, cảnh báo thử tới người nhận; health tĩnh không dùng thay |
-| RLS-GAP-05 | Migration/compatibility/rollback, backup/WAL, sổ bảo vệ và cleanup | DATA-GAP và diễn tập fault/restore đạt, quyền/nội dung cũ không hồi sinh |
+| RLS-GAP-04 | Dependency readiness, metrics/log lọc, cảnh báo và đường nhận | Lỗi DB/worker/media được phát hiện, sau v1 bổ sung archive; cảnh báo thử tới người nhận, health tĩnh không dùng thay |
+| RLS-GAP-05 | v1: migration/compatibility/rollback ứng dụng và cleanup; sau v1: backup/WAL và sổ bảo vệ restore | DATA-GAP/ca fault đúng phạm vi; online v1 giữ quyền/marker/dữ liệu, restore sau v1 có proof không hồi sinh dữ liệu |
 | RLS-GAP-06 | Đường admission/quota/fencing và bản media được pin | MEDIA-GAP có proof RTP/cutoff/quota/rejoin; rollback vẫn giữ gate |
 | RLS-GAP-07 | Công cụ kỹ thuật khóa/mở khóa có guard/audit/receipt | Thực hiện đúng DEC-104/112; không có quyền đọc DM hoặc sửa/xóa thay tác giả |
 | RLS-GAP-08 | Hồ sơ lần chạy/lỗi tồn/deploy/restore và bàn giao | Mỗi gate có evidence/build/người; lỗi theo DEC-110 và quyết định theo người được chọn |
@@ -278,9 +284,9 @@ Các gói có thể đi cùng đợt phát triển phụ thuộc; chưa có kế
 
 - OQ-007: chất lượng/trình duyệt/thu hồi chat và media đã chốt; chính sách lỗi tồn DEC-110 đã chốt. Còn OS/thiết bị/build, khóa phép đo/workload và bằng chứng cutoff/tải.
 - OQ-010: có [mô hình chi phí minh họa](../project/planning.md#budget); còn nơi triển khai, tài nguyên, mức dùng thực tế, báo giá và hạn mức.
-- OQ-011: [vòng đời dữ liệu](../system/data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof, phân công/người trực/lịch trực và người duyệt DEC-111.
+- OQ-011: [vòng đời dữ liệu](../system/data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; backup/restore chuyển [sau v1](../releases/v1.md#backup-scope) theo DEC-156. DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof theo giai đoạn, phân công/người trực/lịch trực và người duyệt DEC-111.
 - OQ-008: có thiết kế Accounts/DM/Community/Media; còn review/migration/email worker, lựa chọn extension/SDK/version LiveKit, key store và proof guards/realtime/SFU.
 
 Vg/Sáng rà soát sản phẩm/quyền/lifecycle; Thái phát triển môi trường/provider/công cụ và tổng hợp kết quả. Mỗi người tự kiểm thử phần sở hữu và kiểm tra chéo theo DEC-117. Người trực vận hành, người ký nghiệm thu và thẩm quyền mở công khai cần được chọn trước phát hành theo DEC-111.
 
-Phương án backup: base backup hằng ngày và WAL liên tục tới kho riêng; cadence và cảnh báo phải được đo để đáp ứng [chính sách dữ liệu](../system/data-lifecycle.md#policy). Công cụ chưa được chọn. Thứ tự thao tác restore ở [RB-RESTORE](#restore).
+Thiết kế backup sau v1: base backup hằng ngày và WAL liên tục tới kho riêng; hướng lưu trữ tại [môi trường](../system/environments.md#v1-postgres-backup-storage), công cụ chưa được chọn. Khi triển khai, cadence và cảnh báo phải được đo để đáp ứng [chính sách dữ liệu](../system/data-lifecycle.md#policy). Thứ tự thao tác restore ở [RB-RESTORE](#restore).

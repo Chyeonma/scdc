@@ -2,6 +2,8 @@
 
 Community / Servers sở hữu metadata, visibility, discovery, join mode và ownership. Quy tắc, luồng sử dụng, UX, thiết kế dữ liệu/API và tiêu chí kiểm chứng của chủ đề được quản lý tại trang này.
 
+Backup/restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Migration v1 vẫn cần preflight, toàn vẹn dữ liệu và kế hoạch rollback ứng dụng tương thích schema.
+
 <a id="implementation"></a>
 
 ## Trạng thái theo khả năng
@@ -363,7 +365,7 @@ Preflight phải hoàn thành trước thay constraint/backfill:
 1. Kiểm tra owner có membership active, tên/mô tả hợp lệ theo policy, membership epoch/status, default/system role/grant và collision khi chuyển tên default role thành @everyone. Báo ID và lỗi cụ thể; dừng trên dữ liệu không có mapping được duyệt.
 2. Cột visibility/joinMode cũ chưa tồn tại nên không suy public cho mọi server legacy. Backfill qua mapping theo server ID được duyệt; DB không có server thì không cần mapping. Server mới lấy default từ request, không lấy lựa chọn backfill của dữ liệu cũ.
 3. Không tự sửa tên, xóa role/grant, đổi trạng thái thành viên hoặc mở visibility. Seed demo legacy cũng phải có mapping hoặc thay bằng seed mới ở bootstrap Development. Không chạy schema.sql có DROP SCHEMA trên DB cần giữ dữ liệu.
-4. Apply/validate trong transaction, lưu ledger; chạy lại cùng checksum là no-op. Deployment phải có bản backup/preflight và kế hoạch quay lại trước migration. Sau khi có write mới, giữ schema mở rộng khi rollback app; không tự DROP cột/bảng hoặc hạ description xuống 500 làm mất dữ liệu.
+4. Apply/validate trong transaction, lưu ledger; chạy lại cùng checksum là no-op. Deployment phải có preflight và kế hoạch rollback ứng dụng trước migration. Sau khi có write mới, giữ schema mở rộng khi rollback app; không tự DROP cột/bảng hoặc hạ description xuống 500 làm mất dữ liệu.
 
 Bootstrap `schema.sql`/`seed.sql` cho DB mới được đồng bộ với schema sau chuỗi migration đã áp dụng, ledger ghi cùng baseline/checksum để không apply lại. Test migration vẫn bắt đầu từ snapshot schema cũ/fixture legacy riêng để chứng minh đường upgrade; cập nhật bootstrap không thay bằng chứng migration.
 

@@ -2,7 +2,7 @@
 
 # Mẫu hồ sơ nghiệm thu và phát hành SCDC
 
-Mẫu trống, không phải kết quả nghiệm thu. Copy cho từng đợt vào nơi nhóm chọn; không điền Đạt từ việc tài liệu/test đã tồn tại. Ghi rõ mốc [MVP](../../releases/mvp.md#acceptance) hoặc [v1](../../releases/v1.md#acceptance), UC/AC và các điều kiện áp dụng; không bắt MVP điền Đạt cho gate media ngoài scope. Quy trình ở [release-operations.md](../../releases/acceptance.md#acceptance-process); runbook ở [operations-runbook.md](../../guides/operations.md). Không ghi token, secrets hoặc nội dung người dùng thật.
+Mẫu trống, không phải kết quả nghiệm thu. Copy cho từng đợt vào nơi nhóm chọn; không điền Đạt từ việc tài liệu/test đã tồn tại. Ghi rõ mốc [MVP](../../releases/mvp.md#acceptance) hoặc [v1](../../releases/v1.md#acceptance), UC/AC và các điều kiện áp dụng; không bắt MVP điền Đạt cho gate media ngoài scope. Backup/khôi phục DB chuyển sang sau v1 theo [DEC-156 và phạm vi backup](../../releases/v1.md#backup-scope); hồ sơ v1 ghi Không áp dụng cho phần này. Quy trình ở [release-operations.md](../../releases/acceptance.md#acceptance-process); runbook ở [operations-runbook.md](../../guides/operations.md). Không ghi token, secrets hoặc nội dung người dùng thật.
 
 <a id="1-định-danh-đợt"></a>
 
@@ -34,13 +34,14 @@ Mỗi lần chạy là một dòng riêng. Trạng thái: Chưa chạy / Bị ch
 |---|---|---|---|---|---|---|---|
 | Chưa điền | Chưa điền | Chưa điền | Chưa điền | Chưa thực thi | Chưa chạy | Chưa có | Chưa điền |
 
-| Nhóm bắt buộc | Tổng ca / Đạt / Chưa đạt / Bị chặn / Chưa chạy / Không áp dụng | Phần chưa bao phủ và lý do |
+| Nhóm kiểm thử theo phạm vi | Tổng ca / Đạt / Chưa đạt / Bị chặn / Chưa chạy / Không áp dụng | Phần chưa bao phủ và lý do |
 |---|---|---|
 | Accounts | Chưa tổng hợp | Chưa đánh giá |
 | DM | Chưa tổng hợp | Chưa đánh giá |
 | Community/quyền/tin phòng | Chưa tổng hợp | Chưa đánh giá |
 | Media desktop | Chưa tổng hợp | Chưa đánh giá |
-| Vòng đời dữ liệu/restore | Chưa tổng hợp | Chưa đánh giá |
+| Vòng đời dữ liệu online | Chưa tổng hợp | Chưa đánh giá |
+| Backup/khôi phục DB | Không áp dụng cho v1 | Sau v1 theo DEC-156; không là kết quả kiểm chứng |
 | Vận hành/triển khai/rollback | Chưa tổng hợp | Chưa đánh giá |
 
 <a id="đo-chất-lượng"></a>
@@ -55,7 +56,7 @@ Dẫn [mục tiêu/phương pháp đo](../../system/quality.md#quality-targets);
 | Thu hồi chat/media, deny rejoin | Chưa điền | Chưa đo | DEC-083/099 | Chưa đánh giá |
 | Join, latency audio/video/share, chất lượng hình ảnh | Chưa điền | Chưa đo | DEC-085 | Chưa đánh giá |
 | Quota 10/20/2, reconnect và race | Chưa điền | Chưa thực thi | DEC-079/080 | Chưa đánh giá |
-| RPO/RTO/tuổi backup và cửa sổ recoverable | Chưa điền | Chưa đo | DEC-086/109 | Chưa đánh giá |
+| RPO/RTO/tuổi backup và cửa sổ khôi phục | Không áp dụng cho v1 | Chưa đo | DEC-086/109; hoãn theo DEC-156 | Sau v1, chưa có bằng chứng |
 
 <a id="3-lỗi-tồn-và-kết-quả-kiểm-tra-lại"></a>
 
@@ -77,7 +78,7 @@ Ghi Đạt/Chưa đạt/Chưa đánh giá/Không áp dụng, cùng link bằng c
 - [ ] RLS-GATE-02: Hành trình chức năng trong phạm vi có kết quả đạt.
 - [ ] RLS-GATE-03: Quyền, phiên, chống trùng và thu hồi có bằng chứng thực tế.
 - [ ] RLS-GATE-04: Tải/chất lượng đạt các ngưỡng đã chốt.
-- [ ] RLS-GATE-05: Migration, restore, retention và bảo vệ dữ liệu đã kiểm chứng.
+- [ ] RLS-GATE-05: Migration, retention online, chống trùng và bảo vệ quyền hiện hành đã kiểm chứng; phần backup/khôi phục DB ghi Không áp dụng cho v1 theo DEC-156.
 - [ ] RLS-GATE-06: Cấu hình production, secrets, email/media và đường truy cập đã kiểm tra.
 - [ ] RLS-GATE-07: Staging deploy/rollback/smoke đã diễn tập với cấu hình tương thích.
 - [ ] RLS-GATE-08: Giám sát, cảnh báo, hỗ trợ và người nhận vận hành/thay thế có xác nhận.
@@ -93,6 +94,8 @@ Ghi Đạt/Chưa đạt/Chưa đánh giá/Không áp dụng, cùng link bằng c
 <a id="5-kết-quả-diễn-tập-restore"></a>
 
 ## 5. Kết quả diễn tập restore
+
+Phần này dành cho đợt triển khai backup/khôi phục DB sau v1. Hồ sơ v1 ghi **Không áp dụng — DEC-156**, dẫn [phạm vi backup](../../releases/v1.md#backup-scope); không điền Đạt hoặc coi mục tiêu RPO/RTO đã được kiểm chứng. Bảng được giữ để ghi bằng chứng khi diễn tập thuộc phạm vi được duyệt.
 
 | Trường | Giá trị thực tế |
 |---|---|
@@ -119,7 +122,8 @@ Ghi Đạt/Chưa đạt/Chưa đánh giá/Không áp dụng, cùng link bằng c
 | Nội dung | Kế hoạch / kết quả |
 |---|---|
 | Migration, compatibility app-schema-key-generation | Chưa có |
-| Backup/checkpoint trước thay đổi, đường rollback/forward fix/restore | Chưa có |
+| Preflight trước thay đổi, đường rollback ứng dụng/forward fix | Chưa có |
+| Backup/checkpoint và khôi phục DB từ backup | Không áp dụng cho v1 — DEC-156 |
 | Cách đóng/mở ingress/ghi/worker/admission và fencing | Chưa có |
 | Manifest/lệnh đã diễn tập, tiêu chí dừng và theo dõi | Chưa có |
 
@@ -132,7 +136,7 @@ Ghi Đạt/Chưa đạt/Chưa đánh giá/Không áp dụng, cùng link bằng c
 ## 7. Bàn giao và quyết định
 
 - [ ] Người chính/thay thế đã nhận quyền đúng phạm vi và lịch trực/kênh nhận sự cố.
-- [ ] Runbook, dashboard, backup/keys và nơi lưu hồ sơ truy cập được bằng tài khoản được cấp.
+- [ ] Runbook, dashboard, keys và nơi lưu hồ sơ truy cập được bằng tài khoản được cấp.
 - [ ] Cảnh báo thử tới đúng người nhận; công việc/hạn xử lý lỗi tồn đã được nhận.
 - [ ] Không có secrets hoặc dữ liệu người dùng thật trong hồ sơ bàn giao.
 
@@ -141,7 +145,8 @@ Ghi Đạt/Chưa đạt/Chưa đánh giá/Không áp dụng, cùng link bằng c
 | Nghiệm thu phạm vi bàn giao | Chưa đánh giá / chưa xác nhận |
 | Cho phép triển khai production | Chưa quyết định |
 | Cho phép mở đăng ký công khai | Chưa quyết định |
-| Rollback/restore nếu đã kích hoạt | Chưa áp dụng |
+| Rollback ứng dụng/forward fix nếu đã kích hoạt | Chưa áp dụng |
+| Khôi phục DB từ backup | Không áp dụng cho v1 — DEC-156 |
 | Hạn chế và đầu việc tiếp theo | Chưa tổng hợp |
 
 Kết luận Đạt phải nối tới lần chạy cụ thể và người xác nhận. Thay artefact/migration/cấu hình liên quan sau duyệt cần đánh giá ảnh hưởng và chạy lại các nhóm bị tác động; không mang chữ ký của build trước sang build mới.

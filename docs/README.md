@@ -17,7 +17,7 @@ Tài liệu hiện hành tổ chức theo chủ đề. Mỗi chủ đề giữ q
 | Thành phần hệ thống và sở hữu dữ liệu | [Kiến trúc](system/architecture.md) |
 | Tổ chức code | [Backend](system/backend.md), [Frontend](system/frontend.md) |
 | Thiết kế dữ liệu và môi trường | [Database](system/database.md), [Môi trường](system/environments.md) |
-| HTTP, lỗi và schema | [Quy ước API](system/api-conventions.md), [Hợp đồng máy đọc](contracts/README.md) |
+| HTTP, gRPC, lỗi và schema | [Quy ước API](system/api-conventions.md), [Hợp đồng máy đọc](contracts/README.md) |
 | Phiên, quyền, retention và restore xuyên hệ thống | [Thu hồi truy cập](system/access-revocation.md), [Vòng đời dữ liệu](system/data-lifecycle.md) |
 | Tài khoản | [Accounts](features/accounts/README.md) |
 | Server, membership, lời mời, phòng và quyền | [Community](features/community/README.md) |
@@ -25,6 +25,7 @@ Tài liệu hiện hành tổ chức theo chủ đề. Mỗi chủ đề giữ q
 | Gọi riêng, phòng thoại, video và chia sẻ màn hình | [Media](features/media/README.md) |
 | Phạm vi và điều kiện bàn giao | [MVP](releases/mvp.md), [v1](releases/v1.md), [Nghiệm thu](releases/acceptance.md) |
 | Ngưỡng và cách đo | [Chất lượng](system/quality.md) |
+| Thu thập log, chỉ số và trace | [Giám sát hệ thống](system/observability.md) |
 | Dựng, chạy và kiểm thử | [Development](guides/development.md), [Community](guides/community-development.md) |
 | Deploy, rollback, sự cố và restore | [Vận hành](guides/operations.md) |
 | Quyết định và kết quả theo revision | [Quyết định](records/decisions/README.md), [Kiểm chứng Community](records/verification/community/README.md) |
@@ -69,7 +70,7 @@ docs/
 │   └── media/
 ├── releases/                # MVP, v1 và nghiệm thu
 ├── guides/                  # Development và vận hành
-├── contracts/               # OpenAPI và JSON Schema
+├── contracts/               # OpenAPI, JSON Schema và nguồn Protobuf mục tiêu
 ├── fixtures/                # Dữ liệu kiểm chứng dùng chung
 ├── records/
 │   ├── decisions/

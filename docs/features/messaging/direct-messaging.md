@@ -2,6 +2,8 @@
 
 REQ-005; phần DM của SCP-005. Sáng phụ trách Messaging và UI DM; Vg rà soát quyền và hợp đồng, Thái cung cấp dataset/bộ chạy. Phạm vi phải bàn giao theo [MVP](../../releases/mvp.md) và [v1](../../releases/v1.md).
 
+Backup/restore, sổ bảo vệ độc lập và UI placeholder sau restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và đồng bộ sau reconnect vẫn thuộc v1.
+
 <a id="status"></a>
 
 ## Trạng thái hiện tại
@@ -70,7 +72,7 @@ phạm vi bản hoàn thiện v1 trong Project Brief.
 | DM-011 | Chỉ giữ nội dung mới nhất sau khi sửa, không cung cấp lịch sử phiên bản cũ; vẫn hiện dấu “Đã sửa”. | DEC-052 |
 | DM-012 | Mỗi tin tối đa 2.000 đơn vị UTF-16; cho xuống dòng/emoji; từ chối tin rỗng/chỉ có khoảng trắng. | DEC-053, DEC-068 |
 | DM-013 | Từ khóa tìm người 2–64 UTF-16, một phần username/displayName; không phân biệt hoa/thường, giữ dấu; ưu tiên username khớp đúng; trang mặc định 20, tối đa 50. | DEC-069 |
-| DM-014 | Tin không tự hết hạn trong v1; sửa/xóa theo quy tắc đã chốt. Account chưa có self-delete, khóa không xóa lịch sử; backup/restore theo chính sách vòng đời. | DEC-070/103/104/108/109 |
+| DM-014 | Tin không tự hết hạn trong v1; sửa/xóa theo quy tắc đã chốt. Account chưa có self-delete, khóa không xóa lịch sử; backup/restore theo chính sách vòng đời áp dụng sau v1. | DEC-070/103/104/108/109/156 |
 | DM-015 | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng, nút Gửi gửi tin. | DEC-071 |
 | DM-016 | Chuẩn hóa CRLF/CR thành LF trước đếm; từ chối UTF-16 lỗi và tin chỉ khoảng trắng/vô hình; giữ Unicode/ZWJ trong tin có nội dung. | DEC-090 |
 | DM-017 | Bản nháp chưa Gửi chỉ ở bộ nhớ tab, giữ khi chuyển hội thoại; reload/đóng tab/logout mất bản nháp; không lưu nội dung xuống localStorage/IndexedDB. | DEC-091 |
@@ -102,7 +104,7 @@ Các cơ chế ID thao tác, lưu giữ khóa chống trùng, phiên bản sửa
 phân trang được mô tả tại [hợp đồng DM](#contracts).
 Đây là thiết kế đề xuất để kiểm chứng hành vi đã chốt, không chọn ngầm
 công nghệ triển khai. Không lưu nội dung cũ trong lịch sử sửa, sự kiện
-hoặc log; backup/restore theo [vòng đời dữ liệu](../../system/data-lifecycle.md#restore), còn proof DATA-GAP.
+hoặc log; backup/restore theo [vòng đời dữ liệu](../../system/data-lifecycle.md#restore), proof DATA-GAP cho phần này áp dụng sau v1.
 
 <a id="permissions"></a>
 
@@ -211,7 +213,7 @@ Tin đã xóa không có thao tác sửa. Các quy tắc này được chi tiế
 | UX-DM-08 | Sửa/xóa thất bại | Giữ nội dung xác nhận gần nhất; lỗi không làm tin biến mất; cho tải bản hiện tại nếu xung đột | AC-DM-04, AC-DM-05 |
 | UX-DM-09 | Chưa xác minh email | Không gửi tin; có hướng dẫn xác minh theo luồng tài khoản | AC-DM-09 |
 | UX-DM-10 | Peer không khả dụng do account bị khóa | Đọc lịch sử vẫn được, composer/call mới bị chặn; không hiển thị lý do khóa/email | DEC-104 |
-| UX-DM-11 | Tin unavailable sau restore | Hiển thị “Nội dung chưa khôi phục được”, giữ vị trí/tác giả; author có quyền được viết lại body mới hoặc xóa, không tải bản cũ | DEC-108 |
+| UX-DM-11 | Tin unavailable sau restore — sau v1 | Hiển thị “Nội dung chưa khôi phục được”, giữ vị trí/tác giả; author có quyền được viết lại body mới hoặc xóa, không tải bản cũ | DEC-108/156 |
 
 Nút “Gửi” gửi tin trên mọi thiết bị. Desktop dùng Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng theo DEC-071. Không gửi trong khi IME đang composition; hành vi bàn phím ảo phải kiểm thử trên ma trận thiết bị. Không đưa đọc/đã nhận, file, chặn tài khoản hoặc
 cuộc gọi vào wireframe của đợt DM văn bản.
@@ -312,7 +314,7 @@ frontend, backend và dữ liệu thử; không coi tài liệu này là bằng 
 
 #### Danh sách kiểm tra bàn giao thiết kế
 
-Review Accounts + DM + OpenAPI/schema/fixture cùng một phiên bản; đối chiếu từng errorCode với UI và TC. Prototype/mock và proof cho concurrent commit, revoke race, key rotation, partial-page reconnect, lost response và email worker thuộc gói triển khai. DEC-103/104 chốt không self-delete/giữ lịch sử khi peer bị khóa; guard read/author edit/delete không yêu cầu peer active, send/call mới vẫn kiểm tra peer. Cần IHistoricalUserSummaryReader và UI availability; không cấp quyền đọc DM cho quản trị. Restore/cleanup theo [vòng đời dữ liệu](../../system/data-lifecycle.md#restore), còn DATA-GAP proof.
+Review Accounts + DM + OpenAPI/schema/fixture cùng một phiên bản; đối chiếu từng errorCode với UI và TC. Prototype/mock và proof cho concurrent commit, revoke race, key rotation, partial-page reconnect, lost response và email worker thuộc gói triển khai. DEC-103/104 chốt không self-delete/giữ lịch sử khi peer bị khóa; guard read/author edit/delete không yêu cầu peer active, send/call mới vẫn kiểm tra peer. Cần IHistoricalUserSummaryReader và UI availability; không cấp quyền đọc DM cho quản trị. Cleanup online theo [vòng đời dữ liệu](../../system/data-lifecycle.md#cleanup) vẫn thuộc v1; restore và DATA-GAP proof riêng cho backup áp dụng sau v1.
 
 Các mã lỗi dưới đây là thiết kế mục tiêu, không phải mã đã có trong backend DM:
 
@@ -362,7 +364,7 @@ Các tiêu chí dưới đây mô tả hành vi quan sát được, cần rà so
 | AC-DM-15 | B mất mạng; A sửa/xóa tin cũ; B kết nối lại và xem tin đó. | B thấy nội dung hiện hành hoặc dòng thay thế, không tiếp tục dùng bản cache cũ làm kết quả chính xác. |
 | AC-DM-16 | Tìm với từ khóa ở biên 1/2/64/65, khác hoa/thường/dấu và nhiều trang kết quả. | Giới hạn theo DEC-069; giữ phân biệt dấu; username khớp đúng được ưu tiên; không lộ email hay trả chính người tìm. |
 | AC-DM-17 | Gửi bằng Enter/Shift+Enter trên desktop và bàn phím điện thoại; nhập tiếng Việt bằng IME. | Desktop Enter gửi, Shift+Enter xuống dòng; điện thoại Enter xuống dòng; nút Gửi luôn gửi; composition không vô tình gửi tin. |
-| AC-DM-18 | Mở lại lịch sử tin cũ chưa bị người gửi xóa. | Tin không bị mất chỉ vì hết một thời hạn tự động; backup/xóa tài khoản được kiểm chứng riêng. |
+| AC-DM-18 | Mở lại lịch sử tin cũ chưa bị người gửi xóa. | Tin không bị mất chỉ vì hết một thời hạn tự động; backup/restore kiểm chứng sau v1, chưa có self-delete tài khoản. |
 | AC-DM-19 | Gửi chỉ zero-width/variation selector, surrogate lỗi, CRLF và emoji có ZWJ | Quy tắc DEC-090/text-policy thống nhất; giữ emoji/chữ và xuống dòng hợp lệ; không thay/cắt nội dung lỗi |
 | AC-DM-20 | Gõ chưa Gửi rồi đổi hội thoại, reload/đóng tab/logout | Giữ bản nháp trong cùng tab/hội thoại; reload/đóng/logout mất; không lưu nội dung DM trên storage trình duyệt |
 | AC-DM-21 | Refresh khi POST đã thất bại, response/event đảo thứ tự; reconnect bù nhiều trang | Không tự replay mutation; một dòng/tin; resumeCursor chỉ tiến sau merge đủ trang |
@@ -419,7 +421,7 @@ bằng chứng kiểm tra giao dịch.
 | TC-DM-17 | B offline; A gửi hơn một trang tin mới và sửa/xóa tin cũ đang nằm trong cửa sổ B từng xem | B bù hết trang mới, tải lại tin cũ và bỏ cache hết hiệu lực; không sót tin hoặc giữ nội dung đã xóa | AC-DM-15 |
 
 Ca kiểm tra nội dung cũ chỉ xét dữ liệu nghiệp vụ đang phục vụ, sự kiện
-và log trong thiết kế; vòng đời bản sao lưu kiểm chứng riêng theo
+và log trong thiết kế; vòng đời bản sao lưu kiểm chứng sau v1 theo
 [DEC-103–109 và TC-DATA](../../system/data-lifecycle.md#acceptance). Không coi thu hồi bản người nhận tự sao chép là điều
 kiện đạt của xóa/sửa tin.
 
@@ -460,7 +462,7 @@ xuất chưa xác nhận thêm ghi chú “Chờ chốt quy tắc”, không tí
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
 | Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; schema/cursor đã chi tiết hóa; còn kiểm chứng truy vấn và frontend/mock. | OQ-005 |
-| Lưu giữ | DEC-103–109 chốt account lock/no self-delete, TTL và restore placeholder; có [chính sách chung](../../system/data-lifecycle.md), còn review/migration/sổ độc lập/worker/restore proof. | OQ-005/011, DATA-GAP |
+| Lưu giữ | DEC-103–109 chốt account lock/no self-delete và retention online; còn review/migration/worker theo [chính sách chung](../../system/data-lifecycle.md). Sổ độc lập, restore placeholder và proof backup/restore áp dụng sau v1 theo DEC-156. | OQ-005/011, DATA-GAP |
 | Thử lại/đồng thời | Rà soát và thử nghiệm hợp đồng chống trùng, khóa theo hội thoại, xung đột sửa/xóa và dọn dữ liệu. | OQ-005, OQ-008 |
 | Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; đã có bảng text-policy và fixture theo DEC-090; còn kiểm chứng client/server. | OQ-005 |
 | Chất lượng | Ngưỡng và ma trận đã chốt DEC-082/083; còn cấu hình/build/thiết bị và kết quả đo. | OQ-007 |

@@ -1582,7 +1582,7 @@
       "post": {
         "operationId": "createChannel",
         "summary": "Tạo phòng text/voice",
-        "description": "Target includes text/voice; feat/community-channels implements text only (omitted kind defaults to text, voice is rejected). Owner/manage_channels creates metadata, Messaging space, operation and outbox in one transaction. Same actor/server/operation and canonical body replay returns the current viewable channel with 200; changed body conflicts. Deleted resource is not recreated. No dispatcher or Hub.",
+        "description": "Target includes text/voice; MVP implements text only (omitted kind defaults to text, voice is rejected). Owner/manage_channels creates metadata, Messaging space, operation and outbox in one transaction in the MVP monolith. For v1, DEC-132 requires Community metadata and the matching Messaging text space or empty Media voice room to be prepared before reporting creation complete and ready. DEC-133 assigns durable progress and orchestration to Community in its own database. DEC-134 selects direct gRPC preparation commands and results; the owner reports prepared only after its data commits. DEC-137 replaces the public 202/pending behavior of DEC-135 with a short wait: return 201/200 when creation is complete, or a definitive creation error only after durable cancellation prevents late publication. Completion and cancellation are mutually exclusive; already completed operations return success. Prepared resources stay unpublished; compensation/cleanup of committed owner data runs in the background with durable recovery. A network timeout or missing cancellation confirmation remains an unknown outcome. DEC-136 retains read-only GET lookup by current actor, operation kind create_channel, server and clientOperationId to reconcile a lost response or reload while the client retains the key; lookup requires authorization and does not create, resume or trigger business processing. Unknown-outcome replay keeps the same key/body; explicit Retry after confirmed terminal cancellation starts a new operation with a new key, after current permission/input checks, while old work stays cancelled. Wait duration, error codes, lookup/status URLs and schemas, cancellation/late-command handling and cleanup protocols remain to be designed. The response schemas below still describe the MVP contract; no v1 cancellation/status/lookup schemas or routes have been added. Completed replay returns the current viewable channel with 200; changed body conflicts. Deleted resource is not recreated. No dispatcher or Hub.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1764,7 +1764,7 @@
       "delete": {
         "operationId": "deleteChannel",
         "summary": "Xóa logic phòng",
-        "description": "Community deletion + Messaging space deletion + revocation outbox same transaction. No restore/purge in v1.",
+        "description": "Single-host design assumption: Community deletion, Messaging space deletion and revocation outbox share one transaction. The v1 cross-service deletion protocol is not yet designed; DEC-132 only selects the channel creation completion condition. No restore/purge in v1.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"

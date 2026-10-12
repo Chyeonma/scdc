@@ -1,10 +1,12 @@
 # SCDC — Hồ sơ bàn giao MVP
 
-Cập nhật: 2026-10-08. Phạm vi ba tính năng theo DEC-114, một API host theo [DEC-116](../records/decisions/README.md#dec-116), phân công kế hoạch theo [DEC-117](../records/decisions/README.md#dec-117). Phạm vi chức năng Community MVP đã chọn theo [DEC-118](../records/decisions/README.md#dec-118); chi tiết triển khai/nghiệm thu từng gói, phạm vi Identity/DM và lịch toàn MVP còn cần khóa. Chưa có xác nhận hoàn tất.
+Cập nhật: 2026-10-12. Phạm vi ba tính năng theo DEC-114, một API host theo [DEC-116](../records/decisions/README.md#dec-116), phân công kế hoạch theo [DEC-117](../records/decisions/README.md#dec-117). Phạm vi chức năng Community MVP đã chọn theo [DEC-118](../records/decisions/README.md#dec-118); chi tiết triển khai/nghiệm thu từng gói, phạm vi Identity/DM và lịch toàn MVP còn cần khóa. Chưa có xác nhận hoàn tất.
 
 ## Mục đích và giới hạn
 
 MVP là mốc đầu tiên trước [v1](v1.md): có bản chạy được để ba thành viên bắt đầu làm và tích hợp, tận dụng phần Identity Vg đã xây dựng gần xong. Đây là hồ sơ để bắt đầu công việc; không yêu cầu triển khai toàn bộ bản đặc tả đầy đủ ngay từ đầu.
+
+Thiết kế trước code thực hiện [theo từng gói việc](../project/planning.md#package-design); các gói đủ thông tin bắt đầu trong khi phần thiết kế còn lại tiếp tục. v1 kế thừa sản phẩm và [giữ dữ liệu MVP](../system/database.md#v1-mvp-data-transition), không bắt đầu lại bằng database trống.
 
 | Nội dung | Đã xác nhận | Cần chốt theo gói |
 |---|---|---|
@@ -56,7 +58,7 @@ Phần UC-COM-04/05/07–15, UC-COM-19/24 và voice/media được theo dõi cho
 | COM-MVP-06: Giao diện và hồi quy | Đổi actor/mất quyền không phục hồi dữ liệu riêng từ request trễ/cache; mutation lỗi không tự POST lại; create/join/search/role/ACL/edit vẫn đạt, gồm Unicode, CAS, epoch, pagination và operation recovery |
 | COM-MVP-07: Chạy lại và hồ sơ | Commit code, schema/ledger, cấu hình/keyring, dataset/tài khoản và bộ chạy rõ; actual result gắn UC/AC/TC và artifact; liệt kê lỗi/phần chưa kiểm chứng, có người kiểm tra lại theo quy trình MVP |
 
-Gate áp dụng cho luồng Community đã chọn, chưa có gate nào được coi đạt chỉ từ việc bổ sung bảng này. Test gói nền hiện có được đối chiếu tại [verification.md](../records/verification/community/README.md); các proof Messaging/Hub và deadline thu hồi cần chạy trong gói tương ứng. Gate release, người duyệt DEC-111 và phạm vi toàn MVP vẫn theo phần [nghiệm thu](#acceptance); yêu cầu v1 về tải/trình duyệt/media/restore được giữ nguyên.
+Gate áp dụng cho luồng Community đã chọn, chưa có gate nào được coi đạt chỉ từ việc bổ sung bảng này. Test gói nền hiện có được đối chiếu tại [verification.md](../records/verification/community/README.md); các proof Messaging/Hub và deadline thu hồi cần chạy trong gói tương ứng. Gate release, người duyệt DEC-111 và phạm vi toàn MVP vẫn theo phần [nghiệm thu](#acceptance); tải/trình duyệt/media thuộc v1, backup/restore thuộc [giai đoạn sau v1](v1.md#backup-scope).
 
 <a id="packages"></a>
 
@@ -93,7 +95,7 @@ Worker là tiến trình backend trong phạm vi Identity. Identity giữ logic 
 
 Ghi kết quả bằng [mẫu hồ sơ](../records/templates/release-record.md), loại bàn giao MVP; không đánh dấu tiêu chí đã đạt từ việc có code hoặc có test. Người làm tự kiểm tra gói của mình, người khác kiểm tra lại luồng chính; người kiểm tra và thời điểm được ghi trong hồ sơ.
 
-Các chỉ tiêu đầy đủ về tải, trình duyệt, media, backup/restore và phát hành công khai nằm trong [v1](v1.md#acceptance). Bản MVP phải kiểm chứng các điều kiện của scope đã chọn; không dùng nhãn thử nghiệm để bỏ kiểm tra xác thực, quyền truy cập hoặc lưu dữ liệu của luồng đó. Bổ sung chỉ tiêu vào MVP cần ghi phạm vi, cách đo và công sức tương ứng.
+Các chỉ tiêu đầy đủ về tải, trình duyệt, media và phát hành công khai nằm trong [v1](v1.md#acceptance); backup/restore được chuyển [sau v1](v1.md#backup-scope) theo DEC-156. Bản MVP phải kiểm chứng các điều kiện của scope đã chọn; không dùng nhãn thử nghiệm để bỏ kiểm tra xác thực, quyền truy cập hoặc lưu dữ liệu của luồng đó. Bổ sung chỉ tiêu vào MVP cần ghi phạm vi, cách đo và công sức tương ứng.
 
 ## Cách bắt đầu một gói
 

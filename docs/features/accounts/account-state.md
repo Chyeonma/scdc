@@ -20,7 +20,7 @@ Phạm vi UC-ACC-12 và điều kiện tài khoản dùng chung cho mọi chức
 | ACC-007 | Tài khoản chưa xác minh chỉ dùng xác minh/khôi phục, không được vào ứng dụng; đặt lại mật khẩu không thay thế xác minh email. | DEC-051; hệ quả của việc tách hai mục đích |
 | ACC-015 | v1 chưa có tự xóa account; khóa chặn ứng dụng/thu hồi phiên nhưng giữ lịch sử, mở khóa cần phiên đăng nhập mới. Khóa không thay lockout 15 phút. | DEC-103/104; công cụ/thẩm quyền khóa còn OQ-011 |
 
-[Vòng đời dữ liệu](../../system/data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal và restore DEC-106–109; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Self-delete chưa thuộc v1; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
+[Vòng đời dữ liệu](../../system/data-lifecycle.md#inventory) chốt TTL log/audit/chi tiết terminal DEC-106/107; giữ active refresh family/cooldown/stamp, không dọn marker thu hồi theo TTL payload. Backup/khôi phục DB DEC-108/109 chuyển sang [sau v1 theo DEC-156](../../releases/v1.md#backup-scope). Self-delete chưa thuộc v1; enum Deleted hiện tại không chứng minh có luồng xóa/anonymize.
 
 <a id="permissions"></a>
 

@@ -24,6 +24,12 @@ Quy tắc view/ACL chỉ định nghĩa tại [Access control](access-control.md
 - [Use case](#use-cases)
 - [UX và trạng thái](#ux)
 - [Thiết kế dữ liệu và xử lý](#technical)
+- [D14 — Điều kiện hoàn tất tạo phòng v1](#v1-channel-provisioning)
+- [D15 — Điều phối tạo phòng v1](#v1-channel-creation-coordination)
+- [D16 — Truyền lệnh chuẩn bị phòng v1](#v1-channel-preparation-transport)
+- [D17 — Phản hồi tạo phòng v1](#v1-channel-creation-response)
+- [D18 — Tìm lại tiến trình khi mất phản hồi](#v1-channel-operation-recovery)
+- [D19 — Hủy tạo phòng và dọn dữ liệu](#v1-channel-creation-interruption)
 - [Tiêu chí chấp nhận](#acceptance)
 - [Ca kiểm thử](#tests)
 - [Việc còn lại](#gaps)
@@ -71,12 +77,13 @@ Quy tắc view/ACL chỉ định nghĩa tại [Access control](access-control.md
 **Luồng chính:**
 
 1. Actor nhập dữ liệu theo [COM-034](#com-034), [COM-039](servers.md#com-039) và gửi thao tác tạo.
-2. Hệ thống kiểm tra quyền, tên unique trong server và kind; tạo metadata cùng chat space qua hợp đồng lifecycle trong cùng transaction theo thiết kế. Phòng mới mặc định mọi thành viên view.
-3. Sau commit, trả phòng vừa tạo và tải lại danh sách theo quyền; voice gọi lifecycle Media theo thiết kế riêng khi tích hợp.
+2. Hệ thống kiểm tra quyền, tên unique trong server và kind; chuẩn bị dữ liệu phòng theo [D14](#v1-channel-provisioning). Phòng mới mặc định mọi thành viên view.
+3. Với v1, xử lý trong khoảng chờ ngắn theo [D17](#v1-channel-creation-response). Đủ dữ liệu nền và chốt thành công thì trả phòng, công bố sẵn sàng và chuyển tới phòng theo quyền hiện hành.
+4. Chưa hoàn tất khi hết hạn thì chốt hủy theo [D19](#v1-channel-creation-interruption). Chỉ báo lỗi tạo xác định sau khi hủy được lưu bền và chặn công bố muộn; giữ dữ liệu nhập và nút Thử lại. Server bù/dọn dữ liệu nền.
 
-**Ngoại lệ:** Tên sai/trùng hoặc actor mất quyền không tạo phòng dở dang. Retry cùng khóa/payload không tạo thêm space/phòng. Phụ thuộc lifecycle không đáp ứng phải rollback; tạo metadata voice chưa chứng minh gọi/media hoạt động.
+**Ngoại lệ:** Tên sai/trùng bị từ chối; actor mất quyền không được hoàn tất tạo phòng. Kết quả chưa rõ do timeout/mất phản hồi thì tra cứu cùng khóa theo [D18](#v1-channel-operation-recovery); không tự kết luận đã hủy hoặc tạo khóa mới. Replay cùng khóa/payload không tạo thêm space/phòng. Thử lại chủ động sau khi lần cũ đã xác nhận hủy là thao tác mới theo [D19](#v1-channel-creation-interruption). Dữ liệu chuẩn bị một phần được đối soát/bù theo quyết định đã lưu. Tạo metadata voice chưa chứng minh gọi/media hoạt động.
 
-**Kết quả sau cùng:** Có một phòng active đúng kind; text có thể dùng [UC-COM-17](#uc-com-17), [UC-COM-23](../messaging/channel-messaging.md#uc-com-23). Phòng read-only và text bên trong voice nằm ngoài hợp đồng v1.
+**Kết quả sau cùng khi tạo thành công:** Có một phòng active đúng kind; text có thể dùng [UC-COM-17](#uc-com-17), [UC-COM-23](../messaging/channel-messaging.md#uc-com-23). Phòng read-only và text bên trong voice nằm ngoài hợp đồng v1.
 
 <a id="uc-com-17"></a>
 
@@ -156,6 +163,8 @@ Quy tắc view/ACL chỉ định nghĩa tại [Access control](access-control.md
 
 **Kết quả sau cùng:** Phòng không truy cập/khôi phục trong v1, giữ ID và nội dung theo DEC-105. Thao tác này không xóa toàn server hoặc purge backup.
 
+Mô tả transaction chung/rollback của luồng xóa trên là giả định một host/database. Giao thức xóa khi tách database v1 còn cần thiết kế; D14 chỉ chốt điều kiện hoàn tất tạo phòng.
+
 <a id="ux"></a>
 
 <a id="ux-và-trạng-thái"></a>
@@ -192,7 +201,7 @@ Phòng bị xóa đóng vùng nội dung và cuộc gọi theo DEC-077.
 
 | Màn hình | Người thực hiện | Nội dung và trạng thái cần thiết |
 |---|---|---|
-| COM-S04 Tạo phòng | Chủ sở hữu/người có quyền tạo phòng | Tên 1–100/chủ đề tối đa 1.000; mặc định mọi thành viên xem; lưu lỗi giữ dữ liệu, tạo thành công về phòng mới |
+| COM-S04 Tạo phòng | Chủ sở hữu/người có quyền tạo phòng | Tên 1–100/chủ đề tối đa 1.000; mặc định mọi thành viên xem. Nút Tạo phản hồi đang xử lý ngay; v1 chờ ngắn theo [D17](#v1-channel-creation-response), chỉ thêm/chuyển tới phòng sau thành công. Hủy xác nhận thì giữ dữ liệu và nút Thử lại; kết quả chưa rõ dùng [D18](#v1-channel-operation-recovery) để đối soát |
 
 Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích hợp UX](../../system/community.md#ux).
 
@@ -213,25 +222,145 @@ Runner yêu cầu 001/002/003 đúng checksum, mapping JSON đầy đủ cho cha
 
 ### API và quyền
 
-GET/POST channels và GET/PATCH channel theo OpenAPI. POST default kind text/topic null, voice chưa có lifecycle Media nên bị từ chối. PATCH chỉ name/topic + expectedVersion; null topic để xóa. [Cấu hình ACL](access-control.md#acl-api) có API, snapshot và CAS riêng. Request được giới hạn kích thước, không tự replay mutation.
+Nền MVP có GET/POST channels và GET/PATCH channel theo OpenAPI. POST default kind text/topic null, voice chưa có lifecycle Media nên bị từ chối. v1 chờ ngắn/hủy/bù theo [D17/D19](#v1-channel-creation-response), lookup theo [D18](#v1-channel-operation-recovery); hợp đồng chi tiết chưa có. PATCH chỉ name/topic + expectedVersion; null topic để xóa. [Cấu hình ACL](access-control.md#acl-api) có API, snapshot và CAS riêng. Request được giới hạn kích thước, không tự replay mutation.
 
 Management guard giữ Identity lease → server share/read hoặc update/mutation → channel share/update. Mọi single-channel route kiểm tra view trước quyền quản lý; phòng bị ẩn, đã xóa hoặc thuộc server khác trả 404, kể cả actor có manage_channels/manage_channel_access. Foundation phải valid session/active verified account/server/member. Tính view theo [policy chuẩn](access-control.md#view-permissions). Danh sách dùng cùng policy trong SQL trước LIMIT; cursor actor/server/limit/purpose/24 giờ, không hứa snapshot bất biến.
 
-Create ghi Messaging space qua IChatSpaceLifecycle trên cùng connection/transaction; Community chỉ ghi community schema. Reader/writer tin phải dùng [channel admission guard](../../system/community.md#transactions); chưa có lịch sử/send/subscription writer tiêu thụ hợp đồng này.
+Trong MVP, create ghi Messaging space qua IChatSpaceLifecycle trên cùng connection/transaction; Community chỉ ghi community schema. Reader/writer tin phải dùng [channel admission guard](../../system/community.md#transactions); chưa có lịch sử/send/subscription writer tiêu thụ hợp đồng này.
 
-Create/metadata mutation tăng server accessVersion và ghi event outbox IDs/cause/version cùng transaction, không broadcast tên/ACL/member list. Metadata bump channel version; metadata no-op giữ version/event. Version và sự kiện khi đổi ACL hoặc dọn override được định nghĩa tại [Access control](access-control.md#acl-api).
+Trong MVP, create/metadata mutation tăng server accessVersion và ghi event outbox IDs/cause/version cùng transaction, không broadcast tên/ACL/member list. Metadata bump channel version; metadata no-op giữ version/event. Version và sự kiện khi đổi ACL hoặc dọn override được định nghĩa tại [Access control](access-control.md#acl-api).
+
+<a id="v1-channel-provisioning"></a>
+
+### D14 — Điều kiện hoàn tất tạo phòng v1
+
+Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-132](../../records/decisions/README.md#dec-132). v1 chỉ báo tạo phòng hoàn tất và công bố phòng sẵn sàng sau khi dữ liệu nền đúng loại phòng đã được chuẩn bị. Phạm vi là điều kiện hoàn tất khi các service có database riêng theo [D02](../../system/database.md#v1-database-layout).
+
+| Loại phòng | Dữ liệu cần chuẩn bị |
+|---|---|
+| Text | Metadata tại Community và chat space tại Messaging |
+| Voice | Metadata tại Community và room DB rỗng tại Media theo [phòng thoại](../media/voice-rooms.md#contracts) |
+
+Phòng voice chưa provision SFU, giữ quota hoặc cấp token ở bước tạo dữ liệu nền; không tạo text space trong voice. Lựa chọn giữ điều kiện “đã tạo xong” gắn với dữ liệu nền đầy đủ. Đánh đổi là hoàn tất tạo phụ thuộc Messaging hoặc Media đáp ứng; chuẩn bị xong không bảo đảm service luôn sẵn sàng ở lần sử dụng sau.
+
+Nền MVP hiện tạo text channel, Messaging space, operation và outbox trong một transaction; [ChannelService](../../../services/Modules/Community/Features/Channels/Application/ChannelService.cs) truyền transaction sang [IChatSpaceLifecycle](../../../services/SCDC.Contracts/Messaging/IChatSpaceLifecycle.cs). Quy tắc này giữ cho MVP; v1 dùng các transaction cục bộ, Community điều phối theo [D15](#v1-channel-creation-coordination). Hợp đồng bước xử lý và phục hồi chi tiết cần thiết kế tiếp.
+
+Không có rollback chung tự động giữa các database. Bản ghi chuẩn bị có thể đã commit tại một owner trong khi owner khác chưa hoàn tất; đối soát và xử lý theo quyết định đã lưu. Sau khi hủy theo [D19](#v1-channel-creation-interruption), server bù/dọn dữ liệu và chặn công bố muộn. Không công bố phòng sẵn sàng từ kết quả một phần. Tham khảo transaction cục bộ và bù tại [Microsoft — Saga](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga).
+
+Quyền phải được bảo vệ tới bước hoàn tất theo [D05](../../system/access-revocation.md#v1-authorization-coordination); thao tác thử lại vẫn giữ khóa/payload và chống trùng. Kết quả chuẩn bị đến muộn không được tự công bố phòng nếu quyền hoặc tài nguyên đã bị vô hiệu.
+
+Mô hình phản hồi tại [D17](#v1-channel-creation-response) đã được điều chỉnh bởi [D19](#v1-channel-creation-interruption): chờ ngắn, thành công hoặc lỗi sau hủy được xác nhận, bù/dọn nền. Schema/ID tham chiếu, giao thức hủy/bù, timeout/retry và race với mất quyền/xóa phòng cần thiết kế chi tiết. Chủ thể điều phối đã chọn tại [D15](#v1-channel-creation-coordination); đường truyền gRPC trực tiếp tại [D16](#v1-channel-preparation-transport). OpenAPI chỉ cập nhật description; chưa thay đổi schema/response, code hoặc SQL.
+
+<a id="v1-channel-creation-coordination"></a>
+
+### D15 — Điều phối tạo phòng v1
+
+Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-133](../../records/decisions/README.md#dec-133). Community lưu tiến độ tạo phòng trong DB mình, yêu cầu Messaging/Media chuẩn bị, ghi nhận kết quả và điều phối phục hồi. Chỉ chốt phòng sẵn sàng khi đủ điều kiện [D14](#v1-channel-provisioning).
+
+| Trách nhiệm | Service sở hữu |
+|---|---|
+| Tiến độ tạo, bước cần thực hiện, kết quả đã ghi nhận và phục hồi | Community; dữ liệu bền trong DB Community |
+| Chuẩn bị dữ liệu chat/voice và kết quả tương ứng | Messaging hoặc Media; mỗi owner tự ghi DB của mình |
+| Hoàn tất tạo và công bố phòng sẵn sàng | Community, sau khi đủ dữ liệu nền và quyền hợp lệ theo D14 |
+
+Lựa chọn giữ một nơi theo dõi toàn bộ thao tác; đánh đổi là cần logic điều phối/phục hồi tại Community. Khi Community ngừng, tiến trình chưa thể được chốt hoàn tất dù owner đã chuẩn bị dữ liệu. Công việc phục hồi chạy cùng API Community theo [D12](../../system/backend.md#v1-application-workers); không thêm service điều phối riêng. Tham khảo trách nhiệm lưu trạng thái và phục hồi của orchestration tại [Microsoft — Saga](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga).
+
+Ví dụ Messaging đã tạo space nhưng Community chưa ghi nhận kết quả rồi restart: Community đọc tiến độ bền để đối soát và xử lý theo quyết định/thời hạn của thao tác. Nếu đã hủy theo [D19](#v1-channel-creation-interruption), công việc nền tiếp tục bù/dọn và chặn công bố muộn. Timeout không chứng minh owner chưa commit. Schema/trình tự transaction và cách nhận diện kết quả cần thiết kế, chưa có proof phục hồi.
+
+Mỗi service giữ transaction cục bộ và quyền sở hữu DB; Community không đọc/ghi DB Messaging hoặc Media trực tiếp. Quyền phải được bảo vệ tới từng commit và bước hoàn tất theo D05/D14. Kết quả đến muộn không tự công bố tài nguyên đã bị vô hiệu.
+
+Đường truyền lệnh/kết quả đã chọn tại [D16](#v1-channel-preparation-transport), phản hồi tại [D17](#v1-channel-creation-response), hủy/bù nền tại [D19](#v1-channel-creation-interruption). Giao thức hủy/bù, hợp đồng HTTP, schema/ID, deadline/retry và xóa phòng còn cần thiết kế chi tiết. Sự kiện sau commit theo [D27](../../system/api-conventions.md#v1-integration-event-transport), chưa thêm broker ban đầu. Chưa đổi code, SQL hoặc schema/response của hợp đồng máy đọc.
+
+<a id="v1-channel-preparation-transport"></a>
+
+### D16 — Truyền lệnh chuẩn bị phòng v1
+
+Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-134](../../records/decisions/README.md#dec-134). Community gọi gRPC trực tiếp tới Messaging/Media để chuẩn bị dữ liệu phòng và nhận kết quả trong lần gọi. Community lưu kết quả, đối soát/thử lại từ tiến độ bền theo [D15](#v1-channel-creation-coordination) khi kết quả chưa rõ.
+
+| Bước | Trách nhiệm |
+|---|---|
+| Gọi chuẩn bị dữ liệu | Community gọi owner theo gRPC/Protobuf đã chọn tại D04 |
+| Trả kết quả đã chuẩn bị | Messaging hoặc Media trả kết quả sau khi dữ liệu đúng thao tác đã commit trong DB của mình |
+| Ghi nhận và hoàn tất | Community ghi nhận kết quả; chỉ công bố phòng sẵn sàng khi đủ điều kiện D14 và quyền hợp lệ |
+
+Lựa chọn dùng giao thức nội bộ đã chọn, không thêm kênh giao nhận lệnh/kết quả riêng cho luồng này. Đánh đổi là mỗi lần gọi cần owner đáp ứng. Nếu Messaging ngừng, tiến trình tạo phòng text chưa hoàn tất; Community giữ tiến độ, thử trong ngân sách chờ và hủy/bù theo [D19](#v1-channel-creation-interruption).
+
+Xác nhận đã nhận RPC hoặc bắt đầu xử lý chưa đủ để báo “đã chuẩn bị”. Timeout/mất phản hồi có thể xảy ra sau khi owner đã commit theo [gRPC — status codes](https://grpc.io/docs/guides/status-codes/). Phục hồi phải nhận diện cùng thao tác và tránh tạo trùng; timeout không tự rollback dữ liệu hoặc biến kết quả chưa rõ thành lỗi cuối cùng.
+
+gRPC trực tiếp nói về lần gọi nội bộ; thời hạn tạo và phản hồi theo [D17/D19](#v1-channel-creation-response). Danh tính service dùng mTLS theo [D20](../../system/api-conventions.md#v1-service-authentication). Hợp đồng `.proto`, cấu hình xác thực và quyền RPC, deadline/lịch retry, giao thức hủy/bù và xóa phòng cần thiết kế chi tiết. Giữ transaction cục bộ và quyền tới commit; [D27](../../system/api-conventions.md#v1-integration-event-transport) về sự kiện sau commit không thay điều kiện “đã chuẩn bị” của D16. Chưa đổi code, SQL hoặc schema/response.
+
+<a id="v1-channel-creation-response"></a>
+
+### D17 — Phản hồi tạo phòng v1
+
+Trạng thái: lựa chọn ban đầu tại [DEC-135](../../records/decisions/README.md#dec-135) đã được thay một phần bởi [DEC-137](../../records/decisions/README.md#dec-137) ngày 2026-10-11. Hiện hành: chờ ngắn; trả thành công khi đã hoàn tất hoặc lỗi xác định sau khi hủy được xác nhận theo [D19](#v1-channel-creation-interruption). Dữ liệu đang chuẩn bị giữ nội bộ; danh sách chỉ thêm phòng sẵn sàng theo D14.
+
+| Tình huống | Phản hồi | UI |
+|---|---|---|
+| Thao tác mới đã hoàn tất | `201` và phòng theo quyền hiện hành | Báo thành công, cập nhật danh sách và chuyển tới phòng |
+| Replay cùng thao tác đã hoàn tất | `200` và phòng hiện hành sau kiểm tra quyền | Dùng kết quả của cùng thao tác |
+| Hết thời hạn, hủy đã lưu bền và chặn công bố muộn | Lỗi tạo xác định; HTTP/errorCode chi tiết chưa chốt | Giữ dữ liệu nhập và nút Thử lại |
+| Mất phản hồi hoặc chưa xác nhận được hoàn tất/hủy | Kết quả chưa rõ; đối soát GET theo D18 | Thông báo chưa xác nhận được kết quả; Thử lại đối soát thao tác cũ trước |
+
+Nút Tạo phản hồi đang xử lý ngay trong khoảng chờ. Mô hình `202`/pending công khai để tiếp tục tạo lâu dài của DEC-135 được thay bằng D19. Chỉ báo lỗi tạo xác định khi server đã xác nhận nhánh hủy; timeout ở browser hoặc RPC không đủ để kết luận. Kết quả đọc phòng vẫn theo dữ liệu/quyền hiện hành.
+
+Giữ chống trùng và không tự POST lại. Khi kết quả cũ chưa rõ, dùng cùng `clientOperationId`/payload và GET [D18](#v1-channel-operation-recovery); nút Thử lại xử lý theo [D19](#v1-channel-creation-interruption). Việc đóng request/màn hình không thay thế quyết định hoàn tất/hủy bền tại server.
+
+Nền MVP hiện trả `201/200` và Channel DTO trong shared transaction. Thời gian chờ cụ thể, mã lỗi, URL/schema trạng thái, quyền đọc chi tiết, lịch GET, retention và hợp đồng bù/dọn v1 cần thiết kế tiếp. OpenAPI chỉ cập nhật description; chưa đổi response/schema, code hoặc SQL.
+
+<a id="v1-channel-operation-recovery"></a>
+
+### D18 — Tìm lại tiến trình khi mất phản hồi
+
+Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-136](../../records/decisions/README.md#dec-136). Khi mất phản hồi hoặc reload mà client còn khóa thao tác, WebClient dùng GET tra cứu tiến trình/kết quả đã lưu bằng `clientOperationId`. Không cần nhận được tham chiếu server trong phản hồi đầu để tìm lại cùng thao tác.
+
+| Thành phần tra cứu | Quy tắc |
+|---|---|
+| Actor | Actor từ phiên hiện hành, kiểm tra quyền trước khi trả dữ liệu |
+| Operation kind | `create_channel`; đây là loại thao tác, khác kind text/voice của phòng |
+| Scope và khóa | Server cùng `clientOperationId` đã lưu trước POST |
+| Kết quả | Tiến trình/trạng thái hoặc tham chiếu kết quả đã lưu, theo quyền hiện hành |
+
+Lựa chọn khôi phục theo dõi bằng thao tác đọc; đánh đổi là thêm hợp đồng tra cứu và kiểm tra quyền. WebClient MVP đã giữ khóa/payload trong sessionStorage theo actor/server để manual retry; lookup v1 chưa triển khai. Mô hình mất phản hồi và trả cùng tiến trình theo khóa chống trùng được tham khảo tại [Microsoft — Asynchronous request-reply](https://learn.microsoft.com/en-us/azure/architecture/patterns/asynchronous-request-reply); URL tra cứu của SCDC cần thiết kế riêng.
+
+GET chỉ đọc, không tạo, resume hoặc kích hoạt bước xử lý nghiệp vụ; công việc nền Community tiếp tục độc lập. Lookup không yêu cầu phát lại payload tạo. Giữ quy tắc không tự POST lại; manual POST retry vẫn dùng nguyên khóa/payload và kiểm tra fingerprint. Không khởi động lại tiến trình đã kết thúc hoặc tạo khóa mới chỉ vì mất phản hồi.
+
+Chưa tìm thấy bản ghi không tự chứng minh request chưa từng được tiếp nhận: request có thể còn đang tới server hoặc metadata không còn trong thời hạn lưu. Hủy/bù và Thử lại sau khi đã xác nhận hủy theo [D19](#v1-channel-creation-interruption). URL/schema/status enum, quyền đọc chi tiết, phạm vi lưu khóa của trình duyệt, hành vi khi mất khóa/payload, retention, lịch GET và giao thức hủy/bù chi tiết còn mở. OpenAPI chỉ cập nhật description; chưa thêm endpoint/schema hoặc đổi code/SQL.
+
+<a id="v1-channel-creation-interruption"></a>
+
+### D19 — Hủy tạo phòng và dọn dữ liệu
+
+Trạng thái: đã xác nhận phương án điều chỉnh ngày 2026-10-11 — [DEC-137](../../records/decisions/README.md#dec-137). Người dùng chọn chờ ngắn, lỗi rõ ràng và nút Thử lại; đồng ý dữ liệu đã commit được bù/dọn nền sau khi server đã chặn chắc chắn việc công bố phòng muộn. Phần `202`/pending công khai tại D17 được thay; giữ điều kiện hoàn tất D14, Community điều phối bền D15, gRPC D16 và GET đối soát D18.
+
+| Bước | Quy tắc |
+|---|---|
+| Chuẩn bị trong khoảng chờ | Chỉ hoàn tất/công bố sau khi đủ dữ liệu nền và quyền hợp lệ; dữ liệu chuẩn bị chưa được đưa vào danh sách hoặc sử dụng như phòng sẵn sàng |
+| Chốt thành công hoặc hủy | Hai quyết định loại trừ nhau trên cùng thao tác; nếu thành công đã được chốt thì trả kết quả thành công |
+| Xác nhận hủy | Lưu bền quyết định hủy và thông tin phục hồi; chỉ trả lỗi tạo xác định sau khi đã chặn công bố muộn của thao tác đó |
+| Bù/dọn nền | Community điều phối theo tiến độ bền; mỗi owner xử lý dữ liệu của mình, đối soát/thử lại khi bị gián đoạn |
+
+Sau khi hủy được xác nhận, lệnh/kết quả đến muộn không được làm thao tác cũ thành công hoặc công bố phòng. Hợp đồng owner phải xử lý việc chuẩn bị đến muộn cả khi bước dọn đã chạy; chỉ xóa dữ liệu rồi quên thao tác chưa đủ. Dữ liệu chuẩn bị phải được chặn trên mọi đường đọc/ghi/phát sự kiện trước khi phòng sẵn sàng. Giao thức hủy, dấu hủy và cách đồng bộ với transaction owner cần thiết kế/kiểm chứng.
+
+Hủy được xác nhận và dọn sạch mọi owner là hai mốc riêng. v1 giữ transaction cục bộ; dữ liệu đã commit được bù bằng bước xử lý có thể phục hồi, không có rollback chung tự động. Bù/dọn cũng có thể thất bại và cần chống trùng, lưu tiến độ để thử lại theo [Microsoft — Compensating Transaction](https://learn.microsoft.com/en-us/azure/architecture/patterns/compensating-transaction). Worker phục hồi cùng API Community theo D12; khi thao tác đã hủy, worker tiếp tục đối soát/dọn dữ liệu của thao tác đó.
+
+Nút Thử lại giữ dữ liệu nhập và phân biệt kết quả cũ: chưa rõ thì GET đối soát, manual POST replay giữ nguyên khóa/payload; đã thành công thì đọc phòng hiện hành; đã xác nhận hủy kết thúc thì hành động Thử lại tạo thao tác mới với khóa mới. Quy tắc này giữ điều kiện thao tác terminal không được tạo lại bằng khóa cũ tại [operation Community](../../system/community.md#operations). Phải chặn thao tác cũ sống lại và giới hạn bù/dọn đúng dữ liệu của nó, không ảnh hưởng lần tạo mới. Không tự POST lại từ browser.
+
+Khoảng chờ ngắn không bảo đảm luôn nhận được kết quả xác định trong thời hạn đó. Nếu chưa xác nhận được hoàn tất hoặc hủy, client vẫn có kết quả chưa rõ và dùng D18; timeout có thể xảy ra sau commit theo [gRPC — Status codes](https://grpc.io/docs/guides/status-codes/). Không tiếp tục hoàn tất bằng phiên/quyền đã mất hiệu lực theo D05.
+
+Thời gian chờ, HTTP/errorCode, schema trạng thái, giao thức hủy/bù, dấu hủy/retention, giải phóng tên/quota, lịch thử/giới hạn đồng thời và xóa phòng đã công bố cần thiết kế tiếp. Kiểm chứng phải bao gồm race thành công/hủy, mất phản hồi sau commit, lệnh đến muộn sau dọn, restart giữa bù và Thử lại sau hủy. Chưa đổi code, SQL hoặc route/schema; chưa có proof v1.
 
 <a id="channel-webclient-và-bằng-chứng"></a>
 
 ### WebClient và bằng chứng
 
-Detail member vào danh sách phòng theo quyền. Tạo giữ operation/body theo actor/server trước POST, retry chủ động nguyên body/key sau mất response/reload. Sửa metadata giữ version đã đọc; conflict/timeout cần GET đối soát trước lưu lại. Actor/server/selection đổi hủy đọc cũ và bỏ dữ liệu quản lý; 401/403/404 đóng metadata cũ. Không hiển thị tin/composer khi gói chưa có API tin.
+Nền WebClient MVP: detail member vào danh sách phòng theo quyền. Tạo giữ operation/body theo actor/server trước POST, retry chủ động nguyên body/key sau mất response/reload. Chờ ngắn/hủy/bù [D17/D19](#v1-channel-creation-response) và lookup [D18](#v1-channel-operation-recovery) của v1 chưa triển khai. Sửa metadata giữ version đã đọc; conflict/timeout cần GET đối soát trước lưu lại. Actor/server/selection đổi hủy đọc cũ và bỏ dữ liệu quản lý; 401/403/404 đóng metadata cũ. Không hiển thị tin/composer khi gói chưa có API tin.
 
 Giao diện sửa quyền, catalog role/member và giữ draft/epoch được mô tả tại [ACL editor](access-control.md#acl-editor-ui). Máy chủ kiểm tra lại quyền dưới khóa cho từng thao tác.
 
 Nghiệm thu API/DB/shared transaction và Chromium độc lập với thuật toán fixture tại [hồ sơ nghiệm thu](../../records/verification/community/channels-access.md). Không suy HTTP guard hoặc outbox thành proof thu hồi realtime/Media; phụ thuộc và việc tiếp theo ở [kế hoạch Community](../../project/planning.md#community-work-items).
 
-### Lifecycle xóa và voice — thiết kế mục tiêu
+### Lifecycle xóa và voice — giả định một host
 
 <a id="delete-giao-dịch-của-thành-phần"></a>
 
@@ -239,7 +368,7 @@ Nghiệm thu API/DB/shared transaction và Chromium độc lập với thuật t
 
 - Xóa phòng: Community chuyển deleted/version/accessVersion, Messaging đánh dấu space deleted qua hợp đồng lifecycle, outbox thu hồi cùng transaction. Không có hai commit độc lập khiến phòng đã deleted vẫn nhận tin; không purge tin/backup ở đây.
 
-Voice cần Media admission/lifecycle. Đề xuất gọi `IMediaRoomLifecycle` tạo room DB rỗng cùng transaction, đánh dấu closing khi xóa; interface/migration chưa có, SFU provision/dừng sau commit. Cutoff Media theo DEC-099 cần bằng chứng riêng. Kind voice có thể được bảo toàn khi migrate legacy, nhưng writer hiện hành chỉ tạo text.
+Voice cần Media admission/lifecycle. Đề xuất `IMediaRoomLifecycle` tạo room DB rỗng cùng transaction và đánh dấu closing khi xóa giả định một host/database; interface/migration chưa có. Điều kiện tạo voice v1 theo [D14](#v1-channel-provisioning); giao thức tạo/xóa xuyên database cần thiết kế tiếp. SFU provision/dừng theo [Media](../media/participation-lifecycle.md#provider); cutoff DEC-099 cần bằng chứng riêng. Kind voice có thể được bảo toàn khi migrate legacy, nhưng writer hiện hành chỉ tạo text.
 
 <a id="acceptance"></a>
 

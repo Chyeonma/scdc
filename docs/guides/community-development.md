@@ -4,6 +4,8 @@
 
 Cập nhật: 2026-10-11. Bộ chạy cho `main` sau khi hợp nhất `feat/community-channels`, kế thừa create/view, join, search và permissions. Backend/WebClient Community và migration 001–004 đã có trên `main`. Phạm vi chạy được tại [các chủ đề Community](../features/community/README.md), bằng chứng theo revision tại [verification](../records/verification/community/README.md). Các lệnh dưới đây là hướng dẫn chạy lại; kết quả lần hợp nhất ghi riêng tại [kiểm chứng main](../records/verification/community/README.md#main-merge).
 
+Backup/restore thuộc [giai đoạn sau v1](../releases/v1.md#backup-scope) theo DEC-156. Hướng dẫn nâng cấp DB vẫn yêu cầu preflight, toàn vẹn schema/dữ liệu, drain writer cũ và kế hoạch rollback ứng dụng tương thích schema.
+
 <a id="chuẩn-bị"></a>
 
 ## Chuẩn bị
@@ -137,7 +139,7 @@ Bộ chạy hiện hành dừng ở nền Community/phòng/quyền. Chưa có co
 
 ## Nâng cấp DB đã có dữ liệu
 
-Chọn connection string riêng cho DB cần nâng cấp, backup DB/keys và drain writer cũ trước khi áp migration còn thiếu. Đọc ledger `common.schema_migrations` và [thiết kế migration](../system/community.md#schema-migration); không sửa SQL/checksum đã áp. Runner ở `tools/SCDC.DbMigrator` đã có trên `main`. Ví dụ chuỗi cho baseline legacy chưa áp 001–004:
+Chọn connection string riêng cho DB cần nâng cấp, thực hiện preflight, drain writer cũ và chuẩn bị kế hoạch rollback ứng dụng tương thích schema trước khi áp migration còn thiếu. Đọc ledger `common.schema_migrations` và [thiết kế migration](../system/community.md#schema-migration); không sửa SQL/checksum đã áp. Runner ở `tools/SCDC.DbMigrator` đã có trên `main`. Ví dụ chuỗi cho baseline legacy chưa áp 001–004:
 
 ```bash
 dotnet run --project tools/SCDC.DbMigrator -- \

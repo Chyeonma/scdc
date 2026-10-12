@@ -2,6 +2,8 @@
 
 Cơ chế Media dùng chung cho [gọi riêng](direct-calls.md), [phòng thoại](voice-rooms.md) và [nguồn thiết bị](video-screen-sharing.md). Thiết kế mục tiêu ngày 2026-10-04; provider/SFU và backend chưa triển khai. v1 chuyển nền một API host của MVP sang microservice theo DEC-116; shared transaction/guard dưới đây còn giả định một host, cần rà soát lại theo ranh giới service.
 
+Restore từ backup và diễn tập tương ứng thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Restart DB/SFU, reconnect, hàng rào generation, cutoff và retention online vẫn cần triển khai/kiểm chứng trong v1 từ dữ liệu bền hiện hành.
+
 ## Mục lục
 
 - [Quyền, quota và luồng](#flows)
@@ -9,6 +11,7 @@ Cơ chế Media dùng chung cho [gọi riêng](direct-calls.md), [phòng thoại
 - [Dữ liệu](#data)
 - [Transaction và chống trùng](#transaction)
 - [API và lỗi](#contracts)
+- [D11 — Realtime Media](#v1-media-realtime)
 - [Realtime và reconnect](#realtime)
 - [Admission và thu hồi tại SFU](#admission)
 - [Provider, restart và restore](#provider)
@@ -25,11 +28,12 @@ Cơ chế Media dùng chung cho [gọi riêng](direct-calls.md), [phòng thoại
 
 ```mermaid
 flowchart LR
-    UI[WebClient desktop] -->|REST điều khiển| API[SCDC.Api · Media đề xuất]
-    UI -->|Trạng thái · /hubs/chat| Hub[SignalR đề xuất]
+    UI[WebClient desktop] -->|REST / SignalR| Gateway[Nginx · Đầu vào API chung]
+    Gateway -->|REST điều khiển| API[Media control · API mục tiêu]
+    Gateway -->|Trạng thái| Hub[Hub SignalR của Media]
     API -->|Guard phiên/quyền| Guards[Identity / Community]
     API --> Pg[(PostgreSQL · media đề xuất)]
-    API -->|Sau commit| Worker[Worker điều khiển SFU]
+    API -->|Sau commit| Worker[Worker lệnh provider]
     UI -->|Signaling qua admission| Admission[Admission proxy đề xuất]
     Admission -->|Kiểm tra mỗi join/resume| API
     Admission --> SFU[LiveKit tự host + bộ kiểm soát đề xuất]
@@ -37,6 +41,8 @@ flowchart LR
     SFU -->|Lease quyền / nguồn| API
     UI <-->|WebRTC / TURN| SFU
 ```
+
+API và Hub thuộc Media control theo [D11](#v1-media-realtime). Các node API, Hub và worker lệnh provider biểu diễn vai trò logic, chạy cùng tiến trình trong cấu hình v1 ban đầu theo [D12](../../system/backend.md#v1-application-workers)/[D13](../../system/backend.md#v1-realtime-hosting). Bộ kiểm soát lease/fail-close tại node SFU nằm ngoài lựa chọn này. URL Hub và topology provider/admission vẫn cần thiết kế; chưa có runtime Media.
 
 Media sở hữu trạng thái call/participation/nguồn và hạn mức. Identity xác nhận user active/verified, session còn hiệu lực/security stamp; Community xác nhận membership epoch, channel loại voice chưa deleted và quyền view hiện hành. Admission/renew gọi riêng kiểm tra cả hai account/session binding đã accept; một bên không còn hợp lệ thì không renew quyền của cả call. Không JOIN chéo schema hoặc suy `IUserDirectory` trả summary thành đủ quyền. REST/SignalR không truyền RTP; LiveKit không tự tạo thành viên hoặc bỏ qua quyền Community.
 
@@ -90,7 +96,7 @@ Bảng `calls` ở [direct-calls](direct-calls.md#contracts), `sources` ở [vid
 
 [Vòng đời dữ liệu](../../system/data-lifecycle.md#inventory) chốt log 14/audit 90 ngày và chi tiết media terminal/quiesced 7 ngày (DEC-106/107), giữ operation/deny marker cần thiết. Không dọn participation/draining chưa xác nhận SFU ngừng hoặc cho phép thao tác ended tạo lại. Không lưu âm thanh/hình ảnh hoặc bản ghi màn hình trong các bảng/outbox/log này. LiveKit recording/egress không được cấp trong grant v1.
 
-Retention và restore tuân DEC-103–109 trong [vòng đời dữ liệu](../../system/data-lifecycle.md); không thêm tự xóa account hoặc lưu bản ghi media.
+Retention online tuân DEC-103–109 trong [vòng đời dữ liệu](../../system/data-lifecycle.md). Phần backup/restore áp dụng sau v1; không thêm tự xóa account hoặc lưu bản ghi media.
 
 <a id="transaction"></a>
 
@@ -151,13 +157,23 @@ Nội bộ: POST `/internal/media/admissions` xác nhận join/resume hoặc ren
 | 429 `Media.RateLimited` | Có Retry-After; ngưỡng limiter media còn đề xuất, không lấy DEC-089 làm xác nhận |
 | 503 `Media.AuthorityUnavailable`, `Media.ProviderUnavailable`, `Media.Draining` | Chưa thể xác nhận quyền/provider; dừng hoặc chưa kết nối, báo thử lại |
 
+<a id="v1-media-realtime"></a>
+
+### D11 — Ranh giới realtime của Media
+
+Trạng thái: đã xác nhận phương án B ngày 2026-10-11 — [DEC-129](../../records/decisions/README.md#dec-129). Media control sở hữu Hub SignalR riêng để nhận đăng ký khả năng nhận cuộc gọi và phát trạng thái cuộc gọi/phòng thoại. WebClient kết nối qua Nginx Gateway. Messaging giữ Hub chat theo [DEC-081](../../records/decisions/README.md#dec-081).
+
+Media tự phụ trách cập nhật realtime của nghiệp vụ mình; không thêm service nghiệp vụ thứ năm. Đánh đổi là frontend quản lý hai luồng realtime khi dùng cả chat và Media, kiểm chứng xác thực, thu hồi, reconnect và đồng bộ trạng thái cho từng luồng.
+
+D11 thay đề xuất đưa thông điệp Media qua `/hubs/chat`. URL Hub Media chưa chọn; catalogue dưới đây giữ các loại thông điệp dự thảo trên Hub riêng. Worker ứng dụng và Hub ban đầu chạy cùng Media API theo [D12](../../system/backend.md#v1-application-workers)/[D13](../../system/backend.md#v1-realtime-hosting); Media control có một bản chạy hoạt động theo [D21](../../system/environments.md#v1-service-replicas). Schema presence, HA, mở rộng sau và backplane khi có nhiều bản Hub còn cần thiết kế. Luồng tích hợp khác giữa Media–Messaging hoặc broker chưa được chốt. Quyền, cutoff ≤5 giây và signaling/WebRTC/TURN của LiveKit giữ hợp đồng riêng; Hub không thay cơ chế dừng RTP. Chưa có implementation hoặc proof đường realtime Media.
+
 <a id="realtime"></a>
 
 <a id="realtime-realtime-presence-và-reconnect"></a>
 
 ### Realtime, presence và reconnect
 
-[media-realtime.schema.json](../../contracts/media-realtime.schema.json) mô tả 8 loại thông điệp ứng dụng trên `/hubs/chat`, không là SignalR wire frame: `RegisterMediaClient`, `UnregisterMediaClient`, `MediaClientAcknowledgement`, `IncomingCall`, `CallChanged`, `ParticipationChanged`, `RoomMediaChanged`, `MediaAccessRevoked`. Schema không thay signaling LiveKit. Register chỉ công bố khả năng nhận cuộc gọi desktop của connection đã xác thực; không cho truyền userId/sessionId để đăng ký thay user khác.
+[media-realtime.schema.json](../../contracts/media-realtime.schema.json) mô tả 8 loại thông điệp ứng dụng dự thảo trên Hub riêng của Media, URL chưa chọn: `RegisterMediaClient`, `UnregisterMediaClient`, `MediaClientAcknowledgement`, `IncomingCall`, `CallChanged`, `ParticipationChanged`, `RoomMediaChanged`, `MediaAccessRevoked`. Đây không là SignalR wire frame hoặc signaling LiveKit. Register chỉ công bố khả năng nhận cuộc gọi desktop của connection đã xác thực; không cho truyền userId/sessionId để đăng ký thay user khác.
 
 Presence đề xuất gắn SignalR connection + user/session/clientInstanceId; hết session/connection thì bỏ đăng ký. Tab lặp RegisterMediaClient mỗi 5 giây để renew presence idempotent, TTL 15 giây, kể cả chưa tham gia cuộc gọi; heartbeat REST chỉ dùng khi có participation. Registry không chứa media token. Kiểm tra presence và claim khi tạo call; trạng thái có thể thay đổi ngay sau kiểm tra, vì vậy người vừa đóng máy có thể kết thúc no-answer sau 30 giây thay vì báo unavailable tức thời. Mobile chưa nằm trong tập nhận/gọi media v1. Presence/heartbeat không xác nhận RTP hoạt động; đó là trách nhiệm bộ kiểm soát provider.
 
@@ -204,9 +220,9 @@ Theo [webhooks LiveKit](https://docs.livekit.io/intro/basics/rooms-participants-
 
 Observations từ bộ kiểm soát có node generation, provider room/participant SID, participation/connection/source epoch và observation sequence dạng chuỗi. Chấp nhận chỉ khi đúng generation/epoch; thấp/trùng bỏ qua; trạng thái terminal không hồi sinh. `connected` cần bằng chứng transport media sẵn sàng, không chỉ HTTP upgrade; `source_live` phải đã qua quota gate; `quiesced` phải bảo đảm cả forward/subscribe ngừng. Provider webhook cũ/lệch epoch dùng cho reconciliation, không cập nhật counter mù.
 
-Worker có commandId/idempotency và kiểm tra trạng thái desired mới nhất trước gọi SFU. Retry remove với backoff bị giới hạn bởi local lease, không kéo dài cutoff 5 giây. Không retry start/join/source cũ sau ended. Poll reconciliation mỗi giây là đề xuất cho v1 20 người; so sánh room/participant/track thực tế với state, xử lý ghost và cảnh báo counter lệch. DB restart/restore: fence room/node generation cũ và chứng minh media cũ ngừng trước mở admission; không để backup hồi sinh token/participation đã kết thúc.
+Worker có commandId/idempotency và kiểm tra trạng thái desired mới nhất trước gọi SFU. Retry remove với backoff bị giới hạn bởi local lease, không kéo dài cutoff 5 giây. Không retry start/join/source cũ sau ended. Poll reconciliation mỗi giây là đề xuất cho v1 20 người; so sánh room/participant/track thực tế với state, xử lý ghost và cảnh báo counter lệch. Khi DB restart trong v1, fence room/node generation cũ và chứng minh media cũ ngừng trước mở admission; dùng trạng thái bền hiện hành, không hồi sinh token/participation đã kết thúc.
 
-Riêng restore backup, kết thúc mọi call/ringing/participation/grant/source phục hồi và vô hiệu command start/thông báo ringing chưa xử lý trước mở admission; không tiếp tục cuộc gọi từ snapshot backup. Cấp room/node generation mới sau khi dừng/cách ly node cũ đã được chứng minh, rồi giải phóng user claims và tính lại capacity từ trạng thái quiesced. Counter/epoch phục hồi từ backup không tự chứng minh an toàn. Người dùng gọi/vào lại bằng participation mới; quy trình áp lại các thu hồi Identity/Community vẫn theo OQ-011 và runbook dữ liệu.
+Thiết kế restore backup sau v1: kết thúc mọi call/ringing/participation/grant/source phục hồi và vô hiệu command start/thông báo ringing chưa xử lý trước mở admission; không tiếp tục cuộc gọi từ snapshot backup. Cấp room/node generation mới sau khi dừng/cách ly node cũ đã được chứng minh, rồi giải phóng user claims và tính lại capacity từ trạng thái quiesced. Counter/epoch phục hồi từ backup không tự chứng minh an toàn. Người dùng gọi/vào lại bằng participation mới; quy trình áp lại các thu hồi Identity/Community vẫn theo OQ-011 và runbook dữ liệu.
 
 <a id="acceptance"></a>
 
@@ -222,7 +238,7 @@ Riêng restore backup, kết thúc mọi call/ringing/participation/grant/source
 | AC-MEDIA-19 | Authority/worker/network điều khiển lỗi trong khi WebRTC vẫn chạy | Lease hết thì node ngừng media liên quan trong budget DEC-099; không dựa riêng websocket/remove ack |
 | AC-MEDIA-20 | Client dùng URL SFU trực tiếp, token cũ, đường resume hoặc clone kết nối đang hoạt động | Không bypass admission/current guard; không thay kết nối đang hoạt động hoặc cấp thêm chỗ |
 | AC-MEDIA-22 | Webhook/observation trùng, đến trễ hoặc dùng epoch cũ | Bỏ sự kiện lỗi thời, không hồi sinh ended hoặc sửa counter/connection mới |
-| AC-MEDIA-23 | Restart/restore DB trong khi node SFU cũ còn sống | Admission dừng tới khi fence và chứng minh node/generation cũ không truyền; token cũ không phục hồi quyền |
+| AC-MEDIA-23 | Restart DB trong v1; restore backup sau v1, trong khi node SFU cũ còn sống | Admission dừng tới khi fence và chứng minh node/generation cũ không truyền; token cũ không phục hồi quyền |
 
 Mọi AC-MEDIA/TC-MEDIA chưa có kết quả chạy được ghi nhận. Dùng tài khoản thử, provider/môi trường và thiết bị có phiên bản cụ thể; kết quả phải gắn commit/provider build/môi trường theo [phương pháp đo](../../system/quality.md#quality-targets).
 
@@ -237,7 +253,7 @@ Mọi AC-MEDIA/TC-MEDIA chưa có kết quả chạy được ghi nhận. Dùng 
 | TC-MEDIA-14 | Giữ đường RTP nhưng chặn authorizer, RoomService/outbox; đo clock skew/lease | Cả gửi/nhận ngừng ≤5 giây, không renew bằng cache/response trễ | AC-MEDIA-19 |
 | TC-MEDIA-15 | Token refresh/cũ, direct IP/routes, resume ngoài hạn, clone identity | Từ chối mọi bypass; không thay active connection | AC-MEDIA-20 |
 | TC-MEDIA-17 | Lặp/out-of-order webhook/observation; replay SID/epoch cũ | Counter và trạng thái mới giữ đúng, signature sai bị từ chối | AC-MEDIA-22 |
-| TC-MEDIA-18 | Restart/restore DB/SFU, remove chưa ack, thử join mới | Chỗ draining không tái cấp, fence node cũ trước mở admission | AC-MEDIA-23 |
+| TC-MEDIA-18 | Restart DB/SFU trong v1; restore backup sau v1; remove chưa ack, thử join mới | Chỗ draining không tái cấp, fence node cũ trước mở admission | AC-MEDIA-23 |
 | TC-MEDIA-19 | Fixture deadline/quota/HMAC, source expiry và repeat operation | Đúng bytes/kết quả, transaction không cấp thêm secret/chỗ/nguồn; không kéo dài deadline | AC-MEDIA-24, MEDIA-GAP-01/02 |
 
 Chuẩn bị hai người gọi riêng, phòng nhiều thành viên, người không có quyền, hai nguồn share, khả năng ngắt mạng/từ chối thiết bị và backend/provider lỗi. Ghi kết quả thực tế theo từng AC/TC, không suy fixture/counter JSON thành proof DB lock/SFU.
@@ -269,6 +285,6 @@ Theo [phân công DEC-117](../../project/planning.md#team), Vg giữ chính sác
 | MEDIA-GAP-04 | Proof cutoff publish/subscribe ≤5 giây kể cả authorizer/worker/network lỗi; clock skew, node treo và fail-close; đo từ commit, không từ lúc worker nhận |
 | MEDIA-GAP-05 | Mock/prototype trên matrix desktop; thiết bị bị từ chối/ended/change, nhiều tab, first accept, reconnect 29/30 giây và trạng thái source thật |
 | MEDIA-GAP-06 | Load/chất lượng DEC-085 tại 20 người, nguồn share/camera đủ, topology/TURN đã chọn; ghi version/hash/cấu hình/băng thông/chi phí |
-| MEDIA-GAP-07 | Runbook node fence/restart/restore, secrets/key rotation, provider callback retry và release/rollback; người phụ trách còn OQ-011 |
+| MEDIA-GAP-07 | Runbook node fence/restart, secrets/key rotation, provider callback retry và release/rollback trong v1; phần restore backup áp dụng sau v1; người phụ trách còn OQ-011 |
 
 Gói V1-MEDIA-01–05, scope và người phụ trách ở [hồ sơ v1](../../releases/v1.md#gói-media-sau-nền-mvp). Mỗi kết quả cần commit/provider build/môi trường và được dẫn từ đúng chủ đề. Provider version, extension/fork, topology/TURN, host/domain, key store và công sức duy trì còn phải review trước khóa lịch/chi phí.
