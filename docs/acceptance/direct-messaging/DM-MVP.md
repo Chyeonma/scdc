@@ -20,6 +20,13 @@
 | Dataset bạn test | **`mvpuser` FE**, **`mvpbe` BE**; usernames/IDs/UUID thật và baseline cuối hồ sơ |
 | Trạng thái | Agent kiểm chứng theo phạm vi / Người dùng **Chưa xác nhận**; một draft PR, chưa merge `message` |
 
+Draft PR **[31](https://github.com/Chyeonma/scdc/pull/31)**, base `message`, head `feat/dm-mvp-completion`. Build source/docs đã push và `git ls-remote` xác minh `5b94f797171eed55dcb10f6b030166cd7725c5d2`; source executable `f0e8dd1`. Commit cập nhật metadata sau đó không đổi API/FE/schema/images. SHA HEAD/remote cuối được ghi ở `.dm-acceptance/runs/mvpuser/git-handover.json` và final response, có thể kiểm lại bằng lệnh dưới đây; không có merge trước user PASS.
+
+```powershell
+git -c safe.directory=E:/Project/SCDC/dm-message-integration -C E:/Project/SCDC/dm-message-integration rev-parse HEAD
+git -c safe.directory=E:/Project/SCDC/dm-message-integration -C E:/Project/SCDC/dm-message-integration ls-remote origin refs/heads/feat/dm-mvp-completion refs/heads/message
+```
+
 Bạn có thể tìm/mở đúng một DM, gửi/nhận text thật, đọc lại lịch sử, retry thủ công không trùng, nhận live events, tự reconnect/bù đủ trang, sửa/xóa tin của mình, xử lý version conflict và tombstone. Draft tách conversation/actor trong RAM; Enter/ShiftEnter/IME và pointer coarse xử lý riêng. Server kiểm tra quyền/session trước read/send/mutation/subscribe/dispatch. Peer unavailable vẫn cho actor đọc/sửa/xóa/retry committed, chặn send mới. UI phiên lấy dữ liệu thật; không dùng fallback session giả.
 
 MVP này chưa là toàn sản phẩm v1 hoặc bản public release. P8 restore/protection/retention, full-system load với Community, email/domain/người ký phát hành và thiết bị/bàn phím mobile vật lý vẫn riêng. Các policy v1 không bị bỏ; không tự ký PASS gate chưa đo. Source search/open/inbox/send/history P0–P3 đã được người dùng nghiệm thu; P4–P7 gộp vào lần nghiệm thu cuối này.
@@ -138,6 +145,23 @@ Crash/real requeue/rollback variants có recipe và runner trong [P4-T01](DM-P4-
 3. Agent đo request-start→clear=conservative upper bound vì commit nằm giữa request-start và response204; không giả exact PostgreSQL commit timestamp. Backend còn các mode logout-all/stamp/session expiry/disabled/unverified, không chỉ AccessRevoked.
 4. JWT access credential hết hạn nhưng refresh session còn hợp lệ: đóng transport cũ rồi product reconnect controller lấy token mới/resubscribe, giữ sid; không giả rằng refresh session đã revoke. Natural-expiry proof host cô lập1min, dispatcher tắt, không writer; host chính vẫn15min.
 5. BE helper C08 revoke exact old A2 và assert oldnegotiate401/no payload/cutoff bound. K/authority behavior ở C10/negative guards; full load/SLA benchmark toàn hệ thống P8 không bị suy từ lần đo này.
+
+Lặp natural JWT expiry proof trên **run agent đã có**, không làm writer vào run bàn giao. Cổng15027 cần trống; launcher chỉ tạo/xóa đúng container proof mới, dispatcher tắt. Nhánh chính vẫn dùng JWT15min và giữ API/FE đang chạy:
+
+```powershell
+$proofContainer='scdc-dm-expiry-proof-'+[guid]::NewGuid().ToString('N').Substring(0,8)
+try {
+ docker compose --project-name scdc-dm-acceptance --env-file .env.dm-test -f compose.dm-test.yaml run -d --no-deps --name $proofContainer -p 127.0.0.1:15027:8080 -e Modules__Identity__AccessTokenMinutes=1 -e Modules__Messaging__Dispatcher__Enabled=false chat-service
+ if($LASTEXITCODE -ne 0){throw 'Proof host start failed'}
+ # Chờ health200 ở15027 trước lệnh tiếp; script chạy khoảng1phút.
+ (Invoke-WebRequest http://localhost:15027/api/v1/health -UseBasicParsing).StatusCode
+ node scripts\dm-acceptance\access-expiry-proof.mjs mvpagentc
+ if($LASTEXITCODE -ne 0){throw 'Expiry proof failed'}
+} finally {
+ if($proofContainer -notmatch '^scdc-dm-expiry-proof-[a-f0-9]{8}$'){throw 'Unexpected cleanup target'}
+ docker rm -f $proofContainer
+}
+```
 
 ### MVP-C09 — Composer, IME và RAM drafts
 
