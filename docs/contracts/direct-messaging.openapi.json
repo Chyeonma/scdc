@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SCDC Direct Messaging — proposed contract",
-    "version": "0.7.0-p2-text-send",
-    "description": "GET search, POST mở DM, GET inbox và POST gửi văn bản đã được người dùng nghiệm thu. GET history P2-T02 đã được người dùng nghiệm thu ngày10/10/2026; Hub chưa triển khai."
+    "version": "0.8.0-dm-mvp",
+    "description": "Search/open/inbox/send/history đã được người dùng nghiệm thu. Authenticated Hub/reconnect, author edit/delete và ma trận phiên được triển khai trong gói MVP liên tục; chờ người dùng test FE/BE cuối. Restore/protection và các gate v1 vẫn riêng."
   },
   "servers": [
     {
@@ -658,7 +658,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-awaiting-user-test-DM-MVP",
         "parameters": [
           {
             "name": "id",
@@ -806,7 +806,7 @@
             }
           }
         },
-        "x-scdc-implementation": "not-implemented",
+        "x-scdc-implementation": "implemented-awaiting-user-test-DM-MVP",
         "parameters": [
           {
             "name": "id",

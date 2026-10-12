@@ -2,11 +2,11 @@
 
 Tổ chức lại: 2026-10-07. Đây là nguồn trạng thái và khoảng trống triển khai DM; cơ chế dùng chung không tự chứng minh một tính năng đã hoàn tất.
 
-Cập nhật: 2026-10-10. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
+Cập nhật: 2026-10-12. Phạm vi: REQ-005, SCP-005. Quy tắc DM, AC-DM, ACL-02–05, màn hình DM-S, UX-DM và TC-DM/TEXT.
 
 Đặc tả đầy đủ cho [v1](../../releases/v1.md); [MVP](../../releases/mvp.md) chọn luồng nhắn tin nền để bắt đầu trong một API host. Các quy tắc áp dụng của luồng được chọn vẫn giữ; transaction/guard xuyên Identity–Messaging được rà soát khi chuyển sang [microservice ở v1](../../architecture.md#target) theo DEC-116.
 
-Quy tắc cốt lõi đã xác nhận. UX và hợp đồng được dẫn từ [tổng quan](README.md) còn đề xuất; P1-T02 đã được người dùng PASS FE/BE và tích hợp vào message. GET inbox P1-T03 được người dùng nghiệm thu build9e47033 ngày09/10/2026; gửi văn bản P2-T01 và lịch sử P2-T02 đã được người dùng nghiệm thu ngày10/10/2026. P3-T01 đã được người dùng PASS FE/BE và tích hợp vào message; P3-T02 đã triển khai và chờ người dùng test FE/BE. Hub chưa triển khai. Các ca TC chưa có kết quả chạy được ghi nhận.
+Quy tắc cốt lõi đã xác nhận. UX và hợp đồng được dẫn từ [tổng quan](README.md) còn đề xuất; P1-T02 đã được người dùng PASS FE/BE và tích hợp vào message. GET inbox P1-T03 được người dùng nghiệm thu build9e47033 ngày09/10/2026; gửi văn bản P2-T01 và lịch sử P2-T02 đã được người dùng nghiệm thu ngày10/10/2026. P3-T01/P3-T02 đã được người dùng PASS FE/BE và tích hợp vào message. Hub/outbox/merge P4-T01 đã triển khai, chờ người dùng test; reconnect nhiều trang P4-T02 và thu hồi đầy đủ P6 chưa triển khai. Các ca TC chưa có kết quả chạy được ghi nhận.
 
 Module thực hiện DM là **Messaging**. [Cơ chế Messaging](../../shared/messaging/README.md), [thiết kế chi tiết](../../shared/messaging/README.md#detailed-design) và [ca TC-TEXT](../../shared/messaging/text.md#tests) đồng thời là nguồn chuẩn cho cơ chế xử lý tin dùng chung với tin phòng. Phần áp dụng vào cộng đồng, quyền phòng và phối hợp realtime được mô tả tại [tích hợp Community](../community/specs/integration.md#responsibilities); DM có điều kiện truy cập riêng, không dùng role/ACL cộng đồng.
 
@@ -65,4 +65,16 @@ Người dùng đã nghiệm thu P3-T01 PASS FE/BE build `156cb32` ngày10/10/20
 
 ## Sequence/fingerprint DM-P3-T02 — 10/10/2026
 
-P3-T01 merge/push `message` tại `a3fea4e` sau xác nhận người dùng. P3-T02 branch `test/dm-p3-t02-concurrency-and-keys` từ đúngbase: deterministic PostgreSQL barrier/rollback/reader, HMAC/keyrotation/missingkey, legacy migration/replay và actualbrowser response-order/REST101. Backend76/76, Node53/53/build, Edge5/5 PASS. [Biên bản P3-T02](../../acceptance/direct-messaging/DM-P3-T02.md) ghi đầy đủ dữ liệu FE/BE riêng và lệnh kiểm thử. **Chờ người dùng test FE/BE**, chưa merge task và chưa làm P4. TC-DM-25 phần Hub reconnect/resume client, DM-SQL-06 dispatcher/recovery và thiết bị mobile thật chưa chạy ở task này; không đánh dấu toànUC hoàn tất.
+P3-T01 merge/push `message` tại `a3fea4e` sau xác nhận người dùng. P3-T02 branch `test/dm-p3-t02-concurrency-and-keys` từ đúngbase: deterministic PostgreSQL barrier/rollback/reader, HMAC/keyrotation/missingkey, legacy migration/replay và actualbrowser response-order/REST101. Backend76/76, Node53/53/build, Edge5/5 PASS. [Biên bản P3-T02](../../acceptance/direct-messaging/DM-P3-T02.md) ghi đầy đủ dữ liệu FE/BE riêng và lệnh kiểm thử. Người dùng đã nghiệm thu build `d4f1669` (code `4102955`); merge/push `message` tại `9de920a`. Các phần chờ nghiệm thu ở hồ sơ cũ là mốc trước xác nhận.
+
+## Hub/outbox DM-P4-T01 — 11/10/2026
+
+Branch `feat/dm-p4-t01-realtime-outbox` từ đúng `origin/message` `9de920a`. `/hubs/chat` có auth và registry user/session/connection/conversation; subscribe/unsubscribe ACK, outsider404, fresh guard trước dispatch. Lease/claim SKIP LOCKED sau commit, backoff và expiry recovery; outbox chỉ giữ tham chiếu, event tải current DTO. FE đăng ký handler/buffer trước subscribe, hợp nhất ID/author+clientUUID/version dạng decimal string; actual connection status, session AccessRevoked xóa RAM và phiên local. Sent là persistence, không là read receipt.
+
+[Biên bản P4-T01](../../acceptance/direct-messaging/DM-P4-T01.md) lưu mốc agent kiểm chứng trước mở rộng MVP. Ngày12/10/2026 người dùng cho thực hiện liên tục toàn MVP còn lại và test FE/BE một lần cuối; gate từng task đã được thay cho gói này, P4-T02/P5/P6/P7 được kế thừa trên cùng nhánh. Chưa có user PASS riêng P4 và chưa merge gói MVP vào message.
+
+## Gói chat riêng MVP liên tục — 12/10/2026
+
+`feat/dm-mvp-completion` từ baseline `message`9de920a giữ P0–P3 đã nghiệm thu, bổ sung authenticated Hub/outbox lease, automatic reconnect REST50/50/1 và refresh cửa sổ tin cũ, author PATCH/DELETE expectedVersion/no-op/tombstone, deterministic races, ma trận quyền, cutoff phiên, peer disabled và composer/drafts/IME. Chỉ một PR hướng `message`, **Chờ người dùng test FE/BE toàn MVP một lần cuối**. [Prompt rút gọn](../../plans/direct-messaging-prompts.md) có một khối copy được; [bản lưu20 task](../../plans/direct-messaging-prompts-by-task.md) giữ traceability. [Biên bản MVP](../../acceptance/direct-messaging/DM-MVP.md) có source/build/image/asset/dataset/commands/testcases và agent evidence.
+
+Agent đã có Node59/59/build, PostgreSQL92/92, E2E MVP14/14, P4 worker/routing8/8 trên build sạch, natural access JWT expiry với refresh/resubscribe thật không writer. Revoke qua UI có conservative bound927ms, no old-session payload. Physical mobile/IME, restore/protection/retention, full-system load và release/email/domain P8/v1 vẫn riêng; không suy đã hoàn thiện toànv1/public release từ MVP. Không tự ghi người dùng PASS từ agent tests.

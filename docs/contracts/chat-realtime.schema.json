@@ -234,7 +234,13 @@
     }
   ],
   "x-scdc-status": "design-draft",
-  "x-scdc-implementation": "not-implemented",
+  "x-scdc-implementation": "implemented-MVP-awaiting-final-user-test",
+  "x-scdc-runtime": {
+    "task": "DM-P4-T01",
+    "hub": "/hubs/chat",
+    "implemented": ["SubscribeConversation", "UnsubscribeConversation", "SubscriptionAcknowledgement", "MessageChanged", "HubProblem", "AccessRevoked-core"],
+    "remaining": "MVP reconnect/recovery/author mutations/session guards implemented; full-system load and v1 release gates remain separate. This catalogue is not the SignalR wire frame."
+  },
   "x-scdc-decisions": [
     "DEC-081",
     "DEC-083"

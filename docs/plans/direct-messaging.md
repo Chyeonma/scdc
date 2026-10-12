@@ -2,9 +2,9 @@
 
 Cập nhật: **09/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../acceptance/direct-messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
 
-Mục tiêu là bàn giao từng task có thể kiểm tra qua **frontend và backend thật**. Sau mỗi task, người dùng tự test với bộ dữ liệu được cung cấp, xác nhận kết quả rồi mới thực hiện task tiếp theo. Agent tự chạy test kỹ thuật trước bàn giao; kết quả tự động không thay xác nhận của người dùng.
+Ngày12/10/2026 người dùng đổi cách thực hiện: **“Làm liên tục toàn bộ phần MVP còn lại; tôi test FE/BE một lần cuối.”** Quy trình hiện hành là một branch `feat/dm-mvp-completion`, một PR hướng `message`, ba phase nội bộ A(P4/P5), B(P6), C(P7). Agent triển khai/test/sửa liên tục; bàn giao cuối ở Chờ người dùng test FE/BE toàn MVP, không dừng xin nghiệm thu từng task. `message` chưa nhận gói mới trước PASS cuối. Các gate riêng từng task bên dưới giữ để đối chiếu nguồn/lịch sử, được thay bằng quyền mới trong gói này. P8/v1 vẫn riêng; không publish/main từ nghiệm thu MVP.
 
-[Prompt từng task](direct-messaging-prompts.md) có **80 ví dụ test case chi tiết**, bốn ca trong mỗi khối prompt hoàn chỉnh, với điều kiện trước, dữ liệu, bước FE/BE, kỳ vọng UI/API/DB, bằng chứng và cleanup. [Catalogue máy đọc](../fixtures/dm-acceptance-cases.json) giữ cùng case ID/nội dung; đây là kế hoạch chưa chạy, không thay toàn bộ AC/TC. Khi triển khai, agent phải cung cấp lệnh/request/SQL thực tế và ghi kết quả từng bước theo [mẫu biên bản](../templates/dm-task-acceptance.md).
+[Prompt hiện hành](direct-messaging-prompts.md) rút gọn còn một khối tự đầy đủ và10 case MVP cuối. [Bản lưu20 prompt](direct-messaging-prompts-by-task.md) giữ80 ví dụ và mapping task/AC/TC. [Catalogue máy đọc](../fixtures/dm-acceptance-cases.json) giữ nguồn testcase; khi thực thi vẫn cần lệnh/request/SQL/ID thật và actual evidence theo [mẫu biên bản](../templates/dm-task-acceptance.md).
 
 ## Phạm vi và nguồn chuẩn
 
@@ -332,7 +332,7 @@ Branch `test/dm-p3-t02-concurrency-and-keys`. TC-DM-02/15/24/25; fixtures finger
 
 **Gate:** Đồng thời/keys/migration có proof API/DB và UI tương ứng; bạn PASS rồi mới realtime.
 
-P3-T02 đã triển khai5subtask và agent kiểm chứng backend76/76, Node53/53, build và Edge5/5; [biên bản P3-T02](../acceptance/direct-messaging/DM-P3-T02.md) có run FE/BE riêng, UUID/ID và từng recipe. Checkbox chỉ ghi implementation. **Chờ người dùng test FE/BE P3-T02**, chưa merge message/chưa làm P4. TC-DM-25 REST/cursor đã kiểm chứng; Hub reconnect/catchup tự động và dispatcher DM-SQL-06 còn chờ P4, không coi toànTC/UC đã PASS.
+P3-T02 đã triển khai5subtask và agent kiểm chứng backend76/76, Node53/53, build và Edge5/5; [biên bản P3-T02](../acceptance/direct-messaging/DM-P3-T02.md) có run FE/BE riêng, UUID/ID và từng recipe. Người dùng đã xác nhận PASS FE/BE build `d4f1669` (code `4102955`), đồng ý nghiệm thu và làm P4-T01. P3-T02 được merge/push vào `message` tại `9de920a`; smoke Node53/53 và history H121 PASS. TC-DM-25 phần reconnect/catchup tự động còn chờ P4-T02; không coi toànTC/UC đã PASS.
 
 ## Phase P4 realtime và reconnect
 
@@ -340,11 +340,11 @@ P3-T02 đã triển khai5subtask và agent kiểm chứng backend76/76, Node53/5
 
 Branch `feat/dm-p4-t01-realtime-outbox`. AC-DM-02/12/21; TC-DM-03/12/16/23.
 
-- [ ] P4-T01.1 Map `/hubs/chat` với auth token đúng route, session reader/registry theo user/session/conversation; SubscribeConversation/UnsubscribeConversation đúng schema.
-- [ ] P4-T01.2 Dispatcher lease/claim sau commit, retry/backoff/recovery; payload tham chiếu, lúc phát đọc current message/version và kiểm tra quyền connection.
-- [ ] P4-T01.3 FE handler/buffer đăng ký trước subscribe, merge ID/clientMessageId/version chính xác; event trước response/trùng/đảo thứ tự không nhân tin.
-- [ ] P4-T01.4 UI trạng thái connection thật; dừng worker làm DB lưu tin nhưng không giả realtime online delivery; không thêm “đã đọc/đã nhận”.
-- [ ] P4-T01.5 Test worker crash/restart, unsubscribe, outsider subscribe, late event; recipe trực tiếp Hub qua browser runner/helper.
+- [x] P4-T01.1 Map `/hubs/chat` với auth token đúng route, session reader/registry theo user/session/conversation; SubscribeConversation/UnsubscribeConversation đúng schema.
+- [x] P4-T01.2 Dispatcher lease/claim sau commit, retry/backoff/recovery; payload tham chiếu, lúc phát đọc current message/version và kiểm tra quyền connection.
+- [x] P4-T01.3 FE handler/buffer đăng ký trước subscribe, merge ID/clientMessageId/version chính xác; event trước response/trùng/đảo thứ tự không nhân tin.
+- [x] P4-T01.4 UI trạng thái connection thật; dừng worker làm DB lưu tin nhưng không giả realtime online delivery; không thêm “đã đọc/đã nhận”.
+- [x] P4-T01.5 Test worker crash/restart, unsubscribe, outsider subscribe, late event; recipe trực tiếp Hub qua browser runner/helper.
 
 **Bạn test FE:** A/B mở D-AB, A gửi B thấy không reload; response/event đảo thứ tự chỉ một dòng; worker dừng rồi chạy lại khôi phục cập nhật; C không nhận tin D-AB.
 
@@ -352,15 +352,17 @@ Branch `feat/dm-p4-t01-realtime-outbox`. AC-DM-02/12/21; TC-DM-03/12/16/23.
 
 **Gate:** Hai browser nhận tin thật và quyền subscribe/dispatch đạt. Thu hồi đầy đủ vẫn phải qua P6; bạn PASS rồi reconnect.
 
+Checkbox ghi implementation P4-T01; **Chờ người dùng test FE/BE**, chưa merge task và chưa làm P4-T02. [Biên bản P4-T01](../acceptance/direct-messaging/DM-P4-T01.md) có dữ liệu FE/BE riêng, recipe C01–C04, rollback, current/tombstone, session cũ và kill/restart sau claim. Reconnect hiện dùng nút thủ công và GET latest; chưa có bù nhiều trang/cửa sổ cache. AC-DM-12 phần edit/delete và thu hồi đầy đủ P6, AC-DM-21/TC-DM-23 phần reconnect vẫn mở.
+
 ### DM-P4-T02 reconnect nhiều trang và sửa xóa tin cũ
 
 Branch `feat/dm-p4-t02-reconnect-history`. AC-DM-15/21; TC-DM-16/17/25; contract-8.
 
-- [ ] P4-T02.1 Reconnect subscribe lại, buffer trước subscribe/ack và GET bù tới through cố định; không dùng eventId/highest live sequence làm frontier đã đọc đủ.
-- [ ] P4-T02.2 Sau merge mỗi trang mới tiến cursor; chỉ nhận resumeCursor cuối; gián đoạn giữa ba trang tiếp tục đúng, cursor hết hạn tải lại.
-- [ ] P4-T02.3 Reload cửa sổ lịch sử đang xem, invalidation cache cũ; wire cùng Message schema để chuẩn bị edit/delete ở P5.
-- [ ] P4-T02.4 Offline UI, GET recovery, tin failed vẫn chờ bấm retry; response actor cũ không ghi lại cache.
-- [ ] P4-T02.5 R101 và interruption runner, duplicate/out-of-order events và cursor faults. Edit/delete server chưa có thì dùng fixture ở test thành phần, ghi rõ; proof E2E tin cũ chạy lại sau P5.
+- [x] P4-T02.1 Reconnect subscribe lại, buffer trước subscribe/ack và GET bù tới through cố định; không dùng eventId/highest live sequence làm frontier đã đọc đủ.
+- [x] P4-T02.2 Sau merge mỗi trang mới tiến cursor; chỉ nhận resumeCursor cuối; gián đoạn giữa ba trang tiếp tục đúng, cursor hết hạn tải lại.
+- [x] P4-T02.3 Reload cửa sổ lịch sử đang xem, invalidation cache cũ; wire cùng Message schema để chuẩn bị edit/delete ở P5.
+- [x] P4-T02.4 Offline UI, GET recovery, tin failed vẫn chờ bấm retry; response actor cũ không ghi lại cache.
+- [x] P4-T02.5 R101 và interruption runner, duplicate/out-of-order events và cursor faults. Edit/delete server chưa có thì dùng fixture ở test thành phần, ghi rõ; proof E2E tin cũ chạy lại sau P5.
 
 **Bạn test FE:** B offline, A gửi R101, B reconnect nhận đủ ba trang; mất mạng sau trang 1/2 rồi nối lại không mất/trùng; failed message không tự gửi.
 
@@ -374,11 +376,11 @@ Branch `feat/dm-p4-t02-reconnect-history`. AC-DM-15/21; TC-DM-16/17/25; contract
 
 Branch `feat/dm-p5-t01-edit-message`. AC-DM-04/10/11/19; TC-DM-09/13; TC-TEXT-06.
 
-- [ ] P5-T01.1 PATCH expectedVersion; actor/member/author guard, same text đúng version là no-op; validation chung và không yêu cầu peer active.
-- [ ] P5-T01.2 Compare-and-update/version + outbox cùng transaction; không lưu content cũ trong bất kỳ edit/event/log payload.
-- [ ] P5-T01.3 UI menu chỉ author, edit/cancel/save/error/conflict; giữ bản xác nhận gần nhất khi lỗi, hiển thị “Đã sửa”.
-- [ ] P5-T01.4 Dispatch DTO mới và merge version; B/A2 nhận text mới; update inbox projection nếu có mà không giữ bản cũ.
-- [ ] P5-T01.5 API/UI/DB test sửa nhiều lần/no-op/biên/outsider/non-author, offline reload và recipe.
+- [x] P5-T01.1 PATCH expectedVersion; actor/member/author guard, same text đúng version là no-op; validation chung và không yêu cầu peer active.
+- [x] P5-T01.2 Compare-and-update/version + outbox cùng transaction; không lưu content cũ trong bất kỳ edit/event/log payload.
+- [x] P5-T01.3 UI menu chỉ author, edit/cancel/save/error/conflict; giữ bản xác nhận gần nhất khi lỗi, hiển thị “Đã sửa”.
+- [x] P5-T01.4 Dispatch DTO mới và merge version; B/A2 nhận text mới; update inbox projection nếu có mà không giữ bản cũ.
+- [x] P5-T01.5 API/UI/DB test sửa nhiều lần/no-op/biên/outsider/non-author, offline reload và recipe.
 
 **Bạn test FE:** A sửa M01 hai lần, B/A2 thấy mới nhất; Cancel không đổi; B không có menu sửa A; text biên bị từ chối và không làm mất bản đã lưu.
 
@@ -390,11 +392,11 @@ Branch `feat/dm-p5-t01-edit-message`. AC-DM-04/10/11/19; TC-DM-09/13; TC-TEXT-06
 
 Branch `feat/dm-p5-t02-delete-message`. AC-DM-05/10; TC-DM-08/10/13.
 
-- [ ] P5-T02.1 DELETE expectedVersion, auth trước cả delete lặp; lần đầu content null/deletedAt/version, giữ ID/sequence/SendOperation.
-- [ ] P5-T02.2 Outbox/current DTO giữ tombstone không body; lần xóa lặp trả current tombstone không tăng version/outbox; PATCH tombstone MESSAGE_DELETED.
-- [ ] P5-T02.3 UI confirmation/cancel/error; giữ vị trí/thời gian với “Tin nhắn đã bị xóa”, bỏ body/menu sửa ở client/cache.
-- [ ] P5-T02.4 Retry send ban đầu sau delete trả tombstone cùng ID; HMAC so với original operation, không dựng lại body.
-- [ ] P5-T02.5 DB invariant/migration/contract tests và UI hai actor.
+- [x] P5-T02.1 DELETE expectedVersion, auth trước cả delete lặp; lần đầu content null/deletedAt/version, giữ ID/sequence/SendOperation.
+- [x] P5-T02.2 Outbox/current DTO giữ tombstone không body; lần xóa lặp trả current tombstone không tăng version/outbox; PATCH tombstone MESSAGE_DELETED.
+- [x] P5-T02.3 UI confirmation/cancel/error; giữ vị trí/thời gian với “Tin nhắn đã bị xóa”, bỏ body/menu sửa ở client/cache.
+- [x] P5-T02.4 Retry send ban đầu sau delete trả tombstone cùng ID; HMAC so với original operation, không dựng lại body.
+- [x] P5-T02.5 DB invariant/migration/contract tests và UI hai actor.
 
 **Bạn test FE:** A xóa M01, B thấy dòng thay thế tại đúng vị trí; Cancel không xóa; API lỗi giữ tin xác nhận gần nhất; reload vẫn tombstone.
 
@@ -406,11 +408,11 @@ Branch `feat/dm-p5-t02-delete-message`. AC-DM-05/10; TC-DM-08/10/13.
 
 Branch `test/dm-p5-t03-mutation-races`. AC-DM-14/15/21; TC-DM-08/11/17/23/25.
 
-- [ ] P5-T03.1 A1/A2 edit-edit và edit-delete từ cùng version, barrier deterministic; một thắng, một conflict, UI tải current.
-- [ ] P5-T03.2 Replay original send sau nhiều edit/delete, cùng key khác body; không sinh message/outbox tạo mới. Nhánh peer disabled được kiểm chứng ở P6-T02 với helper khóa riêng, không đặt phụ thuộc ngược vào task này.
-- [ ] P5-T03.3 B offline với tin cũ trong cửa sổ; A sửa/xóa, thêm R101; reconnect bù hết trang và reload cửa sổ cũ bằng API thật.
-- [ ] P5-T03.4 Event cũ sau version mới/tombstone không thay body; no-op/delete lặp cùng kiểm tra tác giả.
-- [ ] P5-T03.5 Bàn giao conflict/lost response/reconnect recipes, DB counts và E2E proof cho nhánh còn chờ ở P4-T02.
+- [x] P5-T03.1 A1/A2 edit-edit và edit-delete từ cùng version, barrier deterministic; một thắng, một conflict, UI tải current.
+- [x] P5-T03.2 Replay original send sau nhiều edit/delete, cùng key khác body; không sinh message/outbox tạo mới. Nhánh peer disabled được kiểm chứng ở P6-T02 với helper khóa riêng, không đặt phụ thuộc ngược vào task này.
+- [x] P5-T03.3 B offline với tin cũ trong cửa sổ; A sửa/xóa, thêm R101; reconnect bù hết trang và reload cửa sổ cũ bằng API thật.
+- [x] P5-T03.4 Event cũ sau version mới/tombstone không thay body; no-op/delete lặp cùng kiểm tra tác giả.
+- [x] P5-T03.5 Bàn giao conflict/lost response/reconnect recipes, DB counts và E2E proof cho nhánh còn chờ ở P4-T02.
 
 **Bạn test FE:** Hai phiên A sửa/xóa cùng lúc, không ghi đè âm thầm; B reconnect thấy text mới/tombstone của tin cũ và đủ R101; Retry original không kéo body cũ về.
 
@@ -424,11 +426,11 @@ Branch `test/dm-p5-t03-mutation-races`. AC-DM-14/15/21; TC-DM-08/11/17/23/25.
 
 Branch `test/dm-p6-t01-access-matrix`. AC-DM-09/12; ACL-02–05; TC-DM-12–14.
 
-- [ ] P6-T01.1 Ma trận A/B/C/U/no token × search/open/list/history/send/edit/delete/subscribe/retry; kiểm tra từng đường auth không chỉ menu UI.
-- [ ] P6-T01.2 C thử ID D-AB/message/cursor/Hub; B thử mutation A; không rò participants/body/email qua lỗi hoặc timing payload rõ rệt.
-- [ ] P6-T01.3 Phiên stale/expired/unverified chuyển trạng thái trong fixture: validator và guard chặn; không tạo token bypass cho sản phẩm để test U.
-- [ ] P6-T01.4 UI logout/login C trong cùng tab, response A muộn/GET lỗi/storage fault không hiện history của A hoặc fallback mock.
-- [ ] P6-T01.5 Rà logs/outbox/DOM/storage, test auth/replay toàn đường và hồ sơ ma trận.
+- [x] P6-T01.1 Ma trận A/B/C/U/no token × search/open/list/history/send/edit/delete/subscribe/retry; kiểm tra từng đường auth không chỉ menu UI.
+- [x] P6-T01.2 C thử ID D-AB/message/cursor/Hub; B thử mutation A; không rò participants/body/email qua lỗi hoặc timing payload rõ rệt.
+- [x] P6-T01.3 Phiên stale/expired/unverified chuyển trạng thái trong fixture: validator và guard chặn; không tạo token bypass cho sản phẩm để test U.
+- [x] P6-T01.4 UI logout/login C trong cùng tab, response A muộn/GET lỗi/storage fault không hiện history của A hoặc fallback mock.
+- [x] P6-T01.5 Rà logs/outbox/DOM/storage, test auth/replay toàn đường và hồ sơ ma trận.
 
 **Bạn test FE:** C không thấy D-AB, biết URL/ID cũng không xem; B không sửa/xóa A; U login bị chặn. Đổi A→C không còn tin/nháp A kể cả request A về muộn.
 
@@ -440,11 +442,11 @@ Branch `test/dm-p6-t01-access-matrix`. AC-DM-09/12; ACL-02–05; TC-DM-12–14.
 
 Branch `feat/dm-p6-t02-session-revocation`. DEC-083/104; TC-DM-26; contract guard/read/send/author-mutation.
 
-- [ ] P6-T02.1 Session reader/revoker theo session/user, registry cleanup và auth expiry; event sau commit + reconciliation tối đa 1 giây theo thiết kế; fail closed nếu đọc quyền lỗi.
-- [ ] P6-T02.2 Fixture helper K disabled/unlock chỉ `_test`, ghi status/stamp/revoke và receipt kiểm thử; không public admin API, không nhầm lockout 15 phút với disabled.
-- [ ] P6-T02.3 Guard read/author mutation/send mới tách purpose: K disabled vẫn cho A đọc/sửa/xóa tin A, chặn send mới tới K; retry key đã commit trả current nếu A còn quyền.
-- [ ] P6-T02.4 Race revoke với send/subscribe/dispatch giữ UoW/lock order; hết phiên/logout-all không reconnect bằng token cũ.
-- [ ] P6-T02.5 Timestamp commit/cutoff ≤5 giây, fault authority/worker, UI status và scripts/DB proof.
+- [x] P6-T02.1 Session reader/revoker theo session/user, registry cleanup và auth expiry; event sau commit + reconciliation tối đa 1 giây theo thiết kế; fail closed nếu đọc quyền lỗi.
+- [x] P6-T02.2 Fixture helper K disabled/unlock chỉ `_test`, ghi status/stamp/revoke và receipt kiểm thử; không public admin API, không nhầm lockout 15 phút với disabled.
+- [x] P6-T02.3 Guard read/author mutation/send mới tách purpose: K disabled vẫn cho A đọc/sửa/xóa tin A, chặn send mới tới K; retry key đã commit trả current nếu A còn quyền.
+- [x] P6-T02.4 Race revoke với send/subscribe/dispatch giữ UoW/lock order; hết phiên/logout-all không reconnect bằng token cũ.
+- [x] P6-T02.5 Timestamp commit/cutoff ≤5 giây, fault authority/worker, UI status và scripts/DB proof.
 
 **Bạn test FE:** A1 thu hồi A2 từ UI sessions: A2 dừng nhận dữ liệu; logout-all không tự phục hồi. A–K đã có history, khóa K: A còn đọc/sửa/xóa tin mình nhưng không gửi mới; unlock K cần login mới.
 
@@ -456,11 +458,11 @@ Branch `feat/dm-p6-t02-session-revocation`. DEC-083/104; TC-DM-26; contract guar
 
 Branch `feat/dm-p6-t03-composer-and-drafts`. AC-DM-17/20; TC-DM-19/22; UX-DM.
 
-- [ ] P6-T03.1 Desktop Enter gửi/Shift+Enter xuống dòng, mobile Enter xuống dòng, Send luôn gửi; composition IME không gửi sớm.
-- [ ] P6-T03.2 Map nháp theo actor/conversation trong bộ nhớ, giữ khi chuyển D-AB↔D-AC; reload/logout/actor switch xóa, không localStorage/IndexedDB nội dung.
-- [ ] P6-T03.3 Tách draft chưa gửi khỏi failed operation; sent vẫn DB, failed không tự replay; request muộn không phục hồi cache sau logout.
-- [ ] P6-T03.4 Layout wide/narrow, keyboard/focus/errors bằng chữ, load older/retry/edit/delete sử dụng được; không thêm developer controls vào flow người dùng.
-- [ ] P6-T03.5 E2E với IME/multiple profiles/mobile viewport và lượt kiểm tra thiết bị thật được ghi rõ; không coi giả viewport là đủ proof bàn phím mobile.
+- [x] P6-T03.1 Desktop Enter gửi/Shift+Enter xuống dòng, mobile Enter xuống dòng, Send luôn gửi; composition IME không gửi sớm.
+- [x] P6-T03.2 Map nháp theo actor/conversation trong bộ nhớ, giữ khi chuyển D-AB↔D-AC; reload/logout/actor switch xóa, không localStorage/IndexedDB nội dung.
+- [x] P6-T03.3 Tách draft chưa gửi khỏi failed operation; sent vẫn DB, failed không tự replay; request muộn không phục hồi cache sau logout.
+- [x] P6-T03.4 Layout wide/narrow, keyboard/focus/errors bằng chữ, load older/retry/edit/delete sử dụng được; không thêm developer controls vào flow người dùng.
+- [x] P6-T03.5 E2E với IME/multiple profiles/mobile viewport và lượt kiểm tra thiết bị thật được ghi rõ; không coi giả viewport là đủ proof bàn phím mobile.
 
 **Bạn test FE:** Nhập tiếng Việt IME/emoji/nhiều dòng; các phím đúng desktop và điện thoại; chuyển DM giữ nháp, reload/logout mất nháp; A/B không chia sẻ draft, C không nhận draft A.
 
@@ -474,11 +476,11 @@ Branch `feat/dm-p6-t03-composer-and-drafts`. AC-DM-17/20; TC-DM-19/22; UX-DM.
 
 Branch `test/dm-p7-t01-internal-acceptance`. AC-DM-01–21, TC-DM-01–26, TC-TEXT-01–06 trong phạm vi DM; không giả gửi tin phòng đã đạt vì dùng validator chung.
 
-- [ ] P7-T01.1 Chốt commit/config/schema/dataset, rebuild từ checkout sạch, migrations fresh/existing, key ring/HMAC bền qua restart, proxy Web–API–Hub thật.
-- [ ] P7-T01.2 Regression mọi task trên build chung; kiểm tra message/operation/outbox/version/tombstone, no old body và không tự hết hạn history.
-- [ ] P7-T01.3 Happy path A/B, outsider C, pending U, disabled K; offline, 101 tin, worker restart, mutation race, cursor/keys/revoke và browser thật.
-- [ ] P7-T01.4 Chứng minh restart ứng dụng không mất DB/key/cursor trong hạn; log không secrets/body; retention chưa triển khai không được tự purge marker/history.
-- [ ] P7-T01.5 Hồ sơ mẫu task/release, lỗi tồn, known limits/email dependency/P8; bàn giao commands và dataset cho người dùng tự chạy từ đầu.
+- [x] P7-T01.1 Chốt commit/config/schema/dataset, rebuild từ checkout sạch, migrations fresh/existing, key ring/HMAC bền qua restart, proxy Web–API–Hub thật.
+- [x] P7-T01.2 Regression mọi task trên build chung; kiểm tra message/operation/outbox/version/tombstone, no old body và không tự hết hạn history.
+- [x] P7-T01.3 Happy path A/B, outsider C, pending U, disabled K; offline, 101 tin, worker restart, mutation race, cursor/keys/revoke và browser thật.
+- [x] P7-T01.4 Chứng minh restart ứng dụng không mất DB/key/cursor trong hạn; log không secrets/body; retention chưa triển khai không được tự purge marker/history.
+- [x] P7-T01.5 Hồ sơ mẫu task/release, lỗi tồn, known limits/email dependency/P8; bàn giao commands và dataset cho người dùng tự chạy từ đầu.
 
 **Bạn test FE:** A tìm B→mở DM→gửi→B nhận→reload→sửa→xóa→offline/reconnect; repeat trên narrow/mobile; C/U/K đúng hành vi; tự restart rồi mở history.
 
@@ -538,9 +540,9 @@ Branch `chore/dm-p8-t03-release-handoff`. Phụ thuộc: gói Identity/email, c�
 
 ## Prompt và hồ sơ cho lần thực hiện
 
-[Bộ prompt từng task](direct-messaging-prompts.md) có prompt chung và 20 prompt riêng. Mỗi prompt chỉ chạy một task, bàn giao bản FE/BE test được rồi dừng. [Mẫu biên bản](../templates/dm-task-acceptance.md) yêu cầu tách kết quả agent và người dùng, ghi build/actor/dataset/UI/request/DB proof và lỗi.
+[Prompt hiện hành](direct-messaging-prompts.md) là một khối đầy đủ cho toàn MVP còn lại, ba phase nội bộ và một lần user test cuối theo quyền mới12/10/2026. [20 prompt từng task đã lưu](direct-messaging-prompts-by-task.md) giữ traceability. [Biên bản MVP](../acceptance/direct-messaging/DM-MVP.md) và [mẫu](../templates/dm-task-acceptance.md) tách kết quả agent/người dùng, build/actor/dataset/UI/request/DB evidence.
 
-Task đầu cần giao khi bắt đầu là **DM-P0-T01**. Nếu nhánh cũ có phần tương thích, reuse trong task đúng phạm vi để giảm công viết lại; vẫn phải qua cùng gate frontend/backend. Kế hoạch này giữ mọi task Chưa làm cho đến khi thực thi và được kiểm tra theo quy trình trên.
+P0–P3 đã được người dùng nghiệm thu; không bắt đầu lại. P4/P5/P6/P7 được gộp trên `feat/dm-mvp-completion`, checkbox ghi implementation, **chưa là user PASS**. Physical mobile và P8/v1 vẫn ghi phạm vi chưa kiểm chứng. Bản bàn giao cuối chờ user PASS FE/BE trước merge gói vào message; không publish/main từ bước này.
 
 ### Xác nhận chuyển P2 ngày10/10/2026
 
