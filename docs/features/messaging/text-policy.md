@@ -1,6 +1,6 @@
 # Nội dung tin văn bản
 
-Quy tắc nội dung áp dụng cho DM và tin phòng, gồm gửi mới và sửa tin. DEC-053/068/090 đã chốt hành vi; bảng Unicode, fixture và thuật toán dưới đây cần đối chiếu với implementation. Chưa có kết quả kiểm chứng writer tin được ghi nhận.
+Quy tắc nội dung áp dụng cho DM và tin phòng, gồm gửi mới và sửa tin. DEC-053/068/090 đã chốt hành vi. Nền DM `900e226` đã dùng validator Unicode ở [backend](../../../services/SCDC.BuildingBlocks/Application/Text/UnicodeTextPolicy.cs) và [client](../../../clients/WebClient/src/dmTextPolicy.js); bằng chứng theo revision tại [P2-T01](../../records/verification/messaging/DM-P2-T01.md) và [DM-MVP](../../records/verification/messaging/DM-MVP.md). Writer tin phòng còn phải tích hợp và kiểm chứng cùng quy tắc; fixture không tự chứng minh mọi đường gửi/sửa đã đạt.
 
 Trạng thái gửi/thử lại và cache của client nằm trong [vòng đời tin](message-lifecycle.md#client-state); quyền riêng của mỗi ngữ cảnh nằm trong [DM](direct-messaging.md#permissions) và [tin phòng](channel-messaging.md).
 

@@ -19,7 +19,7 @@ flowchart LR
     Channel --> Voice[Phòng thoại · v1]
 ```
 
-Sơ đồ gồm các chức năng mục tiêu. Phạm vi từng mốc tại [MVP](../releases/mvp.md) và [v1](../releases/v1.md); trạng thái thực thi nằm trong chủ đề tương ứng.
+Sơ đồ gồm các chức năng mục tiêu theo [phạm vi v1](../project/overview.md#scope). Nền kế thừa tại [snapshot MVP](../releases/mvp.md); trạng thái thực thi nằm trong chủ đề tương ứng.
 
 ## Điều hướng và bố cục
 
@@ -31,7 +31,7 @@ Sơ đồ gồm các chức năng mục tiêu. Phạm vi từng mốc tại [MVP
 | Nội dung | Danh sách/tìm kiếm, quản lý hoặc hội thoại được chọn | [App](../../clients/WebClient/src/App.jsx) |
 | Panel phụ/modal | Hồ sơ, thành viên và tác vụ cấu hình | [components](../../clients/WebClient/src/components) |
 
-Giao diện chat còn dùng dữ liệu mẫu ở các phần chưa tích hợp. Bố cục hiện có không tự là kết quả nghiệm thu UX.
+Nền `900e226` đã ghép Community và DM dùng API/Hub thật theo [hồ sơ tích hợp](../records/verification/messaging/merge-2026-10-13.md). Tin phòng và các phần giao diện chưa tích hợp vẫn cần hoàn thiện trong v1; dữ liệu mẫu ở các phần đó không là bằng chứng luồng đã chạy. Bố cục hiện có không tự là kết quả nghiệm thu UX.
 
 ## Thiết kế theo chủ đề
 

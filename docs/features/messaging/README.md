@@ -12,7 +12,9 @@ Messaging phụ trách DM và tin trong phòng Community. Identity cung cấp da
 
 ## Trạng thái và cách dùng
 
-Các chủ đề giữ quy tắc, UI, kỹ thuật và cách kiểm chứng liên quan cùng chỗ. Phạm vi bàn giao nằm tại [MVP](../../releases/mvp.md) và [v1](../../releases/v1.md); trạng thái hiện tại và phần còn lại ghi trong từng chủ đề. Messaging có mã DM API, ChatHub/outbox và lifecycle space. Hồ sơ theo gói tại [hồ sơ DM](../../records/verification/messaging/README.md); writer tin phòng và các phần v1 còn theo thiết kế mục tiêu.
+Các chủ đề giữ quy tắc, UI, kỹ thuật và cách kiểm chứng liên quan cùng chỗ. Phạm vi sản phẩm tại [tổng quan v1](../../project/overview.md#scope); [MVP](../../releases/mvp.md) ghi nền nội bộ được kế thừa. Đối chiếu mã nền `900e226`: đã có tìm người, mở DM, inbox, gửi/lịch sử, retry chủ động, sửa/xóa, ChatHub/outbox và reconnect; nền vẫn là một API host Modular Monolith. Lifecycle space đã có, writer/realtime tin phòng và cơ chế xuyên service v1 còn là phần việc tiếp theo.
+
+Kết quả được giữ theo revision và phạm vi tại [hồ sơ DM](../../records/verification/messaging/README.md), [gói DM-MVP](../../records/verification/messaging/DM-MVP.md) và [kiểm tra hợp nhất ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md). Các hồ sơ có bằng chứng agent và xác nhận người dùng của từng gói; không suy toàn bộ hợp đồng/AC hoặc v1 đã nghiệm thu. Lần cập nhật hiện trạng này không chạy lại test ứng dụng.
 
 Sáng phụ trách nền Messaging và UI DM; Vg giữ quyền/Community và review tích hợp; Thái cung cấp bộ chạy/dataset theo [phân công](../../project/planning.md#team). Chuẩn dữ liệu/API, trạng thái dự thảo và phụ thuộc trực tiếp được ghi ở từng chủ đề. Giữ mã DM/ACL/UC/AC/TC/DEC; schema hoặc fixture không thay bằng chứng chạy trên build cụ thể.
 

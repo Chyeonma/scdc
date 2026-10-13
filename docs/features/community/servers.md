@@ -8,7 +8,7 @@ Backup/restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-sc
 
 ## Trạng thái theo khả năng
 
-Đối chiếu hiện trạng ngày 2026-10-08. Nền Community đã hợp nhất vào `main`; bằng chứng dẫn dưới đây gắn revision cụ thể, không phải kết quả chạy lại cho mọi thay đổi sau đó.
+Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md), đã hợp nhất Community và DM trong một host. Bằng chứng từng gói và hợp nhất Community ngày 2026-10-08 giữ revision lịch sử; [kiểm tra tích hợp ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) có phạm vi riêng. Lần cập nhật này không chạy lại test; Hub/dispatcher DM đã có, chưa thay proof tin phòng hoặc thu hồi quyền Community.
 
 | Khả năng | Trạng thái và giới hạn | Bằng chứng |
 |---|---|---|
@@ -334,7 +334,7 @@ Thứ tự tạo:
 
 Read dùng guard và một SQL projection cho toàn bộ metadata/membership/permissions của trang/detail, để quyết định quyền và dữ liệu Community cùng snapshot của statement. Nếu reader phải dùng nhiều statement, phải thay bằng transaction snapshot phù hợp và kiểm chứng trước merge; không ghép kết quả từ những thời điểm quyền khác nhau. Mỗi trang kiểm tra lại quyền, không lấy quyền từ cursor. `READ COMMITTED` tạo snapshot cho từng statement; cách dùng một projection là lựa chọn của gói để giữ dữ liệu nhất quán. [PostgreSQL isolation](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED).
 
-Outbox ghi event nội bộ `Community.ServerCreated.v1`, aggregate server/version, payload tối thiểu server ID/owner ID/accessVersion; chỉ có một event cho một thao tác tạo. Hạ tầng outbox dùng schema integration chung. Gói chỉ ghi bền, chưa có dispatcher/Hub; UI cập nhật từ HTTP rồi đọc lại. Event chờ không được đánh dấu published khi chưa phát; gói realtime bổ sung delivery/routing riêng.
+Outbox ghi event nội bộ `Community.ServerCreated.v1`, aggregate server/version, payload tối thiểu server ID/owner ID/accessVersion; chỉ có một event cho một thao tác tạo. Hạ tầng outbox dùng schema integration chung. Gói chỉ ghi bền, chưa có dispatcher/Hub xử lý event Community; UI cập nhật từ HTTP rồi đọc lại. Dispatcher/Hub DM trong nền `900e226` không thay consumer này. Event chờ không được đánh dấu published khi chưa phát; gói realtime bổ sung delivery/routing riêng.
 
 ### Cursor danh sách của mình
 
@@ -356,7 +356,7 @@ Migration 001 được lưu tại `database/postgres/migrations/001-community-cr
 | @everyone invariant | Giữ unique default-role index; constraint trigger deferred đảm bảo mỗi server có đúng một default/system @everyone, owner member tồn tại; check role hệ thống chỉ là default @everyone và không có management grant. Trigger theo dõi server/member/role/role_permissions để không có đường sửa bỏ invariant |
 | operations | Thêm bảng Community operation với composite PK, fingerprint/key/version/resource/createdAt và checks cần thiết; baseline 001 chỉ nhận create_server/scope zero; các migration 003/004 mở rộng operation kinds |
 | indexes | Dùng active membership index `(user_id,server_id)` và server PK cho list keyset; bổ sung index membership_id. Không thay key/index search/channel/role ngoài phần gói cần |
-| outbox | Dùng bảng integration.outbox_events hiện có qua hạ tầng chung; aggregate_version vẫn tương thích integer của server; chưa thêm lease/dispatcher/realtime |
+| outbox | Dùng bảng integration.outbox_events hiện có qua hạ tầng chung; aggregate_version vẫn tương thích integer của server; chưa có lease/dispatcher/realtime cho event Community |
 
 `char_length` PostgreSQL đếm ký tự, không phải UTF-16. Hàm UTF-16 được chọn có giá trị `char_length + số scalar > U+FFFF`; DB UTF-8 không nhận surrogate không hợp lệ, service vẫn phải chặn trước. Ví dụ tên chỉ một emoji ngoài BMP có 2 UTF-16 và phải vượt qua cận tối thiểu; constraint legacy trước migration không xử lý được trường hợp này. Fixture .NET/SQL kiểm chứng tính nhất quán. [PostgreSQL string functions](https://www.postgresql.org/docs/18/functions-string.html).
 

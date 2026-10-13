@@ -30,7 +30,9 @@ Guard trong một host dùng lock order Identity → Community → Messaging khi
 
 ## Hiện trạng và kiểm chứng
 
-Identity/Community có HTTP/transaction guard và bằng chứng theo gói Community. Consumer Messaging, Hub/dispatcher và proof deadline kết nối thật chưa được tích hợp; Media chưa có runtime. Các hồ sơ gói nền không chứng minh thu hồi realtime hoặc RTP.
+Nền `900e226` đã có HTTP/transaction guard Identity/Community; DM tích hợp `IAccountPairAccessGuard`, ChatHub, outbox dispatcher và `SubscriptionReconciler`. [Hồ sơ DM-MVP](../records/verification/messaging/DM-MVP.md) có bằng chứng thu hồi phiên DM trên build ghi nhận; [hồ sơ hợp nhất](../records/verification/messaging/merge-2026-10-13.md) xác nhận luồng DM realtime/lịch sử tích hợp.
+
+Writer/subscription tin phòng và cutoff khi thay membership/role/ACL Community còn chưa được tích hợp/kiểm chứng. Media và phối hợp thu hồi xuyên service v1 chưa có runtime; các bằng chứng DM một host không thay proof toàn bộ hợp đồng v1.
 
 Ca kiểm chứng phải ghi commit thu hồi, thời điểm cutoff, clock/trace, actor/scope/epoch và kết quả khi authority/worker/provider lỗi hoặc restart. Thử token/cursor/epoch cũ, tranh mutation/subscribe và reconnect. Tiêu chí chi tiết tại [tin phòng](../features/messaging/channel-messaging.md), [đồng bộ tin](../features/messaging/synchronization.md) và [Media](../features/media/README.md).
 

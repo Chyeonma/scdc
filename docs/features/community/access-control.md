@@ -6,13 +6,13 @@ Community / Permissions sở hữu role, assignment, thuật toán view, ACL sna
 
 ## Trạng thái theo khả năng
 
-Đối chiếu hiện trạng ngày 2026-10-08. Nền Community đã hợp nhất vào `main`; bằng chứng dẫn dưới đây gắn revision cụ thể, không phải kết quả chạy lại cho mọi thay đổi sau đó.
+Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md), đã hợp nhất Community và DM trong một host. Bằng chứng từng gói và hợp nhất Community ngày 2026-10-08 giữ revision lịch sử; [kiểm tra tích hợp ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) có phạm vi riêng. Lần cập nhật này không chạy lại test; Hub/dispatcher DM đã có, chưa thay proof tin phòng hoặc thu hồi quyền Community.
 
 | Khả năng | Trạng thái và giới hạn | Bằng chứng |
 |---|---|---|
 | Role/assignment — phần UC-COM-20/21 | Backend/WebClient và management guard đã kiểm chứng | [Vai trò](../../records/verification/community/roles.md) |
 | View policy HTTP và ACL — phần UC-COM-17/22 | Đã kiểm chứng list/detail/metadata/ACL và epoch/CAS | [Phòng text/ACL](../../records/verification/community/channels-access.md) |
-| Channel admission guard | Đã kiểm chứng giữ lock tới caller commit và race role/ACL; chưa có writer tin/Hub sử dụng | [Phòng text/ACL](../../records/verification/community/channels-access.md) |
+| Channel admission guard | Đã kiểm chứng giữ lock tới caller commit và race role/ACL; chưa có writer/subscription tin phòng sử dụng. DM dùng guard hội thoại riêng | [Phòng text/ACL](../../records/verification/community/channels-access.md) |
 | Thu hồi chat ≤5 giây — UC-COM-25 | Chưa có runtime và bằng chứng trên kết nối đang mở | [Tin phòng](../messaging/channel-messaging.md) |
 
 Policy/HTTP guard và outbox đã lưu không đủ chứng minh deadline thu hồi realtime; Media cần bằng chứng riêng.
@@ -320,7 +320,7 @@ Phân chia kỹ thuật đã thống nhất ngày 2026-10-06:
 - Application chứa các use case quản lý role/assignment/ACL và phối hợp transaction, version/epoch.
 - Infrastructure đọc snapshot hiện hành và triển khai checker/guard; guard giữ row lock theo [thiết kế transaction](../../system/community.md#transactions), không thay bằng kết quả bool hoặc cache chưa xác nhận.
 
-Các phần khác dùng kết quả policy/guard; điều kiện Identity qua Contracts. Đổi role/assignment/ACL cập nhật accessVersion và outbox cùng transaction với mutation. [Gói role/assignment](../../records/verification/community/roles.md) có evaluator domain, management guard và writer role/assignment. [Gói phòng/ACL](channels.md) đọc policy hiện hành và giữ khóa server/channel trong transaction caller qua IChannelAccessGuard; kiểm chứng HTTP và race role/ACL, chưa có consumer tin/subscription hoặc thu hồi realtime.
+Các phần khác dùng kết quả policy/guard; điều kiện Identity qua Contracts. Đổi role/assignment/ACL cập nhật accessVersion và outbox cùng transaction với mutation. [Gói role/assignment](../../records/verification/community/roles.md) có evaluator domain, management guard và writer role/assignment. [Gói phòng/ACL](channels.md) đọc policy hiện hành và giữ khóa server/channel trong transaction caller qua IChannelAccessGuard; kiểm chứng HTTP và race role/ACL, chưa có consumer tin/subscription phòng hoặc thu hồi realtime theo role/ACL.
 
 Đối chiếu baseline/mapping mục tiêu ở [COM-SQL-01–10](../../system/community.md#schema-migration); migration/proof được ghi theo từng gói ở [trạng thái theo khả năng](#implementation).
 
@@ -344,9 +344,9 @@ Các route/DTO theo OpenAPI: GET/POST roles, PATCH/DELETE role, GET members, GET
 
 Identity guard khóa account actor → server FOR UPDATE cho mutation/FOR SHARE cho read → membership/role. Server lock ổn định ownership, authorization và limit/CAS tới commit; lease kiểm tra lại trước commit. Private/nonmember/inactive trả 404; member thiếu quyền trả 403. Role/member catalog đọc bởi owner hoặc manage_channel_access; writer owner-only, không coi manage_channel_access là quyền quản lý role. Roster lấy UserSummary qua Identity contract, user null khi directory không còn account active; không trả email, không cần session của target để gán role cho membership active.
 
-Create/sửa/xóa/assignment đổi dữ liệu bump server accessVersion và outbox Community.AccessChanged.v1 cùng transaction. Event chỉ scope/server/accessVersion/cause/resource IDs, không có tên/member roster hoặc nội dung; chưa dispatcher/Hub. Assignment tăng membership.version; delete role cascade assignment/role override và tăng version membership bị đổi, để request cũ không ghi đè. Role update tăng role.version đúng một lần. No-op CAS hợp lệ trả hiện trạng, không bump/outbox. DELETE dùng expectedVersion, role đã mất trả 404; legacy invite còn giữ custom role nhận 409 ROLE_IN_USE, không âm thầm đổi lời mời.
+Create/sửa/xóa/assignment đổi dữ liệu bump server accessVersion và outbox Community.AccessChanged.v1 cùng transaction. Event chỉ scope/server/accessVersion/cause/resource IDs, không có tên/member roster hoặc nội dung; chưa có dispatcher/Hub tiêu thụ sự kiện quyền Community. Dispatcher/Hub DM trong nền hợp nhất không tự xử lý event này. Assignment tăng membership.version; delete role cascade assignment/role override và tăng version membership bị đổi, để request cũ không ghi đè. Role update tăng role.version đúng một lần. No-op CAS hợp lệ trả hiện trạng, không bump/outbox. DELETE dùng expectedVersion, role đã mất trả 404; legacy invite còn giữ custom role nhận 409 ROLE_IN_USE, không âm thầm đổi lời mời.
 
-Management guard dùng catalog/evaluator hiện hành; ServerDetail/own list đọc assignment đúng epoch. Evaluator domain thuần giữ foundation → owner → default/role deny-wins → personal; management union độc lập view. Fixture domain và view HTTP/ACL/guard đã có bằng chứng ở gói phòng; writer tin, Hub và deadline thu hồi vẫn chưa được kiểm chứng.
+Management guard dùng catalog/evaluator hiện hành; ServerDetail/own list đọc assignment đúng epoch. Evaluator domain thuần giữ foundation → owner → default/role deny-wins → personal; management union độc lập view. Fixture domain và view HTTP/ACL/guard đã có bằng chứng ở gói phòng; writer tin phòng, subscription channel và deadline thu hồi quyền Community vẫn chưa được kiểm chứng.
 
 <a id="role-webclient"></a>
 
@@ -426,7 +426,7 @@ Các mục dưới đây giữ yêu cầu kiểm chứng còn lại, không ph�
 | ACL-O2 | Snapshot/accessVersion/epoch, UI ACL và guard giữ lock tới caller commit đã có proof. Còn writer/history Messaging và Hub thật dùng guard, revoke tranh gửi/subscribe và đối soát reconnect; giữ DEC-057/098 | Danh sách phòng, lịch sử, gửi, thời gian thực | Vg, Sáng |
 | ACL-O3 | Chuyển ngay DEC-076 có lock order/transaction; còn proof transfer/leave | Một owner, quyền chủ cũ/target, không xóa server v1 | Vg |
 | ACL-O4 | Có schema/inbox/expiry/issuer theo DEC-074/087/097; còn review và concurrency proof | Cộng đồng riêng tư | Vg |
-| ACL-O5 | Guard/epoch/outbox lưu DB đã có proof; registry/dispatcher/revoker đang là thiết kế, chưa có runtime. Cần đo chat ≤5 giây trên kết nối đang mở; media deadline DEC-099 cần proof SFU riêng | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
+| ACL-O5 | Guard/epoch/outbox lưu DB đã có proof; registry/dispatcher/revoker cho quyền phòng chưa có runtime. Hub/dispatcher và đối soát phiên DM đã có trong `900e226`, chưa thay proof role/ACL. Cần đo chat phòng ≤5 giây trên kết nối đang mở; media deadline DEC-099 cần proof SFU riêng | Thiết kế đồng bộ quyền, kiểm thử chất lượng | Vg, Sáng, Thái |
 
 Các mục trên tiếp tục thuộc OQ-003/OQ-004/OQ-007. DM hai người không phụ
 thuộc mô hình vai trò cộng đồng; có thể rà soát phần ACL-01 đến ACL-05

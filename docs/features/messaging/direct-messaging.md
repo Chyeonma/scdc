@@ -8,7 +8,9 @@ Backup/restore, sổ bảo vệ độc lập và UI placeholder sau restore thu�
 
 ## Trạng thái hiện tại
 
-MVP có mã tìm người, mở hội thoại, inbox, gửi/lịch sử tin, sửa/xóa và ChatHub/outbox. Hồ sơ theo gói và kết quả kiểm tra tại [hồ sơ DM](../../records/verification/messaging/README.md). Phạm vi và các gate v1 tiếp tục theo tài liệu này.
+Nền MVP `900e226` đã có tìm người, mở hội thoại, inbox, gửi/lịch sử tin, retry chủ động, sửa/xóa, ChatHub/outbox và tự reconnect/bù tin trong một API host. Hồ sơ theo gói tại [hồ sơ DM](../../records/verification/messaging/README.md) ghi xác nhận người dùng cho P0–P3 và bằng chứng agent của [DM-MVP](../../records/verification/messaging/DM-MVP.md); [kiểm tra hợp nhất 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) ghi luồng DM tích hợp Community. Kết quả giữ revision/phạm vi của từng hồ sơ; không tuyên bố toàn bộ hợp đồng/AC, toàn DM hoặc v1 đã được người dùng nghiệm thu.
+
+v1 kế thừa nền này, tiếp tục phần còn thiếu và hồi quy sau tách service/database. Tin phòng, Media và cơ chế quyền/thu hồi xuyên service cần bằng chứng riêng. Lần cập nhật hiện trạng này chỉ đối chiếu mã/tài liệu, không chạy lại test ứng dụng.
 
 DM chỉ dựa trên hai người tham gia, không dùng vai trò/ACL Community. Identity sở hữu danh tính và phiên; Messaging dùng hợp đồng `SCDC.Contracts`, không đọc bảng Identity trực tiếp. Cơ chế [lưu và thay đổi tin](message-lifecycle.md), [đồng bộ](synchronization.md) và [nội dung](text-policy.md) áp dụng chung với [tin phòng](channel-messaging.md).
 
@@ -222,11 +224,11 @@ cuộc gọi vào wireframe của đợt DM văn bản.
 
 ### Bàn giao và nội dung còn cần rà soát
 
-Sáng sở hữu UI DM và phản hồi API theo gói fullstack; Vg rà soát bố cục, trạng thái và quyền. Thái cung cấp dataset/bộ chạy kiểm tra theo [DEC-117](../../project/planning.md#team). Chưa có kết quả rà soát hoặc kiểm thử khả dụng được ghi nhận trong tài liệu này.
+Sáng sở hữu UI DM và phản hồi API theo gói fullstack; Vg rà soát bố cục, trạng thái và quyền. Thái cung cấp dataset/bộ chạy kiểm tra theo [DEC-117](../../project/planning.md#team). Hồ sơ DM đã ghi kiểm tra chức năng UI/API theo gói; các kết quả đó không thay nghiên cứu khả dụng hoặc kiểm chứng bàn phím/IME trên thiết bị vật lý.
 
-Trước khi giao frontend cần xác nhận ma trận trình duyệt/kích thước,
-thiết kế liên kết email, fixture UTF-16, hành vi bàn phím/IME và cách xử lý
-xung đột. Chính sách đếm/tìm kiếm và phím gửi đã chốt tại DEC-068/069/071. Wireframe cộng đồng là đầu ra riêng tại
+Trước nghiệm thu v1 cần khóa trình duyệt/kích thước và thiết bị thực tế,
+kiểm chứng liên kết email, UTF-16, bàn phím/IME và xử lý
+xung đột trên bản chạy được chọn. Chính sách đếm/tìm kiếm và phím gửi đã chốt tại DEC-068/069/071. Wireframe cộng đồng là đầu ra riêng tại
 [SCDC-UX-COM-001](../../system/community.md#ux).
 
 <a id="contracts"></a>
@@ -235,15 +237,15 @@ xung đột. Chính sách đếm/tìm kiếm và phím gửi đã chốt tại D
 
 ## Hợp đồng API, dữ liệu và đồng bộ đề xuất
 
-Thiết kế bên dưới cụ thể hóa hành vi đã chốt, chưa phải API đã triển khai hoặc đã duyệt. Tài khoản sở hữu danh tính/phiên; Messaging sở hữu hội thoại/tin/thao tác. Giao tiếp qua `SCDC.Contracts` trong Modular Monolith; DM không đọc bảng tài khoản và không phụ thuộc Community.
+Thiết kế bên dưới cụ thể hóa hành vi đã chốt; các endpoint DM văn bản đã có trong nền monolith `900e226`. Tài khoản sở hữu danh tính/phiên; Messaging sở hữu hội thoại/tin/thao tác. Giao tiếp qua `SCDC.Contracts` trong Modular Monolith; DM không đọc bảng tài khoản và không phụ thuộc Community. Hợp đồng mạng/quyền khi chuyển v1 phải thiết kế riêng, không áp nguyên shared transaction.
 
-[OpenAPI dự thảo](../../contracts/direct-messaging.openapi.json) biểu diễn schema HTTP bên dưới; trạng thái `design-draft`, endpoint chưa triển khai. REST/SignalR, UUID và cursor bảo vệ đã chốt DEC-081; mã lỗi/schema vẫn cần rà soát cùng mock/thử nghiệm. Giới hạn UTF-16 được ghi bằng extension, không dùng minLength/maxLength để thay thế validation server.
+[OpenAPI dự thảo](../../contracts/direct-messaging.openapi.json) vẫn mang metadata `design-draft`; đây là trạng thái tài liệu hợp đồng, không có nghĩa các endpoint DM đều chưa triển khai. API runtime nằm tại [controllers Messaging](../../../services/SCDC.Api/Controllers/Messaging) và [tìm người Identity](../../../services/SCDC.Api/Controllers/Identity/UsersController.cs); kết quả theo revision tại hồ sơ DM. Phạm vi v1 và các nhánh còn thiếu vẫn cần review/kiểm chứng. Giới hạn UTF-16 được ghi bằng extension, không dùng minLength/maxLength để thay thế validation server.
 
-DM-P0-T01 chọn [baseline contract/thiết kế](../../records/planning/messaging/dm-p0-baseline-design.md) gồm taxonomy lỗi cụ thể, reuse/replace, migration theo lát cắt và UoW/guard; OpenAPI/realtime có extension baseline tương ứng. Trạng thái vẫn chờ người dùng review P0 và proof triển khai ở các task sau, không coi là DM API đang hoạt động.
+DM-P0-T01 chọn [baseline contract/thiết kế](../../records/planning/messaging/dm-p0-baseline-design.md) gồm taxonomy lỗi cụ thể, reuse/replace, migration theo lát cắt và UoW/guard; OpenAPI/realtime có extension baseline tương ứng. P0 và các lát cắt P1–P3 đã có triển khai/xác nhận theo [hồ sơ bàn giao](../../records/verification/messaging/README.md); Hub/outbox/reconnect/sửa/xóa có bằng chứng agent của gói DM-MVP. Không suy metadata baseline hoặc nghiệm thu từng gói thành toàn bộ hợp đồng đã đạt.
 
-Prefix đề xuất `/api/v1`. API hiện tại của Accounts ở [đặc tả tài khoản](../accounts/README.md). Lỗi DM dùng [ProblemDetails chung](../../system/api-conventions.md#contracts) theo DEC-061, validation 400; mã lỗi DM được nêu là đề xuất, chưa phải mã đang hoạt động.
+Prefix runtime DM là `/api/v1`. API Accounts ở [đặc tả tài khoản](../accounts/README.md). Lỗi DM dùng [ProblemDetails chung](../../system/api-conventions.md#contracts) theo DEC-061, validation 400; các mã lỗi của luồng đã triển khai có trong source và hồ sơ kiểm chứng. Các nhánh mục tiêu v1/sau v1 trong hợp đồng vẫn cần đối chiếu riêng.
 
-`sequence`/`version` truyền dưới dạng chuỗi số nguyên; thời điểm theo UTC. Actor lấy từ phiên. ID/cursor/transport đã chọn DEC-081; schema, mock và mapping SQL cần rà soát trước triển khai.
+`sequence`/`version` truyền dưới dạng chuỗi số nguyên; thời điểm theo UTC. Actor lấy từ phiên. ID/cursor/transport đã chọn DEC-081 và được dùng trong DM hiện tại; khi chuyển v1 cần hồi quy schema, mapping SQL và quyền trên nền service/database riêng.
 
 <a id="contract-5"></a>
 
@@ -280,24 +282,24 @@ Quy tắc tìm người đã chốt DEC-069: chuỗi tìm từ 2 đến 64 đơn
 không phân biệt hoa/thường, không tự bỏ dấu; khớp một phần, ưu tiên khớp
 đúng tên tài khoản, sau đó thứ tự tên tài khoản và ID để phân trang ổn
 định. Trang mặc định 20, tối đa 50. Chỉ trả người đủ điều kiện nhận DM;
-không trả chính người tìm. Các giới hạn/cách khớp đã xác nhận; thứ tự username/ID và cursor ổn định là thiết kế cần rà soát. Không dùng endpoint tìm kiếm để lộ email.
+không trả chính người tìm. Các giới hạn/cách khớp, thứ tự username/ID và cursor đã có trong Identity search; bằng chứng theo revision tại [P1-T01](../../records/verification/messaging/DM-P1-T01.md). Không dùng endpoint tìm kiếm để lộ email; cần hồi quy khi chuyển v1.
 
 <a id="đối-chiếu-sql-trước-triển-khai"></a>
 
 ### Đối chiếu SQL trước triển khai
 
-Đọc schema ngày 2026-10-04; chưa có writer Messaging để kiểm chứng. Các dòng này là đầu việc kỹ thuật, không thay đổi SQL trong lần hoàn thiện docs.
+Các mã DM-SQL dưới đây giữ truy vết từ schema ngày 2026-10-04 tới nền DM `900e226`. Mã, bootstrap và migration DM đã có; khi chuyển database v1 phải bảo toàn dữ liệu/khóa và kiểm chứng lại, không coi bảng này hoặc seed là proof migration dữ liệu thật.
 
-| Mã | Schema hiện tại | Đầu ra cần có |
+| Mã | Baseline trước triển khai DM | Hiện trạng nền DM và yêu cầu kế thừa |
 |---|---|---|
-| DM-SQL-01 | `direct_conversations` unique `(user_low_id,user_high_id)`, kiểm tra low < high | Chọn cùng thứ tự UUID giữa writer/DB; tạo space/cặp cùng transaction; chứng minh mở đồng thời trả cùng DM |
-| DM-SQL-02 | `messages.sequence_no` là identity toàn cục, cấp trước commit và có thể có khoảng trống | Thiết kế khóa/counter theo hội thoại bảo đảm thứ tự commit; identity hiện tại không chứng minh bù tin không sót |
-| DM-SQL-03 | Unique `(space_id,author_user_id,client_message_id)` đã có | Bổ sung SendOperation/fingerprint còn tồn tại sau xóa; unique tin đơn thuần chưa giải quyết payload khác hoặc thử lại sau sửa/xóa |
-| DM-SQL-04 | Constraint văn bản dùng `char_length` tối đa 10.000; text message yêu cầu content khác null | Ràng buộc 2.000 UTF-16 ở service; điều chỉnh constraint để tombstone có content null; không dùng char_length thay phép đếm đã chốt |
-| DM-SQL-05 | Có `message_edits.previous_content` trong schema/seed | Writer v1 không ghi nội dung cũ theo DEC-052; chọn migration/cleanup phù hợp trước dùng dữ liệu thật |
-| DM-SQL-06 | Có outbox chung nhưng chưa có dispatcher Messaging | Transaction tin/khóa/outbox; sự kiện chỉ tham chiếu; dispatcher đọc bản hiện hành, merge ID/version, kiểm tra quyền/phiên |
+| DM-SQL-01 | `direct_conversations` unique `(user_low_id,user_high_id)`, kiểm tra low < high | Writer đã chuẩn hóa UUID và tạo space/cặp cùng transaction; proof mở đồng thời tại [P1-T02](../../records/verification/messaging/DM-P1-T02.md) |
+| DM-SQL-02 | `messages.sequence_no` là identity toàn cục, cấp trước commit và có thể có khoảng trống | Đã thêm `conversation_sequence` và counter/khóa theo space; proof commit order tại [P3-T02](../../records/verification/messaging/DM-P3-T02.md); v1 giữ cơ chế bù không sót |
+| DM-SQL-03 | Unique `(space_id,author_user_id,client_message_id)` đã có | Đã có SendOperation/fingerprint giữ sau xóa; retry trả current DTO/tombstone; giữ khóa và key khi chuyển dữ liệu |
+| DM-SQL-04 | Constraint văn bản dùng `char_length` tối đa 10.000; text message yêu cầu content khác null | Validator đã dùng 2.000 UTF-16, constraint đã cho tombstone content null; không dùng char_length thay phép đếm đã chốt |
+| DM-SQL-05 | Có `message_edits.previous_content` trong schema/seed | Writer DM hiện tại không ghi nội dung cũ theo DEC-052; bảng legacy còn trong bootstrap, việc import/cleanup dữ liệu thật phải được rà soát |
+| DM-SQL-06 | Có outbox chung nhưng chưa có dispatcher Messaging | Đã có transaction tin/khóa/outbox, lease dispatcher và current DTO; proof worker/merge/quyền tại [DM-MVP](../../records/verification/messaging/DM-MVP.md); transport liên service v1 còn phải tích hợp |
 
-Nguồn: [schema.sql](../../../database/postgres/schema.sql). Các trường/schema cho nhóm chat, file, reactions/read state trong seed không tự mở rộng scope DM văn bản.
+Nguồn: [schema.sql](../../../database/postgres/schema.sql), [migration DM](../../../database/postgres/migrations) và [Messaging module](../../../services/Modules/Messaging/MessagingModule.cs). Các trường/schema cho nhóm chat, file, reactions/read state trong seed không tự mở rộng scope DM văn bản.
 
 <a id="contract-10"></a>
 
@@ -452,8 +454,9 @@ kế, chưa thay thế danh sách OS/thiết bị và phiên bản cụ thể c�
 
 Mỗi lần chạy ghi: mã ca, build, cấu hình, dữ liệu, trình duyệt/thiết bị,
 bước tái hiện, kỳ vọng, thực tế, bằng chứng, người thực hiện và lỗi liên
-quan. Trạng thái ban đầu của **mọi ca là Chưa chạy**; ca phụ thuộc đề
-xuất chưa xác nhận thêm ghi chú “Chờ chốt quy tắc”, không tính là đạt.
+quan. Mỗi lần chạy mới bắt đầu ở trạng thái **Chưa chạy**; kết quả nền đã có
+được dẫn từ hồ sơ DM cùng revision/phạm vi, không tự chuyển thành Đạt cho build v1.
+Ca phụ thuộc đề xuất chưa xác nhận thêm ghi chú “Chờ chốt quy tắc”, không tính là đạt.
 
 <a id="gaps"></a>
 
@@ -463,13 +466,13 @@ xuất chưa xác nhận thêm ghi chú “Chờ chốt quy tắc”, không tí
 
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
-| Kết quả tìm kiếm | Đã chốt độ dài, phân trang và khớp tại DEC-069; schema/cursor đã chi tiết hóa; còn kiểm chứng truy vấn và frontend/mock. | OQ-005 |
+| Kết quả tìm kiếm | Identity search/cursor và frontend API thật đã có bằng chứng [P1-T01](../../records/verification/messaging/DM-P1-T01.md); còn hồi quy và tích hợp hợp đồng mạng sau tách v1. | OQ-005 |
 | Lưu giữ | DEC-103–109 chốt account lock/no self-delete và retention online; còn review/migration/worker theo [chính sách chung](../../system/data-lifecycle.md). Sổ độc lập, restore placeholder và proof backup/restore áp dụng sau v1 theo DEC-156. | OQ-005/011, DATA-GAP |
-| Thử lại/đồng thời | Rà soát và thử nghiệm hợp đồng chống trùng, khóa theo hội thoại, xung đột sửa/xóa và dọn dữ liệu. | OQ-005, OQ-008 |
-| Giới hạn nội dung | Đã chốt 2.000 UTF-16, xuống dòng/emoji và từ chối trống; đã có bảng text-policy và fixture theo DEC-090; còn kiểm chứng client/server. | OQ-005 |
+| Thử lại/đồng thời | Nền DM có proof retry/HMAC/commit order tại [P3-T02](../../records/verification/messaging/DM-P3-T02.md) và mutation/reconnect tại [DM-MVP](../../records/verification/messaging/DM-MVP.md); còn hồi quy xuyên service và kiểm chứng dọn dữ liệu theo scope v1. | OQ-005, OQ-008 |
+| Giới hạn nội dung | Validator client/server và corpus đã có bằng chứng [P2-T01](../../records/verification/messaging/DM-P2-T01.md); sửa tin có bằng chứng trong gói DM-MVP. Tin phòng và các build v1 phải kiểm chứng riêng cùng [text-policy](text-policy.md). | OQ-005 |
 | Chất lượng | Ngưỡng và ma trận đã chốt DEC-082/083; còn cấu hình/build/thiết bị và kết quả đo. | OQ-007 |
 
-Đã bổ sung [OpenAPI dự thảo](../../contracts/direct-messaging.openapi.json) ngày 2026-10-04; chưa xác nhận thiết kế hoặc có mock/API/Hub chạy được. Schema dùng `x-scdc-utf16-length` vì minLength/maxLength của JSON Schema không tự biểu diễn phép đếm UTF-16. `clientMessageId` UUIDv4, ID server UUIDv7 theo DEC-081; ví dụ là dữ liệu minh họa, không phải ID của dữ liệu thật. Cách biểu diễn SQL hiện tại dùng chat space/`sequence_no`; thiết kế logic dùng conversation/sequence. Cần rà soát ánh xạ, unique key theo tác giả và commit order trước triển khai, không coi seed/schema hiện tại là đã chứng minh hợp đồng đề xuất.
+[OpenAPI dự thảo](../../contracts/direct-messaging.openapi.json) được bổ sung ngày 2026-10-04 và vẫn mang metadata thiết kế; API/Hub DM đã có trong nền `900e226`, không đồng nghĩa mọi nhánh schema đã thực thi hoặc nghiệm thu. Schema dùng `x-scdc-utf16-length` vì minLength/maxLength của JSON Schema không tự biểu diễn phép đếm UTF-16. `clientMessageId` UUIDv4, ID server UUIDv7 theo DEC-081; ví dụ là dữ liệu minh họa. SQL dùng chat space và `conversation_sequence` cho wire sequence; `sequence_no` legacy vẫn tồn tại. Kết quả mapping/unique key/commit order phải dẫn từ hồ sơ build đã chạy, không suy từ seed/schema và không tự áp cho database v1.
 
 Các quyết định chưa chốt được giữ ở OQ-005/OQ-007/OQ-008/OQ-011. Chọn framework hoặc mô hình lưu không thay thế việc kiểm chứng lost response, concurrent commit, worker dừng và reconnect.
 

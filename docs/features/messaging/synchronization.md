@@ -4,7 +4,7 @@ History/cursor, outbox, Hub, reconnect và thu hồi của Messaging dùng chung
 
 ## Trạng thái hiện tại
 
-REST/SignalR, UUID, cursor bảo vệ và deadline chat ≤5 giây đã chốt DEC-081/083. Các schema/thuật toán dưới đây là thiết kế mục tiêu; Hub/dispatcher và proof reconnect/thu hồi chưa được ghi nhận hoàn tất. Rà soát lại các giả định transaction xuyên module khi chuyển microservice ở v1 theo DEC-116.
+REST/SignalR, UUID, cursor bảo vệ và deadline chat ≤5 giây đã chốt DEC-081/083. Nền DM `900e226` đã có history/cursor, Hub, dispatcher outbox, tự reconnect/bù nhiều trang và tải lại cửa sổ tin cũ. [DM-MVP](../../records/verification/messaging/DM-MVP.md) ghi bằng chứng reconnect/worker/thu hồi theo revision; [kiểm tra hợp nhất 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) ghi luồng nhận realtime và tải lại lịch sử DM. Đây là bằng chứng nền một host, chưa đóng toàn bộ AC/gate v1. Tin phòng và các giả định transaction/quyền xuyên service vẫn cần tích hợp, rà soát và kiểm chứng theo DEC-116.
 
 <a id="contract-8"></a>
 
@@ -14,7 +14,7 @@ REST/SignalR, UUID, cursor bảo vệ và deadline chat ≤5 giây đã chốt D
 
 `sequence` và `version` truyền dưới dạng chuỗi số nguyên; client so sánh bằng BigInt, không chuyển sang Number có thể mất độ chính xác. ID server dùng UUIDv7, `clientMessageId` dùng UUIDv4 theo DEC-081.
 
-Trang lịch sử đề xuất mặc định 50, tối đa 100 tin. Lần mở đầu lấy
+Trang lịch sử DM mặc định 50, tối đa 100 tin. Lần mở đầu lấy
 trang tin mới nhất; `before` lấy tối đa `limit` tin gần nhất nằm trước
 con trỏ, sau đó sắp tăng theo `sequence` để hiển thị; không được kết hợp
 `before` và `after` trong cùng request. Response:
@@ -31,7 +31,7 @@ realtime làm bằng chứng đã đọc đủ lịch sử. So sánh version/seq
 theo giá trị số nguyên chính xác, không so theo thứ tự từ điển. Không suy số tin chưa đọc
 từ hiệu hai sequence; trạng thái đã đọc chưa thuộc đợt này.
 
-Hợp đồng nhận cập nhật đề xuất: đăng ký hội thoại đã có quyền; thông báo
+Hợp đồng nhận cập nhật DM: đăng ký hội thoại đã có quyền; thông báo
 `MessageChanged` chứa DTO trạng thái hiện hành và version. Client merge
 theo `messageId`, chỉ áp dụng version mới hơn. Dispatcher có thể gửi
 lặp hoặc gộp nhiều sửa đổi bằng cách đọc bản mới nhất; không cần lưu
@@ -87,18 +87,18 @@ Schema máy đọc cho Hub nằm trong [chat-realtime.schema.json](../../contrac
 
 Sự kiện `MessageChanged` có `{eventId,conversationId,message}`; eventId không dùng làm cursor lịch sử. `AccessRevoked` có `{scope,conversationId?,reason}` chỉ phục vụ UI, không mang nội dung tin và không thay việc server ngừng phát. Sai subscribe trả HubException với JSON ProblemDetails theo schema, không stack trace; auth subscription thất bại không tải lịch sử tài nguyên đó. Client dùng errorCode khi được nhận, không đoán ý nghĩa từ message tiếng Anh.
 
-Dispatcher claim outbox bằng lease, lấy message hiện hành qua Messaging, user summary qua Identity và chỉ phát tới registry connections đã đủ quyền. Registry gắn `connectionId,userId,sessionId,spaceId`; guard kiểm tra trước phát nội dung, đối soát ≤1 giây và sự kiện thu hồi commit bỏ định tuyến/đóng kết nối. Backend lỗi kiểm tra quyền phải dừng phát; HTTP history vẫn kiểm tra quyền và outbox còn để retry. SignalR disconnect/reconnect đăng ký lại, bù REST và reload các trang cũ để thấy edit/delete.
+Hợp đồng đồng bộ yêu cầu dispatcher claim outbox bằng lease, lấy message hiện hành qua Messaging, user summary qua Identity và chỉ phát tới registry connections đã đủ quyền. Registry gắn `connectionId,userId,sessionId,spaceId`; guard kiểm tra trước phát nội dung, đối soát ≤1 giây và sự kiện thu hồi commit bỏ định tuyến/đóng kết nối. Backend lỗi kiểm tra quyền phải dừng phát; HTTP history vẫn kiểm tra quyền và outbox còn để retry. SignalR disconnect/reconnect đăng ký lại, bù REST và reload các trang cũ để thấy edit/delete. Phần tích hợp thực tế của nền DM được ghi bên dưới; thông báo thu hồi sau commit và phối hợp xuyên service vẫn cần đối chiếu theo gói v1.
 
-[IAccountAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) và shared [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) đã có trong source cho guard actor và transaction một host. Consumer DM/Hub chưa được tích hợp. Phần còn cần thiết kế/triển khai gồm guard recipient khi gửi mới, `IUserSearchDirectory` cho search/profile, `IAuthenticatedSessionReader` cho realtime và mở rộng `IRealtimeAccessRevoker` theo session/user/space.
+[IAccountPairAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) và [ISharedDatabaseSession](../../../services/SCDC.Contracts/Persistence/ISharedDatabaseSession.cs) đã được tích hợp vào writer/history và [ConversationAccess](../../../services/Modules/Messaging/Realtime/ConversationAccess.cs) của DM trong monolith. Identity triển khai guard cặp actor/peer, [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs), [IAuthenticatedSessionReader](../../../services/SCDC.Contracts/Identity/IAuthenticatedSessionReader.cs) và historical summary reader; Messaging dùng các hợp đồng này, không đọc bảng Identity trực tiếp. Các adapter mạng và phối hợp hàng rào/quyền khi tách service vẫn cần thiết kế tại [thu hồi truy cập v1](../../system/access-revocation.md#v1-authorization-coordination).
 
-Identity giữ dữ liệu bảo mật; Messaging giữ registry/Hub chat. Media control giữ Hub riêng theo [D11](../media/participation-lifecycle.md#v1-media-realtime). Hub và worker ban đầu chạy cùng API của owner theo [D12/D13](../../system/backend.md#v1-realtime-hosting); mỗi service có một bản chạy hoạt động theo [D21](../../system/environments.md#v1-service-replicas). `IUserDirectory` hiện chỉ trả active user summary, không chứng minh verified/valid session; không thay guard bằng summary khác null. Hub và outbox dispatcher còn chưa có runtime; không bổ sung backplane chỉ để phối hợp nhiều bản Hub trong cấu hình này. Redis scale-out cho mở rộng sau cần quyết định riêng.
+Identity giữ dữ liệu bảo mật; Messaging giữ registry/Hub chat. Nền DM đã đăng ký [ChatHub và các worker](../../../services/Modules/Messaging/MessagingModule.cs) trong API host MVP. Media control giữ Hub riêng theo [D11](../media/participation-lifecycle.md#v1-media-realtime); Hub/worker tại API của từng owner và một bản chạy/service là mục tiêu v1 theo [D12/D13](../../system/backend.md#v1-realtime-hosting)/[D21](../../system/environments.md#v1-service-replicas). `IUserDirectory` chỉ trả active user summary, không chứng minh verified/valid session; runtime DM dùng guard/session reader riêng. Không bổ sung backplane chỉ để phối hợp nhiều bản Hub trong cấu hình này; scale-out về sau cần quyết định riêng.
 
 ### Xác thực SignalR
 
 SignalR giữ principal của lúc kết nối và không tự phản ánh việc thu hồi phiên/quyền trong thời gian kết nối; vì vậy cần kiểm tra dữ liệu hiện hành và đóng/bỏ định tuyến connection. Bật `CloseOnAuthenticationExpiration` chỉ giải quyết hết hạn token, không thay thế thu hồi nghiệp vụ. Xem [tài liệu xác thực SignalR của Microsoft](https://learn.microsoft.com/en-us/aspnet/core/signalr/authn-and-authz?view=aspnetcore-10.0). JavaScript dùng `accessTokenFactory`; query token của WebSocket chỉ được nhận đúng route Hub và bị loại khỏi log proxy/API. Map user routing theo `sub` ổn định, không displayName.
 
-Interface phiên/thu hồi theo session là phần mở rộng cần thiết kế trong `SCDC.Contracts`: `IUserDirectory` hiện chỉ trả thông tin user, `IRealtimeAccessRevoker` hiện chỉ nhận user/space ID. Không đọc DB Identity trực tiếp từ Messaging để thay interface còn thiếu. Mọi cơ chế trên vẫn phải thử nghiệm rollback, concurrent commit, mất response, worker dừng và revoke khi reconnect.
+Nền DM đã dùng `IAuthenticatedSessionReader` tại Hub, dispatcher và [SubscriptionReconciler](../../../services/Modules/Messaging/Realtime/SubscriptionReconciler.cs) để kiểm tra phiên hiện hành, bỏ định tuyến và đóng kết nối khi mất quyền hoặc không xác nhận được authority. `IRealtimeAccessRevoker` hiện vẫn chỉ có chữ ký user/space, chưa là hợp đồng thu hồi theo session được runtime DM sử dụng. Phối hợp thông báo sau commit, tin phòng và cơ chế thu hồi xuyên service v1 cần hợp đồng riêng; không đọc DB Identity trực tiếp từ Messaging để thay hợp đồng. Các ca rollback, concurrent commit, mất response, worker dừng và revoke/reconnect phải được hồi quy trên nền v1.
 
 ## Kiểm chứng và phần còn lại
 
-Thử nghiệm outbox sau commit, worker dừng/restart, event trùng/đảo thứ tự, reconnect nhiều trang và sửa/xóa tin cũ theo [TC-DM-15–17/25/26](direct-messaging.md#tests) và [UC-COM-25/TC-COM-25](channel-messaging.md#uc-com-25). Thu hồi phải đo trên kết nối đang mở từ commit đến ngừng truy cập trong ≤5 giây, gồm khi authority lỗi; HTTP guard hoặc fixture riêng chưa đủ. Ghi cấu hình/key ring, dataset, build/commit và phép đo trong hồ sơ thực thi.
+Nền DM có bằng chứng agent về outbox/worker, event trùng/đảo thứ tự, reconnect nhiều trang, sửa/xóa tin cũ và thu hồi tại [DM-MVP](../../records/verification/messaging/DM-MVP.md); kết quả chỉ áp dụng build/phạm vi trong hồ sơ. Hồi quy các ca [TC-DM-15–17/25/26](direct-messaging.md#tests) khi chuyển v1 và thực thi riêng [UC-COM-25/TC-COM-25](channel-messaging.md#uc-com-25) cho tin phòng. Thu hồi phải đo trên kết nối đang mở từ commit đến ngừng truy cập trong ≤5 giây, gồm khi authority lỗi; HTTP guard hoặc fixture riêng chưa đủ. Ghi cấu hình/key ring, dataset, build/commit và phép đo trong hồ sơ thực thi; chưa có kết luận đạt toàn bộ tải/chất lượng hoặc thu hồi xuyên service v1.

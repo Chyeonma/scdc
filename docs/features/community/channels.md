@@ -6,7 +6,7 @@ Community / Channels sở hữu metadata, kind, danh sách theo quyền và vòn
 
 ## Trạng thái theo khả năng
 
-Đối chiếu hiện trạng ngày 2026-10-08. Nền Community đã hợp nhất vào `main`; bằng chứng dẫn dưới đây gắn revision cụ thể, không phải kết quả chạy lại cho mọi thay đổi sau đó.
+Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md), đã hợp nhất Community và DM trong một host. Bằng chứng từng gói và hợp nhất Community ngày 2026-10-08 giữ revision lịch sử; [kiểm tra tích hợp ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) có phạm vi riêng. Lần cập nhật này không chạy lại test; Hub/dispatcher DM đã có, chưa thay proof tin phòng hoặc thu hồi quyền Community.
 
 | Khả năng | Trạng thái và giới hạn | Bằng chứng |
 |---|---|---|
@@ -14,7 +14,7 @@ Community / Channels sở hữu metadata, kind, danh sách theo quyền và vòn
 | List/detail — phần UC-COM-17; sửa metadata — UC-COM-18 | Đã kiểm chứng; UC-COM-17 chưa có lịch sử tin | [Phòng text/ACL](../../records/verification/community/channels-access.md) |
 | Cấu hình ACL HTTP — phần UC-COM-22 | Đã kiểm chứng; thuật toán, snapshot và quyền quản lý tại [Access control](access-control.md) | [Phòng text/ACL](../../records/verification/community/channels-access.md) |
 | Xóa phòng — UC-COM-19; voice/Media | Thiết kế mục tiêu; chưa triển khai lifecycle/runtime | [Kế hoạch](../../project/planning.md#community-work-items) |
-| Lịch sử, gửi/nhận, Hub và mất quyền | Chưa tích hợp; Community MVP chưa đạt | [Tin phòng](../messaging/channel-messaging.md) |
+| Lịch sử, gửi/nhận, Hub và mất quyền phòng | Chưa tích hợp cho channel; chuyển tiếp sang v1 từ nền MVP nội bộ. Hub DM đã có, không thay tích hợp tin phòng | [Tin phòng](../messaging/channel-messaging.md) |
 
 Quy tắc view/ACL chỉ định nghĩa tại [Access control](access-control.md#view-permissions); giao tiếp qua [Messaging](../messaging/channel-messaging.md).
 
@@ -226,7 +226,7 @@ Nền MVP có GET/POST channels và GET/PATCH channel theo OpenAPI. POST default
 
 Management guard giữ Identity lease → server share/read hoặc update/mutation → channel share/update. Mọi single-channel route kiểm tra view trước quyền quản lý; phòng bị ẩn, đã xóa hoặc thuộc server khác trả 404, kể cả actor có manage_channels/manage_channel_access. Foundation phải valid session/active verified account/server/member. Tính view theo [policy chuẩn](access-control.md#view-permissions). Danh sách dùng cùng policy trong SQL trước LIMIT; cursor actor/server/limit/purpose/24 giờ, không hứa snapshot bất biến.
 
-Trong MVP, create ghi Messaging space qua IChatSpaceLifecycle trên cùng connection/transaction; Community chỉ ghi community schema. Reader/writer tin phải dùng [channel admission guard](../../system/community.md#transactions); chưa có lịch sử/send/subscription writer tiêu thụ hợp đồng này.
+Trong nền `900e226`, create ghi Messaging space qua IChatSpaceLifecycle trên cùng connection/transaction; Community chỉ ghi community schema. Reader/writer tin phòng phải dùng [channel admission guard](../../system/community.md#transactions); chưa có lịch sử/send/subscription tin phòng tiêu thụ hợp đồng này. Writer/Hub DM đã có với guard hội thoại riêng, không tự cấp quyền channel.
 
 Trong MVP, create/metadata mutation tăng server accessVersion và ghi event outbox IDs/cause/version cùng transaction, không broadcast tên/ACL/member list. Metadata bump channel version; metadata no-op giữ version/event. Version và sự kiện khi đổi ACL hoặc dọn override được định nghĩa tại [Access control](access-control.md#acl-api).
 

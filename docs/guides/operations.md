@@ -2,7 +2,7 @@
 
 # SCDC — Hướng dẫn thao tác vận hành
 
-Cập nhật: 2026-10-12. Phạm vi SCP-008; DEC-110/111/112/156/170. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](../system/data-lifecycle.md#policy).
+Cập nhật: 2026-10-13. Phạm vi SCP-008; DEC-110/111/112/156/170. Đối chiếu nền kế thừa `900e226` theo [snapshot MVP](../releases/mvp.md). Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](../system/data-lifecycle.md#policy).
 
 Runbook dùng theo phạm vi của [v1](../releases/v1.md) và giai đoạn sau v1. Backup/restore, retention backup và kiểm chứng RPO/RTO được chuyển [sau v1](../project/overview.md#backup-scope) theo DEC-156; các bước tương ứng dưới đây là thiết kế cho giai đoạn đó. Mốc [MVP](../releases/mvp.md) bắt đầu từ ba tính năng nền và bộ chạy/kiểm tra theo scope.
 
@@ -49,10 +49,10 @@ Mỗi lần thao tác cần có người thực hiện đã được cấp quy�
 | [compose.yaml](../../compose.yaml) có Web/API/PostgreSQL | Development, publish cổng DB, credentials local và SQL init/seed; chưa có HTTPS, kho secrets hoặc media. WAL archiving thuộc sau v1 |
 | [Dockerfile API](../../services/SCDC.Api/Dockerfile) và [Web](../../clients/WebClient/Dockerfile) | Có bước build; chưa có manifest production và bản artefact đã khóa digest cho một đợt phát hành |
 | [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs) trả healthy/module stage | Không truy vấn DB hoặc kiểm tra worker; HTTP 200 không chứng minh ứng dụng dùng được |
-| [Nginx](../../clients/WebClient/nginx.conf) có `/healthz`, proxy API/hub | `/healthz` chỉ trả chuỗi tĩnh; access log mặc định cần kiểm tra query nhạy cảm trước dùng production |
+| [Nginx](../../clients/WebClient/nginx.conf) có `/healthz`, proxy API/hub; `/hubs/` đã tắt access log | `/healthz` chỉ trả chuỗi tĩnh; log/proxy trên môi trường production vẫn cần kiểm chứng không lộ query/token nhạy cảm |
 | [Program.cs](../../services/SCDC.Api/Program.cs) và [IdentityModule](../../services/Modules/Identity/IdentityModule.cs) | Swagger bật trong Development; cần cấu hình proxy/HTTPS/CORS và thử đường truy cập thực tế |
 | [appsettings.json](../../services/SCDC.Api/appsettings.json) | Connection string/signing key trống; `ExposeDevelopmentTokens` mặc định false, chưa có kiểm tra cấm bật ngoài Development |
-| Identity và các gói Community đã có nghiệp vụ trên `main`; Messaging có nền module/lifecycle tạo space | Các nhánh tin nhắn/realtime chưa được tích hợp vào `main`; chưa có media hoặc worker retention. Sổ bảo vệ độc lập phục vụ restore thuộc sau v1. Xem [phạm vi và bằng chứng Community](../features/community/README.md) trước khi nghiệm thu |
+| Nền `900e226` có Identity, quản lý Community và DM với writer/lịch sử/sửa/xóa/Hub/outbox/reconnect | Tin phòng, realtime Community, Media và retention worker còn phải hoàn thiện; email worker nằm ở nhánh Identity riêng. Bằng chứng tích hợp tại [hồ sơ ngày 2026-10-13](../records/verification/messaging/merge-2026-10-13.md); proof DM không thay proof tin phòng hoặc microservice v1. Sổ bảo vệ restore thuộc sau v1 |
 
 Chi tiết cấu hình có trong [hướng dẫn phát triển](development.md#configuration). Production phải kiểm tra giá trị cấu hình thực sự được nạp: environment phù hợp, signing key riêng, token Development tắt, origin hợp lệ, domain liên kết email đúng và DB không mở trực tiếp cho browser. Kiểm tra từ response/log đã lọc; không dump toàn environment hoặc connection string vào hồ sơ.
 

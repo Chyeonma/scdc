@@ -1,6 +1,6 @@
 # SCDC — Liên kết email và giao email
 
-Cơ chế Identity dùng chung cho xác minh và khôi phục mật khẩu. Luồng người dùng ở [đăng ký/xác minh](registration-verification.md) và [mật khẩu](password-recovery.md); tài liệu này sở hữu policy token, cooldown, consume, EmailDelivery/worker và bảo vệ liên kết. [Hiện trạng](#status) phân biệt snapshot `main`, triển khai trên nhánh Identity và bằng chứng còn cần kiểm chứng.
+Cơ chế Identity dùng chung cho xác minh và khôi phục mật khẩu. Luồng người dùng ở [đăng ký/xác minh](registration-verification.md) và [mật khẩu](password-recovery.md); tài liệu này sở hữu policy token, cooldown, consume, EmailDelivery/worker và bảo vệ liên kết. [Hiện trạng](#status) phân biệt nền MVP `900e226`, snapshot lịch sử `main@f65408b` và triển khai trên nhánh Identity chưa tích hợp.
 
 Backup key ring và khôi phục từ backup thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. v1 vẫn giữ key ring bền qua restart, bảo vệ/rotation khóa và phục hồi worker từ dữ liệu hiện hành; khôi phục mật khẩu không thuộc phần hoãn này.
 
@@ -31,7 +31,7 @@ ACC-P02: verify/reset một lần, 30 phút, cấp mới vô hiệu link cũ cù
 
 ## API mục tiêu
 
-API mục tiêu thực hiện DEC-063–067. [OpenAPI luồng xác minh/khôi phục](../../contracts/account-recovery.openapi.json) có 4 thao tác; chú thích thiếu endpoint resend và chênh lệch source được lập từ snapshot `main`, chưa đối chiếu lại nhánh Identity theo [hiện trạng](#status). Swagger sinh từ source của bản triển khai là nguồn cho API đang chạy.
+API mục tiêu thực hiện DEC-063–067. [OpenAPI luồng xác minh/khôi phục](../../contracts/account-recovery.openapi.json) có 4 thao tác; chú thích thiếu endpoint resend và chênh lệch source được lập từ snapshot lịch sử `main@f65408b`. Nền `900e226` vẫn chưa tích hợp email/resend từ nhánh Identity theo [hiện trạng](#status). Swagger sinh từ source của bản triển khai là nguồn cho API đang chạy.
 
 <a id="api-http-xác-minh-gửi-lại-và-khôi-phục"></a>
 
@@ -110,7 +110,7 @@ Trạng thái: đã xác nhận phương án A ngày 2026-10-12 — [DEC-155](..
 | Cấp bí mật | App Password cấp riêng cho container Identity theo [D36](../../system/environments.md#v1-secret-provisioning) |
 | Phạm vi | Phát triển/demo v1; bản công khai đánh giá riêng |
 
-Lựa chọn tận dụng tài khoản hiện có, không tự vận hành SMTP giao thư trực tiếp. Đánh đổi là phụ thuộc Google, mạng và hạn mức tài khoản. Phương án B tự vận hành SMTP đã được so sánh nhưng không được chọn. Phần Gmail trong Identity đã có trên nhánh tính năng; [hiện trạng](#status) phân biệt với snapshot `main` và bằng chứng gửi thư thực tế.
+Lựa chọn tận dụng tài khoản hiện có, không tự vận hành SMTP giao thư trực tiếp. Đánh đổi là phụ thuộc Google, mạng và hạn mức tài khoản. Phương án B tự vận hành SMTP đã được so sánh nhưng không được chọn. Phần Gmail trong Identity đã có trên nhánh tính năng, chưa tích hợp nền `900e226`; [hiện trạng](#status) ghi nguồn và bằng chứng gửi thư còn thiếu.
 
 Gmail công bố SMTP hỗ trợ TLS; endpoint, cổng/chế độ TLS và thư viện triển khai v1 cần đối chiếu từ implementation hiện có. Nguồn: [Google — SMTP](https://developers.google.com/workspace/gmail/imap/imap-smtp).
 
@@ -164,14 +164,15 @@ Ngoài các ca trên, v1 thử rollback không gửi mail, worker crash trước
 
 ## Hiện trạng và khoảng trống
 
-Rà soát source ngày 2026-10-12 phân biệt hai snapshot:
+Đối chiếu hiện trạng ngày 2026-10-13 phân biệt nền bàn giao với các snapshot đã rà soát ngày 2026-10-12:
 
-- `main` tại `f65408b70ba5f0dd5a09be2091ddba350f0e180c`: còn các khoảng trống được ghi nhận ngày 2026-10-04/05 trong bảng dưới. Chưa có resend, cooldown reset đầy đủ hoặc worker/provider email.
-- `feat/identity` và `origin/feat/identity` cùng tại `60f4db3cfc72877c536829fa0a8495b6f957b085`: đã có triển khai email và các test nêu sau bảng. Các file riêng của nhánh chưa có trong snapshot `main` trên.
+- [Nền MVP `900e226`](../../releases/mvp.md): đã hợp nhất Community/DM và tích hợp phiên với Hub DM, nhưng chưa có resend, cooldown reset đầy đủ hoặc worker/provider email. Đăng ký local còn dùng token Development; tích hợp DM không chứng minh giao email thật.
+- Snapshot lịch sử `main` tại `f65408b70ba5f0dd5a09be2091ddba350f0e180c`: nguồn của bảng gap email trước tích hợp DM; không dùng tên ref này để chỉ nền hiện tại. Các gap email trong bảng vẫn còn ở `900e226`.
+- `feat/identity` và `origin/feat/identity` tại `60f4db3cfc72877c536829fa0a8495b6f957b085` trong lần rà soát: đã có triển khai email và các test nêu sau bảng. Phần này chưa tích hợp vào `900e226`.
 
 Các khoảng trống giữ nguyên mã để đối chiếu với bản phát hành; năng lực có trong source nhánh không tự đóng khoảng trống hoặc xác nhận AC/TC đã đạt.
 
-| Mã | Yêu cầu/căn cứ | Source trong snapshot `main` trên | Việc còn phải đối chiếu/kiểm chứng |
+| Mã | Yêu cầu/căn cứ | Source nền `900e226` kế thừa gap email | Việc còn phải đối chiếu/kiểm chứng |
 |---|---|---|---|
 | ACC-GAP-02 | Gửi lại sau 60 giây, vô hiệu link cũ — ACC-012 | Chưa có resend verification hoặc cooldown reset; reset request mới đã vô hiệu token reset cũ | Đối chiếu triển khai nhánh Identity với bản phát hành; kiểm chứng cooldown, cấp lại đồng thời và mục đích độc lập |
 | ACC-GAP-03 | Xác minh bằng token dùng một lần — ACC-012 | Verify đọc token/lưu nhưng không có khóa hoặc conditional consume như reset | Đối chiếu khóa/consume trong nhánh Identity; kiểm chứng verify/reset đồng thời và consume tranh khóa với resend |

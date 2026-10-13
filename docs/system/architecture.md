@@ -1,6 +1,6 @@
 # SCDC — Kiến trúc hệ thống
 
-Đối chiếu source `main` sau khi hợp nhất Community ngày 2026-10-08. MVP dùng một API host Modular Monolith; microservice thuộc v1 theo DEC-116. Phương án mục tiêu chưa được triển khai.
+Đối chiếu nền hợp nhất `900e226` ngày 2026-10-13 theo [snapshot MVP](../releases/mvp.md) và [hồ sơ tích hợp Community/DM](../records/verification/messaging/merge-2026-10-13.md). Nền nội bộ dùng một API host Modular Monolith; kiến trúc microservice mục tiêu v1 theo DEC-116 chưa được triển khai.
 
 ## Mục lục
 
@@ -18,7 +18,7 @@
 ```mermaid
 %%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 45, "rankSpacing": 70}, "theme": "dark", "themeVariables": {"background": "#0f172a", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#64748b", "lineColor": "#94a3b8", "textColor": "#e2e8f0", "edgeLabelBackground": "#1e293b", "clusterBkg": "#141e2e", "clusterBorder": "#475569"}, "themeCSS": "& { background-color: #0f172a; }"}}%%
 flowchart LR
-    Web[WebClient · React 19 / Vite] -->|HTTP /api/v1| Api[SCDC.Api · .NET 10]
+    Web[WebClient · React 19 / Vite] -->|HTTP /api/v1 · SignalR /hubs/chat| Api[SCDC.Api · .NET 10]
     Api --> Identity[Identity]
     Api --> Community[Community]
     Api --> Messaging[Messaging]

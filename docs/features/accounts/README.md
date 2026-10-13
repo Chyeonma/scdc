@@ -1,6 +1,6 @@
 # SCDC — Tài khoản
 
-Phạm vi REQ-010/SCP-002. Identity sở hữu danh tính, hồ sơ, mật khẩu, email và phiên. [MVP](../../releases/mvp.md) chọn các luồng nền; [v1](../../releases/v1.md) hoàn thiện vòng đời tài khoản.
+Phạm vi REQ-010/SCP-002. Identity sở hữu danh tính, hồ sơ, mật khẩu, email và phiên. [MVP](../../releases/mvp.md) ghi nhận nền nội bộ đã có; [v1](../../releases/v1.md) hoàn thiện vòng đời tài khoản.
 
 ## Mục lục
 
@@ -15,9 +15,9 @@ Phạm vi REQ-010/SCP-002. Identity sở hữu danh tính, hồ sơ, mật khẩ
 
 ## Phạm vi đọc và bàn giao
 
-Mỗi chủ đề giữ quy tắc, luồng/UX, API/dữ liệu/transaction, AC/TC và hiện trạng tương ứng. Ma trận source/test được đối chiếu ngày 2026-10-04/05; việc tổ chức lại tài liệu không ghi nhận một lần chạy mới. Kết quả chạy gắn commit/build/môi trường vào hồ sơ kiểm chứng của gói; danh mục test hoặc fixture không tự ghi thành đạt.
+Mỗi chủ đề giữ quy tắc, luồng/UX, API/dữ liệu/transaction, AC/TC và hiện trạng tương ứng. Hiện trạng kế thừa ngày 2026-10-13 lấy [nền MVP `900e226`](../../releases/mvp.md); các ma trận Identity ghi rõ phần đối chiếu ngày 2026-10-04/05 và phần bổ sung sau tích hợp DM. Kết quả chạy gắn commit/build/môi trường vào hồ sơ kiểm chứng của gói; danh mục test hoặc fixture không tự ghi thành đạt. Lần cập nhật hiện trạng này không chạy lại test.
 
-Gói MVP-ID và người phụ trách nằm trong [hồ sơ MVP](../../releases/mvp.md#packages); phần hoàn thiện ở [v1](../../releases/v1.md). Chưa có hồ sơ nghiệm thu riêng cho gói Accounts. MVP dùng một API host; shared transaction/guard được rà soát khi chuyển microservice v1 theo DEC-116.
+Gói MVP-ID và người phụ trách nằm trong [hồ sơ MVP](../../releases/mvp.md#packages); phần hoàn thiện tiếp tục ở [v1](../../releases/v1.md). Nền `900e226` có Identity API, guard và tích hợp phiên với Hub DM trong một host; UI đăng ký còn dùng token Development. Email worker/resend trên `feat/identity@60f4db3` chưa tích hợp vào nền này, theo [hiện trạng email](email-links.md#status). [Bằng chứng tích hợp](../../records/verification/messaging/merge-2026-10-13.md) không thay nghiệm thu riêng toàn bộ Accounts hoặc email thật. Shared transaction/guard cần điều chỉnh và kiểm chứng khi chuyển microservice v1 theo DEC-116.
 
 <a id="use-case-rules"></a>
 

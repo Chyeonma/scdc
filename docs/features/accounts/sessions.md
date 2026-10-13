@@ -22,7 +22,7 @@ Phạm vi UC-ACC-04/09/10/11. Identity sở hữu login, refresh rotation, phiê
 | ACC-010 | Mật khẩu 8–128 theo `.Length` của .NET, có ít nhất một chữ và một số theo `char.IsLetter`/`char.IsDigit`; không tự trim hoặc đổi nội dung mật khẩu. Sai 5 lần khóa đăng nhập 15 phút. | DEC-064; giữ chính sách hiện tại |
 | ACC-011 | Access token 15 phút; phiên tối đa 30 ngày từ lúc đăng nhập, refresh không kéo dài thời hạn phiên. Có đăng xuất phiên hiện tại, thu hồi từng phiên và đăng xuất mọi thiết bị; đổi/đặt lại mật khẩu thu hồi mọi phiên. | DEC-065 |
 
-ACC-P04: phiên tối đa 30 ngày, đổi/reset thu hồi tất cả (DEC-065); transport hiện tại Bearer/refresh JSON, thu hồi realtime còn cần triển khai. Định danh tuân ACC-008/009 ở [đăng ký](registration-verification.md#rules); account active/verified và quyền sở hữu theo [account-state](account-state.md).
+ACC-P04: phiên tối đa 30 ngày, đổi/reset thu hồi tất cả (DEC-065); transport nền `900e226` là Bearer/refresh JSON, đã có kiểm tra phiên và cutoff trên Hub DM. Thu hồi tin phòng, Media và cơ chế xuyên service v1 cần tích hợp/kiểm chứng riêng theo [hiện trạng](#status). Định danh tuân ACC-008/009 ở [đăng ký](registration-verification.md#rules); account active/verified và quyền sở hữu theo [account-state](account-state.md).
 
 <a id="flows"></a>
 
@@ -132,7 +132,7 @@ ACC-S02 · Đăng nhập
 
 ## API và dữ liệu
 
-Prefix `/api/v1`; bảng mô tả code được đối chiếu ngày 2026-10-04.
+Prefix `/api/v1`; bảng mô tả API Identity kế thừa trong nền `900e226`.
 
 | Method / đường dẫn | Xác thực và đầu vào JSON | Kết quả thành công |
 |---|---|---|
@@ -155,7 +155,7 @@ Prefix `/api/v1`; bảng mô tả code được đối chiếu ngày 2026-10-04.
 | Còn hạn | Logout-all, đổi/reset mật khẩu | Thu hồi mọi phiên của tài khoản; request xác thực tiếp theo bị từ chối |
 | Đã hết hạn/thu hồi | Dùng access hoặc refresh token cũ | Không cấp lại phiên; cần đăng nhập mới |
 
-HTTP Bearer hiện kiểm tra session, trạng thái active và security stamp trong DB trên mỗi request; JWT cho phép clock skew 30 giây theo source. Chưa có kết nối realtime để kiểm chứng ngưỡng thu hồi trên kết nối mở. Request đã được xác thực trước thay đổi phiên/quyền cần được xem xét riêng trong thiết kế đồng thời.
+HTTP Bearer nền `900e226` kiểm tra session, trạng thái active và security stamp trong DB trên mỗi request; JWT cho phép clock skew 30 giây theo source. Hub DM đã dùng `IAuthenticatedSessionReader` và `SubscriptionReconciler` để đối soát phiên/tài khoản, ngừng định tuyến và đóng kết nối cũ khi không còn hợp lệ hoặc không xác nhận được quyền. Bằng chứng theo [hồ sơ DM](../../records/verification/messaging/DM-MVP.md) không thay proof tin phòng/Media hoặc hàng rào xuyên service v1. Request đã được xác thực trước thay đổi phiên/quyền vẫn cần guard tới commit theo hợp đồng tương ứng.
 
 | Bảng | Trách nhiệm và ràng buộc |
 |---|---|
@@ -197,7 +197,7 @@ Mọi AC/TC dưới đây cần kết quả chạy gắn commit/build; danh mụ
 
 | Mã ca | Tiền điều kiện và thao tác | Kết quả cần quan sát | Dẫn chiếu |
 |---|---|---|---|
-| TC-ACC-08 | Phiên hết hạn/đăng xuất, rồi dùng lại bằng chứng phiên hoặc kết nối cũ | Request mới bị từ chối; kết nối chat ngừng nhận dữ liệu trong ≤5 giây sau commit thu hồi | AC-ACC-04/16, DEC-083; cơ chế realtime còn cần triển khai |
+| TC-ACC-08 | Phiên hết hạn/đăng xuất, rồi dùng lại bằng chứng phiên hoặc kết nối cũ | Request mới bị từ chối; kết nối chat ngừng nhận dữ liệu trong ≤5 giây sau commit thu hồi | AC-ACC-04/16, DEC-083; bằng chứng DM riêng theo [hiện trạng](#status), không suy sang tin phòng/Media |
 | TC-ACC-10 | Mật khẩu 7/8/128/129, chỉ chữ/chỉ số; 5 lần sai rồi mật khẩu đúng trước/sau hết khóa | Policy và lockout theo DEC-064; thử đúng sau hết khóa có thể đăng nhập | AC-ACC-12 |
 | TC-ACC-11 | Đồng hồ thử tại biên hạn access/phiên và refresh trước hạn phiên | Không gia hạn phiên bằng refresh; ghi clock skew 30 giây khi đo JWT | AC-ACC-13 |
 | TC-ACC-14 | A1 thu hồi A2 rồi gọi API trên hai phiên; lặp với phiên hiện tại/logout-all/đổi/reset mật khẩu | Đúng phạm vi phiên bị thu hồi; không suy test HTTP thành test realtime | AC-ACC-16 |
@@ -206,16 +206,18 @@ Mọi AC/TC dưới đây cần kết quả chạy gắn commit/build; danh mụ
 
 ## Hiện trạng và khoảng trống
 
-Đối chiếu source/test ngày 2026-10-04/05; lần tổ chức tài liệu này không chạy lại test hoặc xác nhận nghiệm thu. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
 
 | UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
 |---|---|---|---|---|
 | UC-ACC-04 | AC-02/04/07/12; TC-01/02/08/10 | `LoginAsync`; `POST /auth/login`; form login | Lifecycle: login username trước/sau verify; `Parallel_wrong_passwords_are_counted_and_trigger_lockout`; hai test login/đổi mật khẩu tranh khóa | Login bằng email, biên hết lockout và UI dẫn tới xác minh chưa có test; form hiện chỉ báo lỗi chung |
-| UC-ACC-09 | AC-13/16; TC-08/11/14 | `RefreshAsync`; `POST /auth/refresh`; wrapper refresh | Lifecycle: rotation/reuse và access bị từ chối; Client: phối hợp refresh/không khôi phục logout hoặc ghi đè login mới | Chưa có test biên hạn phiên/access, response rotation bị mất hoặc trình duyệt thật; thu hồi realtime chưa triển khai |
-| UC-ACC-10 | AC-04/16; TC-08/14 | `GetSessionsAsync`, `RevokeSessionAsync`; `GET /auth/sessions`, `DELETE /auth/sessions/{id}`; tab phiên | Lifecycle: đánh dấu current, revoke phiên khác và access phiên đó bị từ chối | Chưa assertion phiên người gọi vẫn sống ngay sau revoke, revoke phiên hiện tại/quyền sở hữu; UI dùng phiên mẫu khi lỗi/rỗng và chưa có thao tác revoke phiên hiện tại |
-| UC-ACC-11 | AC-04/16; TC-08/14 | `LogoutAsync`, `LogoutAllAsync`; `POST /auth/logout`, `POST /auth/logout-all`; wrapper xóa phiên local | Lifecycle: logout/logout-all và từ chối access; Client: logout giữa tab không bị refresh khôi phục | UI ghi “tất cả thiết bị khác” trong khi logout-all gồm phiên gọi; thiếu test logout token không nhận diện, lỗi mạng/phạm vi phiên và cleanup dữ liệu riêng/realtime |
+| UC-ACC-09 | AC-13/16; TC-08/11/14 | `RefreshAsync`; `POST /auth/refresh`; wrapper refresh; reconnect DM lấy access credential mới | Lifecycle: rotation/reuse và access bị từ chối; Client: phối hợp refresh/không khôi phục logout hoặc ghi đè login mới; DM có ca access expiry/refresh/resubscribe | Cần đầy đủ biên hạn phiên/clock skew và response rotation bị mất; ca DM dùng cấu hình proof riêng, chưa là benchmark hoặc bằng chứng xuyên service |
+| UC-ACC-10 | AC-04/16; TC-08/14 | `GetSessionsAsync`, `RevokeSessionAsync`; `GET /auth/sessions`, `DELETE /auth/sessions/{id}`; tab phiên dùng dữ liệu API, có lỗi/thử lại | Lifecycle: đánh dấu current, revoke phiên khác và access phiên đó bị từ chối; hồ sơ DM có ca UI thu hồi đúng A2 và cutoff kết nối cũ | Chưa đóng đầy đủ ca revoke phiên hiện tại/quyền sở hữu; UI chưa có thao tác revoke riêng phiên hiện tại, dùng đăng xuất |
+| UC-ACC-11 | AC-04/16; TC-08/14 | `LogoutAsync`, `LogoutAllAsync`; `POST /auth/logout`, `POST /auth/logout-all`; wrapper xóa phiên local; UI nói rõ gồm thiết bị này | Lifecycle: logout/logout-all và từ chối access; Client: logout giữa tab không bị refresh khôi phục; DM có đối soát logout-all/phiên cũ | Cần đầy đủ lỗi mạng/logout token không nhận diện và phạm vi phiên; không suy proof DM thành thu hồi tin phòng/Media hoặc toàn bộ ma trận Accounts |
 
-Rà soát ngày 2026-10-05. Prefix API là `/api/v1`. `Lifecycle` là test `Identity_v1_supports_the_complete_password_account_lifecycle` trong [IdentityV1FlowTests](../../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs); các test có tên riêng khác nằm trong [IdentityConcurrencyTests](../../../tests/SCDC.Api.Tests/Identity/IdentityConcurrencyTests.cs). `Client` là [api.test.js](../../../clients/WebClient/tests/api.test.js), gồm assertion rotation giữa tab, storage event bị bỏ lỡ, 401 đến trễ, logout khi refresh đang chờ, login mới và trường hợp thiếu Web Locks. Các test này dùng browser/fetch mô phỏng, chưa chứng minh UI hoặc trình duyệt thật.
+Ma trận Identity gốc được rà soát ngày 2026-10-05. Prefix API là `/api/v1`. `Lifecycle` là test `Identity_v1_supports_the_complete_password_account_lifecycle` trong [IdentityV1FlowTests](../../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs); các test có tên riêng khác nằm trong [IdentityConcurrencyTests](../../../tests/SCDC.Api.Tests/Identity/IdentityConcurrencyTests.cs). `Client` là [api.test.js](../../../clients/WebClient/tests/api.test.js), gồm assertion rotation giữa tab, storage event bị bỏ lỡ, 401 đến trễ, logout khi refresh đang chờ, login mới và trường hợp thiếu Web Locks. Các test Client này dùng browser/fetch mô phỏng; bằng chứng trình duyệt DM được ghi riêng bên dưới.
+
+Nền `900e226` bổ sung [AuthenticatedSessionReader](../../../services/Modules/Identity/Infrastructure/Services/AuthenticatedSessionReader.cs), [SubscriptionReconciler](../../../services/Modules/Messaging/Realtime/SubscriptionReconciler.cs) và [RealtimeHubTests](../../../tests/SCDC.Api.Tests/Messaging/RealtimeHubTests.cs). Các ca tự động kiểm tra connection cũ sau revoke/logout-all/stamp/expiry/disabled/unverified; một số trạng thái được dựng bằng SQL trên DB kiểm thử, không thay quy trình khóa tài khoản. [Hồ sơ DM](../../records/verification/messaging/DM-MVP.md) ghi agent chạy UI revoke đúng A2, cutoff với bound đo đã nêu và access expiry/refresh/resubscribe trên host proof riêng. [Kiểm tra hợp nhất ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) bổ sung hồi quy trên nền hợp nhất. Các kết quả không xác nhận toàn bộ Accounts đã nghiệm thu, tải v1 đạt ngưỡng hoặc thu hồi quyền Community/Media đã hoàn tất.
 
 Source nghiệp vụ: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [UserDirectory](../../../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs). Giao diện/wrapper: [AuthScreen](../../../clients/WebClient/src/components/AuthScreen.jsx), [UserSettingsModal](../../../clients/WebClient/src/components/UserSettingsModal.jsx), [api.js](../../../clients/WebClient/src/api.js).
 
@@ -224,7 +226,7 @@ Source nghiệp vụ: [RegistrationService](../../../services/Modules/Identity/I
 | Test hiện có | Hành vi có assertion | Coverage còn thiếu |
 |---|---|---|
 | `Identity_v1_supports_the_complete_password_account_lifecycle` | Đăng ký, từ chối login trước verify, verify, login bằng username, hồ sơ, rotation/reuse, reset/đổi mật khẩu, phiên/revoke/logout-all/logout | Login bằng email; reset trước verify; boundary/cooldown/resend; link hết hạn/verify đồng thời; email thật |
-| `A_concurrent_login_cannot_survive_a_password_change` / `A_login_waiting_for_a_password_change_rechecks_the_password` | Hai thứ tự chạy login và đổi/reset; phiên/mật khẩu cũ không còn dùng được | Hành trình nhiều tab và kết nối realtime |
+| `A_concurrent_login_cannot_survive_a_password_change` / `A_login_waiting_for_a_password_change_rechecks_the_password` | Hai thứ tự chạy login và đổi/reset; phiên/mật khẩu cũ không còn dùng được | Các test này không tự chứng minh hành trình nhiều tab hoặc realtime; bằng chứng kết nối DM được dẫn riêng |
 | `Parallel_wrong_passwords_are_counted_and_trigger_lockout` | Đếm đúng request sai đồng thời, khóa đăng nhập | Biên hết khóa và giới hạn theo nguồn |
 
-Client test dùng browser/fetch mô phỏng; chưa chứng minh trình duyệt thật. Chưa có test biên hạn/clock skew, response rotation bị mất hoặc realtime cutoff. Danh sách phiên UI đang dùng dữ liệu mẫu khi lỗi/rỗng; nhãn logout-all hiện sai phạm vi. ACC-GAP-06 về limiter theo dõi ở [email-links](email-links.md#status).
+Client test dùng browser/fetch mô phỏng; không thay bằng chứng trình duyệt thật đã ghi riêng cho DM. Còn cần đủ biên hạn/clock skew, response rotation bị mất và kiểm chứng theo bản v1. Danh sách phiên hiện dùng API với trạng thái lỗi/thử lại; logout-all đã ghi gồm thiết bị hiện tại. ACC-GAP-06 về limiter theo dõi ở [email-links](email-links.md#status).

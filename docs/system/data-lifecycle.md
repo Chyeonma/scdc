@@ -2,7 +2,7 @@
 
 # SCDC — Vòng đời dữ liệu
 
-Cập nhật: 2026-10-12. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
+Cập nhật: 2026-10-13. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đối chiếu nền kế thừa `900e226`; đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
 
 Chính sách dữ liệu online áp dụng cho [v1](../releases/v1.md). Gói backup/restore, sổ bảo vệ độc lập và nhánh placeholder chỉ phục vụ restore chuyển sang [sau v1](../project/overview.md#backup-scope) theo [DEC-156](../records/decisions/README.md#dec-156); giữ thiết kế dưới đây để triển khai ở giai đoạn đó. [MVP](../releases/mvp.md#acceptance) chọn gói và tiêu chí áp dụng; không cần triển khai mọi worker/media trước gói đầu. Các quy tắc quyền, lưu tin và nội dung được luồng MVP sử dụng vẫn giữ theo nguồn chuẩn; thiết kế transaction/guard cần rà soát khi chuyển sang microservice ở v1 theo DEC-116.
 
@@ -198,19 +198,19 @@ Tác giả active còn quyền được chủ động sửa tin unavailable bằ
 | Hiện có | Chênh lệch / thiết kế đề xuất |
 |---|---|
 | `identity.users` có suspended/disabled/deleted; username unique ở mọi status | Không có API self-delete/suspend trong scope đã triển khai; không tự purge account theo tuổi |
-| `IUserDirectory` chỉ Active | Cần projection lịch sử riêng để không làm mất trang tin của tác giả bị khóa; guard actor/read/send khác nhau |
+| `IUserDirectory` chỉ Active; nền `900e226` đã có `IHistoricalUserSummaryReader` cho DM | DM đã dùng projection lịch sử với `availability` và guard actor/read/send riêng; tin phòng và chuyển service v1 còn cần tích hợp/kiểm chứng |
 | Audit có IP/user-agent/metadata và append-only comment | Cần allowlist metadata, redact/purge theo policy, không cho thao tác tay sửa audit |
 | Account/session/refresh tables có expiry/revoke và FK | Chưa có retention worker/family cleanup, index/terminal marker và proof reuse/cooldown sau purge |
 | `message_edits.previous_content` trong SQL/seed | Migration dữ liệu serving theo DEC-052; không tự xóa backup hoặc dùng SQL comment làm bằng chứng đã dọn |
-| Outbox/inbox trong schema | Chưa có dispatcher/retention/receipt độc lập để chống replay sau purge/restore |
+| Outbox/inbox trong schema; DM đã có outbox dispatcher | Chưa có retention worker và bằng chứng chống replay sau purge; receipt/sổ bảo vệ độc lập phục vụ restore thuộc sau v1 |
 | Media vẫn chưa có module/provider | Terminal/draining và fencing theo [Media](../features/media/participation-lifecycle.md), không dọn theo TTL trước quiescence |
 
-Nguồn: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../../services/Modules/Identity/Domain/IdentityEnums.cs), [IdentityData](../../services/Modules/Identity/Infrastructure/IdentityData.cs), [UserDirectory](../../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs).
+Nguồn: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../../services/Modules/Identity/Domain/IdentityEnums.cs), [IdentityData](../../services/Modules/Identity/Infrastructure/IdentityData.cs), [UserDirectory](../../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs), [HistoricalUserSummaryReader](../../services/Modules/Identity/Infrastructure/Services/HistoricalUserSummaryReader.cs), [hồ sơ DM-MVP](../records/verification/messaging/DM-MVP.md).
 
 | Gói | Đầu ra và proof cần có |
 |---|---|
 | DATA-GAP-01 | Review policy DEC-103–109/matrix/source mapping, cadence/budget dọn và phạm vi quyền người chạy job |
-| DATA-GAP-02 | Projection lịch sử/guard theo DEC-104, mở khóa không sống lại phiên; actor edit/delete khi peer bị khóa |
+| DATA-GAP-02 | Kế thừa projection lịch sử/guard DM theo DEC-104; tiếp tục tích hợp tin phòng/chuyển service và chứng minh công cụ khóa/mở khóa không sống lại phiên, actor edit/delete khi peer bị khóa theo phạm vi v1 |
 | DATA-GAP-03 | Migration worker/index/terminal payload/dedup marker; batch rollback/crash, family FK/reuse và cooldown |
 | DATA-GAP-04 — sau v1 | Chọn kho sổ/key/checkpoint phục vụ restore, proof hai kho và prepared/committed/aborted/unknown; không có gap mất hành động bảo vệ |
 | DATA-GAP-05 — sau v1 | Diễn tập restore/floor/generation/email/media/quota và trường hợp mất bản sửa; đo RPO/RTO, lưu bằng chứng |
@@ -222,7 +222,7 @@ Nguồn: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../..
 
 ## 8. Tiêu chí và kiểm thử
 
-Tất cả ca chưa chạy. Dữ liệu thử phải dùng tài khoản/tin giả; fixture chỉ là kỳ vọng và phép tính policy, không kết quả chạy DB/job/restore.
+Chưa có hồ sơ kiểm chứng toàn bộ bộ ca DATA bên dưới. Một số nhánh quyền/peer bị khóa, projection lịch sử và tombstone/retry DM có bằng chứng theo build tại [DM-MVP](../records/verification/messaging/DM-MVP.md); chúng chưa đóng toàn bộ AC/TC-DATA hoặc chứng minh retention/restore. Dữ liệu thử phải dùng tài khoản/tin giả; fixture chỉ là kỳ vọng và phép tính policy, không kết quả chạy DB/job/restore.
 
 Phạm vi v1 giữ các nhánh online, gồm quyền, tombstone/chống trùng, cleanup và bảo vệ log. AC-DATA-10–13/15–16 và TC-DATA-07–12 thuộc gói restore sau v1. AC-DATA-14 tách retention log/audit online trong v1 với đo backup/RPO/RTO sau v1; TC-DATA-03 chỉ chạy nhánh xóa/retry/cleanup online trong v1. Phần restore của các ca khác cũng áp dụng sau v1, không đánh dấu được hoãn là đã đạt.
 

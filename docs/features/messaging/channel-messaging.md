@@ -6,7 +6,7 @@ Backup/restore và placeholder sau restore thuộc [giai đoạn sau v1](../../p
 
 ## Trạng thái và phạm vi bàn giao
 
-[MVP](../../releases/mvp.md#community-scope) đã chọn lịch sử/gửi/nhận tin và xử lý mất quyền. Sửa/xóa tin UC-COM-24 thuộc phần mở rộng/v1. Chưa có writer tin phòng hoặc Hub được kiểm chứng; nền tạo phòng/ACL và guard đã có bằng chứng riêng tại [Community](../community/channels.md), không chứng minh chat/realtime đã đạt.
+[MVP](../../releases/mvp.md#community-scope) ghi phần lịch sử/gửi/nhận tin và xử lý mất quyền được bàn giao tiếp sang v1; sửa/xóa tin UC-COM-24 thuộc phạm vi v1. Nền `900e226` đã có ChatHub/outbox cho DM theo [Messaging](README.md), nhưng writer tin phòng, SubscribeChannel/UnsubscribeChannel và phát ChannelMessageChanged chưa được triển khai/kiểm chứng. Nền tạo phòng/ACL và guard đã có bằng chứng riêng tại [Community](../community/channels.md), không chứng minh chat/realtime tin phòng đã đạt.
 
 Nguồn điều kiện nền/version/epoch/lỗi và ranh giới module tại [Community](../../system/community.md). Quyền xem và management tại [phân quyền](../community/access-control.md); model/gửi/retry/sửa/xóa tại [vòng đời tin](message-lifecycle.md), validation tại [nội dung văn bản](text-policy.md), history/Hub tại [đồng bộ](synchronization.md).
 
@@ -126,7 +126,7 @@ Mất quyền/rời/xóa phòng xóa cache/tin tạm của scope tương ứng v
 
 ## API và điều kiện admission
 
-[OpenAPI Community](../../contracts/community.openapi.json) và [schema realtime](../../contracts/community-realtime.schema.json) giữ contract tin phòng mục tiêu; các route tin/Hub chưa triển khai. Ví dụ/schema/fixture không ghi nhận kết quả runtime.
+[OpenAPI Community](../../contracts/community.openapi.json) và [schema realtime](../../contracts/community-realtime.schema.json) giữ contract tin phòng mục tiêu; các route tin phòng và phương thức/sự kiện channel trên Hub chưa triển khai. Hub DM đã có không thay phần tích hợp này. Ví dụ/schema/fixture không ghi nhận kết quả runtime.
 
 <a id="channel-admission"></a>
 

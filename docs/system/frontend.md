@@ -2,7 +2,7 @@
 
 ## Cấu trúc hiện tại
 
-WebClient dùng React 19/Vite; phiên bản dependency tại [package.json](../../clients/WebClient/package.json). [App.jsx](../../clients/WebClient/src/App.jsx) ghép điều hướng, phiên và các màn hình.
+WebClient nền hợp nhất `900e226` dùng React 19/Vite; phiên bản dependency tại [package.json](../../clients/WebClient/package.json). [App.jsx](../../clients/WebClient/src/App.jsx) ghép điều hướng, phiên, Community và DM thật theo [hồ sơ tích hợp](../records/verification/messaging/merge-2026-10-13.md).
 
 ```text
 clients/WebClient/
@@ -11,6 +11,12 @@ clients/WebClient/
 │   ├── api.js               # HTTP, auth/session và refresh
 │   ├── components/          # Thành phần giao diện
 │   ├── community/           # API/hooks/views của Community
+│   ├── useConversationInbox.js # Inbox DM theo actor
+│   ├── dmHistory.js         # Hợp nhất lịch sử/version
+│   ├── dmRealtime.js        # Hub, reconnect và bù dữ liệu
+│   ├── dmRecovery.js        # Phục hồi lịch sử sau reconnect
+│   ├── dmSendOperation.js   # Operation gửi/retry chủ động
+│   ├── dmTextPolicy.js      # Validation nội dung DM
 │   ├── styles.css           # Token và CSS hiện tại
 │   └── mockData.js          # Dữ liệu mẫu của phần chưa tích hợp
 ├── tests/                   # Node tests
@@ -27,4 +33,4 @@ clients/WebClient/
 
 ## Kiểm chứng
 
-Node tests kiểm tra logic/wrapper; Playwright kiểm tra hành trình trong môi trường được chỉ định. Build không thay bằng chứng UI/API/DB hoặc realtime. Lệnh chạy tại [Development](../guides/development.md#testing), kết quả gắn commit tại [hồ sơ Community](../records/verification/community/README.md).
+Node tests kiểm tra logic/wrapper; Playwright kiểm tra hành trình trong môi trường được chỉ định. Build không thay bằng chứng UI/API/DB hoặc realtime. Lệnh chạy tại [Development](../guides/development.md#testing), kết quả gắn commit tại [hồ sơ Community](../records/verification/community/README.md), [DM](../records/verification/messaging/README.md) và [tích hợp](../records/verification/messaging/merge-2026-10-13.md).

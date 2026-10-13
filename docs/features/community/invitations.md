@@ -6,7 +6,7 @@ Community / Invitations sở hữu lời mời, hiệu lực, lượt sử dụn
 
 ## Trạng thái theo khả năng
 
-Đối chiếu hiện trạng ngày 2026-10-08. Nền Community đã hợp nhất vào `main`; bằng chứng dẫn dưới đây gắn revision cụ thể, không phải kết quả chạy lại cho mọi thay đổi sau đó.
+Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md), đã hợp nhất Community và DM trong một host. Bằng chứng từng gói và hợp nhất Community ngày 2026-10-08 giữ revision lịch sử; [kiểm tra tích hợp ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) có phạm vi riêng. Lần cập nhật này không chạy lại test; Hub/dispatcher DM đã có, chưa thay proof tin phòng hoặc thu hồi quyền Community.
 
 | Khả năng | Trạng thái và giới hạn | Bằng chứng |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 # SCDC — Chạy local và kiểm thử Community
 
-Cập nhật: 2026-10-11. Bộ chạy cho `main` sau khi hợp nhất `feat/community-channels`, kế thừa create/view, join, search và permissions. Backend/WebClient Community và migration 001–004 đã có trên `main`. Phạm vi chạy được tại [các chủ đề Community](../features/community/README.md), bằng chứng theo revision tại [verification](../records/verification/community/README.md). Các lệnh dưới đây là hướng dẫn chạy lại; kết quả lần hợp nhất ghi riêng tại [kiểm chứng main](../records/verification/community/README.md#main-merge).
+Cập nhật: 2026-10-13. Bộ chạy nền Community/phòng/quyền đã được kế thừa trong bản hợp nhất `900e226`, gồm create/view, join, search, permissions và migration 001–004. Phạm vi chạy được tại [các chủ đề Community](../features/community/README.md); bằng chứng nền theo revision tại [verification](../records/verification/community/README.md), tích hợp với DM tại [hồ sơ ngày 2026-10-13](../records/verification/messaging/merge-2026-10-13.md). Các lệnh dưới đây là hướng dẫn chạy lại, không ghi nhận kết quả mới.
 
 Backup/restore thuộc [giai đoạn sau v1](../project/overview.md#backup-scope) theo DEC-156. Hướng dẫn nâng cấp DB vẫn yêu cầu preflight, toàn vẹn schema/dữ liệu, drain writer cũ và kế hoạch rollback ứng dụng tương thích schema.
 
@@ -10,11 +10,11 @@ Backup/restore thuộc [giai đoạn sau v1](../project/overview.md#backup-scope
 
 ## Chuẩn bị
 
-Cần .NET SDK 10, Node 24/npm, Python 3, OpenSSL và PostgreSQL 18 qua Docker hoặc Podman. Chạy từ root repo trong Bash/zsh hoặc WSL; mở terminal riêng cho API và Vite. Chọn nhánh code đã có tại local, sau khi lưu công việc đang sửa:
+Cần .NET SDK 10, Node 24/npm, Python 3, OpenSSL và PostgreSQL 18 qua Docker hoặc Podman. Chạy từ root repo trong Bash/zsh hoặc WSL; mở terminal riêng cho API và Vite. Dùng checkout chứa nền `900e226` và ghi revision của lần thử:
 
 ```bash
-git switch main
 git status --short --branch
+git rev-parse HEAD
 ```
 
 Không reset nhánh để chạy theo hướng dẫn. Ghi `git rev-parse HEAD` trong hồ sơ của lần chạy; đối chiếu commit nền ở acceptance của gói.
@@ -131,7 +131,7 @@ SCDC_E2E_DATABASE=scdc_community_docs_test \
 4. Owner cấu hình role/ACL deny rồi personal allow; member kiểm tra lại list/detail và gọi trực tiếp API. Kiểm tra version conflict và GET đối soát trước khi lưu lại.
 5. Chạy browser suite cho lost response, pending operation qua reload, stale selection/actor, pagination và roster epoch; ghi riêng lỗi API tiêm với thao tác dùng API thật.
 
-Bộ chạy hiện hành dừng ở nền Community/phòng/quyền. Chưa có composer/lịch sử tin, Hub/dispatcher hoặc thu hồi kết nối ≤5 giây; không đánh dấu [gate MVP](../releases/mvp.md#community-acceptance) đạt từ smoke nền này. Các proof chưa có nằm tại [bảng đối chiếu](../records/verification/community/README.md#unverified).
+Bộ chạy này kiểm tra nền Community/phòng/quyền. Bản hợp nhất đã có composer/lịch sử và Hub/dispatcher cho DM; tin phòng, subscription Community và thu hồi quyền phòng trên kết nối thật vẫn cần triển khai/kiểm chứng trong v1. Smoke nền này không chứng minh các [tiêu chí Community chuyển tiếp](../releases/mvp.md#community-acceptance); giới hạn tại [bảng đối chiếu](../records/verification/community/README.md#unverified).
 
 <a id="migration"></a>
 

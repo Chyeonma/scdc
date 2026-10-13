@@ -96,10 +96,12 @@ UC-ACC-12 áp dụng AC-DATA-02/03 và TC-DATA-01 trong [vòng đời dữ liệ
 
 ## Hiện trạng và khoảng trống
 
-Đối chiếu source/test ngày 2026-10-04/05; lần tổ chức tài liệu này không chạy lại test hoặc xác nhận nghiệm thu. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
 
 | UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
 |---|---|---|---|---|
 | UC-ACC-12 | ACC-015, ACL-02; [AC-DATA-02/03, TC-DATA-01](../../system/data-lifecycle.md#acceptance) | RB-ACCOUNT và enum/status trong Identity; chưa có API/CLI khóa/mở khóa | Chưa có test quy trình khóa/mở khóa; kiểm tra Bearer hiện có chỉ là một phần guard | Công cụ, phân quyền, audit/receipt và status policy cụ thể còn OQ-011; cần chứng minh thu hồi/cutoff, giữ lịch sử và unlock không khôi phục phiên |
 
 DEC-104/112 và RB-ACCOUNT đã chốt hành vi/phạm vi; công cụ, người/vai trò, audit/receipt và status policy cụ thể còn OQ-011. Bearer guard hiện có chỉ là một phần, chưa có test quy trình khóa/mở khóa.
+
+Nền `900e226` đã có projection lịch sử và kiểm tra phiên/tài khoản cho DM. [Hồ sơ DM](../../records/verification/messaging/DM-MVP.md) ghi các ca peer disabled, lịch sử/author mutation và cutoff kết nối cũ; một số trạng thái được dựng trong DB kiểm thử. Đây không phải công cụ khóa/mở khóa được phép sử dụng hoặc bằng chứng hoàn tất UC-ACC-12, thu hồi quyền phòng hay Media.

@@ -70,7 +70,7 @@ Email nằm trong hồ sơ riêng `users/me`, không phải hồ sơ công khai 
 | `identity.user_profiles` | Một hồ sơ mỗi user; tên hiển thị không phải khóa đăng nhập |
 | `identity.user_emails` | Unique email chuẩn hóa; tối đa một email primary; `verified_at` tách khỏi mật khẩu |
 
-Module khác lấy `UserSummary(id, username, displayName)` qua `IUserDirectory`; interface hiện hỗ trợ tìm ID, username chính xác và nhiều ID, chưa có tìm một phần tên. Hồ sơ công khai không trả email, mật khẩu, security stamp hoặc thông tin phiên.
+Module khác lấy `UserSummary(id, username, displayName)` qua `IUserDirectory`; interface này hỗ trợ tìm ID, username chính xác và nhiều ID. Nền `900e226` bổ sung [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs) cho tìm một phần username/displayName trong DM và [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) cho tác giả/peer lịch sử không còn available. Hai đường này đã tích hợp với DM; không suy directory summary thành đủ quyền truy cập. Hồ sơ công khai không trả email, mật khẩu, security stamp hoặc thông tin phiên.
 
 Nguồn đối chiếu: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [IdentityModule](../../../services/Modules/Identity/IdentityModule.cs), [IdentityDbContext](../../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [IUserDirectory](../../../services/SCDC.Contracts/Identity/IUserDirectory.cs).
 
@@ -103,10 +103,10 @@ AC-ACC-11/TC-ACC-09 kiểm chứng biên displayName và định danh ở [đăn
 
 ## Hiện trạng và khoảng trống
 
-Đối chiếu source/test ngày 2026-10-04/05; lần tổ chức tài liệu này không chạy lại test hoặc xác nhận nghiệm thu. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
 
 | UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
 |---|---|---|---|---|
-| UC-ACC-07 | AC-03/08/11/17; TC-05/09/15 | `GetAsync`, `UpdateProfileAsync`; `GET/PATCH /users/me`; `UserDirectory`; form hồ sơ | Lifecycle: đọc username/emailVerified và PATCH trả 200 | Chưa assertion giá trị hồ sơ sau lưu/quyền riêng tư/biên UTF-16; UI chưa cho sửa locale hoặc xem email chỉ đọc; tìm người DM thuộc scope tích hợp |
+| UC-ACC-07 | AC-03/08/11/17; TC-05/09/15 | `GetAsync`, `UpdateProfileAsync`; `GET/PATCH /users/me`; `UserDirectory`; form hồ sơ | Lifecycle: đọc username/emailVerified và PATCH trả 200 | Chưa assertion giá trị hồ sơ sau lưu/quyền riêng tư/biên UTF-16; UI chưa cho sửa locale hoặc xem email chỉ đọc; tìm người/projection lịch sử DM có [bằng chứng riêng](../../records/verification/messaging/README.md), không đóng toàn bộ UC hồ sơ |
 
 ACC-GAP-07 được định nghĩa tại [đăng ký/xác minh](registration-verification.md#status); cần cùng fixture UTF-16 cho register/profile. UI chưa cho sửa locale hoặc xem email chỉ đọc; chưa assertion giá trị sau lưu/quyền riêng tư/biên UTF-16.

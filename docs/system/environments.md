@@ -6,13 +6,17 @@ Nguồn cho topology, thành phần và yêu cầu cấu hình. Các bước cà
 
 ## Development hiện tại
 
+Stack dưới đây là nền hợp nhất `900e226` theo [snapshot MVP](../releases/mvp.md). Các thành phần microservice, Redis, Media và giám sát v1 ở phần thiết kế phía sau chưa được triển khai trong stack này.
+
 | Thành phần | Vai trò | Nguồn cấu hình |
 |---|---|---|
 | WebClient | React/Vite khi debug; Nginx phục vụ bản build trong container | [Vite](../../clients/WebClient/vite.config.js), [Nginx](../../clients/WebClient/nginx.conf), [Dockerfile](../../clients/WebClient/Dockerfile) |
-| SCDC.Api | Host Identity, Community và Messaging | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
+| SCDC.Api | Host Identity, Community và Messaging, gồm ChatHub/outbox/reconciler DM | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
 | PostgreSQL | Dữ liệu nghiệp vụ trong một database | [Compose](../../compose.yaml), [SQL bootstrap](../../database/postgres/schema.sql) |
 | Volume DB | Giữ dữ liệu qua restart container | `scdc-postgres-data` trong Compose |
 | Community keyring | Giữ khóa bảo vệ cursor qua restart | `scdc-community-keys` trong Compose |
+| Identity/DM cursor keyring | Bảo vệ cursor tìm người, inbox và lịch sử DM, tách provider Community | `identity-user-search-keys` trong Compose |
+| Khóa fingerprint DM | Giữ khóa gửi/retry qua restart; tạo bằng `make init-dm-key` | `scdc-messaging-keys` trong Compose |
 
 WebClient proxy `/api`, `/hubs`, `/swagger` tới API. PostgreSQL được kiểm tra bằng `pg_isready` trước khi API khởi động. Thứ tự service khởi động không thay phép kiểm tra hành trình người dùng.
 

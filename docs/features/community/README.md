@@ -17,6 +17,8 @@ Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Mã UC-
 
 Mỗi chủ đề giữ quy tắc, use case, UX, thiết kế dữ liệu/API, tiêu chí kiểm chứng và trạng thái theo khả năng. Bảng trạng thái phân biệt phần hiện có, mục tiêu và phần chưa chứng minh; không tính tiến độ từ số UC/test.
 
+Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md): Community và DM đã hợp nhất trong một API host. [Hồ sơ tích hợp](../../records/verification/messaging/merge-2026-10-13.md) ghi kết quả backend/frontend và luồng DM realtime; bằng chứng Community ngày 2026-10-08 giữ phạm vi/revision lịch sử. Nền DM đã có Hub/outbox/đối soát phiên; tin phòng, subscription theo quyền Community và cutoff role/ACL còn chuyển tiếp sang v1. Lần cập nhật này không chạy lại test hoặc xác nhận nghiệm thu sản phẩm.
+
 | Tài liệu liên quan | Nội dung |
 |---|---|
 | [Cấu trúc và cơ chế Community](../../system/community.md) | Tổ chức backend, điều kiện chung, transaction/guard, operation, version/epoch, cursor và migration |
@@ -30,7 +32,7 @@ Mỗi chủ đề giữ quy tắc, use case, UX, thiết kế dữ liệu/API, t
 
 ## Phạm vi và hành trình
 
-Đặc tả đầy đủ cho [v1](../../releases/v1.md); [MVP](../../releases/mvp.md) chọn luồng tạo/tìm/tham gia → phòng text → lịch sử/gửi/nhận → xử lý mất quyền trong một API host. Gửi file trong phòng để đợt sau theo DEC-023; thoại/video và chia sẻ màn hình theo [Media](../media/README.md).
+Đặc tả đầy đủ cho [v1](../../releases/v1.md). [Hồ sơ MVP nội bộ](../../releases/mvp.md#community-scope) đối chiếu luồng từng được chọn: tạo/tìm/tham gia → phòng text → lịch sử/gửi/nhận → xử lý mất quyền trong một API host; phần chưa hoàn thành tiếp tục trong v1, không chờ một vòng nghiệm thu toàn MVP trước gói v1 độc lập. Gửi file trong phòng để đợt sau theo DEC-023; thoại/video và chia sẻ màn hình theo [Media](../media/README.md).
 
 1. Tìm cộng đồng công khai hoặc mở liên kết mời.
 2. Tham gia ngay, gửi yêu cầu chờ duyệt hoặc dùng lời mời hợp lệ theo cấu hình.

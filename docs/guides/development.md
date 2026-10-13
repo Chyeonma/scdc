@@ -2,7 +2,7 @@
 
 # SCDC — Hướng dẫn phát triển
 
-Cập nhật: 2026-10-08. Hướng dẫn nền theo code `main`; cấu hình và bộ chạy các gói Community trên feature ở [hướng dẫn Community](community-development.md). Vai trò, lịch và ngân sách được quản lý tại [kế hoạch dự án](../project/planning.md).
+Cập nhật: 2026-10-13. Hướng dẫn nền hợp nhất `900e226` theo [snapshot MVP](../releases/mvp.md); cấu hình và bộ chạy Community tại [hướng dẫn Community](community-development.md). Phần chuyển microservice và hoàn thiện sản phẩm tiếp tục trong v1; vai trò, lịch và ngân sách tại [kế hoạch dự án](../project/planning.md).
 
 Các lệnh dưới đây chạy từ root repo trừ khi có ghi thư mục khác. Cấu hình và dữ liệu mẫu dành cho local Development.
 
@@ -32,7 +32,10 @@ Chuẩn bị Docker hoặc Podman với Compose để chạy stack. Nếu debug 
 
 ### Chạy bằng Compose
 
+Trước lần chạy đầu, đặt `COMMUNITY_OPERATION_KEY` bền trong `.env` theo [README](../../README.md#khởi-chạy). Tạo khóa fingerprint DM trong volume riêng trước khi chạy stack:
+
 ```bash
+make init-dm-key
 docker compose up -d --build
 ```
 
@@ -44,7 +47,7 @@ docker compose up -d --build
 | Health | `http://localhost:5026/api/v1/health` |
 | PostgreSQL | `localhost:5432` |
 
-Compose khởi tạo PostgreSQL, API và web. Trên `main`, Identity và các gói tạo/xem, tìm/tham gia, role/assignment, phòng text/ACL của Community đã có API/UI thật theo [status](../features/community/README.md). Khởi chạy cần HMAC/keyring Community; Compose yêu cầu `COMMUNITY_OPERATION_KEY` bền trong `.env` hoặc môi trường. DB mới có migration 001–004 trong bootstrap; DB đã có dữ liệu cần [nâng cấp explicit](community-development.md#migration). Messaging trên `main` mới có nền module và lifecycle tạo chat space; Hub/tin phòng còn cần tích hợp từ các nhánh Messaging.
+Compose khởi tạo PostgreSQL, API và web. Nền `900e226` có Identity, API/UI Community cho tạo/xem/tìm/join public-immediate, role/assignment và phòng text/ACL; DM có inbox, gửi/lịch sử, retry chủ động, sửa/xóa, ChatHub/outbox và reconnect theo [hồ sơ tích hợp](../records/verification/messaging/merge-2026-10-13.md). Giữ HMAC/keyring Community và volume khóa DM cùng dữ liệu. DB mới có migration Community 001–004 trong bootstrap; DB đã có dữ liệu cần [nâng cấp explicit](community-development.md#migration) và đối chiếu migration DM theo [hồ sơ gói](../records/verification/messaging/DM-MVP.md). Tin phòng và realtime Community còn cần tích hợp; email worker ở nhánh Identity riêng theo [hiện trạng email](../features/accounts/email-links.md#status).
 
 <a id="container-engines"></a>
 
@@ -95,7 +98,7 @@ Nếu Python của máy cung cấp lệnh `python` thay vì `py`, thay `py -3` b
 
 ### Debug backend local
 
-Nếu checkout feature Community, đặt thêm cấu hình HMAC/keyring trước khi chạy; dùng [bộ chạy DB thử nghiệm riêng](community-development.md#local-environment) khi kiểm thử. Các lệnh dưới đây là bộ chạy nền trên main.
+API local cần cấu hình HMAC/keyring Community; gửi/retry DM cần thêm thư mục khóa fingerprint hợp lệ theo [cấu hình](#configuration). Dùng [bộ chạy DB thử nghiệm riêng](community-development.md#local-environment) khi kiểm thử; các lệnh dưới đây áp dụng nền hợp nhất.
 
 ```bash
 docker compose up -d postgres
@@ -191,6 +194,8 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `Modules:Identity:ExposeDevelopmentTokens` | `true` trong Development, dùng token trả về để thử xác minh/reset; giá trị mặc định `false` |
 | `Modules:Community:Operations:ActiveKeyId` / `Keys:<id>` | ID active và key base64 ít nhất 32 byte ngẫu nhiên; giữ key cũ cho operation còn lưu, xem [hướng dẫn](community-development.md#configuration) |
 | `Modules:Community:KeyRingPath` | Thư mục keyring bền, API đọc/ghi được; giữ qua restart để cursor vẫn đọc được |
+| `Modules:Identity:UserSearch:CursorKeyRingPath` / `ApplicationName` | Keyring bảo vệ cursor tìm người/inbox/lịch sử DM; provider riêng với Community, giữ qua restart. Compose lưu trong `identity-user-search-keys` |
+| `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Compose dùng `make init-dm-key` và volume `scdc-messaging-keys` |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
 Các thời hạn token/phiên và lockout hiện tại nằm trong [đặc tả Accounts](../features/accounts/README.md). Khi override bằng environment variable, dùng `__` thay dấu `:`, ví dụ `ConnectionStrings__Database`.
@@ -208,9 +213,9 @@ Nguồn: [appsettings.json](../../services/SCDC.Api/appsettings.json), [cấu h�
 3. Đăng nhập bằng email hoặc username. Dùng `accessToken` làm Bearer token khi gọi endpoint yêu cầu xác thực.
 4. Quên mật khẩu dùng `POST /api/v1/auth/forgot-password`; response Development có thể chứa `developmentResetToken`. Dùng token đó cùng `newPassword` ở endpoint reset.
 
-Token Development chỉ phục vụ kiểm thử local; chúng không thuộc trải nghiệm sản phẩm. Hiện chưa có endpoint gửi lại xác minh và chưa có worker gửi email. Quy trình gửi email thật cần hoàn thiện trước phát hành; xem [Accounts](../features/accounts/email-links.md#status).
+Token Development phục vụ kiểm thử local của nền `900e226`. Bản này chưa tích hợp resend hoặc worker email; nhánh `feat/identity@60f4db3` đã có phần triển khai riêng cần đưa vào v1 và kiểm chứng email thật theo [Accounts](../features/accounts/email-links.md#status).
 
-Frontend quản lý phiên ở [api.js](../../clients/WebClient/src/api.js). Khi có Web Locks, nó đồng bộ phiên giữa tab và khóa refresh; khi thiếu Web Locks, token giữ trong tab. Wrapper hiện có thử lại sau 401; khi tích hợp gửi tin phải xử lý rõ theo DEC-021 để không tự gửi lại mutation ngoài thao tác người dùng.
+Frontend quản lý phiên ở [api.js](../../clients/WebClient/src/api.js). Khi có Web Locks, nó đồng bộ phiên giữa tab và khóa refresh; khi thiếu Web Locks, token giữ trong tab. Wrapper mặc định có thử lại sau 401; các mutation mở DM/gửi/sửa/xóa đã dùng `retry: false`. Retry gửi do người dùng chủ động với operation cũ theo DEC-021; reconnect bù dữ liệu bằng REST.
 
 <a id="database"></a>
 
@@ -265,7 +270,7 @@ Khi review thay đổi, đối chiếu requirement và AC bị ảnh hưởng, q
 dotnet test SCDC.slnx --configuration Release
 ```
 
-Suite trên `main` gồm Identity, Community, API response, quyền, operation, migration và transaction. Dùng PostgreSQL riêng với schema repo, tên DB kết thúc `_test` và user có quyền tạo/drop fixture DB. Đặt connection string, Identity signing key và Development tokens theo [bộ chạy tích hợp](community-development.md#configuration). Không chạy suite trên `scdc_chat` hoặc DB cần giữ dữ liệu.
+Suite nền hợp nhất gồm Identity, Community, DM, API response, quyền, operation, migration, transaction và realtime theo các gói. Dùng PostgreSQL riêng với schema repo, tên DB kết thúc `_test` và user có quyền tạo/drop fixture DB. Đặt connection string, Identity signing key và Development tokens theo [bộ chạy tích hợp](community-development.md#configuration); cấu hình/bằng chứng DM tại [hồ sơ DM](../records/verification/messaging/DM-MVP.md). Không chạy suite trên `scdc_chat` hoặc DB cần giữ dữ liệu.
 
 <a id="frontend--trong-clientswebclient"></a>
 
@@ -306,7 +311,7 @@ Hiện chưa có kịch bản k6 trong repo. Ngưỡng chat/media và browser đ
 | Login trả 403 | Xem `errorCode`; chưa xác minh cần hoàn tất verify, không tự coi mọi 403 là phiên hết hạn |
 | Không thấy Swagger | Swagger chỉ bật khi môi trường Development |
 | Sửa SQL nhưng dữ liệu không đổi | Script init không chạy lại trên volume đã khởi tạo; xác định cách cập nhật dữ liệu trước khi thực hiện |
-| Chat UI hiện dữ liệu nhưng không gọi được DM API | DM backend chưa triển khai; dùng đặc tả đề xuất để làm tích hợp tiếp theo |
+| DM API/gửi tin không hoạt động | Xác định đúng bản hợp nhất, kiểm tra phiên/email, proxy API/Hub và khóa fingerprint; không dùng tài khoản seed để đăng nhập. Tin phòng vẫn cần triển khai riêng |
 
 Quan sát container local:
 

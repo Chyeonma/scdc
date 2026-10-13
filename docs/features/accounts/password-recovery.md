@@ -103,7 +103,7 @@ Trang reset chỉ POST khi người dùng gửi mật khẩu mới hợp lệ; k
 
 ## API, dữ liệu và transaction
 
-Prefix `/api/v1`; các endpoint sau có trong code được đối chiếu ngày 2026-10-04. Mục tiêu reset pending/cooldown/email chưa hoàn thiện.
+Prefix `/api/v1`; các endpoint sau có trong nền `900e226`. Reset pending/cooldown/email chưa tích hợp vào nền này; source trên nhánh Identity và giới hạn bằng chứng theo [email-links](email-links.md#status).
 
 | Method / đường dẫn | Xác thực và đầu vào JSON | Kết quả thành công |
 |---|---|---|
@@ -152,7 +152,7 @@ AC-ACC-06 áp dụng tài khoản đã xác minh, AC-ACC-10 bao phủ pending. T
 
 ## Hiện trạng và khoảng trống
 
-Đối chiếu source/test ngày 2026-10-04/05; lần tổ chức tài liệu này không chạy lại test hoặc xác nhận nghiệm thu. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
 
 | UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
 |---|---|---|---|---|
@@ -162,7 +162,7 @@ AC-ACC-06 áp dụng tài khoản đã xác minh, AC-ACC-10 bao phủ pending. T
 
 | Mã | Yêu cầu/căn cứ | Source hiện tại | Việc phải hoàn tất |
 |---|---|---|---|
-| ACC-GAP-01 | Khôi phục trước xác minh — ACC-007/014, AC-ACC-10 | `ForgotPasswordAsync` không tạo token nếu `VerifiedAt` null | Cho cấp token đúng yêu cầu; chứng minh reset không tự xác minh bằng TC-ACC-03 |
+| ACC-GAP-01 | Khôi phục trước xác minh — ACC-007/014, AC-ACC-10 | `ForgotPasswordAsync` trong `900e226` không tạo token nếu `VerifiedAt` null; nhánh Identity đã bổ sung theo [email-links](email-links.md#status) | Tích hợp triển khai nhánh Identity; chứng minh reset không tự xác minh bằng TC-ACC-03 |
 
 | Test hiện có | Hành vi có assertion | Coverage còn thiếu |
 |---|---|---|

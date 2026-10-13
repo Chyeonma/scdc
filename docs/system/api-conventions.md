@@ -8,7 +8,7 @@ Nguồn chung cho giao thức API, lỗi và hợp đồng máy đọc. Quyền 
 
 ## 3. Hợp đồng và lỗi chung
 
-API hiện tại dùng prefix `/api/v1`. ID dùng định danh ổn định; actor lấy từ phiên xác thực. Thời điểm truyền theo UTC. Hợp đồng DM đề xuất truyền `sequence`/`version` dưới dạng chuỗi số nguyên để client xử lý chính xác.
+API nền hợp nhất `900e226` dùng prefix `/api/v1`. ID dùng định danh ổn định; actor lấy từ phiên xác thực. Thời điểm truyền theo UTC. DM đã truyền `sequence`/`version` dưới dạng chuỗi số nguyên để client xử lý chính xác; đối chiếu runtime tại [DirectConversationsController](../../services/SCDC.Api/Controllers/Messaging/DirectConversationsController.cs) và [MessageResponse](../../services/Modules/Messaging/Application/ITextMessageSender.cs).
 
 Theo DEC-061, lỗi dùng `application/problem+json` với các trường `type`, `title`, `status`, `detail`, `instance`, `errorCode`, `traceId`; lỗi validation có thêm `errors`. Các trường mở rộng xuất hiện ở cấp ngoài cùng, không nằm trong object `extensions`.
 
@@ -30,12 +30,12 @@ Theo DEC-061, lỗi dùng `application/problem+json` với các trường `type`
 | 400 | Validation đầu vào theo `ErrorType.Validation` hiện tại |
 | 401 | Thiếu hoặc không còn phiên hợp lệ; cần xác thực lại |
 | 403 | Không đủ quyền/điều kiện cho thao tác được phép biết |
-| 404 | Không tồn tại; hợp đồng DM đề xuất cũng dùng cho tài nguyên người gọi không được biết |
+| 404 | Không tồn tại; DM cũng dùng cho tài nguyên người gọi không được biết |
 | 409 | Xung đột dữ liệu, phiên bản hoặc khóa thao tác |
 | 429 | Vượt giới hạn / bị khóa tạm; chi tiết retry của endpoint tương lai cần đặc tả |
 | 503 | Phụ thuộc tạm không đáp ứng |
 
-Hợp đồng đề xuất DM áp dụng cùng ánh xạ validation 400 này; các mã lỗi DM còn cần rà soát trước triển khai. Client xử lý theo `errorCode` và `errors`, không phụ thuộc câu chữ `detail`. Không đưa stack trace, mật khẩu, token hoặc nội dung chat vào response lỗi hay log.
+DM trong nền hợp nhất đã dùng cùng ánh xạ validation 400 này; hợp đồng v1 cần tiếp tục đối chiếu theo operation khi chuyển service. Client xử lý theo `errorCode` và `errors`, không phụ thuộc câu chữ `detail`. Không đưa stack trace, mật khẩu, token hoặc nội dung chat vào response lỗi hay log.
 
 OpenAPI cho endpoint đã triển khai được sinh từ source: `/swagger/v1/swagger.json` trong môi trường Development; UI tại `/swagger`. Hợp đồng tương lai vẫn được đánh dấu đề xuất trong đặc tả tính năng, chưa coi là endpoint có thể gọi. Thay đổi schema phải cập nhật frontend, backend, mock, docs và dữ liệu thử liên quan.
 
