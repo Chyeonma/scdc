@@ -2,7 +2,7 @@
 
 Community / Servers sở hữu metadata, visibility, discovery, join mode và ownership. Quy tắc, luồng sử dụng, UX, thiết kế dữ liệu/API và tiêu chí kiểm chứng của chủ đề được quản lý tại trang này.
 
-Backup/restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Migration v1 vẫn cần preflight, toàn vẹn dữ liệu và kế hoạch rollback ứng dụng tương thích schema.
+Backup/restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Migration v1 vẫn cần preflight, toàn vẹn dữ liệu và kế hoạch rollback ứng dụng tương thích schema.
 
 <a id="implementation"></a>
 

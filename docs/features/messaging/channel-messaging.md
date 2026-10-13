@@ -2,7 +2,7 @@
 
 Phần tin phòng của SCP-005; UC-COM-23/24 và phần chat của UC-COM-25. Messaging sở hữu tin/Hub/dispatcher; Community sở hữu channel, membership và quyền; Identity cung cấp phiên. Vg giữ UI Community và quyền/lifecycle phòng, Sáng cung cấp nền Messaging; Thái cung cấp dataset/bộ chạy.
 
-Backup/restore và placeholder sau restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và thu hồi quyền vẫn thuộc v1.
+Backup/restore và placeholder sau restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và thu hồi quyền vẫn thuộc v1.
 
 ## Trạng thái và phạm vi bàn giao
 

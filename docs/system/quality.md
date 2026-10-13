@@ -1,6 +1,6 @@
 # SCDC — Chất lượng và phương pháp đo
 
-Các ngưỡng áp dụng cho v1, trừ mục tiêu backup/khôi phục DB được hoãn theo [phạm vi backup](../releases/v1.md#backup-scope), DEC-156. MVP chọn tiêu chí theo phạm vi tại [hồ sơ MVP](../releases/mvp.md); chưa có kết quả đo hệ thống trong lần cấu trúc lại tài liệu.
+Các ngưỡng áp dụng cho v1, trừ mục tiêu backup/khôi phục DB được hoãn theo [phạm vi backup](../project/overview.md#backup-scope), DEC-156. MVP chọn tiêu chí theo phạm vi tại [hồ sơ MVP](../releases/mvp.md); chưa có kết quả đo hệ thống trong lần cấu trúc lại tài liệu.
 
 <a id="quality-targets"></a>
 

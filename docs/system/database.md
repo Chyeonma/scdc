@@ -44,7 +44,7 @@ DB mới dùng schema/seed theo Compose. DB cũ áp migration explicit; thay SQL
 
 ## Vòng đời và mục tiêu v1
 
-Retention, xóa nội dung online và DATA-GAP tại [vòng đời dữ liệu](data-lifecycle.md). Triển khai backup và khôi phục DB từ backup được chuyển sang sau v1 theo [phạm vi backup](../releases/v1.md#backup-scope), DEC-156; migration, retention online và rollback ứng dụng vẫn thuộc v1. v1 đã chọn bốn service theo [DEC-119](../records/decisions/README.md#dec-119), mỗi service sở hữu database và tài khoản truy cập riêng theo [DEC-120](../records/decisions/README.md#dec-120). Khi chuyển service phải rà soát FK/JOIN xuyên schema, dữ liệu tham chiếu và cơ chế nhất quán. Source vẫn dùng database MVP; xem [kiến trúc mục tiêu](architecture.md#target).
+Retention, xóa nội dung online và DATA-GAP tại [vòng đời dữ liệu](data-lifecycle.md). Triển khai backup và khôi phục DB từ backup được chuyển sang sau v1 theo [phạm vi backup](../project/overview.md#backup-scope), DEC-156; migration, retention online và rollback ứng dụng vẫn thuộc v1. v1 đã chọn bốn service theo [DEC-119](../records/decisions/README.md#dec-119), mỗi service sở hữu database và tài khoản truy cập riêng theo [DEC-120](../records/decisions/README.md#dec-120). Khi chuyển service phải rà soát FK/JOIN xuyên schema, dữ liệu tham chiếu và cơ chế nhất quán. Source vẫn dùng database MVP; xem [kiến trúc mục tiêu](architecture.md#target).
 
 <a id="v1-database-layout"></a>
 
@@ -89,7 +89,7 @@ Nguồn tham khảo về vòng đời triển khai và quyền schema: [Microsof
 
 Cần preflight, kiểm tra ledger/checksum và kiểm soát chạy đồng thời. Cách drain writer cũ, tương thích app–schema và chuyển qua bản mới xác định theo migration; lựa chọn A không tự bảo đảm downtime bằng không hoặc rollback toàn bộ thay đổi SQL khi lỗi. [Rollback ứng dụng](../guides/operations.md#rollback) chỉ dùng bản còn tương thích schema, không tự đảo migration khi deploy lỗi.
 
-Backup/restore giữ ở [giai đoạn sau v1](../releases/v1.md#backup-scope) theo DEC-156. [D49](#v1-migration-source) đã chọn SQL có phiên bản làm nguồn thay đổi schema, [D50](#v1-migration-runner) chọn một runner chung cho bốn owner. Engine, project/container, đường dẫn migration, tài khoản/quyền cụ thể, CI/CD và kế hoạch tách database MVP cần thiết kế tiếp. Chưa chạy migration, đổi SQL, API, Compose hoặc cấu hình.
+Backup/restore giữ ở [giai đoạn sau v1](../project/overview.md#backup-scope) theo DEC-156. [D49](#v1-migration-source) đã chọn SQL có phiên bản làm nguồn thay đổi schema, [D50](#v1-migration-runner) chọn một runner chung cho bốn owner. Engine, project/container, đường dẫn migration, tài khoản/quyền cụ thể, CI/CD và kế hoạch tách database MVP cần thiết kế tiếp. Chưa chạy migration, đổi SQL, API, Compose hoặc cấu hình.
 
 <a id="v1-migration-source"></a>
 
@@ -151,7 +151,7 @@ Chuyển dữ liệu phải giữ các bất biến đã có tại tài liệu c
 
 Phương thức chuyển offline đã chọn tại [D52](#v1-mvp-data-cutover); mapping schema/dữ liệu, xử lý khóa/phiên và ledger cần thiết kế trước khi chuyển. Thiết kế trước code thực hiện [theo từng gói việc](../project/planning.md#package-design), không đợi toàn bộ tài liệu v1 hoàn chỉnh.
 
-Chuyển dữ liệu MVP thuộc v1; backup/restore vẫn thuộc [giai đoạn sau v1](../releases/v1.md#backup-scope) theo DEC-156. Nguồn SQL và runner MVP giữ hiện trạng; chưa chạy migration hoặc thao tác database.
+Chuyển dữ liệu MVP thuộc v1; backup/restore vẫn thuộc [giai đoạn sau v1](../project/overview.md#backup-scope) theo DEC-156. Nguồn SQL và runner MVP giữ hiện trạng; chưa chạy migration hoặc thao tác database.
 
 <a id="v1-mvp-data-cutover"></a>
 

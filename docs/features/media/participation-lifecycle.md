@@ -2,7 +2,7 @@
 
 Cơ chế Media dùng chung cho [gọi riêng](direct-calls.md), [phòng thoại](voice-rooms.md) và [nguồn thiết bị](video-screen-sharing.md). Thiết kế mục tiêu ngày 2026-10-04; provider/SFU và backend chưa triển khai. v1 chuyển nền một API host của MVP sang microservice theo DEC-116; shared transaction/guard dưới đây còn giả định một host, cần rà soát lại theo ranh giới service.
 
-Restore từ backup và diễn tập tương ứng thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Restart DB/SFU, reconnect, hàng rào generation, cutoff và retention online vẫn cần triển khai/kiểm chứng trong v1 từ dữ liệu bền hiện hành.
+Restore từ backup và diễn tập tương ứng thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Restart DB/SFU, reconnect, hàng rào generation, cutoff và retention online vẫn cần triển khai/kiểm chứng trong v1 từ dữ liệu bền hiện hành.
 
 ## Mục lục
 
@@ -269,7 +269,7 @@ Chuẩn bị hai người gọi riêng, phòng nhiều thành viên, người kh
 | Chất lượng | Đã chốt DEC-085; còn môi trường, thiết bị/version, hiệu chỉnh đồng hồ và kết quả đo. | OQ-007 |
 | Kỹ thuật/chi phí | LiveKit tự host DEC-084; có admission/lease/nguồn design, chưa chọn extension/fork hoặc pin server/SDK. Host/domain/TURN, key store, mức dùng, chi phí và công sức duy trì cần review. | OQ-008/010, MEDIA-GAP-03/06/07 |
 
-Theo [phân công DEC-117](../../project/planning.md#team), Vg giữ chính sách quyền/admission/quota/thu hồi; Sáng sở hữu backend và UI điều khiển lifecycle cuộc gọi; Thái sở hữu adapter provider/SDK, thiết bị/hiển thị nguồn và bộ chạy. Mỗi người chứng minh phần sở hữu theo kịch bản đã chốt trước khi xác nhận lịch, chi phí và nghiệm thu; [gói v1](../../releases/v1.md) ghi phụ thuộc và công suất theo giai đoạn.
+Theo [phân công DEC-117](../../project/planning.md#team), Vg giữ chính sách quyền/admission/quota/thu hồi; Sáng sở hữu backend và UI điều khiển lifecycle cuộc gọi; Thái sở hữu adapter provider/SDK, thiết bị/hiển thị nguồn và bộ chạy. Mỗi người chứng minh phần sở hữu theo kịch bản đã chốt trước khi xác nhận lịch, chi phí và nghiệm thu; [kế hoạch Media](../../project/planning.md#v1-media-packages) ghi phụ thuộc, [công suất](../../project/planning.md#capacity) được phân bổ theo giai đoạn.
 
 <a id="proof-fixture-và-gói-kiểm-chứng"></a>
 
@@ -287,4 +287,4 @@ Theo [phân công DEC-117](../../project/planning.md#team), Vg giữ chính sác
 | MEDIA-GAP-06 | Load/chất lượng DEC-085 tại 20 người, nguồn share/camera đủ, topology/TURN đã chọn; ghi version/hash/cấu hình/băng thông/chi phí |
 | MEDIA-GAP-07 | Runbook node fence/restart, secrets/key rotation, provider callback retry và release/rollback trong v1; phần restore backup áp dụng sau v1; người phụ trách còn OQ-011 |
 
-Gói V1-MEDIA-01–05, scope và người phụ trách ở [hồ sơ v1](../../releases/v1.md#gói-media-sau-nền-mvp). Mỗi kết quả cần commit/provider build/môi trường và được dẫn từ đúng chủ đề. Provider version, extension/fork, topology/TURN, host/domain, key store và công sức duy trì còn phải review trước khóa lịch/chi phí.
+Gói V1-MEDIA-01–05, scope và người phụ trách ở [hồ sơ v1](../../project/planning.md#v1-media-packages). Mỗi kết quả cần commit/provider build/môi trường và được dẫn từ đúng chủ đề. Provider version, extension/fork, topology/TURN, host/domain, key store và công sức duy trì còn phải review trước khóa lịch/chi phí.

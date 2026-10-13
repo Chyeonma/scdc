@@ -2,7 +2,7 @@
 
 REQ-005; phần DM của SCP-005. Sáng phụ trách Messaging và UI DM; Vg rà soát quyền và hợp đồng, Thái cung cấp dataset/bộ chạy. Phạm vi phải bàn giao theo [MVP](../../releases/mvp.md) và [v1](../../releases/v1.md).
 
-Backup/restore, sổ bảo vệ độc lập và UI placeholder sau restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và đồng bộ sau reconnect vẫn thuộc v1.
+Backup/restore, sổ bảo vệ độc lập và UI placeholder sau restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và đồng bộ sau reconnect vẫn thuộc v1.
 
 <a id="status"></a>
 

@@ -2,7 +2,7 @@
 
 Messaging sở hữu tin, sequence, SendOperation và outbox cho DM và tin phòng. Tài liệu này giữ cách tiếp nhận tin, model, transaction, retry, sửa/xóa và trạng thái client. [Nội dung văn bản](text-policy.md) và [đồng bộ](synchronization.md) là các cơ chế liên quan.
 
-Backup/restore, sổ bảo vệ độc lập và placeholder phát sinh từ restore thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. Lưu bền qua restart, retention online, khóa, version, tombstone và chống trùng vẫn thuộc v1.
+Backup/restore, sổ bảo vệ độc lập và placeholder phát sinh từ restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Lưu bền qua restart, retention online, khóa, version, tombstone và chống trùng vẫn thuộc v1.
 
 ## Trạng thái và phạm vi
 

@@ -2,7 +2,7 @@
 
 Cơ chế Identity dùng chung cho xác minh và khôi phục mật khẩu. Luồng người dùng ở [đăng ký/xác minh](registration-verification.md) và [mật khẩu](password-recovery.md); tài liệu này sở hữu policy token, cooldown, consume, EmailDelivery/worker và bảo vệ liên kết. [Hiện trạng](#status) phân biệt snapshot `main`, triển khai trên nhánh Identity và bằng chứng còn cần kiểm chứng.
 
-Backup key ring và khôi phục từ backup thuộc [giai đoạn sau v1](../../releases/v1.md#backup-scope) theo DEC-156. v1 vẫn giữ key ring bền qua restart, bảo vệ/rotation khóa và phục hồi worker từ dữ liệu hiện hành; khôi phục mật khẩu không thuộc phần hoãn này.
+Backup key ring và khôi phục từ backup thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. v1 vẫn giữ key ring bền qua restart, bảo vệ/rotation khóa và phục hồi worker từ dữ liệu hiện hành; khôi phục mật khẩu không thuộc phần hoãn này.
 
 ## Mục lục
 

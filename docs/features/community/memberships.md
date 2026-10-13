@@ -306,4 +306,4 @@ Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../../project
 | Nội dung | Câu hỏi còn mở | Liên quan |
 |---|---|---|
 | Yêu cầu tham gia | DEC-073/096 đã chốt; có transition/schema, còn kiểm chứng approve/cancel/private switch; limiter bổ sung chưa chốt. | OQ-003, OQ-004 |
-| Rời cộng đồng | Epoch/clear role/override/transfer có thiết kế; mất quyền dọn cache/role/override epoch cũ, giữ tin và dấu thu hồi cần cho quyền hiện hành. Bảo vệ khôi phục DB theo [vòng đời](../../system/data-lifecycle.md#restore) thuộc [sau v1 theo DEC-156](../../releases/v1.md#backup-scope); metadata khác còn review. | OQ-003, OQ-011 |
+| Rời cộng đồng | Epoch/clear role/override/transfer có thiết kế; mất quyền dọn cache/role/override epoch cũ, giữ tin và dấu thu hồi cần cho quyền hiện hành. Bảo vệ khôi phục DB theo [vòng đời](../../system/data-lifecycle.md#restore) thuộc [sau v1 theo DEC-156](../../project/overview.md#backup-scope); metadata khác còn review. | OQ-003, OQ-011 |

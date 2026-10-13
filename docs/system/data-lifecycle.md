@@ -4,7 +4,7 @@
 
 Cập nhật: 2026-10-12. Phạm vi xuyên Accounts/DM/Community/Media; OQ-011. Đây là chính sách sản phẩm và thiết kế kỹ thuật để rà soát, chưa có worker retention, sổ bảo vệ dữ liệu độc lập hoặc kết quả restore trong repo.
 
-Chính sách dữ liệu online áp dụng cho [v1](../releases/v1.md). Gói backup/restore, sổ bảo vệ độc lập và nhánh placeholder chỉ phục vụ restore chuyển sang [sau v1](../releases/v1.md#backup-scope) theo [DEC-156](../records/decisions/README.md#dec-156); giữ thiết kế dưới đây để triển khai ở giai đoạn đó. [MVP](../releases/mvp.md#acceptance) chọn gói và tiêu chí áp dụng; không cần triển khai mọi worker/media trước gói đầu. Các quy tắc quyền, lưu tin và nội dung được luồng MVP sử dụng vẫn giữ theo nguồn chuẩn; thiết kế transaction/guard cần rà soát khi chuyển sang microservice ở v1 theo DEC-116.
+Chính sách dữ liệu online áp dụng cho [v1](../releases/v1.md). Gói backup/restore, sổ bảo vệ độc lập và nhánh placeholder chỉ phục vụ restore chuyển sang [sau v1](../project/overview.md#backup-scope) theo [DEC-156](../records/decisions/README.md#dec-156); giữ thiết kế dưới đây để triển khai ở giai đoạn đó. [MVP](../releases/mvp.md#acceptance) chọn gói và tiêu chí áp dụng; không cần triển khai mọi worker/media trước gói đầu. Các quy tắc quyền, lưu tin và nội dung được luồng MVP sử dụng vẫn giữ theo nguồn chuẩn; thiết kế transaction/guard cần rà soát khi chuyển sang microservice ở v1 theo DEC-116.
 
 <a id="mục-lục"></a>
 
@@ -139,7 +139,7 @@ Tách payload khỏi marker: outbox/inbox/operation có thể bỏ payload/kết
 
 ## 6. Bảo vệ dữ liệu sau restore — thiết kế cần proof
 
-Phần này là thiết kế cho gói sau v1 theo [phạm vi backup/restore](../releases/v1.md#backup-scope), gồm sổ bảo vệ độc lập, receipt và diễn tập. v1 chưa triển khai quy trình restore từ backup; hàng rào quyền/epoch và marker chống trùng trong DB owner vẫn theo [thiết kế thu hồi](access-revocation.md#v1-authorization-coordination).
+Phần này là thiết kế cho gói sau v1 theo [phạm vi backup/restore](../project/overview.md#backup-scope), gồm sổ bảo vệ độc lập, receipt và diễn tập. v1 chưa triển khai quy trình restore từ backup; hàng rào quyền/epoch và marker chống trùng trong DB owner vẫn theo [thiết kế thu hồi](access-revocation.md#v1-authorization-coordination).
 
 Theo [PostgreSQL 18 PITR](https://www.postgresql.org/docs/18/continuous-archiving.html), phục hồi dùng base backup và chuỗi WAL, có thể chọn mốc trước hiện tại. Restore có thể đưa lại trạng thái/nội dung trước xóa hoặc thu hồi. Backup DB vì vậy không thể là nguồn duy nhất của sổ các hành động phải áp lại sau recovery point.
 

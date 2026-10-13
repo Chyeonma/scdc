@@ -114,30 +114,49 @@ Theo [DEC-114](../records/decisions/README.md#dec-114), mốc MVP được bổ 
 | MVP — nội bộ | Snapshot nền Identity, Community và Direct Messaging trong một API host; ghi bằng chứng, giới hạn và phần việc chuyển tiếp | [Nền MVP và bàn giao sang v1](../releases/mvp.md) |
 | v1 — sản phẩm hoàn thiện đầu tiên | Chuyển microservice và hoàn thiện toàn bộ phạm vi ở bảng SCP bên dưới, gồm gọi riêng/phòng thoại, video, chia sẻ màn hình và điều kiện phát hành công khai | [Hồ sơ v1](../releases/v1.md), đặc tả tính năng và điều kiện nghiệm thu/phát hành |
 
-REQ/SCP/SUC dưới đây mô tả sản phẩm mục tiêu v1, dùng chung với đặc tả chủ đề và thiết kế hệ thống trong bộ tài liệu dự án. Bằng chứng nền MVP giữ phạm vi và revision đã ghi nhận; nghiệm thu sản phẩm và mở công khai áp dụng [điều kiện v1](../releases/v1.md#acceptance).
+REQ/SCP/SUC dưới đây mô tả sản phẩm mục tiêu v1, dùng chung với đặc tả chủ đề và thiết kế hệ thống trong bộ tài liệu dự án. Bằng chứng nền MVP giữ phạm vi và revision đã ghi nhận; nghiệm thu sản phẩm và mở công khai áp dụng [điều kiện v1](../releases/acceptance.md#v1-completion).
 
 <a id="phạm-vi-bản-hoàn-thiện-v1"></a>
 
 ### Phạm vi bản hoàn thiện v1
 
+v1 kế thừa nền [MVP](../releases/mvp.md) và các mã requirement, scope, quy tắc, use case, tiêu chí đã có. Yêu cầu kiến trúc REQ-012/SUC-005 chuyển từ một API host sang bốn service nghiệp vụ, dữ liệu và triển khai độc lập theo [kiến trúc mục tiêu](../system/architecture.md#target); các gói chuyển đổi nằm tại [kế hoạch v1](planning.md#v1-architecture-packages).
+
 | Mã | Hạng mục | Nội dung bàn giao |
 |---|---|---|
 | SCP-001 | Nền tảng | Ứng dụng chạy trên trình duyệt web. |
-| SCP-002 | Tài khoản | Đăng ký, đăng nhập và hồ sơ cá nhân. |
-| SCP-003 | Cộng đồng | Tạo và quản lý server; tổ chức phòng; mời và quản lý thành viên. |
-| SCP-004 | Phân quyền | Vai trò và quyền cơ bản đối với server và phòng. |
-| SCP-005 | Nhắn tin | Gửi, nhận và xem lịch sử tin nhắn trong phòng thuộc server và hội thoại riêng giữa hai người. |
-| SCP-006 | Thoại | Phòng thoại trong server cho nhiều thành viên và cuộc gọi riêng giữa hai người. |
-| SCP-007 | Video và chia sẻ màn hình | Sử dụng camera và chia sẻ màn hình trong phòng thoại của server và cuộc gọi riêng giữa hai người. |
-| SCP-008 | Phát hành | Mở đăng ký công khai sau khi hoàn thành kiểm thử, nghiệm thu và chuẩn bị vận hành. |
+| SCP-002 | Tài khoản | Hoàn thiện đăng ký/xác minh, đăng nhập, hồ sơ, mật khẩu, email và phiên theo UC/AC tại [Accounts](../features/accounts/README.md). |
+| SCP-003 | Cộng đồng | Hoàn thiện server, membership, invitation, channel và vòng đời quản lý theo [Community](../features/community/README.md). |
+| SCP-004 | Phân quyền | Vai trò, ACL và quyền đối với server/phòng theo [Access control](../features/community/access-control.md), gồm phối hợp quyền/thu hồi với Messaging và Media. |
+| SCP-005 | Nhắn tin | DM và tin phòng: gửi/nhận, lịch sử, sửa/xóa, retry chống trùng, đồng thời, reconnect và thu hồi quyền/phiên theo [Messaging](../features/messaging/README.md). |
+| SCP-006 | Thoại | Gọi riêng hai người với nhận/từ chối/hủy/kết thúc; phòng thoại với vào/rời và điều khiển micro theo [Media](../features/media/README.md). |
+| SCP-007 | Video và chia sẻ màn hình | Camera/chia sẻ màn hình trong gọi riêng và phòng thoại, gồm quyền thiết bị, nhiều nguồn, dừng nguồn và reconnect theo [Media](../features/media/README.md). |
+| SCP-008 | Phát hành | Kiểm thử bản đầy đủ, migration, rollback ứng dụng, giám sát, hỗ trợ và bàn giao vận hành trước mở đăng ký công khai theo [nghiệm thu](../releases/acceptance.md#v1-completion) và [runbook](../guides/operations.md). |
+
+v1 [giữ dữ liệu MVP](../system/database.md#v1-mvp-data-transition) theo DEC-169 và [chuyển offline](../system/database.md#v1-mvp-data-cutover) theo DEC-170. Các đợt cập nhật hiện tại theo [chính sách offline](../system/environments.md#v1-offline-updates); thiết kế và hiện thực tiếp tục [theo từng gói việc](planning.md#package-design).
 
 Ngoài phạm vi bản hoàn thiện v1:
 
 - Nhóm chat riêng ngoài server và cuộc gọi trong loại nhóm này.
 - Ứng dụng cài đặt riêng trên desktop và thiết bị di động.
-- Triển khai và nghiệm thu backup PostgreSQL/WAL, PITR và khôi phục DB từ backup; chuyển sang sau v1 theo [phạm vi backup](../releases/v1.md#backup-scope), DEC-156.
+- Gửi file và các khả năng xử lý DM không mong muốn đã được để sang đợt sau.
+- Triển khai và nghiệm thu backup PostgreSQL/WAL, PITR và khôi phục DB từ backup; chuyển sang sau v1 theo [phạm vi backup](#backup-scope), DEC-156.
 
-Các chức năng bổ sung được đánh giá theo quy trình quản lý thay đổi.
+“Bản hoàn thiện” nghĩa là hoàn thành phạm vi đã chọn. Các chức năng bổ sung được đánh giá theo quy trình quản lý thay đổi và cần xác nhận trước khi lập đặc tả, ước lượng.
+
+<a id="backup-scope"></a>
+
+### Phạm vi backup sau v1
+
+Theo [DEC-156](../records/decisions/README.md#dec-156), các phần sau thuộc giai đoạn sau v1, không là điều kiện hoàn tất v1:
+
+- Tạo base backup, lưu WAL liên tục và chuyển bản sao ra kho ngoài máy.
+- Thực thi thời hạn lưu backup, phục hồi theo thời điểm (PITR) và bảo vệ dữ liệu khi restore, gồm sổ bảo vệ độc lập phục vụ restore.
+- Diễn tập restore toàn hệ thống, đo và xác nhận RPO/RTO theo DEC-086/108/109.
+
+Các chính sách, AC/TC và runbook backup/restore được giữ làm thiết kế cho giai đoạn đó; chưa có bằng chứng triển khai hoặc đạt ngưỡng. Thiết kế tại [vòng đời dữ liệu](../system/data-lifecycle.md#restore); hướng lưu trữ Google Drive hiện có tại [môi trường](../system/environments.md#v1-postgres-backup-storage).
+
+v1 vẫn phải lưu dữ liệu bền vững qua restart, thực thi retention online, giữ khóa cần thiết, quyền/thu hồi, dedup và deny marker. Migration phải giữ toàn vẹn và có phương án rollback ứng dụng phù hợp schema. Phạm vi này không tạo cam kết khôi phục dữ liệu sau mất máy/đĩa.
 
 <a id="ràng-buộc-và-cơ-sở-lập-kế-hoạch"></a>
 
@@ -195,6 +214,6 @@ Chỉ tiêu định lượng đã chốt tại DEC-082/083/085; chính sách d�
 | Chất lượng media | Độ trễ, âm thanh/hình ảnh, số người/luồng, mạng và thời gian reconnect | OQ-006/OQ-007 |
 | Thu hồi quyền/phiên | Thời hạn hiệu lực trên HTTP và kết nối đang mở, cách đo | OQ-007/OQ-008 |
 | Lưu giữ online | [Chính sách dữ liệu](../system/data-lifecycle.md) DEC-103–109; triển khai và kiểm chứng retention, xóa nội dung, chống trùng và quyền trong v1 | OQ-011 |
-| Backup và khôi phục DB — sau v1 | Giữ mục tiêu RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày cho đợt triển khai sau v1; công cụ, cửa sổ PITR và bằng chứng restore chưa có. [Phạm vi theo DEC-156](../releases/v1.md#backup-scope) | OQ-011 |
+| Backup và khôi phục DB — sau v1 | Giữ mục tiêu RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày cho đợt triển khai sau v1; công cụ, cửa sổ PITR và bằng chứng restore chưa có. [Phạm vi theo DEC-156](overview.md#backup-scope) | OQ-011 |
 
 1.000 tài khoản và 100 người trực tuyến là giả định dự toán, không phải giới hạn đăng ký/online. Ngày 2026-10-04, 20 người gọi đồng thời trở thành giới hạn media v1 theo DEC-079; chưa có kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.

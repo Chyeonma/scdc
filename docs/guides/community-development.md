@@ -4,7 +4,7 @@
 
 Cập nhật: 2026-10-11. Bộ chạy cho `main` sau khi hợp nhất `feat/community-channels`, kế thừa create/view, join, search và permissions. Backend/WebClient Community và migration 001–004 đã có trên `main`. Phạm vi chạy được tại [các chủ đề Community](../features/community/README.md), bằng chứng theo revision tại [verification](../records/verification/community/README.md). Các lệnh dưới đây là hướng dẫn chạy lại; kết quả lần hợp nhất ghi riêng tại [kiểm chứng main](../records/verification/community/README.md#main-merge).
 
-Backup/restore thuộc [giai đoạn sau v1](../releases/v1.md#backup-scope) theo DEC-156. Hướng dẫn nâng cấp DB vẫn yêu cầu preflight, toàn vẹn schema/dữ liệu, drain writer cũ và kế hoạch rollback ứng dụng tương thích schema.
+Backup/restore thuộc [giai đoạn sau v1](../project/overview.md#backup-scope) theo DEC-156. Hướng dẫn nâng cấp DB vẫn yêu cầu preflight, toàn vẹn schema/dữ liệu, drain writer cũ và kế hoạch rollback ứng dụng tương thích schema.
 
 <a id="chuẩn-bị"></a>
 

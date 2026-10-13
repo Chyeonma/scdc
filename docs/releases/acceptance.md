@@ -1,8 +1,19 @@
 # SCDC — Nghiệm thu và điều kiện phát hành
 
-Nguồn chung cho quy trình nghiệm thu, phân loại lỗi và gate phát hành. [MVP](mvp.md) và [v1](v1.md) chọn phạm vi áp dụng. Chưa có xác nhận phát hành công khai.
+Nguồn cho điều kiện hoàn tất, quy trình nghiệm thu, phân loại lỗi và gate phát hành sản phẩm v1 theo [phạm vi dự án](../project/overview.md#scope). [MVP](mvp.md) ghi nhận nền nội bộ và phần việc chuyển tiếp. Chưa có xác nhận hoàn tất hoặc phát hành công khai v1.
 
-Backup/restore và kiểm chứng RPO/RTO áp dụng sau v1 theo [phạm vi DEC-156](v1.md#backup-scope). Các ca/gate liên quan được giữ để dùng cho giai đoạn đó; v1 vẫn kiểm chứng lưu bền, migration, retention online, quyền/thu hồi, chống trùng và rollback ứng dụng.
+Backup/restore và kiểm chứng RPO/RTO áp dụng sau v1 theo [phạm vi DEC-156](../project/overview.md#backup-scope). Các ca/gate liên quan được giữ để dùng cho giai đoạn đó; v1 vẫn kiểm chứng lưu bền, migration, retention online, quyền/thu hồi, chống trùng và rollback ứng dụng.
+
+<a id="v1-completion"></a>
+
+## Điều kiện hoàn tất v1
+
+- Hoàn thành [phạm vi sản phẩm](../project/overview.md#scope) và các nhánh UC/AC đã khóa trong từng tính năng, gồm Media.
+- Có bằng chứng bốn service chạy/build/restart và triển khai độc lập, chỉ truy cập database nghiệp vụ của owner; hồi quy luồng nền đúng quyền/dữ liệu và kiểm chứng lỗi/timeout liên service theo chính sách đã chọn. Một host MVP hoặc chỉ đổi tên container chưa đủ. Gói chuyển đổi tại [V1-ARCH](../project/planning.md#v1-architecture-packages).
+- Có kết quả thực thi các tiêu chí chức năng, quyền, đồng thời, trình duyệt và [chất lượng](../system/quality.md#quality-targets) áp dụng; fixture hoặc chỉ kiểm tra UI chưa đủ làm bằng chứng nghiệm thu.
+- Đạt các [gate phát hành](#release-gates), [kiểm tra sau deploy](#smoke) và diễn tập dữ liệu/vận hành thuộc phạm vi. Backup/restore áp dụng sau v1 theo [phạm vi đã chọn](../project/overview.md#backup-scope).
+- Có người tiếp nhận vận hành và người xác nhận nghiệm thu/quyết định mở công khai theo [DEC-111](../records/decisions/README.md#dec-111). Phân công phát triển và bàn giao nền MVP chưa chọn những người này.
+- Có hồ sơ commit/build/hợp đồng, kết quả kiểm thử, lỗi tồn được xử lý và hướng dẫn bàn giao.
 
 <a id="testing"></a>
 
@@ -27,7 +38,7 @@ Bộ ca và dữ liệu chuẩn bị tại [Accounts](../features/accounts/READM
 | Phòng/tin | Quyền xem mặc định, lịch sử, gửi/sửa/xóa/thử lại, ACL snapshot và epoch; manager cần view, guard tranh revoke/send; xóa phòng chặn HTTP/realtime/media theo phạm vi. | AC-COM-06/07, AC-COM-11 đến AC-COM-18, AC-COM-22 đến AC-COM-28, AC-COM-34/42 |
 | Tài khoản | Đăng ký, xác minh, đăng nhập, hồ sơ, phiên và đặt lại mật khẩu qua email; consume/resend đồng thời, trạng thái liên kết và email worker. Chính sách DEC-063–068 đã chốt; limiter bổ sung hoãn DEC-089; thiết kế recovery còn cần triển khai và kiểm chứng ACC-GAP. | AC-ACC-01 đến AC-ACC-21, OQ-002 |
 | Media | Gọi riêng/phòng thoại, 10/20/2, ring/reconnect 30 giây; DEC-099–102 chốt cutoff/fail-close, nhiều thiết bị, ban đầu tắt và không audio screen. Có OpenAPI/realtime/fixture/coordinator/admission/quota gate design; chưa có kết quả provider. | AC-MEDIA-01 đến AC-MEDIA-24; MEDIA-GAP-01–07 |
-| Dữ liệu | Account lock/no self-delete, room deleted giữ nội dung, retention online và dedup/deny marker; restore xóa/thu hồi, placeholder và sổ bảo vệ restore thuộc sau v1. | AC-DATA-01–16; TC-DATA-01–12; DATA-GAP-01–06, áp dụng theo [phạm vi](v1.md#backup-scope) |
+| Dữ liệu | Account lock/no self-delete, room deleted giữ nội dung, retention online và dedup/deny marker; restore xóa/thu hồi, placeholder và sổ bảo vệ restore thuộc sau v1. | AC-DATA-01–16; TC-DATA-01–12; DATA-GAP-01–06, áp dụng theo [phạm vi](../project/overview.md#backup-scope) |
 | Vận hành | Cài đặt/triển khai, giám sát, rollback ứng dụng, hỗ trợ và mở đăng ký công khai; sao lưu/khôi phục thuộc sau v1. | SCP-008, RLS-GATE-01–10; [runbook](../guides/operations.md) |
 
 <a id="acceptance-process"></a>
@@ -94,7 +105,7 @@ Các gate cụ thể hóa phạm vi/ngưỡng đã chọn và DEC-110; chưa gat
 | RLS-GATE-09 | Lỗi tồn theo DEC-110, các ca bắt buộc không bị bỏ qua | Không M1/M2 chưa giải quyết; M3 có người/hạn sửa và chấp nhận; không tiêu chí bắt buộc chưa kiểm chứng |
 | RLS-GATE-10 | Có người có thẩm quyền xác nhận và quyết định | Xác nhận nghiệm thu, deploy/mở công khai, phạm vi/build/thời điểm; DEC-111 còn mở |
 
-Limiting bổ sung DEC-089 vẫn là đề xuất hoãn chọn, không tự biến ngưỡng chưa chọn thành tiêu chí nghiệm thu. Phần backup/restore của GATE-05 chưa áp dụng cho v1 theo [DEC-156](v1.md#backup-scope), không ghi Đạt khi chưa triển khai. Thay hoặc bỏ một gate bắt buộc khác cần quyết định phạm vi/ngưỡng mới được ghi nhận, không chỉ đánh dấu Không áp dụng. Bản v1 chưa có một tính năng trong scope vẫn chưa đủ nghiệm thu toàn v1.
+Limiting bổ sung DEC-089 vẫn là đề xuất hoãn chọn, không tự biến ngưỡng chưa chọn thành tiêu chí nghiệm thu. Phần backup/restore của GATE-05 chưa áp dụng cho v1 theo [DEC-156](../project/overview.md#backup-scope), không ghi Đạt khi chưa triển khai. Thay hoặc bỏ một gate bắt buộc khác cần quyết định phạm vi/ngưỡng mới được ghi nhận, không chỉ đánh dấu Không áp dụng. Bản v1 chưa có một tính năng trong scope vẫn chưa đủ nghiệm thu toàn v1.
 
 Phương pháp và ngưỡng đo: [chất lượng](../system/quality.md).
 
@@ -136,7 +147,7 @@ Trước mỗi đợt bàn giao cần có: tiêu chí chấp nhận đã đượ
 trường và dữ liệu thử, kết quả chạy, danh sách lỗi với mức độ và quyết
 định xử lý. Trước phát hành công khai cần thêm kết quả phân quyền, kiểm
 thử tải/media theo ngưỡng đã chốt, dữ liệu/vận hành trong phạm vi
-và người nhận hỗ trợ. Backup/restore theo [phạm vi sau v1](v1.md#backup-scope), không là điều kiện hoàn tất v1. Chất lượng và trình duyệt đã chốt DEC-082/083/085; mức lỗi tồn theo DEC-110 đã chốt, người ký nghiệm thu chưa được chọn DEC-111; chưa thể tuyên bố
+và người nhận hỗ trợ. Backup/restore theo [phạm vi sau v1](../project/overview.md#backup-scope), không là điều kiện hoàn tất v1. Chất lượng và trình duyệt đã chốt DEC-082/083/085; mức lỗi tồn theo DEC-110 đã chốt, người ký nghiệm thu chưa được chọn DEC-111; chưa thể tuyên bố
 đạt điều kiện phát hành.
 
 Đợt hiện tại không khảo sát người dùng bên ngoài theo DEC-030. Việc đó
@@ -189,4 +200,4 @@ Smoke nhằm phát hiện hỏng cấu hình/tích hợp sau deploy, rollback ho
 | RLS-SM-11 | Sau v1, khi diễn tập/thực hiện restore: thử tombstone/placeholder/deny marker, auth/link/media cũ và retry key | Đúng DEC-108, không email/ringing cũ, không mất khóa chống trùng — AC-DATA-05/11/13/15; không là gate v1 |
 | RLS-SM-12 | v1: kích hoạt cảnh báo thử, kiểm tra cleanup và bàn giao; sau v1 bổ sung backup/WAL | Đúng người nhận, có bằng chứng dependency/cutoff/retention theo phạm vi — GATE-05/08 |
 
-SM-11 chỉ chạy khi phạm vi có restore; v1 chưa áp dụng theo [DEC-156](v1.md#backup-scope). Deploy v1 kiểm tra tombstone/deny marker, quyền và dữ liệu hiện hành; không tự tạo một restore production để chạy smoke. SM-12 không yêu cầu backup/WAL trong v1. SM-10 cần công cụ quản trị theo DEC-112 chưa có trong repo; không dùng SQL tay bỏ qua audit/guard để làm ca đạt.
+SM-11 chỉ chạy khi phạm vi có restore; v1 chưa áp dụng theo [DEC-156](../project/overview.md#backup-scope). Deploy v1 kiểm tra tombstone/deny marker, quyền và dữ liệu hiện hành; không tự tạo một restore production để chạy smoke. SM-12 không yêu cầu backup/WAL trong v1. SM-10 cần công cụ quản trị theo DEC-112 chưa có trong repo; không dùng SQL tay bỏ qua audit/guard để làm ca đạt.

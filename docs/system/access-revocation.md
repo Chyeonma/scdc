@@ -4,7 +4,7 @@
 
 Hợp đồng xuyên Identity, Community, Messaging và Media. Chính sách tính quyền nằm tại [Community access control](../features/community/access-control.md); lifecycle phiên tại [Accounts](../features/accounts/README.md). File này giữ thời hạn hiệu lực và nghĩa vụ phối hợp.
 
-Restore từ backup và proof tương ứng thuộc [giai đoạn sau v1](../releases/v1.md#backup-scope) theo DEC-156. Restart, tiếp tục tiến trình bền, rebuild Redis từ PostgreSQL hiện hành và kiểm chứng hàng rào/quyền tới commit vẫn thuộc v1; sổ riêng phục vụ restore không là phụ thuộc mới của v1.
+Restore từ backup và proof tương ứng thuộc [giai đoạn sau v1](../project/overview.md#backup-scope) theo DEC-156. Restart, tiếp tục tiến trình bền, rebuild Redis từ PostgreSQL hiện hành và kiểm chứng hàng rào/quyền tới commit vẫn thuộc v1; sổ riêng phục vụ restore không là phụ thuộc mới của v1.
 
 ## Quy tắc
 

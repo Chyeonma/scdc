@@ -4,7 +4,7 @@
 
 Cập nhật: 2026-10-12. Phạm vi SCP-008; DEC-110/111/112/156/170. Đây là runbook để chuẩn bị và diễn tập; chưa có cấu hình production, công cụ backup hoặc kết quả diễn tập được xác nhận. Quyết định nghiệm thu/phát hành ở [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu ở [data-lifecycle.md](../system/data-lifecycle.md#policy).
 
-Runbook dùng theo phạm vi của [v1](../releases/v1.md) và giai đoạn sau v1. Backup/restore, retention backup và kiểm chứng RPO/RTO được chuyển [sau v1](../releases/v1.md#backup-scope) theo DEC-156; các bước tương ứng dưới đây là thiết kế cho giai đoạn đó. Mốc [MVP](../releases/mvp.md) bắt đầu từ ba tính năng nền và bộ chạy/kiểm tra theo scope.
+Runbook dùng theo phạm vi của [v1](../releases/v1.md) và giai đoạn sau v1. Backup/restore, retention backup và kiểm chứng RPO/RTO được chuyển [sau v1](../project/overview.md#backup-scope) theo DEC-156; các bước tương ứng dưới đây là thiết kế cho giai đoạn đó. Mốc [MVP](../releases/mvp.md) bắt đầu từ ba tính năng nền và bộ chạy/kiểm tra theo scope.
 
 <a id="mục-lục"></a>
 
@@ -102,7 +102,7 @@ Thực hiện offline theo [chính sách cập nhật](../system/environments.md
 4. Deploy artefact/cấu hình cũ phù hợp nhưng giữ key ring, deny marker và quyền hiện hành; giữ bảo vệ restore khi đã triển khai sau v1. Media cần fence generation cũ; không bỏ admission/quota gate để làm phiên cũ hoạt động.
 5. Chạy smoke, kiểm tra dữ liệu/thao tác đã commit trong thời gian bản lỗi chạy và token/cursor cũ. Chỉ mở lại khi có kết quả và xác nhận; theo dõi như sau deploy.
 
-**Kết thúc:** bản hoạt động, không hạ version/quyền hoặc hồi sinh nội dung đã xóa, thao tác chưa rõ đã được đối chiếu. Restore DB thuộc [giai đoạn sau v1](../releases/v1.md#backup-scope), là thao tác riêng có thể mất dữ liệu theo recovery point; khi thực hiện cần ghi phạm vi mất và người chấp nhận trong hồ sơ.
+**Kết thúc:** bản hoạt động, không hạ version/quyền hoặc hồi sinh nội dung đã xóa, thao tác chưa rõ đã được đối chiếu. Restore DB thuộc [giai đoạn sau v1](../project/overview.md#backup-scope), là thao tác riêng có thể mất dữ liệu theo recovery point; khi thực hiện cần ghi phạm vi mất và người chấp nhận trong hồ sơ.
 
 <a id="service-incident"></a>
 
@@ -153,7 +153,7 @@ Thực hiện offline theo [chính sách cập nhật](../system/environments.md
 
 ## 7. RB-RESTORE — Backup và khôi phục dữ liệu
 
-Toàn bộ RB-RESTORE áp dụng sau v1 theo [DEC-156](../releases/v1.md#backup-scope). Chưa có công cụ hay kết quả diễn tập được xác nhận; mục này không là điều kiện hoàn tất hoặc bước deploy bắt buộc của v1. Chính sách mục tiêu DEC-086/108/109 vẫn được giữ cho giai đoạn triển khai backup.
+Toàn bộ RB-RESTORE áp dụng sau v1 theo [DEC-156](../project/overview.md#backup-scope). Chưa có công cụ hay kết quả diễn tập được xác nhận; mục này không là điều kiện hoàn tất hoặc bước deploy bắt buộc của v1. Chính sách mục tiêu DEC-086/108/109 vẫn được giữ cho giai đoạn triển khai backup.
 
 <a id="kiểm-tra-backup"></a>
 
@@ -284,7 +284,7 @@ Các gói có thể đi cùng đợt phát triển phụ thuộc; chưa có kế
 
 - OQ-007: chất lượng/trình duyệt/thu hồi chat và media đã chốt; chính sách lỗi tồn DEC-110 đã chốt. Còn OS/thiết bị/build, khóa phép đo/workload và bằng chứng cutoff/tải.
 - OQ-010: có [mô hình chi phí minh họa](../project/planning.md#budget); còn nơi triển khai, tài nguyên, mức dùng thực tế, báo giá và hạn mức.
-- OQ-011: [vòng đời dữ liệu](../system/data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; backup/restore chuyển [sau v1](../releases/v1.md#backup-scope) theo DEC-156. DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof theo giai đoạn, phân công/người trực/lịch trực và người duyệt DEC-111.
+- OQ-011: [vòng đời dữ liệu](../system/data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; backup/restore chuyển [sau v1](../project/overview.md#backup-scope) theo DEC-156. DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof theo giai đoạn, phân công/người trực/lịch trực và người duyệt DEC-111.
 - OQ-008: có thiết kế Accounts/DM/Community/Media; còn review/migration/email worker, lựa chọn extension/SDK/version LiveKit, key store và proof guards/realtime/SFU.
 
 Vg/Sáng rà soát sản phẩm/quyền/lifecycle; Thái phát triển môi trường/provider/công cụ và tổng hợp kết quả. Mỗi người tự kiểm thử phần sở hữu và kiểm tra chéo theo DEC-117. Người trực vận hành, người ký nghiệm thu và thẩm quyền mở công khai cần được chọn trước phát hành theo DEC-111.
