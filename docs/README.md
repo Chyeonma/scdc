@@ -1,6 +1,8 @@
 # SCDC — Tài liệu dự án
 
-Tài liệu hiện hành tổ chức theo chủ đề. Mỗi chủ đề giữ quy tắc, UI/UX, dữ liệu/API, thiết kế xử lý, tiêu chí kiểm chứng và trạng thái triển khai. Cấu trúc cập nhật ngày 2026-10-11.
+Bộ tài liệu hiện hành mô tả dự án với **v1 là sản phẩm hoàn thiện đầu tiên**. Nội dung tổ chức theo chủ đề; mỗi chủ đề giữ quy tắc, UI/UX, dữ liệu/API, thiết kế xử lý, tiêu chí kiểm chứng và trạng thái triển khai. Phần sau v1 được ghi rõ tại chủ đề tương ứng. Cập nhật định hướng tài liệu ngày 2026-10-13.
+
+[MVP](releases/mvp.md) là hồ sơ mốc nội bộ, ghi snapshot nền phát triển và phần việc chuyển tiếp sang v1. Nhóm hoàn thiện tài liệu và triển khai các gói v1 từ nền đã bàn giao theo [quy trình](project/workflow.md#process).
 
 <a id="contents"></a>
 
@@ -23,7 +25,8 @@ Tài liệu hiện hành tổ chức theo chủ đề. Mỗi chủ đề giữ q
 | Server, membership, lời mời, phòng và quyền | [Community](features/community/README.md) |
 | DM, tin phòng và nền nhắn tin | [Messaging](features/messaging/README.md) |
 | Gọi riêng, phòng thoại, video và chia sẻ màn hình | [Media](features/media/README.md) |
-| Phạm vi và điều kiện bàn giao | [MVP](releases/mvp.md), [v1](releases/v1.md), [Nghiệm thu](releases/acceptance.md) |
+| Bàn giao sản phẩm v1 và điều kiện nghiệm thu | [v1](releases/v1.md), [Nghiệm thu](releases/acceptance.md) |
+| Nền nội bộ và công việc chuyển tiếp sang v1 | [Snapshot MVP](releases/mvp.md) |
 | Ngưỡng và cách đo | [Chất lượng](system/quality.md) |
 | Thu thập log, chỉ số và trace | [Giám sát hệ thống](system/observability.md) |
 | Dựng, chạy và kiểm thử | [Development](guides/development.md), [Community](guides/community-development.md) |
@@ -43,7 +46,7 @@ Tài liệu hiện hành tổ chức theo chủ đề. Mỗi chủ đề giữ q
 | Quy tắc, luồng, UI state, dữ liệu/API, transaction và AC/TC của chủ đề | Tài liệu chủ đề trong `features/` |
 | Navigation, bố cục và component chung | `experience/` |
 | Ranh giới, quy ước và cơ chế xuyên chủ đề | `system/` |
-| Phạm vi phải bàn giao và gate cấp mốc | `releases/` |
+| Hồ sơ bàn giao v1, điều kiện nghiệm thu và snapshot nền nội bộ MVP | `releases/` |
 | Các bước thao tác | `guides/`; README kỹ thuật giữ hướng dẫn riêng của thành phần |
 | Schema máy đọc và dữ liệu kiểm chứng | `contracts/`, `fixtures/`; mỗi artefact có chủ đề sở hữu |
 | SQL, Compose, cấu hình và khung code thực thi | `database/`, `services/`, `clients/`, scripts và cấu hình trong repo |
@@ -51,7 +54,7 @@ Tài liệu hiện hành tổ chức theo chủ đề. Mỗi chủ đề giữ q
 
 Trạng thái hiện tại ghi theo khả năng trong tài liệu chủ đề; README không duy trì bảng tiến độ thứ hai. Hồ sơ kiểm chứng giữ commit/build, môi trường, phạm vi và actual result. Có code, schema, mockup hoặc fixture chưa đủ để ghi đạt nghiệm thu.
 
-Release dẫn tới UC/AC được chọn; không tạo bộ quy tắc riêng cho MVP. Quyết định lưu bối cảnh và lịch sử; hành vi đang có hiệu lực phải đọc được trong chủ đề. Giữ mã truy vết khi đổi vị trí.
+Hồ sơ bàn giao v1 dẫn tới yêu cầu, UC/AC và điều kiện nghiệm thu tại nguồn chuẩn. Snapshot MVP ghi nhận nền nội bộ và giới hạn kiểm chứng; phần việc còn thiếu tiếp tục trong v1. Quyết định lưu bối cảnh và lịch sử; hành vi đang có hiệu lực phải đọc được trong chủ đề. Giữ mã truy vết khi đổi vị trí.
 
 <a id="cấu-trúc"></a>
 
@@ -68,7 +71,7 @@ docs/
 │   ├── community/
 │   ├── messaging/
 │   └── media/
-├── releases/                # MVP, v1 và nghiệm thu
+├── releases/                # Bàn giao v1, nghiệm thu và snapshot MVP nội bộ
 ├── guides/                  # Development và vận hành
 ├── contracts/               # OpenAPI, JSON Schema và nguồn Protobuf mục tiêu
 ├── fixtures/                # Dữ liệu kiểm chứng dùng chung

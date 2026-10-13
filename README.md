@@ -1,6 +1,8 @@
 # SCDC — Nền tảng giao tiếp trên web
 
-SCDC là ứng dụng giao tiếp cho nhóm bạn và cộng đồng. [MVP](docs/releases/mvp.md) gồm Identity, Community và Direct Messaging trong một API host Modular Monolith. [v1](docs/releases/v1.md) chuyển sang microservice và hoàn thiện thoại/video/chia sẻ màn hình.
+SCDC là ứng dụng giao tiếp trên web cho nhóm bạn và cộng đồng. **[v1](docs/releases/v1.md) là sản phẩm hoàn thiện đầu tiên và là mục tiêu của bộ tài liệu hiện hành**: tài khoản, cộng đồng, nhắn tin riêng/tin phòng, thoại/video/chia sẻ màn hình trên kiến trúc microservice.
+
+[MVP](docs/releases/mvp.md) là mốc nội bộ ghi nhận nền Identity, Community và Direct Messaging trong một API host Modular Monolith, cùng bằng chứng và phần việc bàn giao sang v1. Hướng dẫn khởi chạy bên dưới áp dụng cho nền hiện có; gói v1 có thể bắt đầu khi phụ thuộc trực tiếp đủ rõ theo [quy trình](docs/project/workflow.md#readiness).
 
 ## Mục lục
 

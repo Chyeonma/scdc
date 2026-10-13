@@ -2,7 +2,7 @@
 
 # SCDC — Mục tiêu, yêu cầu và phạm vi
 
-Nguồn chuẩn cho nhu cầu, thuật ngữ và mã REQ/SCP/SUC. Phạm vi bàn giao theo mốc nằm trong [MVP](../releases/mvp.md) và [v1](../releases/v1.md).
+Nguồn chuẩn cho nhu cầu, thuật ngữ và mã REQ/SCP/SUC của dự án. **v1 là sản phẩm hoàn thiện đầu tiên và là mục tiêu của bộ tài liệu hiện hành.** Hồ sơ bàn giao tại [v1](../releases/v1.md); nền phát triển nội bộ và phần việc chuyển tiếp được ghi tại [MVP](../releases/mvp.md).
 
 ## Mục lục
 
@@ -103,16 +103,18 @@ bản 1.3. Mã yêu cầu này được giữ trong lịch sử và không sử 
 
 <a id="hai-mốc-bàn-giao-phạm-vi-v1-và-ràng-buộc"></a>
 
-## Hai mốc bàn giao, phạm vi v1 và ràng buộc
+## Mốc nội bộ MVP và sản phẩm v1
 
-Theo [DEC-114](../records/decisions/README.md#dec-114), thêm MVP trước bản đầy đủ đã đặc tả để triển khai Identity, Community và DM trước media. Phạm vi đầy đủ trước đây được gọi là MVP nay mang tên **v1**; yêu cầu, mã truy vết và các quy tắc nghiệp vụ được giữ. DEC-116 chốt MVP một API host và microservice ở v1; DEC-117 cập nhật phân công kế hoạch.
+MVP là mốc làm việc và tích hợp nội bộ, ghi nhận nền đã có và công việc bàn giao sang v1. v1 là sản phẩm hoàn thiện đầu tiên, phát triển tiếp từ nền này. Phần việc MVP còn thiếu được xếp vào các gói v1; gói có đủ đầu vào trực tiếp bắt đầu theo [quy trình](workflow.md#readiness), không cần hoàn tất một vòng nghiệm thu toàn MVP riêng.
 
-| Mốc | Phạm vi đã xác nhận | Hồ sơ sử dụng |
+Theo [DEC-114](../records/decisions/README.md#dec-114), mốc MVP được bổ sung để triển khai Identity, Community và DM trước media. Phạm vi đầy đủ trước đây mang tên MVP được gọi là v1; yêu cầu, mã truy vết và quy tắc nghiệp vụ được giữ. DEC-116 chốt nền MVP một API host và microservice ở v1; DEC-117 cập nhật phân công kế hoạch.
+
+| Mốc | Vai trò và phạm vi | Hồ sơ sử dụng |
 |---|---|---|
-| MVP | Identity, Community và Direct Messaging; chọn luồng tối thiểu theo từng gói, chạy trong một API host | [Phạm vi, gói việc và điều kiện MVP](../releases/mvp.md); phân công theo DEC-117, chi tiết UC/AC còn cần khóa |
-| v1 | Chuyển microservice và hoàn thiện toàn bộ phạm vi ở bảng SCP bên dưới, gồm gọi riêng/phòng thoại, video và chia sẻ màn hình | [Hồ sơ v1](../releases/v1.md), đặc tả tính năng và điều kiện phát hành hiện có |
+| MVP — nội bộ | Snapshot nền Identity, Community và Direct Messaging trong một API host; ghi bằng chứng, giới hạn và phần việc chuyển tiếp | [Nền MVP và bàn giao sang v1](../releases/mvp.md) |
+| v1 — sản phẩm hoàn thiện đầu tiên | Chuyển microservice và hoàn thiện toàn bộ phạm vi ở bảng SCP bên dưới, gồm gọi riêng/phòng thoại, video, chia sẻ màn hình và điều kiện phát hành công khai | [Hồ sơ v1](../releases/v1.md), đặc tả tính năng và điều kiện nghiệm thu/phát hành |
 
-REQ/SCP/SUC dưới đây mô tả sản phẩm mục tiêu v1. Hồ sơ từng mốc xác định phần bàn giao và các tiêu chí áp dụng; hoàn tất MVP không suy ra đã đạt toàn bộ SUC hoặc có thể mở công khai.
+REQ/SCP/SUC dưới đây mô tả sản phẩm mục tiêu v1, dùng chung với đặc tả chủ đề và thiết kế hệ thống trong bộ tài liệu dự án. Bằng chứng nền MVP giữ phạm vi và revision đã ghi nhận; nghiệm thu sản phẩm và mở công khai áp dụng [điều kiện v1](../releases/v1.md#acceptance).
 
 <a id="phạm-vi-bản-hoàn-thiện-v1"></a>
 
