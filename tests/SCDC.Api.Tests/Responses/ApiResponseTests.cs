@@ -89,5 +89,14 @@ public sealed class ApiResponseTests(SCDCWebApplicationFactory factory)
         Assert.Contains("ApiProblemDetails", serverError.GetRawText(), StringComparison.Ordinal);
         Assert.True(
             serverError.GetProperty("content").TryGetProperty("application/problem+json", out _));
+        var serverViews = document.RootElement.GetProperty("paths").GetProperty("/api/v1/servers/{serverId}")
+            .GetProperty("get").GetProperty("responses").GetProperty("200")
+            .GetProperty("content").GetProperty("application/json").GetProperty("schema").GetProperty("oneOf");
+        Assert.Equal(new[] { "#/components/schemas/ServerSummary", "#/components/schemas/ServerDetail" },
+            serverViews.EnumerateArray().Select(view => view.GetProperty("$ref").GetString()).ToArray());
+        var schemas = document.RootElement.GetProperty("components").GetProperty("schemas");
+        Assert.False(schemas.GetProperty("ServerSummary").GetProperty("additionalProperties").GetBoolean());
+        Assert.Contains("ownerUserId", schemas.GetProperty("ServerDetail").GetProperty("required")
+            .EnumerateArray().Select(field => field.GetString()));
     }
 }

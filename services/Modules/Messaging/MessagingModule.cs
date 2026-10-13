@@ -7,6 +7,8 @@ using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
 using SCDC.Modules.Messaging.Infrastructure.Services;
 using SCDC.Modules.Messaging.Realtime;
+using SCDC.Contracts.Messaging;
+using SCDC.Modules.Messaging.Infrastructure;
 
 namespace SCDC.Modules.Messaging;
 
@@ -32,6 +34,7 @@ public static class MessagingModule
         services.AddSingleton<OutboxDispatcher>();
         services.AddHostedService(provider => provider.GetRequiredService<OutboxDispatcher>());
         services.AddHostedService<SubscriptionReconciler>();
+        services.AddScoped<IChatSpaceLifecycle, ChatSpaceLifecycle>();
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

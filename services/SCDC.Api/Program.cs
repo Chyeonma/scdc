@@ -18,7 +18,7 @@ builder.Services.AddScoped<ISharedDatabaseSession>(provider => new SharedDatabas
     provider.GetRequiredService<IConfiguration>().GetConnectionString("Database")
         ?? throw new InvalidOperationException("ConnectionStrings:Database must be configured.")));
 builder.Services.AddIdentityModule(builder.Configuration);
-builder.Services.AddCommunityModule(builder.Configuration);
+builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.AddMessagingModule(builder.Configuration);
 
 builder.Services.AddControllers();
@@ -45,7 +45,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "SCDC modular monolith. Direct messaging text, history, edit/delete and authenticated SignalR are active; Community remains at foundation stage."
+        Description = "SCDC modular monolith. Identity, Community management and direct messaging with text, history, edit/delete and authenticated SignalR are integrated."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -59,6 +59,8 @@ builder.Services.AddSwaggerGen(options =>
         [new OpenApiSecuritySchemeReference("Bearer", document, null)] = []
     });
     options.OperationFilter<AuthenticationOperationFilter>();
+    options.OperationFilter<CommunityServerViewOperationFilter>();
+    options.SchemaFilter<CommunityResponseSchemaFilter>();
 });
 
 var app = builder.Build();

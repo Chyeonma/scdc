@@ -11,7 +11,7 @@ const password = 'DmDemo2026!Local';
 const actor = (alias) => manifest.accounts.find((item) => item.alias === alias);
 
 async function login(page, alias) {
-  await page.goto('/');
+  await page.goto('/#home');
   await page.locator('input[name="login"]').fill(actor(alias).username);
   await page.locator('input[name="password"]').fill(password);
   const responsePromise = page.waitForResponse((r) => r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST');
@@ -53,7 +53,7 @@ test('DM-P0-T01-C01 login/profile/save/reload uses real API', async ({ page, con
 });
 
 test('DM-P0-T01-C02 pending login denied with no app session', async ({ page, context }) => {
-  await page.goto('/');
+  await page.goto('/#home');
   await page.locator('input[name="login"]').fill(actor('U').username);
   await page.locator('input[name="password"]').fill(password);
   const responsePromise = page.waitForResponse((r) => r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST');

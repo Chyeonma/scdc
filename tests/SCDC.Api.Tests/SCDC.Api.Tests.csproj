@@ -27,8 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../services/SCDC.Api/SCDC.Api.csproj" />
+    <ProjectReference Include="../../services/SCDC.Api/SCDC.Api.csproj" Aliases="global,ScdcApi" />
     <ProjectReference Include="../../services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
+    <ProjectReference Include="../../tools/SCDC.DbMigrator/SCDC.DbMigrator.csproj" />
   </ItemGroup>
 
 </Project>

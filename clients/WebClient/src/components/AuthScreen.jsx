@@ -84,26 +84,26 @@ export function AuthScreen({ notify }) {
 
         <div className="auth-story__content">
           <span className="eyebrow">YOUR COMMUNITY, ONE PLACE</span>
-          <h1>Trò chuyện thời gian thực. Kết nối không giới hạn.</h1>
+          <h1>Không gian riêng cho cộng đồng của bạn.</h1>
           <p>
-            Nền tảng giao tiếp hiện đại với kiến trúc Modular Monolith, hỗ trợ
-            Server Channels, Direct Messaging, SignalR realtime và quản lý phân quyền mạnh mẽ.
+            Tạo cộng đồng, giới thiệu điều bạn quan tâm và theo dõi các cộng đồng
+            bạn đang tham gia trong cùng một nơi.
           </p>
           <div className="feature-row">
             <span>01</span>
-            <p>Không gian Server & Kênh phân quyền chi tiết</p>
+            <p>Tạo cộng đồng công khai hoặc riêng tư</p>
           </div>
           <div className="feature-row">
             <span>02</span>
-            <p>Trò chuyện trực tiếp (DM) & Nhóm chat thời gian thực</p>
+            <p>Xem cộng đồng và tư cách thành viên của bạn</p>
           </div>
           <div className="feature-row">
             <span>03</span>
-            <p>Bảo mật phiên đăng nhập, JWT & Session Management</p>
+            <p>Quản lý tài khoản và các phiên đăng nhập</p>
           </div>
         </div>
 
-        <p className="auth-story__foot">SCDC MODULAR MONOLITH • 2026</p>
+        <p className="auth-story__foot">SCDC • 2026</p>
       </section>
 
       {/* Auth Card Panel */}

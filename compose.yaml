@@ -8,6 +8,11 @@ services:
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
       Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
+      Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
+      Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+      Modules__Community__Operations__ActiveKeyId: local1
+      Modules__Community__Operations__Keys__local1: ${COMMUNITY_OPERATION_KEY:?Set COMMUNITY_OPERATION_KEY to a persistent base64 key of at least 32 random bytes}
+      Modules__Community__KeyRingPath: /app/community-keys
     ports:
       - "5026:8080"
     depends_on:
@@ -16,6 +21,8 @@ services:
     restart: unless-stopped
     volumes:
       - identity-user-search-keys:/app/.dm-keys/user-search
+      - scdc-community-keys:/app/community-keys
+      - scdc-messaging-keys:/app/messaging-keys
 
   web-client:
     build:
@@ -49,3 +56,5 @@ services:
 volumes:
   scdc-postgres-data:
   identity-user-search-keys:
+  scdc-community-keys:
+  scdc-messaging-keys:

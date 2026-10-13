@@ -1,18 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const apiTarget = process.env.SCDC_DEV_API_TARGET || 'http://localhost:5026'
+
 export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
     port: 3000,
     proxy: {
-      '/api': 'http://localhost:5026',
+      '/api': apiTarget,
       '/hubs': {
-        target: 'http://localhost:5026',
+        target: apiTarget,
         ws: true,
       },
-      '/swagger': 'http://localhost:5026',
+      '/swagger': apiTarget,
     },
   },
 })

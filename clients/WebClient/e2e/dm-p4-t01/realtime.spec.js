@@ -37,7 +37,7 @@ function proof(id, data) {
 }
 async function login(page, alias) {
   await page.addInitScript({ content: script('realtime-faults.js') });
-  await page.goto('/'); await page.locator('input[name="login"]').fill(user(alias).username);
+  await page.goto('/#home'); await page.locator('input[name="login"]').fill(user(alias).username);
   await page.locator('input[name="password"]').fill('DmDemo2026!Local');
   const response = page.waitForResponse(r => r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST');
   await button(page, 'Đăng nhập').last().click(); const auth = await (await response).json(); sessions.push(auth);

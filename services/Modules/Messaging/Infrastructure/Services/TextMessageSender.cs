@@ -14,7 +14,7 @@ using SCDC.Modules.Messaging.Infrastructure.Security;
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
 internal sealed class TextMessageSender(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountAccessGuard guard, MessageFingerprint fingerprints, TimeProvider clock) : ITextMessageSender
+    IAccountPairAccessGuard guard, MessageFingerprint fingerprints, TimeProvider clock) : ITextMessageSender
 {
     public async Task<Result<MessageResponse>> SendAsync(SendTextMessage command, CancellationToken cancellationToken)
     {

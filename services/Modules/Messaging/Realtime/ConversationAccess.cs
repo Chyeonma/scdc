@@ -10,7 +10,7 @@ using SCDC.Modules.Messaging.Infrastructure.Persistence;
 namespace SCDC.Modules.Messaging.Realtime;
 
 internal sealed class ConversationAccess(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountAccessGuard guard, IHistoricalUserSummaryReader summaries, TimeProvider clock)
+    IAccountPairAccessGuard guard, IHistoricalUserSummaryReader summaries, TimeProvider clock)
 {
     public Task<Result> AuthorizeAsync(AuthenticatedSession actor, Guid space, CancellationToken token) =>
         DeliverAsync(actor, space, null, _ => Task.CompletedTask, token);

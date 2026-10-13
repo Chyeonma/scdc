@@ -18,7 +18,7 @@ const script=async(action,id,extras=[])=> (await exec('powershell.exe',['-NoProf
 const snap=async id=>JSON.parse(await script('Snapshot',id));
 function proof(id,data){fs.writeFileSync(path.join(folder,'mvp-browser-'+id+'.json'),JSON.stringify({run,case:id,...data,result:'PASS actual browser/API/WebSocket/PostgreSQL',userResult:'Chua xac nhan'},null,2));}
 async function login(page,alias){
- await page.addInitScript({content:source('realtime-faults.js')});await page.goto('/');
+ await page.addInitScript({content:source('realtime-faults.js')});await page.goto('/#home');
  await page.locator('input[name="login"]').fill(user(alias).username);await page.locator('input[name="password"]').fill('DmDemo2026!Local');
  const pending=page.waitForResponse(r=>r.url().endsWith('/api/v1/auth/login')&&r.request().method()==='POST');
  await button(page,'Đăng nhập').last().click();const auth=await(await pending).json();sessions.push(auth);

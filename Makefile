@@ -10,7 +10,7 @@ TO ?=
 export SCDC_DOCS_FROM = $(FROM)
 export SCDC_DOCS_TO = $(TO)
 
-.PHONY: help up down status logs db compose-check api web build test test-api test-web docs-check docs-sync docs-sync-preview test-tools
+.PHONY: help up down status logs db compose-check init-dm-key api web build test test-api test-web docs-check docs-sync docs-sync-preview test-tools
 
 help:
 	@printf '%s\n' \
@@ -22,6 +22,7 @@ help:
 	  '  make logs               Xem log API và PostgreSQL' \
 	  '  make db                 Chạy riêng PostgreSQL' \
 	  '  make compose-check      Kiểm tra cấu hình Compose, chưa chạy container' \
+	  '  make init-dm-key        Tạo khóa fingerprint DM trong volume nếu chưa có' \
 	  '  make api                Chạy backend local' \
 	  '  make web                Cài dependency và chạy frontend local' \
 	  '  make build              Build backend và frontend' \
@@ -35,7 +36,7 @@ help:
 	  '  make up ENGINE=podman   Dùng Podman và Compose provider đã cài.' \
 	  '  Dùng cùng ENGINE cho down/status/logs/db/compose-check.' \
 	  '  Có thể override COMPOSE, ví dụ COMPOSE="podman-compose".' \
-	  '  Windows: chạy Make trong WSL; lệnh PowerShell xem docs/development.md.' \
+	  '  Windows: chạy Make trong WSL; lệnh PowerShell xem docs/guides/development.md.' \
 	  '' \
 	  '  make docs-sync FROM=main' \
 	  '      Chép toàn bộ docs/ từ main vào nhánh hiện tại, đưa vào staging.' \
@@ -65,6 +66,10 @@ db:
 
 compose-check:
 	$(COMPOSE) config --quiet
+
+init-dm-key:
+	$(COMPOSE) build chat-service
+	$(COMPOSE) run --rm --no-deps --entrypoint /bin/sh chat-service -c 'umask 077; if [ ! -e /app/messaging-keys/dm-local-v1.key ]; then head -c 32 /dev/urandom > /app/messaging-keys/dm-local-v1.key; fi; test "$$(wc -c < /app/messaging-keys/dm-local-v1.key)" -ge 32'
 
 api:
 	dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http

@@ -14,7 +14,7 @@ const rows = page => page.locator('.dm-text-message');
 const historyResponse = page => page.waitForResponse(r => /\/messages\?/.test(r.url()) && r.request().method() === 'GET');
 async function login(page, alias, fixtureRun = run) {
   const user = JSON.parse(fs.readFileSync(path.join(root, '.dm-acceptance/runs', fixtureRun, 'manifest.json'), 'utf8')).accounts.find(x => x.alias === alias);
-  await page.goto('/'); await page.locator('input[name="login"]').fill(user.username);
+  await page.goto('/#home'); await page.locator('input[name="login"]').fill(user.username);
   await page.locator('input[name="password"]').fill('DmDemo2026!Local');
   const response = page.waitForResponse(r => r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST');
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).last().click();

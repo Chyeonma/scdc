@@ -53,14 +53,15 @@ public static class IdentityModule
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
         services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
+        services.AddScoped<IAccountPairAccessGuard, AccountPairAccessGuard>();
         services.AddScoped<IAuthenticatedSessionReader, AuthenticatedSessionReader>();
         services.AddScoped<IHistoricalUserSummaryReader, HistoricalUserSummaryReader>();
         services.AddScoped<UserSearchKeyInitializer>();
         var searchKeyRing = configuration["Modules:Identity:UserSearch:CursorKeyRingPath"]
             ?? Path.Combine(AppContext.BaseDirectory, ".dm-keys", "user-search");
-        services.AddDataProtection()
-            .SetApplicationName(configuration["Modules:Identity:UserSearch:ApplicationName"] ?? "SCDC.UserSearch")
-            .PersistKeysToFileSystem(new DirectoryInfo(searchKeyRing));
+        services.AddKeyedSingleton<IDataProtectionProvider>("Messaging.Cursors", (_, _) =>
+            DataProtectionProvider.Create(new DirectoryInfo(searchKeyRing), builder =>
+                builder.SetApplicationName(configuration["Modules:Identity:UserSearch:ApplicationName"] ?? "SCDC.UserSearch")));
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -117,6 +118,9 @@ public static class IdentityModule
         var dbContext = context.HttpContext.RequestServices.GetRequiredService<IdentityDbContext>();
         var timeProvider = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
         var now = timeProvider.GetUtcNow();
+        // REST owners distinguish an authenticated account from permission denial.
+        // Hub negotiation must reject an ineligible account before opening a connection.
+        var isChatHandshake = context.HttpContext.Request.Path.StartsWithSegments("/hubs/chat");
         var isActive = await dbContext.AuthSessions
             .AsNoTracking()
             .AnyAsync(session => session.Id == sessionId
@@ -125,7 +129,7 @@ public static class IdentityModule
                 && session.ExpiresAt > now
                 && session.User.Status == UserStatus.Active
                 && session.User.DeletedAt == null
-                && session.User.Emails.Any(email => email.IsPrimary && email.VerifiedAt != null)
+                && (!isChatHandshake || session.User.Emails.Any(email => email.IsPrimary && email.VerifiedAt != null))
                 && session.User.SecurityState != null
                 && session.User.SecurityState.SecurityStamp == securityStamp,
                 context.HttpContext.RequestAborted);

@@ -1,573 +1,151 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
-import {
-  HubConnectionBuilder,
-  HubConnectionState,
-  LogLevel,
-} from '@microsoft/signalr';
-
-import {
-  api,
-  getAccessToken,
-  sessionStore,
-  getMe,
-} from './api.js';
-
-import {
-  INITIAL_SERVERS,
-  INITIAL_MEMBERS,
-  INITIAL_MESSAGES,
-  INITIAL_THREADS,
-} from './mockData.js';
-
+import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { sessionStore, getMe } from './api.js';
 import { ServerRail } from './components/ServerRail.jsx';
 import { SubSidebar } from './components/SubSidebar.jsx';
 import { ChatHeader } from './components/ChatHeader.jsx';
-import { MessageItem } from './components/MessageItem.jsx';
-import { MessageComposer } from './components/MessageComposer.jsx';
-import { RightPanel } from './components/RightPanel.jsx';
-import { UserProfileModal } from './components/UserProfileModal.jsx';
 import { UserSettingsModal } from './components/UserSettingsModal.jsx';
-import { ServerSettingsModal } from './components/ServerSettingsModal.jsx';
 import { CreateServerModal } from './components/CreateServerModal.jsx';
-import { CreateChannelModal } from './components/CreateChannelModal.jsx';
 import { CreateDmModal } from './components/CreateDmModal.jsx';
-import { InviteModal } from './components/InviteModal.jsx';
-import { ReportModal } from './components/ReportModal.jsx';
 import { AuthScreen } from './components/AuthScreen.jsx';
 import { DmChat } from './components/DmChat.jsx';
 import { useConversationInbox } from './useConversationInbox.js';
+import { useCommunityList } from './community/useCommunityList.js';
+import { CommunityList, CommunityDetail } from './community/CommunityViews.jsx';
+import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
+import { CommunityRoles } from './community/CommunityRoles.jsx';
+import { CommunityChannels } from './community/CommunityChannels.jsx';
+import { readPending } from './community/pendingCreate.js';
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
+  // Actor changes unmount private state and cancel pending requests.
+  return <Application key={session?.user?.id || 'anonymous'} session={session} />;
+}
 
-  // Toast notification state
+function Application({ session }) {
+  const actorId = session?.user?.id;
+  const list = useCommunityList(actorId);
+  const inbox = useConversationInbox(actorId);
+  const [route, setRoute] = useState(window.location.hash);
+  const communityRoute = /^#community\/([^/]+)(\/(?:roles|channels))?$/.exec(route);
+  const activeServerId = communityRoute?.[1] || null;
+  const isRoleManagement = communityRoute?.[2] === '/roles';
+  const isChannels = communityRoute?.[2] === '/channels';
+  const isDiscovery = route === '#discover' || route.startsWith('#discover?');
+  const discoveryQuery = isDiscovery ? new URLSearchParams(route.split('?')[1] || '').get('q') || '' : '';
+  const [communityReturnTo, setCommunityReturnTo] = useState('#communities');
+  const isHomeActive = route === '#home';
+  const [hasPending, setHasPending] = useState(false);
+  const checkPending = useCallback(() => {
+    try { setHasPending(Boolean(actorId && readPending(window.sessionStorage, actorId))); }
+    catch { setHasPending(Boolean(actorId)); }
+  }, [actorId]);
+  useEffect(() => {
+    const navigate = () => setRoute(window.location.hash);
+    window.addEventListener('hashchange', navigate);
+    checkPending();
+    return () => window.removeEventListener('hashchange', navigate);
+  }, [checkPending]);
+  function selectServer(id) {
+    setCommunityReturnTo(isDiscovery ? route : '#communities');
+    window.location.hash = `community/${id}`;
+  }
+  function setIsHomeActive(value) { window.location.hash = value ? 'home' : 'communities'; }
+
   const [toast, setToast] = useState(null);
   const notify = useCallback((type, message) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4500);
   }, []);
-
-  // Current user details
   const [currentUser, setCurrentUser] = useState(null);
   const [userStatus, setUserStatus] = useState('online');
-
-  // Navigation State
-  const [isHomeActive, setIsHomeActive] = useState(true);
-  const [servers, setServers] = useState(INITIAL_SERVERS);
-  const [activeServerId, setActiveServerId] = useState(INITIAL_SERVERS[0].id);
-  const [activeChannelId, setActiveChannelId] = useState(INITIAL_SERVERS[0].channels[0].spaceId);
-  const inbox = useConversationInbox(session?.user?.id);
+  const [activeDmId, setActiveDmId] = useState(null);
+  const [connectionState, setConnectionState] = useState('offline');
+  const [showUserSettings, setShowUserSettings] = useState(false);
+  const [showCreateServer, setShowCreateServer] = useState(false);
+  const [showCreateDm, setShowCreateDm] = useState(false);
   const dms = useMemo(() => inbox.items.map(conversation => ({ ...conversation,
     spaceId: conversation.id, spaceType: 1,
-    user: conversation.participants.find(user => user.id !== session?.user?.id),
-  })), [inbox.items, session?.user?.id]);
-  const [activeDmId, setActiveDmId] = useState(null);
-
-  // Messages & Threads State
-  const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES);
-  const [threadsMap, setThreadsMap] = useState(INITIAL_THREADS);
-  const [members, setMembers] = useState(INITIAL_MEMBERS);
-
-  // Active Collapsible Right Panel ('memberList' | 'thread' | 'pinned' | null)
-  const [rightPanelMode, setRightPanelMode] = useState('memberList');
-  const [threadRootMessage, setThreadRootMessage] = useState(null);
-
-  // Modals & Popovers
-  const [showUserSettings, setShowUserSettings] = useState(false);
-  const [showServerSettings, setShowServerSettings] = useState(false);
-  const [showCreateServer, setShowCreateServer] = useState(false);
-  const [showCreateChannel, setShowCreateChannel] = useState(false);
-  const [showCreateDm, setShowCreateDm] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [reportingMessage, setReportingMessage] = useState(null);
-  const [inspectingUser, setInspectingUser] = useState(null);
-  const [replyingTo, setReplyingTo] = useState(null);
-
-  // Search & Filter
-  const [searchQuery, setSearchQuery] = useState('');
-  const [connectionState, setConnectionState] = useState('online');
-
-  const timelineEndRef = useRef(null);
-
-  // Initialize or fetch current user on session change
-  useEffect(() => {
-    let cancelled = false;
-    setCurrentUser(session?.user ?? null);
-    if (session?.user) {
-      getMe().then((res) => {
-        if (!cancelled && res?.id === session.user.id) setCurrentUser(res);
-      }).catch(() => {});
-    }
-    return () => { cancelled = true; };
-  }, [session]);
+    user: conversation.participants.find(user => user.id !== actorId),
+  })), [inbox.items, actorId]);
+  const activeDm = dms.find(dm => dm.spaceId === activeDmId) || dms[0];
 
   useEffect(() => {
-    setActiveDmId(null); setIsHomeActive(true); setShowCreateDm(false); setReplyingTo(null); setSearchQuery('');
-  }, [session?.user?.id]);
-
+    if (!actorId) return;
+    let disposed = false;
+    setCurrentUser(session.user);
+    getMe().then(user => { if (!disposed && user?.id === actorId) setCurrentUser(user); }).catch(() => {});
+    return () => { disposed = true; };
+  }, [session, actorId]);
   useEffect(() => {
     setActiveDmId(previous => dms.some(dm => dm.spaceId === previous) ? previous : dms[0]?.spaceId ?? null);
   }, [dms]);
 
   function handleOpenedDm(conversation) {
-    const peer = conversation.participants.find(user => user.id !== sessionStore.getSnapshot()?.user?.id);
-    if (!peer) return;
-    const dm = { ...conversation, spaceId: conversation.id, spaceType: 1, user: peer };
+    if (sessionStore.getSnapshot()?.user?.id !== actorId) return;
     inbox.opened(conversation);
-    setActiveDmId(dm.spaceId); setIsHomeActive(true); setShowCreateDm(false);
-    setRightPanelMode(null); setSearchQuery(''); setReplyingTo(null);
+    setActiveDmId(conversation.id);
+    setIsHomeActive(true);
+    setShowCreateDm(false);
   }
-
-  // Active Server & Channel reference
-  const activeServer = useMemo(
-    () => servers.find((s) => s.id === activeServerId) || servers[0],
-    [servers, activeServerId]
-  );
-
-  const activeChannel = useMemo(
-    () => activeServer?.channels?.find((c) => c.spaceId === activeChannelId) || activeServer?.channels?.[0],
-    [activeServer, activeChannelId]
-  );
-
-  const activeDm = useMemo(
-    () => dms.find((d) => d.spaceId === activeDmId) || dms[0],
-    [dms, activeDmId]
-  );
-
-  const currentSpaceId = isHomeActive ? activeDmId : activeChannelId;
-
-  // Active Messages list
-  const currentMessages = useMemo(() => {
-    const list = messagesMap[currentSpaceId] || [];
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter((m) => m.content?.toLowerCase().includes(q));
-  }, [messagesMap, currentSpaceId, searchQuery]);
-
-  // Pinned messages for current space
-  const currentPinnedMessages = useMemo(() => {
-    const list = messagesMap[currentSpaceId] || [];
-    return list.filter((m) => m.isPinned);
-  }, [messagesMap, currentSpaceId]);
-
-  // Auto-scroll timeline to bottom
-  useEffect(() => {
-    timelineEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentMessages.length, currentSpaceId]);
-
-  // SignalR Hub Connection Setup
-  useEffect(() => {
-    if (isHomeActive || !session?.accessToken || !currentSpaceId) return undefined;
-
-    let disposed = false;
-    const connection = new HubConnectionBuilder()
-      .withUrl('/hubs/chat', { accessTokenFactory: getAccessToken })
-      .withAutomaticReconnect([0, 2000, 5000, 10000])
-      .configureLogging(LogLevel.Warning)
-      .build();
-
-    connection.on('MessageCreated', (message) => {
-      if (message?.spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [message.spaceId]: [...(prev[message.spaceId] || []), message],
-        }));
-      }
-    });
-
-    connection.on('MessageUpdated', (message) => {
-      if (message?.spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [message.spaceId]: (prev[message.spaceId] || []).map((m) =>
-            m.id === message.id ? { ...m, ...message } : m
-          ),
-        }));
-      }
-    });
-
-    connection.on('MessageDeleted', ({ spaceId, messageId }) => {
-      if (spaceId) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [spaceId]: (prev[spaceId] || []).filter((m) => m.id !== messageId),
-        }));
-      }
-    });
-
-    connection.onreconnecting(() => setConnectionState('connecting'));
-    connection.onreconnected(() => setConnectionState('online'));
-    connection.onclose(() => {
-      if (!disposed) setConnectionState('offline');
-    });
-
-    async function startSignalR() {
-      try {
-        await connection.start();
-        if (!disposed) {
-          setConnectionState('online');
-          await connection.invoke('SubscribeChannel', currentSpaceId);
-        }
-      } catch {
-        if (!disposed) {
-          setConnectionState('online'); // fallback smoothly
-        }
-      }
-    }
-
-    startSignalR();
-
-    return () => {
-      disposed = true;
-      if (connection.state !== HubConnectionState.Disconnected) {
-        connection.stop();
-      }
-    };
-  }, [session, currentSpaceId, isHomeActive]);
-
-  // Send Message Handler
-  function handleSendMessage({ content, replyTo, attachments }) {
-    if (isHomeActive) return;
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      sequenceNo: Date.now(),
-      spaceId: currentSpaceId,
-      author: {
-        id: currentUser?.id || 'usr-me',
-        username: currentUser?.username || 'me',
-        displayName: currentUser?.displayName || currentUser?.username || 'Me',
-        roleColor: '#5865f2',
-        roleName: 'Member',
-      },
-      messageType: attachments?.length > 0 ? 3 : 1,
-      content,
-      createdAt: new Date().toISOString(),
-      editedAt: null,
-      reactions: [],
-      replyTo,
-      attachments: attachments || [],
-      isPinned: false,
-      threadCount: 0,
-    };
-
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: [...(prev[currentSpaceId] || []), newMessage],
-    }));
-
-    setReplyingTo(null);
-
-    // Try calling backend API if available
-    api(`/channels/${currentSpaceId}/messages`, {
-      method: 'POST',
-      body: { clientMessageId: crypto.randomUUID(), content },
-    }).catch(() => {});
+  function handleCreateServer(server) {
+    list.reload();
+    selectServer(server.id);
+    notify('success', `Đã xác nhận cộng đồng "${server.name}".`);
   }
+  const toastView = toast && <div className="toast-container">
+    <div className={`toast toast--${toast.type}`}>
+      <span>{toast.message}</span>
+      <button type="button" className="toast-close-btn" onClick={() => setToast(null)}>✕</button>
+    </div>
+  </div>;
+  if (!session) return <><AuthScreen notify={notify} />{toastView}</>;
 
-  // Toggle Reaction Handler
-  function handleToggleReaction(messageId, emoji) {
-    setMessagesMap((prev) => {
-      const list = prev[currentSpaceId] || [];
-      return {
-        ...prev,
-        [currentSpaceId]: list.map((msg) => {
-          if (msg.id !== messageId) return msg;
-          const reactions = msg.reactions || [];
-          const existing = reactions.find((r) => r.emoji === emoji);
-
-          let nextReactions;
-          if (existing) {
-            if (existing.userReacted) {
-              nextReactions = reactions
-                .map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, userReacted: false } : r))
-                .filter((r) => r.count > 0);
-            } else {
-              nextReactions = reactions.map((r) =>
-                r.emoji === emoji ? { ...r, count: r.count + 1, userReacted: true } : r
-              );
-            }
-          } else {
-            nextReactions = [...reactions, { emoji, count: 1, userReacted: true }];
-          }
-
-          return { ...msg, reactions: nextReactions };
-        }),
-      };
-    });
-  }
-
-  // Pin / Unpin Message
-  function handlePinMessage(messageId) {
-    setMessagesMap((prev) => {
-      const list = prev[currentSpaceId] || [];
-      return {
-        ...prev,
-        [currentSpaceId]: list.map((msg) =>
-          msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
-        ),
-      };
-    });
-    notify('success', 'Đã cập nhật trạng thái ghim tin nhắn.');
-  }
-
-  // Delete Message
-  function handleDeleteMessage(messageId) {
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: (prev[currentSpaceId] || []).filter((m) => m.id !== messageId),
-    }));
-    notify('success', 'Đã xoá tin nhắn.');
-  }
-
-  // Edit Message
-  function handleEditMessage(messageId, newContent) {
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: (prev[currentSpaceId] || []).map((m) =>
-        m.id === messageId
-          ? { ...m, content: newContent, editedAt: new Date().toISOString() }
-          : m
-      ),
-    }));
-    notify('success', 'Đã cập nhật tin nhắn.');
-  }
-
-  // Thread Replies
-  function handleOpenThread(message) {
-    setThreadRootMessage(message);
-    setRightPanelMode('thread');
-  }
-
-  function handleSendThreadReply(rootId, replyText) {
-    const newReply = {
-      id: `th-${Date.now()}`,
-      sequenceNo: Date.now(),
-      author: {
-        id: currentUser?.id || 'usr-me',
-        username: currentUser?.username || 'me',
-        displayName: currentUser?.displayName || currentUser?.username || 'Me',
-      },
-      content: replyText,
-      createdAt: new Date().toISOString(),
-    };
-
-    setThreadsMap((prev) => ({
-      ...prev,
-      [rootId]: [...(prev[rootId] || []), newReply],
-    }));
-
-    setMessagesMap((prev) => ({
-      ...prev,
-      [currentSpaceId]: (prev[currentSpaceId] || []).map((m) =>
-        m.id === rootId ? { ...m, threadCount: (m.threadCount || 0) + 1 } : m
-      ),
-    }));
-  }
-
-  // Start DM
-  function handleStartDm(userOrDm) {
-    if (userOrDm.spaceId) {
-      setIsHomeActive(true);
-      setActiveDmId(userOrDm.spaceId);
-    } else {
-      setShowCreateDm(true);
-    }
-  }
-
-  // Create Server
-  function handleCreateServer(serverData) {
-    setServers((prev) => [...prev, serverData]);
-    setIsHomeActive(false);
-    setActiveServerId(serverData.id);
-    setActiveChannelId(serverData.channels[0].spaceId);
-    notify('success', `Đã tạo server "${serverData.name}".`);
-  }
-
-  // Create Channel
-  function handleCreateChannel(channelData) {
-    setServers((prev) =>
-      prev.map((s) =>
-        s.id === activeServerId ? { ...s, channels: [...(s.channels || []), channelData] } : s
-      )
-    );
-    setActiveChannelId(channelData.spaceId);
-    notify('success', `Đã tạo kênh #${channelData.name}.`);
-  }
-
-  // If not logged in, render Auth Screen
-  if (!session) {
-    return (
-      <>
-        <AuthScreen notify={notify} />
-        {toast && (
-          <div className="toast-container">
-            <div className={`toast toast--${toast.type}`}>
-              <span>{toast.message}</span>
-              <button type="button" className="toast-close-btn" onClick={() => setToast(null)}>✕</button>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <div className="app-shell">
-      {/* COLUMN 1: SERVER RAIL */}
-      <ServerRail
-        servers={servers}
-        activeServerId={activeServerId}
-        isHomeActive={isHomeActive}
-        onSelectHome={() => setIsHomeActive(true)}
-        onSelectServer={(serverId) => {
-          setIsHomeActive(false);
-          setActiveServerId(serverId);
-          const srv = servers.find((s) => s.id === serverId);
-          if (srv?.channels?.[0]) {
-            setActiveChannelId(srv.channels[0].spaceId);
-          }
-        }}
-        onOpenCreateServer={() => setShowCreateServer(true)}
-        totalUnreadDMs={dms.reduce((acc, d) => acc + (d.unreadCount || 0), 0)}
-      />
-
-      {/* COLUMN 2: SUB-SIDEBAR (CHANNELS OR DMS + USER DOCK) */}
-      <SubSidebar
-        isHomeActive={isHomeActive}
-        activeServer={activeServer}
-        activeChannelId={activeChannelId}
-        onSelectChannel={(chId) => setActiveChannelId(chId)}
-        dms={dms}
-        inbox={inbox}
-        activeDmId={activeDmId}
-        onSelectDm={(dmId) => setActiveDmId(dmId)}
-        onOpenCreateDm={() => setShowCreateDm(true)}
-        onOpenCreateChannel={() => setShowCreateChannel(true)}
-        onOpenServerSettings={() => setShowServerSettings(true)}
-        onOpenInviteModal={() => setShowInviteModal(true)}
-        onLeaveServer={() => {
-          if (confirm(`Bạn có chắc chắn muốn rời khỏi ${activeServer?.name}?`)) {
-            setServers((prev) => prev.filter((s) => s.id !== activeServerId));
-            setIsHomeActive(true);
-            notify('warning', `Đã rời khỏi ${activeServer?.name}.`);
-          }
-        }}
-        currentUser={currentUser}
-        onOpenUserSettings={() => setShowUserSettings(true)}
-        userStatus={userStatus}
-        onChangeStatus={(status) => setUserStatus(status)}
-      />
-
-      {/* COLUMN 3: MAIN CHAT STAGE */}
-      <main className="main-chat">
-        {/* Chat Header */}
-        <ChatHeader
-          title={isHomeActive ? (activeDm?.name || activeDm?.user?.displayName || 'Tin nhắn trực tiếp') : (activeChannel?.name ? `#${activeChannel.name}` : 'Kênh')}
-          topic={isHomeActive ? (activeDm?.user ? `@${activeDm.user.username}` : '') : (activeChannel?.topic || '')}
-          icon={isHomeActive ? (activeDm?.spaceType === 2 ? '👥' : '@') : (activeChannel?.visibility === 2 ? '🔒' : activeChannel?.visibility === 3 ? '📢' : '#')}
-          connectionState={connectionState}
-          showMemberList={rightPanelMode === 'memberList'}
-          onToggleMemberList={() =>
-            setRightPanelMode((prev) => (prev === 'memberList' ? null : 'memberList'))
-          }
-          showThreads={rightPanelMode === 'thread'}
-          onToggleThreads={() =>
-            setRightPanelMode((prev) => (prev === 'thread' ? null : 'thread'))
-          }
-          showPinned={rightPanelMode === 'pinned'}
-          onTogglePinned={() =>
-            setRightPanelMode((prev) => (prev === 'pinned' ? null : 'pinned'))
-          }
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          isDirectMessage={isHomeActive}
-          statusDot={isHomeActive && activeDm?.user?.status === 'online' ? '#23a55a' : null}
-        />
-
-        <div style={{ display: isHomeActive ? 'contents' : 'none' }}>
-          <DmChat key={session.user.id} actorId={session.user.id}
-            author={currentUser || session.user} conversation={isHomeActive ? activeDm : null}
-            onCommitted={inbox.refresh} onConnectionState={setConnectionState} />
+  return <div className="app-shell">
+    <ServerRail servers={list.items} activeServerId={activeServerId} isHomeActive={isHomeActive}
+      onSelectHome={() => setIsHomeActive(true)} onSelectOverview={() => setIsHomeActive(false)}
+      onSelectServer={selectServer} onOpenCreateServer={() => setShowCreateServer(true)} />
+    {isHomeActive && <SubSidebar isHomeActive={true} dms={dms} inbox={inbox}
+      activeDmId={activeDmId} onSelectDm={setActiveDmId} onOpenCreateDm={() => setShowCreateDm(true)}
+      currentUser={currentUser} onOpenUserSettings={() => setShowUserSettings(true)}
+      userStatus={userStatus} onChangeStatus={setUserStatus} />}
+      {!isHomeActive && <div className="community-workspace">
+        <div className="community-toolbar">
+          <span>{currentUser?.displayName || session.user.username}</span>
+          <button className="btn btn--secondary" onClick={() => setShowUserSettings(true)}>Cài đặt tài khoản</button>
         </div>
-        {/* Message Timeline */}
-        {!isHomeActive && <div className="chat-timeline">
-          {currentMessages.length === 0 ? (
-            <div className="timeline-empty">
-              <span className="timeline-empty__icon">
-                {isHomeActive ? '💬' : '#️⃣'}
-              </span>
-              <h2>
-                {isHomeActive
-                  ? (activeDm ? `Cuộc trò chuyện với ${activeDm.user.displayName}` : 'Tin nhắn trực tiếp')
-                  : `Chào mừng tới #${activeChannel?.name || 'kênh'}`}
-              </h2>
-              <p>{isHomeActive ? (activeDm ? (activeDm.lastSequence === '0' ? 'Chưa có tin nhắn.' : 'Lịch sử hội thoại chưa được tải.') : 'Tìm một người để bắt đầu cuộc trò chuyện.') : 'Đây là điểm khởi đầu của cuộc trò chuyện này. Hãy gửi lời chào đầu tiên!'}</p>
-            </div>
-          ) : (
-            currentMessages.map((message, index) => {
-              const previous = currentMessages[index - 1];
-              const isGrouped =
-                previous &&
-                previous.author?.id === message.author?.id &&
-                previous.messageType === 1 &&
-                message.messageType === 1 &&
-                new Date(message.createdAt) - new Date(previous.createdAt) < 5 * 60000;
-
-              const isOwn = message.author?.id === currentUser?.id || message.author?.username === currentUser?.username;
-
-              return (
-                <MessageItem
-                  key={message.id}
-                  message={message}
-                  isGrouped={Boolean(isGrouped)}
-                  isOwn={Boolean(isOwn)}
-                  onReply={(msg) => setReplyingTo(msg)}
-                  onOpenThread={handleOpenThread}
-                  onToggleReaction={handleToggleReaction}
-                  onPinMessage={handlePinMessage}
-                  onDeleteMessage={handleDeleteMessage}
-                  onEditMessage={handleEditMessage}
-                  onReportMessage={(msg) => setReportingMessage(msg)}
-                  onJumpToReply={() => {}}
-                  onAuthorClick={(author) => setInspectingUser(author)}
-                />
-              );
-            })
-          )}
-          <div ref={timelineEndRef} />
+        {hasPending && <div className="community-pending" role="status">
+          <span>Có yêu cầu tạo chưa được xác nhận.</span>
+          <button className="btn btn--secondary" onClick={() => setShowCreateServer(true)}>Tiếp tục yêu cầu</button>
         </div>}
+        {activeServerId
+          ? isRoleManagement
+            ? <CommunityRoles key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
+              onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
+            : isChannels
+              ? <CommunityChannels key={`${actorId}:${activeServerId}`} actorId={actorId} serverId={activeServerId}
+                onBack={() => { window.location.hash = `community/${activeServerId}`; }} />
+              : <CommunityDetail key={activeServerId} actorId={actorId} serverId={activeServerId}
+            onBack={() => { window.location.hash = communityReturnTo; }} onJoined={list.reload}
+            onManage={() => { window.location.hash = `community/${activeServerId}/roles`; }}
+            onChannels={() => { window.location.hash = `community/${activeServerId}/channels`; }}
+            backLabel={communityReturnTo.startsWith('#discover') ? '← Kết quả tìm kiếm' : undefined} />
+          : isDiscovery
+            ? <CommunityDiscovery key={`${actorId}:${discoveryQuery}`} actorId={actorId} query={discoveryQuery} onSelect={selectServer}
+              onSearch={(query) => { window.location.hash = `discover?${new URLSearchParams({ q: query })}`; }}
+              onBack={() => setIsHomeActive(false)} />
+            : <CommunityList list={list} onSelect={selectServer} onCreate={() => setShowCreateServer(true)}
+              onDiscover={() => { window.location.hash = 'discover'; }} />}
+      </div>}
 
-        {/* Message Composer */}
-        {!isHomeActive && <MessageComposer
-          channelName={isHomeActive ? (activeDm?.user?.displayName || activeDm?.name) : activeChannel?.name}
-          replyingTo={replyingTo}
-          onCancelReply={() => setReplyingTo(null)}
-          onSendMessage={handleSendMessage}
-        />}
-      </main>
 
-      {/* COLUMN 4: COLLAPSIBLE RIGHT PANEL (MEMBER LIST / THREAD / PINNED) */}
-      {!isHomeActive && <RightPanel
-        mode={rightPanelMode}
-        members={members}
-        onSelectMember={(mem) => setInspectingUser(mem)}
-        threadRootMessage={threadRootMessage}
-        threadReplies={threadRootMessage ? threadsMap[threadRootMessage.id] || [] : []}
-        onCloseThread={() => setRightPanelMode(null)}
-        onSendThreadReply={handleSendThreadReply}
-        pinnedMessages={currentPinnedMessages}
-        onClosePinned={() => setRightPanelMode(null)}
-        onJumpToMessage={() => {}}
-        onUnpinMessage={handlePinMessage}
-      />}
-
+    {isHomeActive && <main className="main-chat">
+      <ChatHeader title={activeDm?.user?.displayName || 'Tin nhắn trực tiếp'}
+        topic={activeDm?.user ? `@${activeDm.user.username}` : ''} icon="@"
+        connectionState={connectionState} isDirectMessage={true} />
+      <DmChat key={actorId} actorId={actorId} author={currentUser || session.user}
+        conversation={activeDm} onCommitted={inbox.refresh} onConnectionState={setConnectionState} />
+    </main>}
       {/* USER SETTINGS MODAL */}
       {showUserSettings && (
         <UserSettingsModal
@@ -578,80 +156,15 @@ export default function App() {
         />
       )}
 
-      {/* SERVER SETTINGS MODAL */}
-      {showServerSettings && (
-        <ServerSettingsModal
-          server={activeServer}
-          onClose={() => setShowServerSettings(false)}
-          onUpdateServer={(updated) => {
-            setServers((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-          }}
-          notify={notify}
-        />
-      )}
+      {showCreateServer && <CreateServerModal
+        actorId={actorId}
+        onClose={() => setShowCreateServer(false)}
+        onCreateServer={handleCreateServer}
+        onPendingChange={checkPending}
+      />}
 
-      {/* CREATE SERVER MODAL */}
-      {showCreateServer && (
-        <CreateServerModal
-          onClose={() => setShowCreateServer(false)}
-          onCreateServer={handleCreateServer}
-        />
-      )}
 
-      {/* CREATE CHANNEL MODAL */}
-      {showCreateChannel && (
-        <CreateChannelModal
-          onClose={() => setShowCreateChannel(false)}
-          onCreateChannel={handleCreateChannel}
-        />
-      )}
-
-      {/* CREATE DM MODAL */}
-      {showCreateDm && (
-        <CreateDmModal
-          onClose={() => setShowCreateDm(false)}
-          key={session?.user?.id}
-          onOpened={handleOpenedDm}
-        />
-      )}
-
-      {/* INVITE MODAL */}
-      {showInviteModal && (
-        <InviteModal
-          server={activeServer}
-          onClose={() => setShowInviteModal(false)}
-          notify={notify}
-        />
-      )}
-
-      {/* REPORT MESSAGE MODAL */}
-      {reportingMessage && (
-        <ReportModal
-          message={reportingMessage}
-          onClose={() => setReportingMessage(null)}
-          notify={notify}
-        />
-      )}
-
-      {/* USER PROFILE MODAL */}
-      {inspectingUser && (
-        <UserProfileModal
-          user={inspectingUser}
-          onClose={() => setInspectingUser(null)}
-          onStartDm={handleStartDm}
-          currentUser={currentUser}
-        />
-      )}
-
-      {/* TOAST NOTIFICATION CONTAINER */}
-      {toast && (
-        <div className="toast-container">
-          <div className={`toast toast--${toast.type}`}>
-            <span>{toast.message}</span>
-            <button type="button" className="toast-close-btn" onClick={() => setToast(null)}>✕</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    {showCreateDm && <CreateDmModal onClose={() => setShowCreateDm(false)} onOpened={handleOpenedDm} />}
+    {toastView}
+  </div>;
 }

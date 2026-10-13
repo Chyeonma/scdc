@@ -209,11 +209,11 @@ public sealed class UserSearchFixture : IAsyncLifetime
     private string _connection = null!;
     public string Prefix { get; } = $"ds_{Guid.NewGuid():N}"[..12] + "_";
     public SearchClock Clock { get; } = new();
-    public WebApplicationFactory<Program> Factory { get; private set; } = null!;
+    public WebApplicationFactory<ApiProgram> Factory { get; private set; } = null!;
     public HttpClient Client { get; private set; } = null!;
     public Dictionary<string, ActorData> Users { get; } = [];
     public ActorData Actor => Users["owner"];
-    public WebApplicationFactory<Program> MakeFactory() => _baseFactory.WithWebHostBuilder(builder =>
+    public WebApplicationFactory<ApiProgram> MakeFactory() => _baseFactory.WithWebHostBuilder(builder =>
     {
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         { ["Modules:Identity:UserSearch:CursorKeyRingPath"] = _keyPath,

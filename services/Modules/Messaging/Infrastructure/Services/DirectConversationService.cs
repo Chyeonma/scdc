@@ -12,7 +12,7 @@ using SCDC.Modules.Messaging.Infrastructure.Persistence;
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
 internal sealed class DirectConversationService(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountAccessGuard guard, TimeProvider clock) : IDirectConversationService
+    IAccountPairAccessGuard guard, TimeProvider clock) : IDirectConversationService
 {
     public async Task<Result<DirectConversationResponse>> OpenAsync(OpenDirectConversation command, CancellationToken cancellationToken)
     {

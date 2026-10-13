@@ -12,6 +12,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <ProjectReference Include="../SCDC.Contracts/SCDC.Contracts.csproj" />
+    <EmbeddedResource Include="../../docs/fixtures/text-policy.json" LogicalName="SCDC.TextPolicy.json" />
   </ItemGroup>
 
 </Project>

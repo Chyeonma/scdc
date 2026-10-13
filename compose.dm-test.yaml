@@ -28,6 +28,9 @@ services:
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
       Modules__Identity__SigningKey: ${DM_IDENTITY_SIGNING_KEY:?Run Init first}
       Modules__Identity__ExposeDevelopmentTokens: "true"
+      Modules__Community__Operations__ActiveKeyId: dm-test
+      Modules__Community__Operations__Keys__dm-test: ${DM_IDENTITY_SIGNING_KEY:?Run Init first}
+      Modules__Community__KeyRingPath: /app/community-keys
       Cors__AllowedOrigins__0: http://localhost:${DM_WEB_PORT:-15300}
       Modules__Identity__UserSearch__CursorKeyRingPath: /app/dm-keys/cursor
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-acceptance
@@ -45,6 +48,7 @@ services:
       - ./.dm-acceptance/keyrings/cursor:/app/dm-keys/cursor
       - ./.dm-acceptance/keyrings/hmac:/app/dm-keys/hmac:ro
       - ./.dm-acceptance/dispatcher:/app/dm-dispatcher
+      - dm-community-keys:/app/community-keys
 
   web-client:
     build:
@@ -82,4 +86,5 @@ services:
 
 volumes:
   dm-postgres-data:
+  dm-community-keys:
   dm-test-nuget:

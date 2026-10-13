@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SCDC Media application messages — draft",
-  "description": "Eight application catalogue variants on /hubs/chat, not SignalR or LiveKit wire frames. No provider JWT/grant/source publish permit in events. Current permission and owner-binding routing mandatory.",
+  "description": "Eight draft application catalogue variants on a dedicated SignalR hub owned by Media control (DEC-129); the public hub route is not yet selected. Not SignalR or LiveKit wire frames. No provider JWT/grant/source publish permit in events. Current permission and owner-binding routing mandatory.",
   "oneOf": [
     {
       "type": "object",

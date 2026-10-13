@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
@@ -9,7 +10,7 @@ using SCDC.Modules.Identity.Infrastructure.Persistence;
 namespace SCDC.Modules.Identity.Infrastructure.Services;
 
 internal sealed class UserSearchDirectory(
-    IdentityDbContext db, IDataProtectionProvider protection, TimeProvider clock) : IUserSearchDirectory
+    IdentityDbContext db, [FromKeyedServices("Messaging.Cursors")] IDataProtectionProvider protection, TimeProvider clock) : IUserSearchDirectory
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Messaging.UserSearch.v1");
     private sealed record Position(int Rank, string Username, Guid Id);

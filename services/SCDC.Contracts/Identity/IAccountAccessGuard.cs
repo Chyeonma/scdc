@@ -1,18 +1,23 @@
+using System.Data.Common;
+
 namespace SCDC.Contracts.Identity;
 
-public sealed record AccountAccessRequest(Guid ActorId, Guid SessionId, Guid SecurityStamp, Guid PeerId);
-public sealed record AccountAccessFailure(string Code);
-public sealed record AccountAccessResult(UserSummary? Actor, UserSummary? Peer, bool PeerEligible, AccountAccessFailure? Failure);
+public sealed record AccountActor(Guid UserId, Guid SessionId, Guid SecurityStamp);
 
-/// <summary>Enlists in the shared transaction and holds ordered user/session SHARE locks until owner completion.</summary>
-public interface IAccountAccessGuard
+public enum AccountAccessStatus
 {
-    Task<AccountAccessResult> LockPairAsync(AccountAccessRequest request, CancellationToken cancellationToken);
-    Task DetachAsync(CancellationToken cancellationToken);
+    Allowed,
+    InvalidSession,
+    AccountDenied
 }
 
-/// <summary>Internal public projection for callers that have already acquired the appropriate access guard.</summary>
-public interface IHistoricalUserSummaryReader
+public sealed record AccountAccessCheck(AccountAccessStatus Status, DateTimeOffset? SessionExpiresAt = null)
 {
-    Task<IReadOnlyDictionary<Guid, UserSummary>> ReadAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+    public bool IsAllowedAt(DateTimeOffset now) => Status == AccountAccessStatus.Allowed && SessionExpiresAt > now;
+}
+
+public interface IAccountAccessGuard
+{
+    // The caller owns the transaction and must retain it until the operation finishes.
+    Task<AccountAccessCheck> AcquireAsync(AccountActor actor, DbTransaction transaction, CancellationToken cancellationToken);
 }

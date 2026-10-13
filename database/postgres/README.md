@@ -1,48 +1,41 @@
-# SCDC PostgreSQL database
+# SCDC — PostgreSQL
 
-Database `scdc_chat` duoc chia theo domain:
+Thiết kế schema, quan hệ và quy ước dữ liệu tại [Thiết kế database](../../docs/system/database.md). SQL có cấu trúc cho cả tính năng chưa triển khai.
 
-| Schema | Noi dung |
+## Mục lục
+
+- [Kết nối local](#kết-nối-local)
+- [SQL và migration](#sql-và-migration)
+- [Truy vấn quan sát](#truy-vấn-quan-sát)
+
+## Kết nối local
+
+Thông số dưới đây dùng cho stack Compose Development:
+
+| Thuộc tính | Giá trị |
 |---|---|
-| `identity` | User, profile, email, password credential, MFA, session va token |
-| `community` | Server, member, channel, role, permission, invite va ban |
-| `messaging` | DM, group chat, message, attachment, reaction va read state |
-| `moderation` | Message report va moderation action |
-| `audit` | Security event append-only |
-| `integration` | Transactional outbox va inbox idempotency |
-| `common` | Trigger/function dung chung |
+| Driver | PostgreSQL |
+| Host / port | `localhost:5432` |
+| Database | `scdc_chat` |
+| Username / password | `scdc` / `scdc_dev` |
+| SSL mode | `disable` |
 
-## DBeaver
+Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`, `moderation`, `audit`, `integration`, `common`.
 
-- Driver: PostgreSQL
-- Host: `localhost`
-- Port: `5432`
-- Database: `scdc_chat`
-- Username: `scdc`
-- Password: `scdc_dev`
-- SSL mode: `disable` cho moi truong local
+## SQL và migration
 
-Sau khi ket noi, mo `Schemas` va chon hien thi `identity`, `community`,
-`messaging`, `moderation`, `audit`, `integration`. Cac view de xem nhanh:
+- [schema.sql](schema.sql): bootstrap schema, constraint, index, trigger và view; có DROP SCHEMA.
+- [seed.sql](seed.sql): dữ liệu minh họa, password/token không dùng đăng nhập.
+- [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/community-development.md#migration).
 
-- `identity.v_user_accounts`
-- `identity.v_active_sessions`
-- `messaging.v_space_overview`
-- `messaging.v_message_timeline`
+Compose chỉ chạy script init khi volume mới được khởi tạo. Sửa SQL không cập nhật volume có sẵn. Dùng [database thử riêng](../../docs/guides/community-development.md#local-environment) cho suite tích hợp.
 
-## Script
+## Truy vấn quan sát
 
-- `schema.sql`: tao lai toan bo schema, constraint, index, trigger va view.
-- `seed.sql`: du lieu mau cho dang ky, login/logout, token rotation, DM, group
-  chat, server channel, role, permission, attachment, reaction va outbox.
-
-Du lieu password/token trong `seed.sql` chi de minh hoa va khong dang nhap duoc.
-
-## Query de quan sat luong du lieu
+Các view hỗ trợ đọc tài khoản, phiên, space và timeline. Chạy trên DB local hoặc DB thử phù hợp:
 
 ```sql
 SELECT * FROM identity.v_user_accounts ORDER BY username;
-
 SELECT * FROM identity.v_active_sessions;
 
 SELECT

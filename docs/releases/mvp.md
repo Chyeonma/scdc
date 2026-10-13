@@ -1,10 +1,12 @@
 # SCDC — Hồ sơ bàn giao MVP
 
-Cập nhật: 2026-10-07. Phạm vi ba tính năng theo DEC-114, một API host theo [DEC-116](../decisions.md#dec-116), phân công kế hoạch theo [DEC-117](../decisions.md#dec-117). Đã chọn phạm vi gói Community đầu; danh sách UC/AC toàn MVP và lịch còn cần khóa theo gói, chưa có xác nhận hoàn tất.
+Cập nhật: 2026-10-12. Phạm vi ba tính năng theo DEC-114, một API host theo [DEC-116](../records/decisions/README.md#dec-116), phân công kế hoạch theo [DEC-117](../records/decisions/README.md#dec-117). Phạm vi chức năng Community MVP đã chọn theo [DEC-118](../records/decisions/README.md#dec-118); chi tiết triển khai/nghiệm thu từng gói, phạm vi Identity/DM và lịch toàn MVP còn cần khóa. Chưa có xác nhận hoàn tất.
 
 ## Mục đích và giới hạn
 
 MVP là mốc đầu tiên trước [v1](v1.md): có bản chạy được để ba thành viên bắt đầu làm và tích hợp, tận dụng phần Identity Vg đã xây dựng gần xong. Đây là hồ sơ để bắt đầu công việc; không yêu cầu triển khai toàn bộ bản đặc tả đầy đủ ngay từ đầu.
+
+Thiết kế trước code thực hiện [theo từng gói việc](../project/planning.md#package-design); các gói đủ thông tin bắt đầu trong khi phần thiết kế còn lại tiếp tục. v1 kế thừa sản phẩm và [giữ dữ liệu MVP](../system/database.md#v1-mvp-data-transition), không bắt đầu lại bằng database trống.
 
 | Nội dung | Đã xác nhận | Cần chốt theo gói |
 |---|---|---|
@@ -18,13 +20,45 @@ MVP là mốc đầu tiên trước [v1](v1.md): có bản chạy được để
 
 | Tính năng | Luồng chạy thật cần làm trước | Đặc tả nguồn | Phần hoàn thiện sau mốc đầu |
 |---|---|---|---|
-| Identity | Đăng ký, xác minh email, đăng nhập, duy trì phiên và đăng xuất; tận dụng code hiện có | [Use case và đối chiếu source](../features/accounts/specs/use-cases.md#use-cases), [API hiện tại](../features/accounts/design/README.md#api-current) | Đóng các gap còn lại và kiểm chứng đầy đủ vòng đời tài khoản theo v1; không xóa phần đã làm chỉ để giảm scope |
-| Community | Tạo/xem cộng đồng của mình; một đường tham gia hoạt động; tạo/xem phòng text và giao tiếp trong phòng | [UC-COM](../features/community/specs/README.md#use-cases), [Servers](../features/community/specs/servers.md), [Memberships](../features/community/specs/memberships.md), [Channels](../features/community/specs/channels.md), [tin phòng](../features/community/specs/integration.md#use-cases) | Đủ các đường tham gia/lời mời, quản lý vai trò/ACL, chuyển owner và các nhánh quản lý trong đặc tả v1 |
-| Direct Messaging | Tìm người, mở hội thoại hai người, gửi/nhận văn bản, xem lại lịch sử sau reload hoặc mở lại | [Quy tắc DM](../features/direct-messaging/specs/requirements.md#requirements), [hợp đồng](../features/direct-messaging/design/README.md#contracts), [AC](../features/direct-messaging/specs/acceptance.md#acceptance) | Bổ sung và kiểm chứng đầy đủ sửa/xóa, retry không trùng, phân trang/reconnect và các tình huống đồng thời của v1 |
+| Identity | Đăng ký, xác minh email, đăng nhập, duy trì phiên và đăng xuất; tận dụng code hiện có | [Use case và đối chiếu source](../features/accounts/README.md), [API hiện tại](../features/accounts/README.md) | Đóng các gap còn lại và kiểm chứng đầy đủ vòng đời tài khoản theo v1; không xóa phần đã làm chỉ để giảm scope |
+| Community | Phạm vi đã chọn: tạo/tìm/tham gia public/immediate, phòng text, lịch sử/gửi/nhận tin và mất quyền; hồi quy role/ACL đã có | [Baseline Community](#community-scope), [UC-COM](../features/community/README.md#use-cases) | Các đường approval/lời mời, quản lý server/owner/leave, xóa phòng, sửa/xóa tin và voice theo đặc tả v1 |
+| Direct Messaging | Tìm người, mở hội thoại hai người, gửi/nhận văn bản, xem lại lịch sử sau reload hoặc mở lại | [Quy tắc DM](../features/messaging/direct-messaging.md#requirements), [hợp đồng](../features/messaging/direct-messaging.md#contracts), [AC](../features/messaging/direct-messaging.md#acceptance) | Bổ sung và kiểm chứng đầy đủ sửa/xóa, retry không trùng, phân trang/reconnect và các tình huống đồng thời của v1 |
 
-Ngày 2026-10-07 đã chọn [gói Community đầu tiên](../features/community/delivery/create-view/plan.md#first-package): UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03. Scope/tiêu chí ở kế hoạch gói, các bước và tiến độ hiện tại ở [status.md](../features/community/status.md). Tải phòng/lịch sử và đối soát sau leave/rejoin của UC-COM-03 thuộc các gói sau; gói đầu đạt chưa đồng nghĩa toàn bộ UC-COM-03 đạt. Tiếp theo bổ sung UC-COM-06 và phòng/tin theo phụ thuộc. Các UC vẫn giữ quy tắc của đặc tả nguồn; thêm mốc MVP không tự thay đổi quyền, nội dung tin hoặc hợp đồng API.
+Ngày 2026-10-07 đã chọn [gói Community đầu tiên](../records/verification/community/create-view.md#scope-first-package): UC-COM-01 và phần danh sách/detail/tư cách của UC-COM-03. Các gói đã kiểm chứng và công việc tiếp theo được quản lý tại [các chủ đề Community](../features/community/README.md). Gói đầu đạt chưa đồng nghĩa toàn bộ UC-COM-03 đạt. Các UC vẫn giữ quy tắc của đặc tả nguồn; thêm mốc MVP không tự thay đổi quyền, nội dung tin hoặc hợp đồng API.
 
-Việc chưa đưa một thao tác vào gói đầu không đồng nghĩa tự bỏ nó khỏi toàn bộ MVP. Trước khi khóa mốc, Vg và người thực hiện lập danh sách UC/AC cụ thể, gồm các nhánh cần thiết của luồng đã chọn. Phạm vi tạo/xem của gói Community đầu đã được chọn; bảng trên chưa phải baseline UC/AC của toàn MVP đã được xác nhận.
+Phạm vi Community dưới đây đã được người dùng chọn; bảng Identity/DM vẫn là đề xuất luồng. Trước từng gói, Vg và người thực hiện khóa UC/AC, nhánh ngoại lệ, contract và cách kiểm chứng. Bản này chưa xác nhận nghiệm thu hoặc khóa toàn bộ mốc MVP.
+
+<a id="community-scope"></a>
+
+## Phạm vi Community MVP đã chọn
+
+Ngày 2026-10-07 người dùng chọn luồng tối thiểu “tạo/tìm/tham gia, phòng text, lịch sử/gửi/nhận tin và xử lý mất quyền”; các chức năng role/ACL đã làm được giữ và kiểm thử hồi quy. Ghi nhận tại DEC-118. Bảng này xác định phạm vi chức năng và gate; trạng thái thực hiện chỉ ghi tại [Community status](../features/community/README.md).
+
+| Luồng | UC và tiêu chí nguồn trong phạm vi | Ranh giới mốc |
+|---|---|---|
+| Tạo, tìm và xem cộng đồng | UC-COM-01/02 và phần UC-COM-03; [AC Servers](../features/community/servers.md#acceptance) | Tạo public/private; danh sách/detail/tư cách; tìm và preview public, không lộ dữ liệu private |
+| Tham gia | Phần public/immediate UC-COM-06; [AC Memberships](../features/community/memberships.md#acceptance) | Join lặp/đồng thời không tạo tư cách trùng; member nhận quyền hiện hành, epoch cũ không được dùng lại; approval/lời mời thuộc mở rộng |
+| Phòng text và lịch sử | Phần text UC-COM-16/17 và tải phòng của UC-COM-03; [AC Channels](../features/community/channels.md#acceptance) | Tạo/list/detail phòng theo view; lịch sử phân trang chỉ đọc trong phòng được cấp quyền; voice và xóa phòng thuộc mở rộng |
+| Gửi/nhận tin văn bản | UC-COM-23 và phần chat UC-COM-25; [AC tích hợp](../features/messaging/channel-messaging.md#acceptance) | Lưu bền, gửi/retry chống trùng, nhận realtime và đối soát sau reconnect; sửa/xóa tin UC-COM-24 thuộc mở rộng |
+| Xử lý mất quyền và hồi quy | Phần chat UC-COM-25; UC-COM-18/20/21/22 đã có và [AC Permissions](../features/community/access-control.md#acceptance) | Giữ edit phòng, role/assignment và ACL; mutation quyền/session chặn HTTP, gửi, subscribe/resume và kết nối đang mở; owner vẫn chịu kiểm tra account/session |
+
+Phần UC-COM-04/05/07–15, UC-COM-19/24 và voice/media được theo dõi cho mốc mở rộng/v1 tại [bảng công việc](../project/planning.md#community-work-items). Chúng tiếp tục có đặc tả/AC/TC đầy đủ; lựa chọn này không xóa code hoặc yêu cầu v1. Những UC phối hợp chỉ được đánh dấu đạt trong phạm vi đã chọn, không đóng cả UC từ một phần test.
+
+<a id="community-acceptance"></a>
+
+### Điều kiện hoàn tất Community trong mốc MVP
+
+| Gate | Bằng chứng cần ghi trên bản bàn giao |
+|---|---|
+| COM-MVP-01: Toàn luồng | Hai tài khoản verified và một outsider chạy tạo → tìm → public/immediate join → phòng text → lịch sử/gửi/nhận trên DB/API/Hub thật; reload/restart đọc lại dữ liệu đã commit |
+| COM-MVP-02: Lưu tin và retry | Mất response, retry cùng operation và gửi đồng thời không tạo tin trùng; tin/sequence/outbox nguyên tử; lỗi/lease hết hạn rollback; giao diện chỉ báo đã gửi sau xác nhận lưu |
+| COM-MVP-03: Lịch sử/reconnect | Keyset không bỏ/trùng tin đã commit theo contract; cursor gắn actor/space/quyền; reconnect bù tin thiếu, dedup realtime, xử lý cursor lỗi và trạng thái rỗng/lỗi bằng dữ liệu thật |
+| COM-MVP-04: Quyền hiện hành | Outsider, hidden room, stale epoch, phiên/account sai bị chặn đọc/gửi/subscribe/resume; management không tự cấp view; proof đổi quyền tranh gửi/subscribe tới commit |
+| COM-MVP-05: Mất quyền đang kết nối | Đo từ commit thay đổi role/ACL hoặc thu hồi session/account đến ngừng truy cập chat trên kết nối đang mở trong ≤5 giây theo DEC-083; ghi timestamp, cách đo, restart/lỗi authority và kết quả fail-close; HTTP guard riêng chưa đủ |
+| COM-MVP-06: Giao diện và hồi quy | Đổi actor/mất quyền không phục hồi dữ liệu riêng từ request trễ/cache; mutation lỗi không tự POST lại; create/join/search/role/ACL/edit vẫn đạt, gồm Unicode, CAS, epoch, pagination và operation recovery |
+| COM-MVP-07: Chạy lại và hồ sơ | Commit code, schema/ledger, cấu hình/keyring, dataset/tài khoản và bộ chạy rõ; actual result gắn UC/AC/TC và artifact; liệt kê lỗi/phần chưa kiểm chứng, có người kiểm tra lại theo quy trình MVP |
+
+Gate áp dụng cho luồng Community đã chọn, chưa có gate nào được coi đạt chỉ từ việc bổ sung bảng này. Test gói nền hiện có được đối chiếu tại [verification.md](../records/verification/community/README.md); các proof Messaging/Hub và deadline thu hồi cần chạy trong gói tương ứng. Gate release, người duyệt DEC-111 và phạm vi toàn MVP vẫn theo phần [nghiệm thu](#acceptance); tải/trình duyệt/media thuộc v1, backup/restore thuộc [giai đoạn sau v1](v1.md#backup-scope).
 
 <a id="packages"></a>
 
@@ -34,7 +68,7 @@ Phân công dưới đây theo DEC-117 và [nguồn nhân sự](../project/plann
 
 | Gói | Đầu ra bàn giao | Người phụ trách | Phụ thuộc trực tiếp |
 |---|---|---|---|
-| MVP-ID | Hoàn thiện phần Identity còn lại đủ dùng cho Community/DM; hợp đồng phiên/user/job email giữa module | Vg | Code Identity gần xong; chỉ tính công sức còn lại, không bắt đầu lại tính năng |
+| MVP-ID | Hoàn thiện phần Identity còn lại đủ dùng cho Community/DM; hợp đồng phiên/user/job email giữa module | Vg | Ước lượng công sức còn lại theo [hiện trạng Accounts](../features/accounts/README.md) |
 | MVP-COM | Luồng tạo/tham gia cộng đồng, phòng text và quyền truy cập cơ bản chạy từ DB tới frontend | Vg | MVP-ID; hợp đồng nền nhắn tin và kiểm tra quyền với Sáng |
 | MVP-DM | Nhắn tin riêng từ DB tới frontend; nền lưu/gửi/nhận/lịch sử dùng chung cho tin phòng | Sáng | MVP-ID; quy tắc DM và hợp đồng quyền/tin phòng với Vg |
 | MVP-SYS | Hai đầu ra trọn gói: Email Worker; bộ chạy Compose/config/CI, dữ liệu demo và kiểm tra nhanh | Thái | Job contract do Identity cung cấp; cấu hình một host hiện có; kỳ vọng kiểm thử nghiệp vụ do Vg/Sáng cung cấp |
@@ -43,7 +77,7 @@ MVP-COM và MVP-DM thực hiện song song sau khi thống nhất hợp đồng 
 
 Vg/Sáng tự kiểm thử gói nghiệp vụ của mình; Thái cung cấp dataset, bộ chạy và tổng hợp kết quả. Khi một người quá tải, điều chuyển một đầu ra đã có contract/AC rõ theo [quy tắc cân tải](../project/planning.md#capacity), đồng thời giảm phần việc cũ của người nhận. Không giao Thái toàn bộ frontend/QA hoặc thêm gửi file vào scope để lấp công suất.
 
-Worker là tiến trình backend trong phạm vi Identity. Identity giữ logic cấp/consume token và hiệu lực liên kết; worker thực hiện gửi, retry và ghi kết quả theo policy đã chọn. Hợp đồng gửi email hiện còn cần hoàn thiện tại [Accounts](../features/accounts/design/README.md#detailed-design); outbox chỉ tham chiếu token đã băm chưa đủ để dựng liên kết.
+Worker là tiến trình backend trong phạm vi Identity. Identity giữ logic cấp/consume token và hiệu lực liên kết; worker thực hiện gửi, retry và ghi kết quả theo policy đã chọn. Hợp đồng gửi email hiện còn cần hoàn thiện tại [Accounts](../features/accounts/email-links.md#contracts); outbox chỉ tham chiếu token đã băm chưa đủ để dựng liên kết.
 
 <a id="acceptance"></a>
 
@@ -59,9 +93,9 @@ Worker là tiến trình backend trong phạm vi Identity. Identity giữ logic 
 | Trạng thái giao diện đúng | Chỉ báo đã gửi khi tin được lưu; lỗi API hoặc mất kết nối có phản hồi rõ, không chỉ chạy với dữ liệu mẫu |
 | Có hồ sơ bàn giao | Commit/build, UC/AC được chọn, dữ liệu thử, thao tác, kết quả, lỗi và phần v1 chưa triển khai được ghi nhận |
 
-Ghi kết quả bằng [mẫu hồ sơ](../templates/release-record.md), loại bàn giao MVP; không đánh dấu tiêu chí đã đạt từ việc có code hoặc có test. Người làm tự kiểm tra gói của mình, người khác kiểm tra lại luồng chính; người kiểm tra và thời điểm được ghi trong hồ sơ.
+Ghi kết quả bằng [mẫu hồ sơ](../records/templates/release-record.md), loại bàn giao MVP; không đánh dấu tiêu chí đã đạt từ việc có code hoặc có test. Người làm tự kiểm tra gói của mình, người khác kiểm tra lại luồng chính; người kiểm tra và thời điểm được ghi trong hồ sơ.
 
-Các chỉ tiêu đầy đủ về tải, trình duyệt, media, backup/restore và phát hành công khai nằm trong [v1](v1.md#acceptance). Bản MVP phải kiểm chứng các điều kiện của scope đã chọn; không dùng nhãn thử nghiệm để bỏ kiểm tra xác thực, quyền truy cập hoặc lưu dữ liệu của luồng đó. Bổ sung chỉ tiêu vào MVP cần ghi phạm vi, cách đo và công sức tương ứng.
+Các chỉ tiêu đầy đủ về tải, trình duyệt, media và phát hành công khai nằm trong [v1](v1.md#acceptance); backup/restore được chuyển [sau v1](v1.md#backup-scope) theo DEC-156. Bản MVP phải kiểm chứng các điều kiện của scope đã chọn; không dùng nhãn thử nghiệm để bỏ kiểm tra xác thực, quyền truy cập hoặc lưu dữ liệu của luồng đó. Bổ sung chỉ tiêu vào MVP cần ghi phạm vi, cách đo và công sức tương ứng.
 
 ## Cách bắt đầu một gói
 

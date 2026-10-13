@@ -153,7 +153,18 @@ export async function api(path, options = {}) {
     retry = true,
     signal,
     expectedActorId,
+    actorId = expectedActorId,
   } = options;
+
+  const checkActor = () => {
+    if (actorId === undefined) return;
+    syncStoredSession();
+    if (session?.user?.id !== actorId) {
+      throw new ApiError('Phiên đăng nhập đã thay đổi. Vui lòng đăng nhập lại.', 401,
+        { errorCode: 'CLIENT_SESSION_CHANGED' });
+    }
+  };
+  checkActor();
 
   const headers = { Accept: 'application/json' };
 
@@ -164,9 +175,7 @@ export async function api(path, options = {}) {
   signal?.throwIfAborted();
   const accessToken = auth ? await getAccessToken() : '';
   signal?.throwIfAborted();
-  if (expectedActorId !== undefined && session?.user?.id !== expectedActorId) {
-    throw new ApiError('Phiên đăng nhập đã thay đổi.', 401);
-  }
+  checkActor();
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
@@ -177,6 +186,7 @@ export async function api(path, options = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
+  checkActor();
 
   if (response.status === 401 && auth && retry && session?.refreshToken) {
     await refreshSession(accessToken);
@@ -184,14 +194,18 @@ export async function api(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw await readError(response);
+    const error = await readError(response);
+    checkActor();
+    throw error;
   }
 
   if (response.status === 204) {
     return null;
   }
 
-  return response.json();
+  const value = await response.json();
+  checkActor();
+  return value;
 }
 
 // Authentication & Identity API Calls

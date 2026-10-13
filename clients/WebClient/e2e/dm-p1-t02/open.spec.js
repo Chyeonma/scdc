@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 const helper = (action, peer = 'S09') => execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'scripts/dm-acceptance/open-conversation.ps1'), '-Action', action, '-PeerAlias', peer], { cwd: root, stdio: 'pipe' });
 let session;
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/#home');
   await page.locator('input[name="login"]').fill('dm_demo_an');
   await page.locator('input[name="password"]').fill('DmDemo2026!Local');
   const response = page.waitForResponse(r => r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST');

@@ -26,7 +26,7 @@ function delta(before, after, count) {
 }
 function proof(name, data) { fs.writeFileSync(path.join(folder, `retry-${name}.json`), JSON.stringify(data, null, 2)); }
 async function login(page, alias = 'A') {
-  await page.goto('/'); await page.locator('input[name="login"]').fill(account(alias).username);
+  await page.goto('/#home'); await page.locator('input[name="login"]').fill(account(alias).username);
   await page.locator('input[name="password"]').fill('DmDemo2026!Local');
   const response = page.waitForResponse(r => r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST');
   await button(page, 'Đăng nhập').last().click(); const session = await (await response).json(); sessions.push(session);

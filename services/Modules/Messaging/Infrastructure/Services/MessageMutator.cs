@@ -13,7 +13,7 @@ using SCDC.Modules.Messaging.Infrastructure.Persistence;
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
 internal sealed class MessageMutator(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountAccessGuard guard, TimeProvider clock) : IMessageMutator
+    IAccountPairAccessGuard guard, TimeProvider clock) : IMessageMutator
 {
     public async Task<Result<MessageResponse>> MutateAsync(MutateMessage command, CancellationToken token)
     {

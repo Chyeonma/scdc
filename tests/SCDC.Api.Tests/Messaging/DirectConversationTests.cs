@@ -175,7 +175,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
         await using var scope = f.Inner.Factory.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var shared = services.GetRequiredService<ISharedDatabaseSession>();
-        var guard = services.GetRequiredService<IAccountAccessGuard>();
+        var guard = services.GetRequiredService<IAccountPairAccessGuard>();
         var identityType = typeof(SCDC.Modules.Identity.IdentityModule).Assembly.GetType("SCDC.Modules.Identity.Infrastructure.Persistence.IdentityDbContext")!;
         var messagingType = typeof(SCDC.Modules.Messaging.MessagingModule).Assembly.GetType("SCDC.Modules.Messaging.Infrastructure.Persistence.MessagingDbContext")!;
         var identity = (DbContext)services.GetRequiredService(identityType);

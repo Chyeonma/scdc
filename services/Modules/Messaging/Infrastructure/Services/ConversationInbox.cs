@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -14,7 +15,7 @@ using SCDC.Modules.Messaging.Infrastructure.Persistence;
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
 internal sealed class ConversationInbox(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountAccessGuard guard, IHistoricalUserSummaryReader summaries, IDataProtectionProvider protection,
+    IAccountPairAccessGuard guard, IHistoricalUserSummaryReader summaries, [FromKeyedServices("Messaging.Cursors")] IDataProtectionProvider protection,
     TimeProvider clock) : IConversationInbox
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Messaging.Conversations.v1");

@@ -22,7 +22,7 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
     private readonly string _applicationName = $"identity-tests-{Guid.NewGuid():N}";
     private readonly PasswordCheckGate _gate = new();
     private readonly SCDCWebApplicationFactory _baseFactory = new();
-    private WebApplicationFactory<Program> _factory = null!;
+    private WebApplicationFactory<ApiProgram> _factory = null!;
     private HttpClient _client = null!;
     private string _connectionString = null!;
     private Guid? _userId;
