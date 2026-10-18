@@ -53,7 +53,7 @@ Mỗi user chỉ có một ngữ cảnh ringing/participation; room tối đa 10
 | Connecting | Provider xác nhận kết nối | Connected; điều khiển mic/camera/share theo trạng thái thực |
 | Connected | Mất mạng | Reconnecting; giữ slot tối đa 30 giây, vẫn tính tải 10/20 |
 | Reconnecting | Mạng trở lại trong hạn, phiên/quyền còn hợp lệ | Tái kết nối bằng đúng participation ID, không tạo thêm slot; đồng bộ thiết bị/danh sách |
-| Reconnecting | Hết 30 giây hoặc mất phiên/quyền | Ended; giải phóng slot, không tự khôi phục participation cũ; có thể join/call mới |
+| Reconnecting | Hết 30 giây hoặc mất phiên/quyền | Ended, grant cũ mất hiệu lực, không tự khôi phục participation cũ; slot còn draining tới khi có bằng chứng provider đã ngừng hoặc node đã được cách ly/dừng; join/call mới phải qua admission và quota |
 | Connected/connecting/reconnecting | Rời/kết thúc, phòng deleted, session/quyền bị thu hồi | Kết thúc participation, thu hồi quyền provider và thông báo trạng thái; thu hồi ≤5 giây theo DEC-099, chưa đo |
 
 Đề xuất coordinator kiểm tra atomically một participation mỗi user và hạn mức toàn hệ thống, không dùng riêng số kết nối trên một tab. Ringing chưa có luồng media không tính người đang gọi, nhưng cần khóa ngữ cảnh gọi để accept/cancel trên nhiều thiết bị chỉ có một kết quả. Slot giữ chỗ reconnect vẫn tính vào hạn mức. Khách gửi heartbeat/rejoin không kéo dài thời hạn 30 giây của cùng lần gián đoạn. Khi đạt 2 nguồn màn hình, yêu cầu chia sẻ thứ ba bị từ chối rõ; dừng một nguồn mới cho cấp slot khác. Gọi riêng có hai người, mỗi người một màn hình nên tối đa hai nguồn; không thêm người thứ ba.
@@ -233,7 +233,7 @@ Thiết kế restore backup sau v1: kết thúc mọi call/ringing/participation
 | AC-MEDIA-09 | Người tham gia đang gọi riêng hoặc ở phòng thoại bị mất mạng, sau đó mạng trở lại. | Ứng dụng tự thử kết nối lại; khi khôi phục thành công, giao diện và âm thanh/hình ảnh trở về đúng trạng thái. |
 | AC-MEDIA-10 | Hai thiết bị của một người đồng thời join hai phòng/call | Chỉ một participation được cấp; UI còn lại nhận busy/conflict |
 | AC-MEDIA-11 | Phòng đã có 10 người, request thứ 11; toàn hệ thống đã có 20 người, request mới | Từ chối vượt giới hạn, gồm slot reconnect đang giữ; không cấp token/slot dở dang |
-| AC-MEDIA-13 | Mất mạng, reconnect ở giây 29 và sau giây 30 | Trong hạn giữ đúng participation/slot; quá hạn ended, giải phóng chỗ, chỉ join/call mới |
+| AC-MEDIA-13 | Mất mạng, reconnect ở giây 29 và sau giây 30 | Trong hạn giữ đúng participation/slot; quá hạn ended và grant cũ mất hiệu lực, chỉ join/call mới; chỗ draining chỉ tái cấp sau bằng chứng provider đã ngừng hoặc node đã được cách ly/dừng |
 | AC-MEDIA-15 | Thu hồi phiên/quyền hoặc xóa phòng khi đang gửi/nhận RTP | Cả phát/nhận ngừng và token cũ/SFU refresh bị chặn vào lại ≤5 giây từ commit theo DEC-099 |
 | AC-MEDIA-19 | Authority/worker/network điều khiển lỗi trong khi WebRTC vẫn chạy | Lease hết thì node ngừng media liên quan trong budget DEC-099; không dựa riêng websocket/remove ack |
 | AC-MEDIA-20 | Client dùng URL SFU trực tiếp, token cũ, đường resume hoặc clone kết nối đang hoạt động | Không bypass admission/current guard; không thay kết nối đang hoạt động hoặc cấp thêm chỗ |
@@ -246,7 +246,7 @@ Mọi AC-MEDIA/TC-MEDIA chưa có kết quả chạy được ghi nhận. Dùng 
 |---|---|---|---|
 | TC-MEDIA-05 | Một user trên hai thiết bị join/call đồng thời | Một participation/user, không gấp đôi tải | AC-MEDIA-10 |
 | TC-MEDIA-06 | Biên 10/phòng, 20/toàn hệ thống, slot reconnect | Không vượt giới hạn khi request đồng thời/rollback | AC-MEDIA-11 |
-| TC-MEDIA-07 | Ngắt mạng, trở lại ở 29 giây và sau 30 giây | Tự reconnect đúng hạn/ID, hết hạn giải phóng slot | AC-MEDIA-09/13 |
+| TC-MEDIA-07 | Ngắt mạng, trở lại ở 29 giây và sau 30 giây | Tự reconnect đúng hạn/ID; hết hạn ended, từ chối grant cũ và chỉ tái cấp slot sau bằng chứng provider ngừng hoặc node được cách ly/dừng | AC-MEDIA-09/13 |
 | TC-MEDIA-08 | Thu hồi phiên/quyền, xóa phòng khi đang phát/xem | Chặn API và cả phát/nhận provider ≤5 giây từ commit; không chỉ ẩn UI | AC-MEDIA-15, DEC-077/099 |
 | TC-MEDIA-09 | Provider lỗi, callback lặp/đến trễ, accept/cancel đồng thời | Không hồi sinh participation/call đã kết thúc, không rò slot | AC-MEDIA-14; cần thiết kế provider |
 | TC-MEDIA-10 | Chạy tải 20 người, 2 nguồn share/phòng trên cấu hình mạng được chốt | Đo mục tiêu DEC-085, tỷ lệ kết nối, CPU/băng thông/chi phí; ghi cấu hình/build và kết quả thực tế | OQ-007/010 |
@@ -266,7 +266,7 @@ Chuẩn bị hai người gọi riêng, phòng nhiều thành viên, người kh
 
 | Nhóm | Cần quyết định | Liên quan |
 |---|---|---|
-| Chất lượng | Đã chốt DEC-085; còn môi trường, thiết bị/version, hiệu chỉnh đồng hồ và kết quả đo. | OQ-007 |
+| Chất lượng | Các mục tiêu DEC-085 đã chốt; quy tắc kết luận đạt/chưa đạt hình ảnh còn mở theo [chuẩn bị phép đo](../../system/quality.md#measurement-readiness). Môi trường, thiết bị/version, hiệu chỉnh đồng hồ và kết quả đo cần hoàn thiện theo gói. | OQ-007 |
 | Kỹ thuật/chi phí | LiveKit tự host DEC-084; có admission/lease/nguồn design, chưa chọn extension/fork hoặc pin server/SDK. Host/domain/TURN, key store, mức dùng, chi phí và công sức duy trì cần review. | OQ-008/010, MEDIA-GAP-03/06/07 |
 
 Theo [phân công DEC-117](../../project/planning.md#team), Vg giữ chính sách quyền/admission/quota/thu hồi; Sáng sở hữu backend và UI điều khiển lifecycle cuộc gọi; Thái sở hữu adapter provider/SDK, thiết bị/hiển thị nguồn và bộ chạy. Mỗi người chứng minh phần sở hữu theo kịch bản đã chốt trước khi xác nhận lịch, chi phí và nghiệm thu; [kế hoạch Media](../../project/planning.md#v1-media-packages) ghi phụ thuộc, [công suất](../../project/planning.md#capacity) được phân bổ theo giai đoạn.

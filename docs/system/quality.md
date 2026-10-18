@@ -23,6 +23,14 @@ DEC-082: desktop Chrome/Edge/Firefox/Safari, hai phiên bản ổn định gần
 | Hình ảnh | Camera mục tiêu 720p/30fps; share 720p/15fps | Mạng mỗi máy upload ≥10/download ≥20 Mbps, RTT ≤100 ms, loss ≤1%; ghi resolution/FPS thực tế và tỷ lệ thời gian đạt, không suy từ cấu hình capture |
 | Khôi phục DB — sau v1 | RPO ≤15 phút; RTO ≤4 giờ; tuổi artefact backup/WAL ≤30 ngày | Mục tiêu DEC-086/109 giữ cho đợt triển khai backup sau v1 theo DEC-156; chưa có bằng chứng đo. Khi triển khai, đo cửa sổ khôi phục thực tế và áp lại bảo vệ DEC-108, không hứa PITR mọi mốc tròn 30 ngày |
 
+<a id="measurement-readiness"></a>
+
+### Chuẩn bị phép đo và bằng chứng
+
+Ma trận hỗ trợ và các mục tiêu trên đã chốt; chưa có kết quả xác nhận hệ thống đáp ứng. Còn cần khóa build, phiên bản browser/thiết bị, môi trường, dataset/workload chi tiết và bộ đo; hiệu chỉnh đồng hồ, thực thi và lưu bằng chứng theo từng hành trình. Các workload đề xuất dưới đây là đầu vào để rà soát trước lần chạy.
+
+Riêng hình ảnh, DEC-085 đã chốt mục tiêu camera 720p/30fps và share 720p/15fps trong điều kiện mạng đã nêu. Tỷ lệ thời gian tối thiểu phải đạt resolution/FPS, cách lấy mẫu và tổng hợp để kết luận đạt/chưa đạt còn cần chốt tại [OQ-007](../project/open-questions.md#oq-007) trước nghiệm thu. Ghi resolution/FPS thực tế chưa đủ để kết luận đạt khi thiếu quy tắc này; không tự coi tiêu chí là không áp dụng.
+
 Kịch bản chat theo DEC-083: 100 người online liên tục 60 phút sau warm-up 5 phút; riêng các ca chức năng âm tính/fault injection có nhãn. Workload kỹ thuật đề xuất: 1.000 tài khoản, 500 DM, 20 cộng đồng/50 phòng text và 100.000 tin preload, trong đó hai hội thoại/phòng có ít nhất 10.000 tin để thử nhiều trang. Trong 100 người online, 80 người ở 40 DM và 20 người ở các phòng có đúng quyền; mỗi người gửi một tin/10 giây, khoảng 10 tin/giây và 36.000 tin mới trong 60 phút. Mỗi client tải trang lịch sử/30 giây; chèn sửa/xóa một tin của chính mình/5 phút. Ghi độ dài nội dung/thời điểm, không dùng tài khoản/DM thật.
 
 Test correctness/fault tách các mốc mất response, transaction rollback, worker dừng 30 giây, reconnect, concurrent send/edit/delete và revoke trong khi stream; không loại lỗi bất thường do hệ thống gây ra khỏi báo cáo. Đối soát toàn bộ operation ID/message ID, nội dung hiện hành, tombstone và quyền với số thao tác hợp lệ đã commit. Ghi CPU/RAM/DB/NIC, region, số connection và concurrency từng bước; báo p50/p95/p99/số mẫu/tỷ lệ lỗi/backlog. Đồng hồ test phải được hiệu chỉnh và độ lệch ghi trong báo cáo. Workload này là baseline để nhóm rà soát, không suy 100 online là mọi hình thức tải đều đã thử.

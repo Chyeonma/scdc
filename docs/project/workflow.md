@@ -1,6 +1,6 @@
 # SCDC — Quy trình phát triển
 
-SCDC-PRC-001. Áp dụng theo từng gói có đầu ra kiểm chứng được. Phân công và công suất nằm tại [kế hoạch](planning.md); phạm vi tại [MVP](../releases/mvp.md) và [v1](../releases/v1.md).
+SCDC-PRC-001. Áp dụng theo từng gói có đầu ra kiểm chứng được. Phân công và công suất nằm tại [kế hoạch](planning.md); phạm vi sản phẩm tại [tổng quan](overview.md#scope), đầu ra bàn giao tại [v1](../releases/v1.md), nền kế thừa và phần chuyển tiếp tại [MVP](../releases/mvp.md).
 
 ## Mục lục
 

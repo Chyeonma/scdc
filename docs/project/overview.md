@@ -207,13 +207,15 @@ Nội dung chi tiết và điều kiện chấp nhận của từng kết quả 
 
 Chỉ tiêu định lượng đã chốt tại DEC-082/083/085; chính sách dữ liệu ở DEC-103–109; điều kiện lỗi tồn ở DEC-110. DEC-156 hoãn triển khai và nghiệm thu backup/khôi phục DB cùng các mục tiêu DEC-086/109 sang sau v1, không hoãn retention online, quyền truy cập, chống trùng hoặc rollback ứng dụng. Môi trường, dữ liệu tải, kết quả chạy và người duyệt DEC-111 cần hoàn tất trước nghiệm thu/phát hành thực tế.
 
-| Nội dung cần chốt | Đầu ra cần có | Theo dõi |
-|---|---|---|
-| Trình duyệt/thiết bị và khả năng tiếp cận | Danh sách phiên bản, thiết bị, kích thước và hành trình bắt buộc; DEC-059 đã chốt desktop/trình duyệt điện thoại cho tài khoản và DM; DEC-082 bổ sung Community/desktop-media | OQ-007 |
-| Hiệu năng và tải | Độ trễ API/gửi–nhận theo percentile, tỷ lệ lỗi, dataset, thời lượng tải và cấu hình đo | OQ-007 |
-| Chất lượng media | Độ trễ, âm thanh/hình ảnh, số người/luồng, mạng và thời gian reconnect | OQ-006/OQ-007 |
-| Thu hồi quyền/phiên | Thời hạn hiệu lực trên HTTP và kết nối đang mở, cách đo | OQ-007/OQ-008 |
-| Lưu giữ online | [Chính sách dữ liệu](../system/data-lifecycle.md) DEC-103–109; triển khai và kiểm chứng retention, xóa nội dung, chống trùng và quyền trong v1 | OQ-011 |
-| Backup và khôi phục DB — sau v1 | Giữ mục tiêu RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày cho đợt triển khai sau v1; công cụ, cửa sổ PITR và bằng chứng restore chưa có. [Phạm vi theo DEC-156](overview.md#backup-scope) | OQ-011 |
+Các quyết định dưới đây là đầu vào cho triển khai và nghiệm thu. Phần còn lại gồm chuẩn bị môi trường/phép đo, triển khai và thu thập bằng chứng; quy tắc kết luận chất lượng hình ảnh và phạm vi tiêu chí tiếp cận đầy đủ còn cần chốt tại [OQ-007](open-questions.md#oq-007).
+
+| Nội dung | Cơ sở đã chốt | Phần còn lại | Theo dõi |
+|---|---|---|---|
+| Trình duyệt/thiết bị và khả năng tiếp cận | DEC-059/082 chốt [ma trận hỗ trợ](../system/quality.md#quality-targets): Accounts/DM/Community trên desktop và trình duyệt điện thoại đã chọn; media v1 trên desktop | Ghi phiên bản browser, OS, thiết bị, viewport, build và ngày khóa ma trận; chạy các hành trình và ca bàn phím/IME, focus, thông báo lỗi, cuộn và trạng thái thiết bị; làm rõ phạm vi tiêu chí tiếp cận đầy đủ còn mở | OQ-007 |
+| Hiệu năng và tải | DEC-083 chốt mức tải, thời lượng, percentile độ trễ, tỷ lệ lỗi và tính đúng tại [mục tiêu chất lượng](../system/quality.md#quality-targets) | Khóa dataset/workload chi tiết, cấu hình môi trường và instrumentation; hiệu chỉnh đồng hồ, chạy tải và lưu kết quả theo build | OQ-007 |
+| Chất lượng media | DEC-079/080/085 chốt giới hạn người/nguồn, reconnect, điều kiện mạng và mục tiêu kết nối/độ trễ/hình ảnh tại [mục tiêu chất lượng](../system/quality.md#quality-targets) | Chuẩn bị thiết bị, mạng, bộ đo và bằng chứng; chốt [quy tắc đánh giá hình ảnh](../system/quality.md#measurement-readiness), gồm tỷ lệ thời gian đạt resolution/FPS | OQ-006/OQ-007 |
+| Thu hồi quyền/phiên | DEC-083/099 chốt thời hạn chat/media đang mở và dừng media khi không xác nhận được quyền; HTTP mới kiểm tra trạng thái hiện hành | Triển khai giao thức liên service; đo commit→cutoff trên kết nối đang mở, cả phát/nhận RTP và chặn vào lại; kiểm chứng khi dependency lỗi | OQ-007/OQ-008 |
+| Lưu giữ online | DEC-103–109 chốt [chính sách dữ liệu](../system/data-lifecycle.md); retention online thuộc v1 | Triển khai và kiểm chứng retention, xóa nội dung, chống trùng và quyền theo build | OQ-011 |
+| Backup và khôi phục DB — sau v1 | DEC-086/109 giữ mục tiêu RPO ≤15 phút/RTO ≤4 giờ và tuổi mỗi backup/WAL ≤30 ngày; [DEC-156 hoãn sang sau v1](overview.md#backup-scope) | Đợt sau v1 chọn công cụ, cấu hình cửa sổ PITR và thu thập bằng chứng restore thực tế | OQ-011 |
 
 1.000 tài khoản và 100 người trực tuyến là giả định dự toán, không phải giới hạn đăng ký/online. Ngày 2026-10-04, 20 người gọi đồng thời trở thành giới hạn media v1 theo DEC-079; chưa có kết quả đo. Các mốc hiệu năng trong tài liệu kỹ thuật cũ chưa có bằng chứng và chưa được xác nhận làm ngưỡng nghiệm thu. Không tuyên bố truy vấn luôn dưới 10ms.

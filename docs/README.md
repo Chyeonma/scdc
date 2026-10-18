@@ -11,9 +11,9 @@ Bộ tài liệu hiện hành mô tả dự án với **v1 là sản phẩm hoà
 | Nội dung | Tài liệu |
 |---|---|
 | Mục tiêu, yêu cầu và phạm vi | [Tổng quan dự án](project/overview.md) |
-| Nhân sự, công suất, công việc, lịch và dự toán | [Kế hoạch](project/planning.md) |
+| Nhân sự, công suất, công việc, lịch và dự toán | [Kế hoạch](project/planning.md), [thiết kế kế tiếp](project/planning.md#v1-next-design) |
 | Trình tự thiết kế trước code và điều kiện triển khai | [Quy trình](project/workflow.md) |
-| Vấn đề cần xác định | [Danh mục OQ](project/open-questions.md) |
+| Quyết định còn thiếu và vấn đề cần xác định | [Quyết định v1](project/open-questions.md#v1-decisions), [danh mục OQ](project/open-questions.md#open-questions) |
 | Hành trình, điều hướng và bố cục | [Trải nghiệm tổng thể](experience/overview.md) |
 | Thành phần và quy ước UI dùng chung | [Quy ước giao diện](experience/design-system.md) |
 | Thành phần hệ thống và sở hữu dữ liệu | [Kiến trúc](system/architecture.md) |

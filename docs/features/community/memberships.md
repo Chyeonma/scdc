@@ -303,7 +303,7 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](../messaging/channel-mess
 
 Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../../project/planning.md#community-work-items), [migration](../../system/community.md#schema-migration) và [vòng đời dữ liệu](../../system/data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
-| Nội dung | Câu hỏi còn mở | Liên quan |
+| Nội dung | Thiết kế, triển khai và kiểm chứng còn lại | Liên quan |
 |---|---|---|
-| Yêu cầu tham gia | DEC-073/096 đã chốt; có transition/schema, còn kiểm chứng approve/cancel/private switch; limiter bổ sung chưa chốt. | OQ-003, OQ-004 |
+| Yêu cầu tham gia | DEC-073/096 đã chốt; đã có thiết kế transition/schema, còn triển khai và kiểm chứng approve/cancel/private switch; limiter bổ sung chưa chốt. | OQ-003, OQ-004 |
 | Rời cộng đồng | Epoch/clear role/override/transfer có thiết kế; mất quyền dọn cache/role/override epoch cũ, giữ tin và dấu thu hồi cần cho quyền hiện hành. Bảo vệ khôi phục DB theo [vòng đời](../../system/data-lifecycle.md#restore) thuộc [sau v1 theo DEC-156](../../project/overview.md#backup-scope); metadata khác còn review. | OQ-003, OQ-011 |

@@ -300,7 +300,7 @@ Dùng [dữ liệu và cách ghi bằng chứng chung](../messaging/channel-mess
 
 Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../../project/planning.md#community-work-items), [migration](../../system/community.md#schema-migration) và [vòng đời dữ liệu](../../system/data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
 
-| Nội dung | Câu hỏi còn mở | Liên quan |
+| Nội dung | Thiết kế, triển khai và kiểm chứng còn lại | Liên quan |
 |---|---|---|
-| Lời mời | Hạn/lượt/issuer theo DEC-075/087/097; đã có schema/secret/transaction, còn proof và migration/key store. | OQ-003, OQ-004, OQ-008 |
-| Cộng đồng riêng tư | Đã chốt DEC-074/087/096; schema/inbox/notification có thiết kế; còn review/proof. Không xóa server v1 theo DEC-094. | OQ-003, OQ-008 |
+| Lời mời | Hạn/lượt/issuer theo DEC-075/087/097; đã có thiết kế schema/secret/transaction, còn triển khai luồng xử lý, migration/key store và kiểm chứng. | OQ-003, OQ-004, OQ-008 |
+| Cộng đồng riêng tư | Đã chốt DEC-074/087/096; schema/inbox/notification có thiết kế; còn rà soát, triển khai và kiểm chứng. Không xóa server v1 theo DEC-094. | OQ-003, OQ-008 |

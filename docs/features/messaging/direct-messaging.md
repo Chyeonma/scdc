@@ -318,9 +318,9 @@ frontend, backend và dữ liệu thử; không coi tài liệu này là bằng 
 
 #### Danh sách kiểm tra bàn giao thiết kế
 
-Review Accounts + DM + OpenAPI/schema/fixture cùng một phiên bản; đối chiếu từng errorCode với UI và TC. Prototype/mock và proof cho concurrent commit, revoke race, key rotation, partial-page reconnect, lost response và email worker thuộc gói triển khai. DEC-103/104 chốt không self-delete/giữ lịch sử khi peer bị khóa; guard read/author edit/delete không yêu cầu peer active, send/call mới vẫn kiểm tra peer. Cần IHistoricalUserSummaryReader và UI availability; không cấp quyền đọc DM cho quản trị. Cleanup online theo [vòng đời dữ liệu](../../system/data-lifecycle.md#cleanup) vẫn thuộc v1; restore và DATA-GAP proof riêng cho backup áp dụng sau v1.
+Review Accounts + DM + OpenAPI/schema/fixture cùng một phiên bản; đối chiếu từng errorCode với UI và TC. Prototype/mock và proof cho concurrent commit, revoke race, key rotation, partial-page reconnect, lost response và email worker thuộc gói triển khai. DEC-103/104 chốt không self-delete/giữ lịch sử khi peer bị khóa; guard read/author edit/delete không yêu cầu peer active, send/call mới vẫn kiểm tra peer. Nền DM `900e226` đã có [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) và [UI availability](../../../clients/WebClient/src/components/DmChat.jsx); tiếp tục hồi quy và tích hợp chúng khi chuyển v1, không cấp quyền đọc DM cho quản trị. Cleanup online theo [vòng đời dữ liệu](../../system/data-lifecycle.md#cleanup) vẫn thuộc v1; restore và DATA-GAP proof riêng cho backup áp dụng sau v1.
 
-Các mã lỗi dưới đây là thiết kế mục tiêu, không phải mã đã có trong backend DM:
+Các mã lỗi dưới đây đã có trong backend DM nền `900e226`, gồm [validation nội dung](../../../services/Modules/Messaging/Application/TextContent.cs), [gửi/retry](../../../services/Modules/Messaging/Infrastructure/Services/TextMessageSender.cs), [sửa/xóa](../../../services/Modules/Messaging/Infrastructure/Services/MessageMutator.cs) và [cursor lịch sử](../../../services/Modules/Messaging/Infrastructure/Services/MessageHistory.cs). Bảng giữ cách xử lý giao diện cần đối chiếu theo từng build; có mã lỗi không đồng nghĩa mọi nhánh UI hoặc toàn bộ hợp đồng đã được kiểm chứng:
 
 | HTTP / errorCode | Cách xử lý giao diện |
 |---|---|

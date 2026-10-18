@@ -282,7 +282,7 @@ Các gói có thể đi cùng đợt phát triển phụ thuộc; chưa có kế
 
 ## 4. Thông tin cần chốt
 
-- OQ-007: chất lượng/trình duyệt/thu hồi chat và media đã chốt; chính sách lỗi tồn DEC-110 đã chốt. Còn OS/thiết bị/build, khóa phép đo/workload và bằng chứng cutoff/tải.
+- OQ-007: ma trận trình duyệt, mục tiêu chất lượng/thu hồi chat và media, chính sách lỗi tồn DEC-110 đã chốt. Còn chốt [quy tắc kết luận hình ảnh](../system/quality.md#measurement-readiness), gồm tỷ lệ thời gian đạt resolution/FPS; chuẩn bị OS/thiết bị/build, khóa phép đo/workload và bằng chứng cutoff/tải.
 - OQ-010: có [mô hình chi phí minh họa](../project/planning.md#budget); còn nơi triển khai, tài nguyên, mức dùng thực tế, báo giá và hạn mức.
 - OQ-011: [vòng đời dữ liệu](../system/data-lifecycle.md) và DEC-103–109 chốt phạm vi/TTL/restore/tuổi backup; backup/restore chuyển [sau v1](../project/overview.md#backup-scope) theo DEC-156. DEC-112 chốt quản trị kỹ thuật/no admin UI. Còn kho sổ/key/tool/topology/worker proof theo giai đoạn, phân công/người trực/lịch trực và người duyệt DEC-111.
 - OQ-008: có thiết kế Accounts/DM/Community/Media; còn review/migration/email worker, lựa chọn extension/SDK/version LiveKit, key store và proof guards/realtime/SFU.
