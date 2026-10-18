@@ -1,73 +1,50 @@
 # SCDC — Nền tảng giao tiếp trên web
 
-SCDC là ứng dụng giao tiếp trên web cho nhóm bạn và cộng đồng. **[v1](docs/releases/v1.md) là sản phẩm hoàn thiện đầu tiên và là mục tiêu của bộ tài liệu hiện hành**: tài khoản, cộng đồng, nhắn tin riêng/tin phòng, thoại/video/chia sẻ màn hình trên kiến trúc microservice.
-
-[MVP](docs/releases/mvp.md) là mốc nội bộ ghi nhận nền Identity, Community và Direct Messaging trong một API host Modular Monolith, cùng bằng chứng và phần việc bàn giao sang v1. Hướng dẫn khởi chạy bên dưới áp dụng cho nền hiện có; gói v1 có thể bắt đầu khi phụ thuộc trực tiếp đủ rõ theo [quy trình](docs/project/workflow.md#readiness).
+SCDC là ứng dụng giao tiếp trên web dành cho nhóm bạn và cộng đồng. Mỗi cộng đồng có một không gian riêng, gọi là server. Các phòng trong server giúp tổ chức trao đổi theo chủ đề.
 
 ## Mục lục
 
-- [Tài liệu dự án](docs/README.md)
-- [Mục tiêu và phạm vi](docs/project/overview.md)
-- [Kế hoạch và phân công](docs/project/planning.md)
-- [Quy trình thiết kế trước code](docs/project/workflow.md)
-- [Kiến trúc](docs/system/architecture.md)
-- [UI/UX](docs/experience/overview.md)
-- [Development và kiểm thử](docs/guides/development.md)
-- [Community](docs/features/community/README.md), [Messaging](docs/features/messaging/README.md)
-- [Nghiệm thu](docs/releases/acceptance.md), [Vận hành](docs/guides/operations.md)
+- [Bản phát hành](#bản-phát-hành): mục tiêu v1 và nền MVP.
+- [Tính năng](#tính-năng): các chức năng trong phạm vi v1.
+- [Thành phần chính](#thành-phần-chính): mã nguồn, dữ liệu và công cụ.
+- [Khởi chạy](#khởi-chạy): chuẩn bị môi trường phát triển.
+- [Tài liệu dự án](docs/README.md): yêu cầu, thiết kế, kế hoạch và vận hành.
+
+## Bản phát hành
+
+- **[v1](docs/releases/v1.md)** là bản hoàn thiện đầu tiên, đang được phát triển. Bản này gồm các tính năng bên dưới.
+- **[MVP](docs/releases/mvp.md)** là mốc phát triển nội bộ. Nền này đã tích hợp tài khoản, cộng đồng và nhắn tin riêng.
+
+Trạng thái triển khai chi tiết nằm trong tài liệu của từng nhóm tính năng.
+
+## Tính năng
+
+Phạm vi v1 gồm:
+
+| Nhóm | Chức năng |
+|---|---|
+| [Tài khoản](docs/features/accounts/README.md) | Đăng ký, xác minh email, đăng nhập và quản lý hồ sơ, mật khẩu, phiên đăng nhập. |
+| [Cộng đồng](docs/features/community/README.md) | Tạo và tham gia server. Quản lý thành viên, phòng và quyền truy cập. |
+| [Nhắn tin](docs/features/messaging/README.md) | Nhắn riêng giữa hai người hoặc trao đổi trong phòng. Xem lịch sử, sửa và xóa tin nhắn. |
+| [Thoại và video](docs/features/media/README.md) | Gọi riêng hoặc tham gia phòng thoại. Sử dụng micro, camera và chia sẻ màn hình. |
+
+## Thành phần chính
+
+| Thành phần | Vai trò |
+|---|---|
+| [clients/WebClient](clients/WebClient) | Giao diện web, dùng React và Vite. |
+| [services](services) | Backend xử lý nghiệp vụ, cung cấp API và cập nhật thời gian thực. Dùng .NET. |
+| [database/postgres](database/postgres) | Script SQL khởi tạo, cập nhật cấu trúc và tạo dữ liệu mẫu cho PostgreSQL. |
+| [compose.yaml](compose.yaml) | Cấu hình chạy giao diện, API và cơ sở dữ liệu bằng container trong môi trường phát triển. |
+| [Makefile](Makefile) | Các lệnh chạy, build, kiểm thử và kiểm tra tài liệu. |
+| [docs](docs/README.md) | Tài liệu sản phẩm, thiết kế hệ thống và hướng dẫn làm việc. |
+
+Backend hiện chạy trong một ứng dụng API. [Kiến trúc v1](docs/system/architecture.md#target) sẽ tách thành bốn dịch vụ: tài khoản, cộng đồng, nhắn tin và điều khiển cuộc gọi.
 
 ## Khởi chạy
 
-Cần Docker hoặc Podman với Compose. Trước lần chạy đầu, tạo khóa bằng `openssl rand -base64 32`, lưu vào `COMMUNITY_OPERATION_KEY` trong `.env` local. Git bỏ qua `.env`; giữ khóa và volume keyring qua các lần chạy. DB cũ cần [migration explicit](docs/guides/community-development.md#migration).
+Cần Docker hoặc Podman với Compose.
 
-```bash
-make init-dm-key
-docker compose up -d --build
-# Podman:
-make init-dm-key ENGINE=podman
-podman compose up -d --build
-```
+Trước lần chạy đầu, tạo khóa bằng `openssl rand -base64 32`. Lưu khóa vào biến `COMMUNITY_OPERATION_KEY` trong file `.env` tại thư mục gốc dự án. Giữ nguyên khóa và các volume dữ liệu qua những lần chạy.
 
-Lệnh `init-dm-key` tạo khóa fingerprint để gửi/retry tin nhắn trong volume riêng, giữ khóa đã có. Giữ volume khóa DM cùng dữ liệu PostgreSQL qua các lần chạy.
-
-| Thành phần | Địa chỉ Development |
-|---|---|
-| WebClient — React 19 / Vite | `http://localhost:3000` |
-| API — .NET 10 / Swagger | `http://localhost:5026/swagger` |
-| Health | `http://localhost:5026/api/v1/health` |
-| PostgreSQL 18 | `localhost:5432`; database `scdc_chat`; user/password `scdc` / `scdc_dev` |
-
-Compose phục vụ Development. Tài khoản seed không dùng đăng nhập; tạo tài khoản bằng API theo [hướng dẫn](docs/guides/development.md#identity). Health hiện không kiểm tra DB.
-
-## Lệnh
-
-[Makefile](Makefile) cung cấp các tác vụ chạy/build/test và đồng bộ tài liệu. `ENGINE=docker` mặc định; dùng `ENGINE=podman` khi chọn Podman và dùng cùng engine cho các thao tác container.
-
-```bash
-make help
-make docs-check
-make docs-sync-preview FROM=main TO=feat/identity
-```
-
-`docs-sync` chép snapshot `docs/` đã commit từ nguồn sang nhánh đích local, gồm thêm/sửa/xóa và staging. Công cụ không tự commit/push. Cách dùng và giới hạn tại [đồng bộ tài liệu](docs/guides/development.md#short-commands).
-
-## Kiểm tra
-
-Backend cần PostgreSQL và DB kiểm thử riêng theo [bộ chạy](docs/guides/community-development.md#backend-tests):
-
-```bash
-dotnet test SCDC.slnx --configuration Release
-```
-
-Frontend, trong `clients/WebClient` sau `npm ci`:
-
-```bash
-npm test
-npm run build
-```
-
-Link/anchor tài liệu, từ root repo:
-
-```bash
-python3 scripts/check_docs.py
-```
+Các bước chạy ứng dụng và kiểm thử nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup).

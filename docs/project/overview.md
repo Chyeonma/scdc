@@ -12,8 +12,7 @@ Nguồn chuẩn cho nhu cầu, thuật ngữ và mã REQ/SCP/SUC của dự án.
 | Điều kiện triển khai | [Sẵn sàng phát triển](workflow.md#readiness) |
 | Trách nhiệm, đầu ra và quản lý thay đổi | [Quy trình](workflow.md) |
 
-Phạm vi sản phẩm đã được xác định ở mức tổng thể. Đầu vào còn thiếu được theo dõi tại [vấn đề còn mở](open-questions.md) và từng chủ đề; có code trong repo chưa đồng nghĩa đã nghiệm thu hoặc sẵn sàng phát hành.
-
+Phạm vi sản phẩm đã được xác định ở mức tổng thể. Đầu vào còn thiếu được theo dõi tại [vấn đề còn mở](open-questions.md) và từng chủ đề;
 <a id="needs"></a>
 
 <a id="nhu-cầu-và-người-sử-dụng"></a>
@@ -31,24 +30,8 @@ Người sử dụng có thể nhắn tin, tham gia phòng thoại, gọi video 
 màn hình. Người quản lý cộng đồng có thể tổ chức phòng, quản lý thành viên
 và cấp quyền cơ bản.
 
-Ngày 2026-09-30, đại diện sản phẩm xác định đối tượng là một nhóm người bất
-kỳ và nêu vấn đề của nhóm chat một luồng: nhiều người trao đổi khác chủ đề
-khiến tin nhắn bị trôi, khó theo dõi liên tục; file tài liệu cũng gặp vấn
-đề tương tự. Ưu tiên trước mắt là nhắn tin và tham gia cộng đồng, vì chức
-năng nhắn tin cơ bản là nền tảng để phát triển thêm tính năng. Nhắn tin
-riêng giữa hai người được ưu tiên trước; cộng đồng được tổ chức bằng nhiều
-phòng theo chủ đề trước. Các quyết định về cách tìm người để nhắn riêng,
-tin nhắn văn bản và cách tham gia cộng đồng được ghi tại
-[SCDC-DIS-001](#needs). Đặc tả hành vi
-nhắn tin riêng đợt đầu được quản lý tại
-[SCDC-FR-DM-001](../features/messaging/direct-messaging.md#requirements).
 
-Đợt hiện tại không khảo sát người dùng bên ngoài theo
-[DEC-030](../records/decisions/README.md#decisions). Đầu vào từ đại diện sản phẩm
-được dùng để đặc tả yêu cầu và vẫn được đánh dấu là chưa kiểm chứng với
-người dùng bên ngoài.
-
-Discord là sản phẩm tham chiếu về trải nghiệm giao tiếp và cách tổ chức
+Discord/Slack là sản phẩm tham chiếu về trải nghiệm giao tiếp và cách tổ chức
 cộng đồng. Danh sách yêu cầu dưới đây xác định phạm vi cần phát triển.
 
 | Nhóm | Nhu cầu sử dụng |
@@ -63,7 +46,7 @@ cộng đồng. Danh sách yêu cầu dưới đây xác định phạm vi cần
 
 | Thuật ngữ | Ý nghĩa |
 |---|---|
-| Server | Không gian cộng đồng trên ứng dụng, có thành viên và các phòng; phân biệt với máy chủ hạ tầng. |
+| Comunity | Không gian cộng đồng trên ứng dụng, có thành viên và các phòng; phân biệt với máy chủ hạ tầng. |
 | Channel/phòng | Khu vực giao tiếp bên trong một server. |
 | Tin nhắn riêng (DM) | Hội thoại riêng giữa hai người. |
 | Phòng thoại | Phòng trong server mà thành viên có thể vào và rời để giao tiếp trực tiếp. |
