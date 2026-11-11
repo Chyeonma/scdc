@@ -126,6 +126,12 @@ def main() -> None:
 
     files = args.files or sorted(p for p in TASKS.glob("*.md") if p.name != "README.md")
     repo_url = os.environ.get("REPO_URL")
+    seen: dict[str, str] = {}
+    for f in files:
+        for c in parse(f.resolve(), repo_url):
+            if c["code"] in seen and seen[c["code"]] != f.name:
+                fail(f"Mã thẻ {c['code']} có ở cả {seen[c['code']]} và {f.name}")
+            seen[c["code"]] = f.name
     drafts = [f for f in files if is_draft(f)]
     for f in drafts:
         print(f"Bỏ qua {f.name}: đang là nháp ({len(parse(f.resolve(), repo_url))} thẻ)")

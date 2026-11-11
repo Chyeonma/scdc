@@ -221,7 +221,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 - **Sau mỗi bước, hệ thống vẫn chạy và demo được.** Không có giai đoạn "đang tách dở".
 - **Mỗi lần tách một service.**
 - **Bước 1 cả nhóm làm chung** để mọi người cùng hiểu hạ tầng; từ bước 2 mỗi người theo service của mình ([phân công](#team)).
-- **Trang này chỉ ghi bước, thứ tự, lý do và tiêu chí xong.** Việc cụ thể, người làm, hạn và trạng thái nằm trên Trello; mỗi thẻ ghi mã bước (STEP-1 đến 4). Thẻ thuộc lộ trình viết trong [docs/project/tasks](tasks/README.md) và tự đồng bộ lên Trello. Khi một bước đạt tiêu chí, ghi ngày và link bằng chứng vào cột "Kết quả".
+- **Trang này chỉ ghi bước, thứ tự, lý do và tiêu chí xong.** Việc cụ thể, người làm, hạn và trạng thái nằm trên Trello; mỗi thẻ ghi mã bước (STEP-1 đến 4). Thẻ thuộc lộ trình viết trong [docs/project/tasks](tasks/README.md) và tự đồng bộ lên Trello. Bước sau được viết trước dưới dạng nháp; việc làm được ngay, không phụ thuộc kiến trúc, nằm ở [việc làm sớm](tasks/step-4-early.md). Khi một bước đạt tiêu chí, ghi ngày và link bằng chứng vào cột "Kết quả".
 
 | Bước | Mục tiêu | Phụ trách chính | Xong khi | Kết quả |
 |---|---|---|---|---|
@@ -396,7 +396,7 @@ Các gói PREP thuộc giai đoạn chuẩn bị MVP, giữ lại để tham kh�
 
 ## Công việc Community
 
-**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); trạng thái theo dõi trên Trello. Cột "Phụ thuộc" và "Đầu ra" còn viết theo cơ chế transaction chung của MVP; phải cập nhật theo thiết kế của [STEP-2](#step-2) trước khi làm.
+**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); thẻ Trello tương ứng ở [step-4.md](tasks/step-4.md) (cùng mã), trạng thái theo dõi trên Trello. Cột "Phụ thuộc" và "Đầu ra" còn viết theo cơ chế transaction chung của MVP; phải cập nhật theo thiết kế của [STEP-2](#step-2) trước khi làm.
 
 COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ [MVP](../releases/mvp.md#community-scope) sang v1. COM-W08 đến 13 hoàn thiện các nhánh khác. Mã COM-W chỉ là tên công việc, không thay mã UC, AC, TC. Trạng thái thật xem [Community](../features/community/README.md) và [tin phòng](../features/messaging/channel-messaging.md). Người phụ trách tự chia nhiệm vụ Trello và làm khi đủ [điều kiện](workflow.md#readiness).
 
