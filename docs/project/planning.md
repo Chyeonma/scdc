@@ -203,88 +203,130 @@ Cập nhật khi đổi phạm vi, thời gian, nguồn lực, giải pháp kỹ
 
 ## Bàn giao và ước lượng
 
-MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc v1 ([DEC-116](../records/decisions/README.md#dec-116)). Mục tiêu 3 tháng và mô hình 16 tuần, 250 triệu chỉ là cơ sở minh họa cũ; chưa có lịch riêng MVP, v1 hay số liệu năng suất để cam kết. Không làm lại toàn bộ kế hoạch sau MVP.
+MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc v1 ([DEC-116](../records/decisions/README.md#dec-116)). Mục tiêu 3 tháng và mô hình 16 tuần, 250 triệu chỉ là cơ sở minh họa cũ; chưa có lịch v1 hay số liệu năng suất để cam kết.
 
-<a id="package-design"></a>
-
-### Thiết kế trước khi code, theo từng gói
-
-Trước khi code một gói, làm rõ: đầu ra, tiêu chí nghiệm thu, phụ thuộc trực tiếp, và phần giao diện, dữ liệu, hợp đồng, tổ chức code, môi trường mà gói ảnh hưởng. Gói đủ thông tin thì bắt đầu; không chờ toàn bộ thiết kế v1. Gói còn chờ quyết định chỉ chờ đúng phần đó; gói độc lập vẫn làm tiếp.
-
-Thiết kế cập nhật vào trang tính năng; hồ sơ gói chỉ giữ phạm vi, phụ thuộc và link.
-
-<a id="đợt-bàn-giao-và-điều-kiện-chuyển-tiếp"></a>
-
-### Các đợt
-
-MVP-0 đến 2 là bối cảnh lịch sử trước [bản chụp MVP](../releases/mvp.md), không cần làm lại. V1-0 đến 2 là trình tự hiện hành, chưa có lịch cam kết.
-
-| Đợt | Đầu ra | Vg | Sáng | Thái | Điều kiện chuyển |
-|---|---|---|---|---|---|
-| MVP-0. Chốt gói đầu | Identity đủ dùng, hợp đồng module và job email, môi trường thử | Phần Identity cần thiết; chốt quyền và hợp đồng | Gói DM, nền tin, ca thử | Compose, CI, dữ liệu thử; bắt đầu worker | Phụ thuộc đủ rõ |
-| MVP-1. Làm song song | Community, DM, email, công cụ chạy từ DB tới giao diện | Community trọn luồng | DM trọn luồng; nền tin phòng | Worker email; công cụ kiểm tra hệ thống | Ba tính năng nền tích hợp thật; quyền và dữ liệu đã kiểm thử |
-| MVP-2. Bàn giao | Chạy lại trên bản và dữ liệu xác định; sửa lỗi chính | Review quyền, Identity, Community; điều phối | Sửa và kiểm tra Messaging, luồng liên thông | Kiểm tra nhanh, hồi quy, dữ liệu demo, hồ sơ | Đạt [điều kiện MVP](../releases/mvp.md#acceptance) |
-| V1-0. Chuyển microservice | Ranh giới chốt; API, dữ liệu, triển khai độc lập; sửa giả định transaction | Chuyển Identity, Community; thiết kế tổng thể và môi trường | Chuyển Messaging, hợp đồng, dữ liệu, chuẩn bị triển khai | Thiết kế Media; tích hợp email; cấu hình và công cụ chạy | Đạt gói kiến trúc v1; luồng MVP vẫn chạy |
-| V1-1. Hoàn thiện, Media | Đủ Community, Messaging; gọi riêng, phòng thoại, camera, chia sẻ | Identity, Community, quyền, triển khai | Nhắn tin; hợp đồng thông báo | Media và LiveKit trọn luồng; email; hợp đồng file | Các gói có bằng chứng; không xếp chồng vượt công suất |
-| V1-2. Ổn định, phát hành | Kiểm thử v1, dữ liệu online, rollback, bàn giao | Điều phối, triển khai và diễn tập chung; sửa phần mình | Kiểm thử, hồ sơ, sửa phần mình; kiểm tra chéo | Kiểm thử, hồ sơ, sửa phần mình; kiểm tra chéo | Đạt điều kiện v1; còn phải chọn người duyệt và vận hành |
-
-Trong V1-1, các gói được xếp theo phụ thuộc và công suất, không mặc định làm cùng lúc. Gói nào chưa đủ đầu vào thì làm gói độc lập khác trong phạm vi; không thêm tính năng ngoài phạm vi để lấp thời gian.
+<a id="roadmap"></a>
 
 <a id="v1-planning"></a>
 
-### Lập kế hoạch v1 từ nền MVP
+<a id="v1-architecture-packages"></a>
 
-1. Đối chiếu [nền MVP](../releases/mvp.md) với đặc tả; chỉ ước lượng phần còn lại.
-2. Làm các gói chuyển microservice: sửa transaction và guard của MVP trước khi chạy giữa service; giữ phần đã chạy để hồi quy.
-3. Thử Media sớm trước khi chốt công sức và chi phí.
-4. Lập lịch theo [công suất thật](#capacity) và [quy tắc ước lượng](#ước-lượng-và-khóa-lịchchi-phí).
+### Lộ trình lên microservice
+
+**Trạng thái:** đề xuất ngày 2026-11-11, **chờ nhóm xác nhận** ở họp tuần. Thay cho các gói V1-ARCH-01 đến 03 và các đợt V1-0 đến 2 trước đây; bản cũ xem lịch sử Git của trang này.
+
+**Nguyên tắc:**
+
+- **Giải quyết phần khó trong monolith trước.** Với nhóm làm microservice lần đầu, phần khó là dữ liệu và lỗi giữa các phần: không còn transaction chung, lời gọi có thể thất bại, dữ liệu có thể lệch. Làm phần này khi code vẫn là một ứng dụng (còn debugger, rollback dễ), rồi mới tách thành service.
+- **Sau mỗi bước, hệ thống vẫn chạy và demo được.** Không có giai đoạn "đang tách dở".
+- **Mỗi lần tách một service.**
+- **Bước 1 cả nhóm làm chung** để mọi người cùng hiểu hạ tầng; từ bước 2 mỗi người theo service của mình ([phân công](#team)).
+- **Trang này chỉ ghi bước, thứ tự, lý do và tiêu chí xong.** Việc cụ thể, người làm, hạn và trạng thái nằm trên Trello; mỗi thẻ ghi mã bước (STEP-1 đến 4). Thẻ thuộc lộ trình viết trong [docs/project/tasks](tasks/README.md) và tự đồng bộ lên Trello. Khi một bước đạt tiêu chí, ghi ngày và link bằng chứng vào cột "Kết quả".
+
+| Bước | Mục tiêu | Phụ trách chính | Xong khi | Kết quả |
+|---|---|---|---|---|
+| [STEP-1](#step-1) | Khung chạy: gateway, Compose, CI, giám sát; thử LiveKit | Cả nhóm; Vg điều phối, Thái thử LiveKit | Ai cũng tự dựng được môi trường; lần theo được request lỗi; một phiên âm thanh thật | — |
+| [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | — |
+| [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | — |
+| [STEP-4](#step-4) | Tính năng mới trên kiến trúc mới: tin phòng, phòng thoại, hoàn thiện Community | Theo service | Đạt [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion) | — |
+
+Không ước lượng cả lộ trình ngay từ đầu: làm xong STEP-1, đo thời gian thực tế rồi mới ước lượng các bước sau ([ước lượng](#ước-lượng-và-khóa-lịchchi-phí)). Mỗi bước kết thúc bằng một buổi demo.
+
+<a id="step-1"></a>
+
+#### STEP-1 — Khung chạy
+
+Mục tiêu: hạ tầng chạy được trước khi đụng vào nghiệp vụ.
+
+- Nginx làm cổng vào trước monolith hiện tại, phục vụ luôn WebClient ([D09, D10, D22](../system/api-conventions.md#v1-public-routing)); thêm một service mẫu chỉ có `/health` để thử định tuyến.
+- Docker Compose dựng toàn bộ bằng một lệnh ([môi trường](../system/environments.md)); CI build và chạy test trên mỗi pull request.
+- OpenTelemetry Collector và OpenObserve ([D33–D35](../system/observability.md)): log và trace của một request đi qua gateway và service.
+- Khung thư viện dùng chung `SCDC.Shared.Core` ([D45](../system/backend.md#v1-code-layout)), bắt đầu bằng phần kiểm tra JWT.
+- Song song: Thái thử LiveKit tự host, một phiên âm thanh thật giữa hai trình duyệt (V1-MEDIA-01).
+
+**Xong khi:** mỗi người tự dựng lại môi trường từ máy chưa cài gì theo [hướng dẫn phát triển](../guides/development.md); lần theo được một request lỗi qua trace; CI chặn được pull request làm hỏng test; LiveKit chạy được một phiên âm thanh.
+
+<a id="step-2"></a>
 
 <a id="v1-next-design"></a>
 
-### Việc thiết kế tiếp theo (rà soát 2026-11-01)
+#### STEP-2 — Tách ranh giới ngay trong monolith
 
-Các đầu ra thiết kế nằm trong gói V1-ARCH và V1-MEDIA; không tạo thêm giai đoạn phải xong trước khi code. Quyết định sản phẩm còn thiếu xem [câu hỏi còn mở](open-questions.md#v1-decisions).
+Code vẫn là một ứng dụng, nhưng các module phải cư xử như các service riêng. Sau bước này, tách service chủ yếu là đóng gói.
 
-| Thứ tự | Việc | Đầu ra | Nguồn và phụ thuộc |
+- **Database:** mỗi module có database user và connection string riêng; user chỉ có quyền trên schema của mình ([D02](../system/database.md#v1-database-layout)).
+- **Bỏ khóa ngoại, JOIN và transaction xuyên module.** Chỗ khó nhất: `IAccountAccessGuard` và `IChannelAccessGuard` đang giữ transaction của bên gọi ([kiến trúc](../system/architecture.md#boundaries)). Thay bằng hàng rào ghi ([D05–D07](../system/access-revocation.md#v1-authorization-coordination)) và outbox ([D27](../system/api-conventions.md#v1-integration-event-transport)).
+- **Hợp đồng giữa module** (`SCDC.Contracts`) viết lại như lời gọi qua mạng: có timeout, có thể thất bại, gọi lặp không gây hại.
+- **Xác thực giữa các phần:** JWT ký bất đối xứng ([D28, D29](../system/api-conventions.md#v1-service-authentication)), phiên qua Redis ([D30, D31](../system/access-revocation.md#v1-session-validation)). Bắt đầu với luồng DM, sau đó Community.
+- **Test tình huống lỗi:** bên kia không trả lời, sự kiện đến hai lần, sai thứ tự, mất Redis; đo thời gian thu hồi quyền (yêu cầu 5 giây).
+
+Vg làm Identity và Community, Sáng làm Messaging; mỗi phần có người kia review.
+
+**Xong khi:** toàn bộ test DM và Community vẫn qua; không còn transaction, khóa ngoại hay JOIN xuyên module (kiểm chứng bằng quyền của database user); đo được thời gian thu hồi.
+
+<a id="step-3"></a>
+
+#### STEP-3 — Tách từng service
+
+Theo thứ tự ít rủi ro trước:
+
+| Thứ tự | Service | Phụ trách | Lý do |
 |---|---|---|---|
-| 1 | Xác thực và phiên giữa service (V1-ARCH-01, phối hợp 02, 03) | Danh tính và quyền gọi RPC; hợp đồng JWT và khóa; schema, nhất quán, phục hồi Redis; lỗi tạm thời và phản hồi giao diện. Ca kiểm thử: mất Redis, dữ liệu cũ, khởi động lại, đổi khóa | [D20, D28, D29](../system/api-conventions.md#v1-service-authentication), [D30, D31](../system/access-revocation.md#v1-session-validation); bắt đầu với luồng DM |
-| 2 | Quyền tới commit và giao nhận giữa service (V1-ARCH-01, 02) | Phạm vi, owner, hàng rào, epoch; lệnh và xác nhận sau commit; chống trùng; thời hạn, thử lại, phục hồi; `.proto`. Ca kiểm thử: thu hồi tranh ghi, mất phản hồi, worker dừng, đo thời gian ngắt | [D05–D07](../system/access-revocation.md#v1-authorization-coordination), [D27](../system/api-conventions.md#v1-integration-event-transport), [D46](../system/api-conventions.md#v1-grpc-contract-sources) |
-| 3 | Dữ liệu và chuyển offline (V1-ARCH-01, 02, 03) | Mapping theo database; thay khóa ngoại, JOIN, transaction giữa service; giữ ID, sequence, version, tombstone, ledger, khóa; công cụ migration; trình tự dừng ghi, chuyển, đối chiếu, mở lại; cách quay lại an toàn. Chạy thử trên dữ liệu thử | [D02](../system/database.md#v1-database-layout), [D48–D52](../system/database.md#v1-migration-execution); không gồm backup |
-| 4 | Tạo phòng và tin phòng (V1-ARCH-01, 02; COM-W01–07) | Hợp đồng chuẩn bị, tra cứu, hủy, bù; trạng thái công bố phòng; quyền đọc, ghi, đăng ký; hồi quy DM. Ca kiểm thử: hủy tranh hoàn tất, thành công muộn, tải lại, gửi lại, mất quyền | [D14–D19](../features/community/channels.md#v1-channel-provisioning), [tin phòng](../features/messaging/channel-messaging.md), [COM-W](#community-work-items) |
-| Song song | Môi trường demo và công cụ chạy (V1-ARCH-03) | Container, mạng, volume; định tuyến; mTLS, bí mật, key ring; migration; CI; telemetry; dựng mới, khởi động lại, triển khai riêng từng service, hồi quy | [Môi trường](../system/environments.md), [D36](../system/environments.md#v1-secret-provisioning), [giám sát](../system/observability.md) |
-| Thử sớm | Khả thi LiveKit và quyền media (V1-MEDIA-01, 05) | Đề xuất phiên bản server, SDK, extension; cách thử luồng thật, kiểm soát vào, nguồn, hạn mức, ngắt khi phụ thuộc lỗi | [MEDIA-GAP-03, 04, 06](../features/media/participation-lifecycle.md#proof-fixture-và-gói-kiểm-chứng), [chất lượng](../system/quality.md#measurement-readiness) |
+| 3a | Identity | Vg | Service khác chỉ cần kiểm tra JWT và biết phiên còn hiệu lực. Ranh giới rõ nhất, dùng để học quy trình tách |
+| 3b (song song) | Media control | Thái | Xây mới thành service riêng, không phải chuyển dữ liệu. Làm gọi riêng trước (V1-MEDIA-02); phòng thoại cần quyền Community nên để STEP-4 |
+| 3c | Messaging | Sáng | Nhiều dữ liệu và realtime nhất; tách sau khi đã quen quy trình. Cần hợp đồng tạo phòng giữa Community và Messaging ([D14–D19](../features/community/channels.md#v1-channel-provisioning)) |
+| — | Community | Vg | Phần còn lại của monolith trở thành service Community |
 
-Đề xuất bắt đầu với hợp đồng phiên và thu hồi giữa Identity và Messaging (V1-ARCH-01), đủ để rà soát HTTP, ghi DM và đăng ký realtime khi tách service; sau đó mở rộng sang Community và Media. Trước khi làm từng phần, kiểm tra [READY-01 đến 08](workflow.md#readiness), người làm và review, [công suất](#capacity).
+Mỗi lần tách gồm: chuyển dữ liệu offline ([D48–D52](../system/database.md#v1-migration-execution)), chạy lại toàn bộ test, đo thời gian thu hồi, và cách quay về bản trước nếu lỗi.
 
-<a id="v1-architecture-packages"></a>
+**Xong khi:** đạt mục 2 của [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion): bốn service build, chạy, khởi động lại và triển khai độc lập, mỗi service chỉ dùng database của mình, luồng cũ vẫn đúng.
 
-### Gói chuyển microservice
+<a id="step-4"></a>
 
-Ranh giới bốn service đã chốt ([kiến trúc](../system/architecture.md#service-boundaries)). Dữ liệu, hợp đồng mạng, quyền, thu hồi và triển khai cần thiết kế trước migration.
+#### STEP-4 — Tính năng trên kiến trúc mới
 
-| Gói | Đầu ra | Phụ trách | Review, phối hợp |
+- Tin phòng và realtime Community: [COM-W01 đến 07](#community-work-items).
+- Phòng thoại, camera, chia sẻ màn hình, kiểm soát Media: [V1-MEDIA-03 đến 05](#v1-media-packages).
+- Hoàn thiện Community: [COM-W08 đến 13](#community-plan-công-việc-mở-rộng-sau-phạm-vi-mvp-đã-chọn).
+- Mobile, thông báo, gửi file nếu được chốt vào v1: [gói bổ sung](#extension-packages).
+
+**Vì sao làm sau khi tách:** nếu làm tin phòng trong monolith trước, phần quyền dựa trên transaction chung sẽ phải viết lại khi tách.
+
+<a id="tech-deferral"></a>
+
+### Đề xuất hoãn một số công nghệ
+
+Các quyết định dưới đây đã chốt. Đề xuất chỉ **hoãn** để nhóm học từng thứ một, không bỏ. Nếu nhóm đồng ý, ghi DEC mới; nếu môn học bắt buộc thì giữ nguyên.
+
+| Đã chốt | Đề xuất làm trước | Lý do | Chuyển sang bản chốt khi |
 |---|---|---|---|
-| V1-ARCH-01 | Thiết kế dữ liệu, xác thực, hợp đồng mạng, chính sách thu hồi và quyền; chuyển Identity và phần Community liên quan | Vg | Sáng rà phần Messaging; Thái đối chiếu cấu hình |
-| V1-ARCH-02 | Chuyển lưu trữ, khởi động, hợp đồng của Messaging; hồi quy DM và tin phòng; lỗi giao tiếp | Sáng | Vg review quyền, dữ liệu, nhất quán |
-| V1-ARCH-03 | Container, cấu hình, định tuyến qua [cổng vào chung](../system/api-conventions.md#v1-public-routing), CI, công cụ migration, môi trường tích hợp | Vg | Sáng, Thái cung cấp migration, cấu hình, đóng gói, công cụ chạy phần mình |
+| gRPC giữa service ([D04](../system/api-conventions.md#v1-internal-protocol)) | HTTP/JSON nội bộ | Dễ debug bằng curl và log; đổi giao thức về sau rẻ nếu hợp đồng đã rõ | Hợp đồng giữa hai service ổn định |
+| mTLS giữa service ([D20](../system/api-conventions.md#v1-service-authentication)) | Mạng Docker nội bộ và token dịch vụ | Quản lý chứng chỉ là một mảng riêng, dễ tốn nhiều tuần | Bốn service đã chạy (cuối STEP-3) |
+| Redis cho phiên ([D30](../system/access-revocation.md#v1-session-validation)) | Giữ nguyên | Cần để đạt thu hồi trong 5 giây | — |
 
-Điều kiện xong: [hoàn tất v1](../releases/acceptance.md#v1-completion). Giai đoạn chuyển service và giai đoạn hoàn thiện, Media không cộng vào cùng một tuần.
+<a id="package-design"></a>
+
+### Thiết kế trước khi code
+
+Trước khi code một phần việc, làm rõ: đầu ra, tiêu chí nghiệm thu, phụ thuộc trực tiếp, và phần giao diện, dữ liệu, hợp đồng, tổ chức code, môi trường bị ảnh hưởng. Đủ thông tin thì bắt đầu; không chờ toàn bộ thiết kế v1. Việc còn chờ quyết định chỉ chờ đúng phần đó.
+
+Thiết kế cập nhật vào trang tính năng; thẻ Trello chỉ giữ phạm vi, phụ thuộc và link.
 
 <a id="v1-media-packages"></a>
 
-### Gói Media
+### Việc Media
 
-Thái phụ trách toàn bộ Media control và LiveKit, tự chia nhiệm vụ trên Trello. Vg quyết định tổng thể và cung cấp quyền Identity, Community; Sáng phối hợp thông báo; một người khác review từng gói.
+Thái phụ trách Media control và LiveKit. Vg cung cấp quyền Identity, Community; Sáng phối hợp thông báo cuộc gọi; một người khác review. Các mã dưới đây là tên phần việc, chưa phải cam kết.
 
-| Gói | Đầu ra | Phụ thuộc và kiểm thử |
-|---|---|---|
-| V1-MEDIA-01 | Chọn LiveKit, SDK; một phiên âm thanh thật | Trình phương án và phiên bản để Vg duyệt; thử kết nối thật trước khi ước lượng đầy đủ |
-| V1-MEDIA-02 | Gọi riêng từ backend tới giao diện | Hợp đồng Identity và thông báo; thử nhận, từ chối, hủy, hết giờ, bận, kết thúc |
-| V1-MEDIA-03 | Phòng thoại từ backend tới giao diện | Quyền và vòng đời phòng Community; thử vào, rời, hạn mức, mất quyền, xóa phòng |
-| V1-MEDIA-04 | Micro, camera, chia sẻ; thiết bị; hiển thị nguồn | Thử quyền thiết bị, dừng nguồn từ trình duyệt, kết nối lại |
-| V1-MEDIA-05 | Kiểm soát vào, hạn mức, thu hồi, dừng khi lỗi; kiểm thử Media | Vg cung cấp hợp đồng phiên và quyền; chứng minh ngắt, đồng thời, tải, lỗi phụ thuộc |
+| Mã | Bước | Đầu ra | Phụ thuộc và kiểm thử |
+|---|---|---|---|
+| V1-MEDIA-01 | STEP-1 | Chọn phiên bản LiveKit, SDK; một phiên âm thanh thật | Trình phương án để Vg duyệt; thử kết nối thật trước khi ước lượng |
+| V1-MEDIA-02 | STEP-3 | Gọi riêng, từ backend tới giao diện | Hợp đồng Identity và thông báo; thử nhận, từ chối, hủy, hết giờ, bận, kết thúc |
+| V1-MEDIA-03 | STEP-4 | Phòng thoại, từ backend tới giao diện | Quyền và vòng đời phòng Community; thử vào, rời, hạn mức, mất quyền, xóa phòng |
+| V1-MEDIA-04 | STEP-4 | Micro, camera, chia sẻ màn hình; thiết bị; hiển thị nguồn | Thử quyền thiết bị, dừng nguồn từ trình duyệt, kết nối lại |
+| V1-MEDIA-05 | STEP-4 | Kiểm soát vào, hạn mức, thu hồi, dừng khi lỗi | Hợp đồng phiên và quyền từ Vg; chứng minh ngắt, đồng thời, tải, lỗi phụ thuộc |
 
-File và email cũng là việc của Thái; phải xếp chung quỹ thời gian, không làm tất cả cùng lúc.
+File và email cũng là việc của Thái; xếp chung quỹ thời gian, không làm tất cả cùng lúc.
 
 <a id="extension-packages"></a>
 
@@ -336,9 +378,9 @@ Mỗi người giữ tối đa một gói chính và một gói hỗ trợ nhỏ
 
 <a id="preparation"></a>
 
-## Gói chuẩn bị
+## Gói chuẩn bị (giai đoạn MVP)
 
-PREP nằm trong quỹ của gói tính năng tương ứng, không phải việc toàn thời gian thêm. Chỉ làm phần còn thiếu cho gói v1 sắp làm; không làm lại đầu ra đã có ([nền MVP](../releases/mvp.md)).
+Các gói PREP thuộc giai đoạn chuẩn bị MVP, giữ lại để tham khảo; lộ trình v1 xem [STEP-1 đến 4](#roadmap). PREP nằm trong quỹ của gói tính năng tương ứng, không phải việc toàn thời gian thêm. Chỉ làm phần còn thiếu cho gói v1 sắp làm; không làm lại đầu ra đã có ([nền MVP](../releases/mvp.md)).
 
 | Gói | Đầu ra | Phụ thuộc | Làm, rà soát | Xong khi |
 |---|---|---|---|---|
@@ -354,17 +396,19 @@ PREP nằm trong quỹ của gói tính năng tương ứng, không phải việ
 
 ## Công việc Community
 
+**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); trạng thái theo dõi trên Trello. Cột "Phụ thuộc" và "Đầu ra" còn viết theo cơ chế transaction chung của MVP; phải cập nhật theo thiết kế của [STEP-2](#step-2) trước khi làm.
+
 COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ [MVP](../releases/mvp.md#community-scope) sang v1. COM-W08 đến 13 hoàn thiện các nhánh khác. Mã COM-W chỉ là tên công việc, không thay mã UC, AC, TC. Trạng thái thật xem [Community](../features/community/README.md) và [tin phòng](../features/messaging/channel-messaging.md). Người phụ trách tự chia nhiệm vụ Trello và làm khi đủ [điều kiện](workflow.md#readiness).
 
-| Mã | Ca sử dụng | Phụ thuộc | Phụ trách | Đầu ra và điều kiện xong | Trạng thái |
-|---|---|---|---|---|---|
-| COM-W01 | UC-COM-17, nền tin dùng chung | Guard Identity và phòng, tạo phòng đã có; hợp đồng [Messaging](../features/messaging/README.md) | Sáng; Vg rà quyền | Migration và model tin, thứ tự theo không gian, cursor, đọc lịch sử có guard. Thử phân trang, phòng ẩn, khác server, phiên sai, epoch cũ trên DB thật | Chưa bắt đầu |
-| COM-W02 | UC-COM-23 gửi, gửi lại | COM-W01; [transaction](../features/community/mechanics.md#transactions) | Sáng; Vg rà Community | Ghi tin có guard tới commit; chống trùng; tin, sequence, outbox nguyên tử. Thử gửi lại, đồng thời, khởi động lại, đổi quyền tranh commit | Chưa bắt đầu |
-| COM-W03 | UC-COM-17, 23 giao diện | COM-W01, 02 | Sáng; Vg ghép khung | Mở phòng → lịch sử → gửi → tải lại với API thật; trạng thái đã lưu, lỗi rõ; gửi lại do người dùng bấm | Chưa bắt đầu |
-| COM-W04 | UC-COM-25 nhận tin | COM-W02; hợp đồng realtime Messaging | Sáng | Worker outbox, Hub, đăng ký có kiểm soát; hai tài khoản nhận tin; loại trùng; đối chiếu sau kết nối lại; ghi bằng chứng mất kết nối | Chưa bắt đầu |
-| COM-W05 | UC-COM-25 mất quyền; UC-COM-20, 21, 22 | COM-W04 | Sáng + Vg | HTTP, gửi, đăng ký, bù tin dùng quyền hiện tại; đo kết nối ngừng trong 5 giây từ commit (DEC-083) cho cả phiên và vai trò, ACL; có test tranh chấp và dừng khi lỗi | Chưa bắt đầu |
-| COM-W06 | Toàn luồng UC-COM-03, 06, 16, 17, 23, 25 | COM-W03, 04, 05 | Vg + Sáng | Tạo → tìm → tham gia → phòng chữ → lịch sử, gửi, nhận → mất quyền trên DB, API, Hub thật; hồi quy các chức năng cũ; ghi commit, môi trường, kết quả | Chưa bắt đầu |
-| COM-W07 | Tích hợp và kiểm thử | COM-W06 | Vg điều phối; Sáng kiểm Messaging | Chạy lại theo [hướng dẫn](../guides/development.md#community); hồ sơ đối chiếu [tiêu chí chuyển tiếp](../releases/mvp.md#community-acceptance) | Chưa bắt đầu |
+| Mã | Ca sử dụng | Phụ thuộc | Phụ trách | Đầu ra và điều kiện xong |
+|---|---|---|---|---|
+| COM-W01 | UC-COM-17, nền tin dùng chung | Guard Identity và phòng, tạo phòng đã có; hợp đồng [Messaging](../features/messaging/README.md) | Sáng; Vg rà quyền | Migration và model tin, thứ tự theo không gian, cursor, đọc lịch sử có guard. Thử phân trang, phòng ẩn, khác server, phiên sai, epoch cũ trên DB thật |
+| COM-W02 | UC-COM-23 gửi, gửi lại | COM-W01; [transaction](../features/community/mechanics.md#transactions) | Sáng; Vg rà Community | Ghi tin có guard tới commit; chống trùng; tin, sequence, outbox nguyên tử. Thử gửi lại, đồng thời, khởi động lại, đổi quyền tranh commit |
+| COM-W03 | UC-COM-17, 23 giao diện | COM-W01, 02 | Sáng; Vg ghép khung | Mở phòng → lịch sử → gửi → tải lại với API thật; trạng thái đã lưu, lỗi rõ; gửi lại do người dùng bấm |
+| COM-W04 | UC-COM-25 nhận tin | COM-W02; hợp đồng realtime Messaging | Sáng | Worker outbox, Hub, đăng ký có kiểm soát; hai tài khoản nhận tin; loại trùng; đối chiếu sau kết nối lại; ghi bằng chứng mất kết nối |
+| COM-W05 | UC-COM-25 mất quyền; UC-COM-20, 21, 22 | COM-W04 | Sáng + Vg | HTTP, gửi, đăng ký, bù tin dùng quyền hiện tại; đo kết nối ngừng trong 5 giây từ commit (DEC-083) cho cả phiên và vai trò, ACL; có test tranh chấp và dừng khi lỗi |
+| COM-W06 | Toàn luồng UC-COM-03, 06, 16, 17, 23, 25 | COM-W03, 04, 05 | Vg + Sáng | Tạo → tìm → tham gia → phòng chữ → lịch sử, gửi, nhận → mất quyền trên DB, API, Hub thật; hồi quy các chức năng cũ; ghi commit, môi trường, kết quả |
+| COM-W07 | Tích hợp và kiểm thử | COM-W06 | Vg điều phối; Sáng kiểm Messaging | Chạy lại theo [hướng dẫn](../guides/development.md#community); hồ sơ đối chiếu [tiêu chí chuyển tiếp](../releases/mvp.md#community-acceptance) |
 
 - Trước COM-W01, đối chiếu phần DM đã có và ranh giới service để chỉ làm phần còn thiếu.
 - COM-W03 và 04 làm song song được khi hợp đồng COM-W02 ổn định.
@@ -374,14 +418,14 @@ COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ
 
 ### Công việc mở rộng
 
-| Mã | Ca sử dụng | Điều kiện xong | Phụ trách | Trạng thái |
-|---|---|---|---|---|
-| COM-W08 | UC-COM-19 xóa phòng | Xóa phòng và không gian cùng transaction; chống trùng, outbox; chặn HTTP và Hub; chứng minh tranh gửi và xóa ([phòng](../features/community/channels.md)) | Vg + Sáng | Chưa bắt đầu |
-| COM-W09 | UC-COM-04, 05, 07, 08 thông tin server, cách tham gia, duyệt | Ghi server và yêu cầu nguyên tử; chuyển sang riêng tư kết thúc yêu cầu đang chờ; quyền người duyệt; chứng minh CAS, duyệt, hủy, tham gia đồng thời | Vg | Chưa bắt đầu |
-| COM-W10 | UC-COM-09 đến 13 lời mời | Token, lượt dùng, hiệu lực theo người tạo, mời đích danh, epoch; chứng minh lượt cuối, thu hồi và nhận đồng thời | Vg | Chưa bắt đầu |
-| COM-W11 | UC-COM-14, 15 chuyển chủ và rời | Chủ, tư cách, epoch, dọn ACL nguyên tử; chủ không tự rời; epoch cũ; thu hồi HTTP và realtime | Vg + Sáng | Chưa bắt đầu |
-| COM-W12 | UC-COM-24 sửa, xóa tin | Ghi tin, quyền tác giả, placeholder, version, outbox; chứng minh CAS, tranh chấp, quyền hiện tại | Sáng; Vg phối hợp | Chưa bắt đầu |
-| COM-W13 | Phần thoại của UC-COM-16, 17, 25 | Module Media, kiểm soát vào, LiveKit, ngắt ([Media](../features/media/README.md)) | Thái: Media; Vg: vòng đời và quyền phòng | Chưa bắt đầu |
+| Mã | Ca sử dụng | Điều kiện xong | Phụ trách |
+|---|---|---|---|
+| COM-W08 | UC-COM-19 xóa phòng | Xóa phòng và không gian cùng transaction; chống trùng, outbox; chặn HTTP và Hub; chứng minh tranh gửi và xóa ([phòng](../features/community/channels.md)) | Vg + Sáng |
+| COM-W09 | UC-COM-04, 05, 07, 08 thông tin server, cách tham gia, duyệt | Ghi server và yêu cầu nguyên tử; chuyển sang riêng tư kết thúc yêu cầu đang chờ; quyền người duyệt; chứng minh CAS, duyệt, hủy, tham gia đồng thời | Vg |
+| COM-W10 | UC-COM-09 đến 13 lời mời | Token, lượt dùng, hiệu lực theo người tạo, mời đích danh, epoch; chứng minh lượt cuối, thu hồi và nhận đồng thời | Vg |
+| COM-W11 | UC-COM-14, 15 chuyển chủ và rời | Chủ, tư cách, epoch, dọn ACL nguyên tử; chủ không tự rời; epoch cũ; thu hồi HTTP và realtime | Vg + Sáng |
+| COM-W12 | UC-COM-24 sửa, xóa tin | Ghi tin, quyền tác giả, placeholder, version, outbox; chứng minh CAS, tranh chấp, quyền hiện tại | Sáng; Vg phối hợp |
+| COM-W13 | Phần thoại của UC-COM-16, 17, 25 | Module Media, kiểm soát vào, LiveKit, ngắt ([Media](../features/media/README.md)) | Thái: Media; Vg: vòng đời và quyền phòng |
 
 UC-COM-02 còn nhánh gửi yêu cầu duyệt; UC-COM-06 còn nhánh chờ duyệt; UC-COM-03 còn đối chiếu khi rời và tham gia lại. Kết quả tìm kiếm và tham gia hiện tại không đóng được toàn bộ các ca này.
 

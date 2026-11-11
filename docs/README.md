@@ -51,6 +51,7 @@ docs/
 
 ## Thay đổi gần đây (2026-11-11)
 
+- Đề xuất [lộ trình lên microservice](project/planning.md#roadmap) gồm 4 bước, thay các gói V1-ARCH; chờ nhóm xác nhận.
 - Gộp tóm tắt kiến trúc vào [kiến trúc](system/architecture.md#summary), hướng dẫn Community vào [hướng dẫn phát triển](guides/development.md#community).
 - Chuyển cơ chế Community từ `system/` sang [features/community](features/community/mechanics.md).
 - Chuyển kế hoạch và prompt DM cũ ([2026-10-planning](archive/2026-10-planning/messaging/direct-messaging.md)) cùng bản đồ chuyển đổi 2026-10-11 vào `archive/`.
@@ -60,3 +61,65 @@ docs/
 - Phân công mới theo dịch vụ, quản lý nhiệm vụ trên Trello và họp hằng tuần: xem [kế hoạch](project/planning.md#team) và [quy trình](project/workflow.md#trello).
 - Ba phần mới được đưa vào kế hoạch, đang thiết kế: [mobile](experience/mobile.md), [thông báo](features/notifications/README.md) và [gửi file](features/files/README.md).
 - Mẫu mới: [nhiệm vụ Trello](records/templates/trello-task.md) và [biên bản họp tuần](records/templates/weekly-meeting.md).
+
+
+docs/
+  ├── README.md              Trang bắt đầu: đọc gì trước, sơ đồ thư mục
+  ├── glossary.md            Thuật ngữ (epoch, outbox, guard, lease…)
+  │
+  ├── project/               QUẢN LÝ DỰ ÁN
+  │   ├── overview.md        Người dùng, yêu cầu REQ, phạm vi SCP, tiêu chí thành công SUC
+  │   ├── planning.md        Phân công (nguồn duy nhất), công suất, ngân sách, rủi ro, các gói việc
+  │   ├── workflow.md        Các bước làm một gói, điều kiện READY, review, Trello, họp tuần
+  │   └── open-questions.md  Câu hỏi còn mở OQ-001 đến 016
+  │
+  ├── experience/            TRẢI NGHIỆM CHUNG
+  │   ├── overview.md        Hành trình người dùng, bố cục, điều hướng
+  │   ├── design-system.md   Thành phần giao diện dùng chung, quy tắc tương tác
+  │   └── mobile.md          App mobile (đang thiết kế)
+  │
+  ├── features/              ĐẶC TẢ TỪNG TÍNH NĂNG (quy tắc, ca sử dụng, giao diện, API, AC/TC)
+  │   ├── accounts/          Đăng ký, xác minh, phiên, mật khẩu, hồ sơ, khóa tài khoản, email
+  │   ├── community/         Server, thành viên, lời mời, phòng, vai trò và quyền, bảng truy vết
+  │   ├── messaging/         DM, tin phòng, vòng đời tin, đồng bộ, quy tắc nội dung
+  │   ├── media/             Gọi riêng, phòng thoại, camera và chia sẻ, cơ chế tham gia chung
+  │   ├── notifications/     Thông báo (đang thiết kế)
+  │   └── files/             Gửi file (đang thiết kế)
+  │
+  ├── system/                THIẾT KẾ KỸ THUẬT XUYÊN TÍNH NĂNG
+  │   ├── architecture-summary.md  Tóm tắt kiến trúc v1 (một trang)
+  │   ├── architecture.md    Kiến trúc hiện tại và v1, ranh giới dữ liệu, sơ đồ, bảng quyết định
+  │   ├── api-conventions.md Quy ước API, lỗi; gRPC, Gateway, mTLS, JWT (D04, D09, D10, D20, D27–29, D46)
+  │   ├── access-revocation.md  Thu hồi phiên và quyền; hàng rào ghi; Redis (D05–07, D30, D31)
+  │   ├── backend.md         Cấu trúc code, project, worker, Hub (D12, D13, D39–45, D47)
+  │   ├── frontend.md        Cấu trúc WebClient, quy tắc viết code giao diện
+  │   ├── database.md        Schema, migration, tách DB, chuyển dữ liệu MVP (D02, D48–52)
+  │   ├── data-lifecycle.md  Thời hạn lưu, khóa tài khoản, xóa, dọn dữ liệu, khôi phục
+  │   ├── community.md       Cơ chế dùng chung của Community (transaction, chống trùng, cursor)
+  │   ├── environments.md    Môi trường, hạ tầng, bố trí container (D03, D21–26, D32, D36, D38)
+  │   ├── observability.md   Log, metric, trace (D33–35)
+  │   └── quality.md         Mục tiêu chất lượng và cách đo
+  │
+  ├── releases/              MỐC BÀN GIAO
+  │   ├── README.md          MVP và v1 khác nhau thế nào
+  │   ├── mvp.md             Bản chụp `900e226`: đã có gì, bằng chứng, việc chuyển sang v1
+  │   ├── v1.md              Điểm bắt đầu của v1, dẫn tới các trang liên quan
+  │   └── acceptance.md      Khi nào v1 xong, phân loại lỗi, 10 điều kiện phát hành, kiểm tra nhanh
+  │
+  ├── guides/                HƯỚNG DẪN THAO TÁC
+  │   ├── development.md     Cài đặt, chạy, cấu hình, kiểm thử, đồng bộ tài liệu
+  │   ├── community-development.md  Chạy và kiểm thử Community, nâng cấp database
+  │   ├── operations.md      Runbook: triển khai, rollback, sự cố, khóa tài khoản
+  │   └── writing.md         Quy ước viết tài liệu
+  │
+  ├── contracts/             OpenAPI và JSON Schema (sau này thêm `.proto` ở grpc/)
+  ├── fixtures/              Dữ liệu kiểm thử dạng JSON và SQL
+  │
+  ├── records/               HỒ SƠ (lịch sử, không sửa nội dung cũ)
+  │   ├── decisions/         Hồ sơ quyết định DEC-001 đến 173
+  │   ├── verification/      Kết quả kiểm thử theo gói (community/, messaging/)
+  │   ├── planning/          Kế hoạch và prompt cũ của DM
+  │   ├── migrations/        Lịch sử tổ chức lại tài liệu
+  │   └── templates/         Mẫu: hồ sơ phát hành, sự cố, thẻ Trello, họp tuần
+  │
+  └── archive/               Tài liệu cũ đã bị thay thế

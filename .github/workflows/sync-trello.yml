@@ -1,11 +1,21 @@
-name: Sync Markdown to Trello
+name: Sync tasks to Trello
+
+# Đồng bộ một chiều nội dung thẻ từ docs/project/tasks/*.md lên Trello.
+# Cách dùng và cài đặt: docs/project/tasks/README.md
 
 on:
   push:
     branches:
-      - main  # Hoặc master tùy theo nhánh chính của bạn
+      - main
     paths:
-      - 'docs/**'
+      - 'docs/project/tasks/**'
+      - 'scripts/sync_trello.py'
+      - '.github/workflows/sync-trello.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-trello
+  cancel-in-progress: false
 
 jobs:
   sync:
@@ -14,21 +24,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Push content to Trello - Customer Request
+      - name: Sync cards
         env:
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          CARD_ID: ${{ secrets.TRELLO_CARD_ID_TONGQUAN }}
-        run: |
-          FILE_PATH="docs/project.md"
-
-          if [ -f "$FILE_PATH" ]; then
-            # Dùng jq đọc nội dung file md và encode thành chuỗi JSON hợp lệ
-            jq -n --rawfile content "$FILE_PATH" '{desc: $content}' > payload.json
-
-            # Gửi request PUT dưới dạng application/json
-            curl --fail --show-error --request PUT \
-              --url "https://api.trello.com/1/cards/${CARD_ID}?key=${TRELLO_KEY}&token=${TRELLO_TOKEN}" \
-              --header "Content-Type: application/json; charset=utf-8" \
-              --data @payload.json
-          fi
+          TRELLO_BOARD_ID: ${{ vars.TRELLO_BOARD_ID }}
+          TRELLO_LIST_ID: ${{ vars.TRELLO_LIST_ID }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: python3 scripts/sync_trello.py

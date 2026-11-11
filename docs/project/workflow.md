@@ -77,7 +77,8 @@ Người phụ trách tự chuẩn bị yêu cầu, giao diện, thiết kế k�
 
 - Mỗi người tự chia nhỏ công việc của mình, tạo thẻ, ước lượng, cập nhật tiến độ và gắn bằng chứng.
 - Cả nhóm dùng chung một bảng để thấy phụ thuộc.
-- Mỗi thẻ theo [mẫu](../records/templates/trello-task.md): service hoặc mã gói, đầu ra, phạm vi, UC và AC nếu có, người làm và người review, ước lượng, hạn dự kiến, phụ thuộc, tiêu chí, kết quả.
+- Thẻ thuộc lộ trình viết trong [tasks](tasks/README.md) và tự đồng bộ lên Trello; thẻ phát sinh tạo thẳng trên Trello.
+- Mỗi thẻ theo [mẫu](../records/templates/trello-task.md): bước lộ trình ([STEP-1 đến 4](planning.md#roadmap)), service hoặc mã gói, đầu ra, phạm vi, UC và AC nếu có, người làm và người review, ước lượng, hạn dự kiến, phụ thuộc, tiêu chí, kết quả.
 - Các cột: Cần làm → Đang làm → Chờ kiểm tra → Hoàn tất. Thẻ bị chặn ghi rõ nguyên nhân, người cần xử lý và bước tiếp theo.
 - Chỉ chuyển sang Hoàn tất khi đạt tiêu chí và có kết quả kiểm tra. Số thẻ hoàn tất không phải tỷ lệ hoàn thành sản phẩm.
 

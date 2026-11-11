@@ -1,5 +1,6 @@
 # Mẫu nhiệm vụ Trello
 
+- Bước lộ trình (STEP-1 đến 4, xem [kế hoạch](../../project/planning.md#roadmap)):
 - Dịch vụ/nhóm chức năng và mã gói:
 - Người thực hiện / người kiểm tra:
 - Kết quả cần đạt và phạm vi:

@@ -83,7 +83,7 @@ Mã gói MVP giữ lại để truy vết. Bảng dưới là phân công lúc b
 | MVP-DM | Sáng | Chuyển lưu trữ, hợp đồng, Hub và outbox của Messaging; giữ hành vi DM; kiểm thử lại các luồng giữa service |
 | MVP-SYS | Thái; Vg và Sáng cung cấp migration và kết quả mong đợi | Compose nhiều service, công cụ migration, bí mật, CI, giám sát, công cụ vận hành |
 
-Gói chuyển service (V1-ARCH-01 đến 03) và gói Media xem [v1](v1.md). Mỗi người tự kiểm thử phần mình và có người khác kiểm tra lại ([quy trình](../project/workflow.md#review)).
+Các gói trên là phân công giai đoạn MVP. Lộ trình v1 xem [kế hoạch](../project/planning.md#roadmap). Mỗi người tự kiểm thử phần mình và có người khác kiểm tra lại ([quy trình](../project/workflow.md#review)).
 
 ## Chạy lại bản MVP
 

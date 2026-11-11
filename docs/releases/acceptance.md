@@ -11,7 +11,7 @@ Backup, khôi phục và đo RPO, RTO để [sau v1](../project/overview.md#back
 ## Khi nào v1 hoàn tất
 
 1. Làm xong [phạm vi sản phẩm](../project/overview.md#scope) và mọi ca sử dụng, tiêu chí đã chốt của từng tính năng, kể cả Media.
-2. Bốn service build, chạy, khởi động lại và triển khai độc lập; mỗi service chỉ dùng database của mình. Các luồng cũ chạy đúng quyền và dữ liệu; lỗi và timeout giữa service xử lý đúng chính sách. Một ứng dụng MVP đổi tên container là chưa đủ ([gói V1-ARCH](../project/planning.md#v1-architecture-packages)).
+2. Bốn service build, chạy, khởi động lại và triển khai độc lập; mỗi service chỉ dùng database của mình. Các luồng cũ chạy đúng quyền và dữ liệu; lỗi và timeout giữa service xử lý đúng chính sách. Một ứng dụng MVP đổi tên container là chưa đủ ([STEP-3](../project/planning.md#step-3)).
 3. Có kết quả chạy thật cho các tiêu chí chức năng, quyền, đồng thời, trình duyệt và [chất lượng](../system/quality.md#quality-targets). Fixture hay chỉ nhìn giao diện là chưa đủ.
 4. Đạt các [điều kiện phát hành](#release-gates), [kiểm tra sau triển khai](#smoke) và các buổi diễn tập dữ liệu, vận hành thuộc phạm vi.
 5. Có người nhận vận hành, và người có quyền xác nhận nghiệm thu và mở công khai ([DEC-111](../records/decisions/README.md#dec-111)). Hiện chưa chọn.
