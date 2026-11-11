@@ -1,26 +1,24 @@
-# SCDC — Hồ sơ và định danh công khai
+# SCDC — Hồ sơ người dùng
 
-Phạm vi UC-ACC-07. Identity sở hữu hồ sơ riêng; module khác nhận projection ID/username/displayName qua Contracts. Tên hiển thị không là khóa đăng nhập hoặc khóa hội thoại.
+Người dùng xem và sửa hồ sơ của mình: tên hiển thị, giới thiệu, ngôn ngữ, múi giờ. Người khác chỉ thấy ID, username và tên hiển thị.
 
-## Mục lục
+**Trạng thái:** API đọc và sửa hồ sơ đã có trong nền `900e226`. Giao diện chưa cho sửa ngôn ngữ và chưa hiện email (chỉ đọc). Chưa có test kiểm tra giá trị sau khi lưu.
 
-- [Quy tắc](#rules)
-- [Hành trình](#flows)
-- [Giao diện, API và dữ liệu](#contracts)
-- [Tiêu chí và kiểm thử](#acceptance)
-- [Hiện trạng](#status)
+Identity sở hữu hồ sơ. Module khác chỉ nhận ID, username và tên hiển thị qua hợp đồng (Contracts). Tên hiển thị không dùng để đăng nhập hay làm khóa cuộc trò chuyện.
 
 <a id="rules"></a>
 
 ## Quy tắc
 
-| Mã | Quy tắc/hành vi | Căn cứ |
-|---|---|---|
-| ACC-003 | Người đã đăng nhập sửa tên hiển thị, giới thiệu ngắn, ngôn ngữ và múi giờ của mình; tên tài khoản/email không cho đổi; email không công khai. | DEC-054, DEC-063, DEC-066 |
-| ACC-004 | API cần nhận diện tài khoản bằng định danh ổn định, không dùng tên hiển thị làm khóa. | Đề xuất kỹ thuật để đáp ứng tìm kiếm/chọn đúng người |
-| ACC-013 | Hồ sơ cho sửa `displayName`, `bio`, `locale`, `timezone`; bio tối đa 500 theo phép đếm hiện tại, locale 1–16 và timezone 1–64. v1 chưa thêm tải ảnh đại diện. | DEC-066; các giới hạn giữ theo API hiện tại |
+| Mã | Quy tắc |
+|---|---|
+| ACC-003 | Người đã đăng nhập sửa được tên hiển thị, giới thiệu, ngôn ngữ và múi giờ của mình. Không đổi được username và email. Email không công khai. |
+| ACC-004 | API nhận diện tài khoản bằng ID cố định, không dùng tên hiển thị. |
+| ACC-013 | Các trường sửa được: `displayName`, `bio` (tối đa 500), `locale` (1–16 ký tự), `timezone` (1–64 ký tự). v1 chưa có tải ảnh đại diện. |
 
-Tên hiển thị là trường tìm người theo DEC-019, trim, dài 1–64 UTF-16 và được trùng; username/email không đổi theo [ACC-008/009](registration-verification.md#rules). ACC-P05: hồ sơ ACC-013, projection công khai chỉ ID/username/displayName, khôi phục chỉ qua email (DEC-063/066/067). Quyền ACL-01 của chủ tài khoản ở [account-state](account-state.md#permissions).
+- Tên hiển thị dùng để tìm người, được cắt khoảng trắng hai đầu, dài 1–64 đơn vị UTF-16, và **được phép trùng**. Username và email không đổi được ([ACC-008, 009](registration-verification.md#rules)).
+- Thông tin công khai chỉ gồm ID, username và tên hiển thị. Khôi phục tài khoản chỉ qua email (ACC-P05).
+- Quyền của chủ tài khoản (ACL-01) xem [trạng thái tài khoản](account-state.md#permissions).
 
 <a id="flows"></a>
 
@@ -30,83 +28,112 @@ Tên hiển thị là trường tìm người theo DEC-019, trim, dài 1–64 UT
 
 <a id="uc-uc-acc-07--xem-và-sửa-hồ-sơ-riêng"></a>
 
-### UC-ACC-07 — Xem và sửa hồ sơ riêng
+### UC-ACC-07 — Xem và sửa hồ sơ
 
-**Tác nhân:** Người đã đăng nhập.
+**Ai làm:** người đã đăng nhập.
 
-**Điều kiện trước:** Phiên của chính tài khoản còn hạn/chưa thu hồi; tài khoản active và đã xác minh.
+**Điều kiện trước:** phiên còn hạn và chưa bị thu hồi; tài khoản đang hoạt động và đã xác minh.
 
-**Luồng chính:**
+**Các bước:**
 
-1. Người dùng mở ACC-S06; hệ thống tải hồ sơ riêng, gồm username/email chỉ đọc.
-2. Người dùng sửa `displayName`, `bio`, `locale`, `timezone` và gửi lưu.
-3. Hệ thống kiểm tra dữ liệu theo ACC-008/013, cập nhật hồ sơ của chính người gọi và trả hồ sơ đã lưu; giao diện cập nhật nội dung hiển thị.
+1. Người dùng mở màn hình hồ sơ (ACC-S06). Hệ thống hiện hồ sơ, username và email ở dạng chỉ đọc.
+2. Người dùng sửa tên hiển thị, giới thiệu, ngôn ngữ, múi giờ rồi bấm lưu.
+3. Hệ thống kiểm tra dữ liệu (ACC-008, 013), lưu hồ sơ của chính người gọi và trả về hồ sơ đã lưu; giao diện cập nhật.
 
-**Ngoại lệ:** Dữ liệu sai trả lỗi trường; lưu lỗi giữ bản đang sửa. Phiên không hợp lệ yêu cầu đăng nhập; không lấy user ID do người gọi cung cấp để sửa hồ sơ người khác. Các tên hiển thị trùng nhau được phép; việc chọn người trong DM dùng ID/username ổn định. Quy tắc chuẩn hóa và UTF-16 phải nhất quán HTTP–service–DB.
+**Ngoại lệ:**
 
-**Kết quả sau cùng:** Các trường hợp lệ được lưu; username/email giữ nguyên. Hồ sơ công khai chỉ có ID/username/tên hiển thị, không có email. v1 chưa có thao tác tải avatar; chưa áp dụng allowlist locale/timezone hoặc kiểm soát version mới khi chưa chốt contract.
+- Dữ liệu sai: báo lỗi theo từng trường. Lưu lỗi: giữ nguyên bản đang sửa.
+- Phiên không hợp lệ: yêu cầu đăng nhập lại.
+- Server không dùng user ID do client gửi; chỉ sửa hồ sơ của chính người gọi.
+- Tên hiển thị trùng với người khác vẫn được; khi chọn người trong DM thì dùng ID hoặc username.
+- Cách chuẩn hóa và đếm UTF-16 phải giống nhau ở HTTP, service và DB.
+
+**Kết quả:** các trường hợp lệ được lưu; username và email không đổi. Thông tin công khai không có email.
 
 <a id="contracts"></a>
 
 ## Giao diện, API và dữ liệu
 
-| Màn hình | Trạng thái và thao tác | Phản hồi/kết quả |
+| Màn hình | Trạng thái | Phản hồi |
 |---|---|---|
-| ACC-S06 Hồ sơ | Tải/lưu/lỗi; dữ liệu không hợp lệ | Giữ bản đang sửa khi lưu lỗi; tên tài khoản/email chỉ đọc; các trường sửa theo ACC-013 |
+| ACC-S06 Hồ sơ | Đang tải, đang lưu, lỗi, dữ liệu không hợp lệ | Lưu lỗi thì giữ bản đang sửa; username và email chỉ đọc |
 
-| Method / đường dẫn | Xác thực và đầu vào JSON | Kết quả thành công |
+| Method và đường dẫn | Đầu vào | Kết quả |
 |---|---|---|
-| `GET /users/me` | Bearer | 200 `UserAccountResponse` riêng tư |
-| `PATCH /users/me` | Bearer; `displayName, bio?, locale, timezone` | 200 hồ sơ sau cập nhật |
+| `GET /users/me` | Bearer | 200 `UserAccountResponse` |
+| `PATCH /users/me` | Bearer; `displayName`, `bio?`, `locale`, `timezone` | 200 hồ sơ sau khi lưu |
 
 - `UserAccountResponse`: `id, username, displayName, email, emailVerified, status, bio, avatarObjectKey, locale, timezone, createdAt, updatedAt, version`.
 - `SessionResponse`: `id, deviceName, userAgent, lastSeenIp, createdAt, lastSeenAt, expiresAt, isCurrent`.
 
-Email nằm trong hồ sơ riêng `users/me`, không phải hồ sơ công khai cho tìm kiếm. Token Development chỉ có giá trị khi `ExposeDevelopmentTokens` bật; không sử dụng chúng làm giao diện sản phẩm.
+Email chỉ có trong `/users/me` (hồ sơ riêng), không có trong kết quả tìm kiếm. Token Development chỉ xuất hiện khi bật `ExposeDevelopmentTokens`; không dùng chúng trong giao diện sản phẩm.
 
-| Bảng | Trách nhiệm và ràng buộc |
+| Bảng | Vai trò |
 |---|---|
-| `identity.users` | ID ổn định, username và trạng thái; unique username chuẩn hóa |
-| `identity.user_profiles` | Một hồ sơ mỗi user; tên hiển thị không phải khóa đăng nhập |
-| `identity.user_emails` | Unique email chuẩn hóa; tối đa một email primary; `verified_at` tách khỏi mật khẩu |
+| `identity.users` | ID cố định, username và trạng thái; username (đã chuẩn hóa) là duy nhất |
+| `identity.user_profiles` | Một hồ sơ mỗi người dùng |
+| `identity.user_emails` | Email (đã chuẩn hóa) là duy nhất; tối đa một email chính; `verified_at` tách khỏi mật khẩu |
 
-Module khác lấy `UserSummary(id, username, displayName)` qua `IUserDirectory`; interface này hỗ trợ tìm ID, username chính xác và nhiều ID. Nền `900e226` bổ sung [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs) cho tìm một phần username/displayName trong DM và [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) cho tác giả/peer lịch sử không còn available. Hai đường này đã tích hợp với DM; không suy directory summary thành đủ quyền truy cập. Hồ sơ công khai không trả email, mật khẩu, security stamp hoặc thông tin phiên.
+### Module khác lấy thông tin người dùng thế nào
 
-Nguồn đối chiếu: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [IdentityModule](../../../services/Modules/Identity/IdentityModule.cs), [IdentityDbContext](../../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [IUserDirectory](../../../services/SCDC.Contracts/Identity/IUserDirectory.cs).
+- `IUserDirectory` trả `UserSummary(id, username, displayName)`: tìm theo ID, theo username chính xác, hoặc nhiều ID.
+- [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs): tìm theo một phần username hoặc tên hiển thị, dùng trong DM.
+- [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs): lấy thông tin tác giả hoặc người kia trong lịch sử, kể cả khi tài khoản không còn hoạt động.
+
+Có thông tin người dùng không có nghĩa là có quyền truy cập. Thông tin công khai không bao giờ chứa email, mật khẩu, security stamp hay thông tin phiên.
+
+Code đối chiếu: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [IdentityModule](../../../services/Modules/Identity/IdentityModule.cs), [IdentityDbContext](../../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [IUserDirectory](../../../services/SCDC.Contracts/Identity/IUserDirectory.cs).
 
 <a id="normalization-hồ-sơ-và-chuẩn-hóa-khi-bàn-giao"></a>
 
-### Hồ sơ và chuẩn hóa khi bàn giao
+### Chuẩn hóa dữ liệu
 
-Chốt pipeline normalize → validate → transaction → constraint; validation HTTP không chạy bộ quy tắc khác service. Username/email unique ở DB xử lý cả đăng ký đồng thời. DisplayName trim/UTF-16 như ACC-008; bio hiện trim và rỗng thành null; locale/timezone giữ validation độ dài hiện tại, chưa tự thêm allowlist locale/zone chỉ vì có giá trị trông hợp lệ. Source đang dùng version hồ sơ ở response; cập nhật optimistic concurrency là hướng thiết kế, chưa thêm `expectedVersion` vào API hiện có khi chưa thay contract.
+Thứ tự xử lý: chuẩn hóa → kiểm tra → transaction → ràng buộc DB. Lớp HTTP không dùng bộ quy tắc khác với service.
+
+- Username và email duy nhất được đảm bảo bằng ràng buộc DB, kể cả khi hai người đăng ký cùng lúc.
+- Tên hiển thị: cắt khoảng trắng hai đầu, đếm UTF-16 như ACC-008.
+- Giới thiệu: cắt khoảng trắng; rỗng thì lưu null.
+- Ngôn ngữ và múi giờ: chỉ kiểm tra độ dài, chưa kiểm tra theo danh sách giá trị hợp lệ.
+- Phản hồi có `version` của hồ sơ, nhưng API chưa nhận `expectedVersion` để chống ghi đè.
 
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận và ca kiểm thử
 
-| Mã | Tình huống kiểm tra | Kết quả mong đợi |
+| Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| AC-ACC-03 | Hai tài khoản có cùng tên hiển thị xuất hiện trong tìm kiếm. | Người tìm chọn được đúng tài khoản qua định danh phân biệt. |
-| AC-ACC-08 | Người dùng xem/sửa hồ sơ; người khác tìm tài khoản đó. | Đổi được tên hiển thị; không đổi được tên tài khoản; kết quả công khai không có email. |
-| AC-ACC-17 | Sửa các trường hồ sơ đã chốt; thử sửa username/email hoặc tải avatar. | Tên hiển thị/bio/locale/timezone cập nhật hợp lệ; v1 không cung cấp thao tác đổi định danh hoặc tải avatar; không tuyên bố tính năng chỉ từ cột SQL. |
+| AC-ACC-03 | Hai tài khoản trùng tên hiển thị xuất hiện khi tìm kiếm | Người tìm chọn đúng tài khoản nhờ thông tin phân biệt |
+| AC-ACC-08 | Người dùng xem, sửa hồ sơ; người khác tìm tài khoản đó | Đổi được tên hiển thị; không đổi được username; kết quả công khai không có email |
+| AC-ACC-17 | Sửa các trường hồ sơ; thử đổi username, email hoặc tải ảnh đại diện | Tên hiển thị, giới thiệu, ngôn ngữ, múi giờ cập nhật được; không có thao tác đổi định danh hay tải ảnh. Cột SQL có sẵn không có nghĩa là có tính năng |
 
-Mọi AC/TC dưới đây cần kết quả chạy gắn commit/build; danh mục ca và assertion trong source không phải kết quả nghiệm thu. A là tài khoản đã xác minh, U chưa xác minh, A1/A2 là hai phiên của A. Dùng DB/email thử riêng và phiên trình duyệt độc lập.
+Ký hiệu: A là tài khoản đã xác minh, U chưa xác minh, A1 và A2 là hai phiên của A. Dùng DB và email thử riêng.
 
-| Mã ca | Tiền điều kiện và thao tác | Kết quả cần quan sát | Dẫn chiếu |
+| Mã ca | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| TC-ACC-05 | A đổi tên hiển thị; B tìm tên đó; thử đổi tên tài khoản | Tên hiển thị mới xuất hiện; tên tài khoản giữ nguyên; dữ liệu công khai không có email | AC-ACC-03, AC-ACC-08 |
-| TC-ACC-15 | Sửa từng trường hồ sơ và dữ liệu vượt giới hạn; xem thông tin trợ giúp khi mất email | Trường hợp lệ lưu được; định danh không đổi; không hứa khôi phục khác email | AC-ACC-17/18 |
+| TC-ACC-05 | A đổi tên hiển thị; B tìm tên đó; A thử đổi username | Tên mới xuất hiện; username không đổi; không lộ email | AC-ACC-03, 08 |
+| TC-ACC-15 | Sửa từng trường, nhập dữ liệu quá dài; xem trợ giúp khi mất email | Trường hợp lệ được lưu; định danh không đổi; không hứa khôi phục qua kênh khác ngoài email | AC-ACC-17, 18 |
 
-AC-ACC-11/TC-ACC-09 kiểm chứng biên displayName và định danh ở [đăng ký](registration-verification.md#acceptance). Tìm người một phần tên thuộc DM, không suy từ interface lookup hiện có.
+Giới hạn tên hiển thị và định danh (AC-ACC-11, TC-ACC-09) xem [đăng ký](registration-verification.md#acceptance). Tìm người theo một phần tên thuộc DM.
+
+Kết quả phải ghi kèm commit và build.
 
 <a id="status"></a>
 
-## Hiện trạng và khoảng trống
+## Hiện trạng
 
-Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Đối chiếu với [nền MVP `900e226`](../../releases/mvp.md) ngày 2026-10-13. Bảng test Identity giữ phần rà soát ngày 2026-10-04 và 05. Lần cập nhật này không chạy lại test. Phản hồi 200 hay 204 chưa chứng minh mọi kết quả sau đó.
 
-| UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
+| UC | Liên quan | Code hiện có | Test tự động | Còn thiếu |
 |---|---|---|---|---|
-| UC-ACC-07 | AC-03/08/11/17; TC-05/09/15 | `GetAsync`, `UpdateProfileAsync`; `GET/PATCH /users/me`; `UserDirectory`; form hồ sơ | Lifecycle: đọc username/emailVerified và PATCH trả 200 | Chưa assertion giá trị hồ sơ sau lưu/quyền riêng tư/biên UTF-16; UI chưa cho sửa locale hoặc xem email chỉ đọc; tìm người/projection lịch sử DM có [bằng chứng riêng](../../records/verification/messaging/README.md), không đóng toàn bộ UC hồ sơ |
+| UC-ACC-07 | AC-ACC-03, 08, 11, 17; TC-ACC-05, 09, 15 | `GetAsync`, `UpdateProfileAsync`; `GET` và `PATCH /users/me`; `UserDirectory`; form hồ sơ | Đọc username, `emailVerified`; PATCH trả 200 | Chưa kiểm tra giá trị sau khi lưu, quyền riêng tư và giới hạn UTF-16. Giao diện chưa cho sửa ngôn ngữ, chưa hiện email chỉ đọc. Tìm người và thông tin lịch sử DM có [bằng chứng riêng](../../records/verification/messaging/README.md) |
 
-ACC-GAP-07 được định nghĩa tại [đăng ký/xác minh](registration-verification.md#status); cần cùng fixture UTF-16 cho register/profile. UI chưa cho sửa locale hoặc xem email chỉ đọc; chưa assertion giá trị sau lưu/quyền riêng tư/biên UTF-16.
+ACC-GAP-07 định nghĩa tại [đăng ký](registration-verification.md#status): cần dùng chung fixture UTF-16 cho đăng ký và hồ sơ.
+
+## Còn mở
+
+- Kiểm tra ngôn ngữ và múi giờ theo danh sách giá trị hợp lệ.
+- Thêm `expectedVersion` để chống ghi đè khi hai nơi cùng sửa: cần đổi hợp đồng API.
+
+---
+
+Nguồn: DEC-019 (tìm theo tên hiển thị), DEC-054, DEC-063, DEC-066, DEC-067 (hồ sơ, định danh, khôi phục). ACC-004 là đề xuất kỹ thuật để chọn đúng người.

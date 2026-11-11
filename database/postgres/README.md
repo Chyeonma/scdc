@@ -26,9 +26,9 @@ Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`, `
 
 - [schema.sql](schema.sql): bootstrap schema, constraint, index, trigger và view; có DROP SCHEMA.
 - [seed.sql](seed.sql): dữ liệu minh họa, password/token không dùng đăng nhập.
-- [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/community-development.md#migration).
+- [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/development.md#migration).
 
-Compose chỉ chạy script init khi volume mới được khởi tạo. Sửa SQL không cập nhật volume có sẵn. Dùng [database thử riêng](../../docs/guides/community-development.md#local-environment) cho suite tích hợp.
+Compose chỉ chạy script init khi volume mới được khởi tạo. Sửa SQL không cập nhật volume có sẵn. Dùng [database thử riêng](../../docs/guides/development.md#local-environment) cho suite tích hợp.
 
 ## Truy vấn quan sát
 

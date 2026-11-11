@@ -1,8 +1,8 @@
 # Biên bản kiểm tra task nhắn tin riêng
 
-Mẫu theo [kế hoạch DM](../planning/messaging/direct-messaging.md). Sao chép vào hồ sơ task khi thực thi; mẫu này chưa ghi kết quả đã chạy. Không điền Đạt từ việc có source, build hoặc dữ liệu mock.
+Mẫu theo [kế hoạch DM](../../archive/2026-10-planning/messaging/direct-messaging.md). Sao chép vào hồ sơ task khi thực thi; mẫu này chưa ghi kết quả đã chạy. Không điền Đạt từ việc có source, build hoặc dữ liệu mock.
 
-Từng prompt có bốn ví dụ C01–C04 trong [prompt DM](../planning/messaging/direct-messaging-prompts.md), đối chiếu được với [catalogue ca thử](../../fixtures/dm-acceptance-cases.json). Ghi riêng từng case và biến thể; bổ sung AC/TC bắt buộc chưa có trong ví dụ. Không dùng kết quả agent để điền phần người dùng xác nhận.
+Từng prompt có bốn ví dụ C01–C04 trong [prompt DM](../../archive/2026-10-planning/messaging/direct-messaging-prompts.md), đối chiếu được với [catalogue ca thử](../../fixtures/dm-acceptance-cases.json). Ghi riêng từng case và biến thể; bổ sung AC/TC bắt buộc chưa có trong ví dụ. Không dùng kết quả agent để điền phần người dùng xác nhận.
 
 ## Task và bản chạy
 

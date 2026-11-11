@@ -1,27 +1,22 @@
 # SCDC — Khôi phục và đổi mật khẩu
 
-Phạm vi UC-ACC-05/06/08. Khôi phục qua email không cần phiên ứng dụng; đổi mật khẩu cần phiên hợp lệ và mật khẩu hiện tại. Cả reset/đổi thành công thu hồi mọi phiên, không tự xác minh email.
+Người quên mật khẩu có thể đặt lại qua link gửi tới email, không cần đăng nhập. Người đã đăng nhập có thể đổi mật khẩu nếu biết mật khẩu hiện tại. Cả hai cách, khi thành công, đều đăng xuất mọi thiết bị và không tự xác minh email.
 
-## Mục lục
-
-- [Quy tắc](#rules)
-- [Hành trình](#flows)
-- [Giao diện](#ux)
-- [API, dữ liệu và transaction](#contracts)
-- [Tiêu chí và kiểm thử](#acceptance)
-- [Hiện trạng](#status)
+**Trạng thái:** API quên, đặt lại, đổi mật khẩu đã có trong nền `900e226`. Chưa có trang đặt lại mật khẩu; giao diện chưa đăng xuất ngay sau khi đổi mật khẩu. Đặt lại cho tài khoản chưa xác minh, thời gian chờ và gửi email thật nằm ở nhánh Identity riêng ([hiện trạng email](email-links.md#status)).
 
 <a id="rules"></a>
 
 ## Quy tắc
 
-| Mã | Quy tắc/hành vi | Căn cứ |
-|---|---|---|
-| ACC-006 | Đợt đầu có luồng yêu cầu và thực hiện đặt lại mật khẩu qua email. | DEC-042 |
-| ACC-014 | Khôi phục chỉ qua email đã đăng ký, gồm tài khoản chưa xác minh theo DEC-051. Mất quyền truy cập email chưa có kênh khôi phục khác hoặc quy trình thủ công trong v1. | DEC-067; không thay đổi điều kiện xác minh trước khi vào ứng dụng |
-| ACC-016 | Đổi mật khẩu khi đã đăng nhập từ chối mật khẩu mới trùng mật khẩu hiện tại; đặt lại qua liên kết cho phép trùng nếu vẫn đúng policy. Reset thành công vẫn dùng token một lần, đổi security stamp và thu hồi mọi phiên dù mật khẩu trùng. | DEC-113; giữ hành vi hiện tại, không yêu cầu kiểm tra lịch sử mật khẩu |
+| Mã | Quy tắc |
+|---|---|
+| ACC-006 | Có luồng yêu cầu và thực hiện đặt lại mật khẩu qua email. |
+| ACC-014 | Chỉ khôi phục qua email đã đăng ký, kể cả tài khoản chưa xác minh. v1 không có kênh khôi phục khác hay xử lý thủ công khi mất email. |
+| ACC-016 | Đổi mật khẩu (đã đăng nhập): từ chối nếu mật khẩu mới trùng mật khẩu hiện tại. Đặt lại qua link: cho phép trùng, nhưng vẫn dùng hết token, đổi security stamp và đăng xuất mọi phiên. Không kiểm tra lịch sử mật khẩu. |
 
-Mật khẩu giữ nguyên nội dung, không trim; policy 8–128 `.Length`, ít nhất một chữ/số theo [ACC-010](sessions.md#rules). Token/reset cooldown, độc lập verify/reset, email worker và fragment theo [ACC-012](email-links.md). MFA, recovery code và external identity để Identity v2; v1 chưa có API.
+- Mật khẩu giữ nguyên, không cắt khoảng trắng; dài 8–128 (`.Length`), có ít nhất một chữ và một số ([ACC-010](sessions.md#rules)).
+- Token, thời gian chờ, worker email và cách đưa token qua fragment URL: xem [ACC-012](email-links.md).
+- MFA, mã khôi phục và đăng nhập bằng tài khoản ngoài để Identity v2.
 
 <a id="flows"></a>
 
@@ -31,41 +26,51 @@ Mật khẩu giữ nguyên nội dung, không trim; policy 8–128 `.Length`, í
 
 <a id="uc-uc-acc-05--yêu-cầu-khôi-phục-mật-khẩu"></a>
 
-### UC-ACC-05 — Yêu cầu khôi phục mật khẩu
+### UC-ACC-05 — Yêu cầu đặt lại mật khẩu
 
-**Tác nhân:** Người quên mật khẩu; hệ thống email hỗ trợ gửi liên kết.
+**Ai làm:** người quên mật khẩu.
 
-**Điều kiện trước:** Người dùng có email hợp lệ để gửi yêu cầu; để nhận và dùng liên kết, cần kiểm soát hộp thư đã đăng ký. Tài khoản chờ xác minh cũng được khôi phục theo DEC-051/067.
+**Điều kiện trước:** có email hợp lệ để gửi yêu cầu; muốn dùng link thì phải truy cập được hộp thư đã đăng ký. Tài khoản chưa xác minh cũng được.
 
-**Luồng chính:**
+**Các bước:**
 
-1. Người dùng nhập email tại ACC-S04 và gửi yêu cầu.
-2. Với tài khoản đủ điều kiện và ngoài cooldown 60 giây, hệ thống vô hiệu token reset cũ cùng mục đích, cấp token reset mới hạn 30 phút và tiếp nhận yêu cầu email.
-3. Hệ thống trả phản hồi accepted; giao diện hướng dẫn kiểm tra email, không tiết lộ trạng thái tài khoản hoặc hứa email đã giao.
+1. Người dùng nhập email ở màn hình Quên mật khẩu (ACC-S04) và gửi.
+2. Nếu tài khoản đủ điều kiện và đã qua thời gian chờ 60 giây: hủy token đặt lại cũ, cấp token mới hạn 30 phút, đưa yêu cầu gửi email vào hàng.
+3. Trả "đã tiếp nhận"; giao diện hướng dẫn kiểm tra email. Không tiết lộ email có tài khoản hay không, không hứa email đã được giao.
 
-**Ngoại lệ:** Unknown/unavailable/cooldown có cùng phản hồi công khai; trong cooldown không cấp thêm token hoặc làm mất link hiện tại. Hai request đồng thời chỉ cấp tối đa một token mới. Dữ liệu sai trả lỗi validation. Mất quyền truy cập email chưa có khôi phục thủ công hoặc kênh khác trong v1.
+**Ngoại lệ:**
 
-**Kết quả sau cùng:** Khi cấp mới, token reset cũ không dùng được; token verify độc lập. Mật khẩu, trạng thái xác minh và phiên hiện tại chưa thay đổi chỉ vì gửi yêu cầu. Limiter bổ sung vẫn hoãn DEC-089.
+- Email không tồn tại, tài khoản không dùng được, hoặc đang trong thời gian chờ: cùng một phản hồi. Trong thời gian chờ không cấp token mới, link cũ vẫn dùng được.
+- Hai yêu cầu đồng thời chỉ cấp tối đa một token.
+- Dữ liệu sai: lỗi validation.
+
+**Kết quả:** token đặt lại cũ hết hiệu lực (nếu có token mới); token xác minh email không bị ảnh hưởng. Mật khẩu, trạng thái xác minh và phiên chưa đổi. Giới hạn tần suất bổ sung vẫn hoãn (DEC-089).
 
 <a id="uc-uc-acc-06"></a>
 
 <a id="uc-uc-acc-06--đặt-lại-mật-khẩu-qua-liên-kết"></a>
 
-### UC-ACC-06 — Đặt lại mật khẩu qua liên kết
+### UC-ACC-06 — Đặt lại mật khẩu qua link
 
-**Tác nhân:** Người kiểm soát hộp thư khôi phục của tài khoản.
+**Ai làm:** người truy cập được hộp thư của tài khoản.
 
-**Điều kiện trước:** Người dùng có liên kết reset; không cần đăng nhập ứng dụng. Token phải đúng mục đích, còn hạn, chưa dùng/bị thay thế và tài khoản đủ điều kiện.
+**Điều kiện trước:** có link đặt lại; không cần đăng nhập. Token đúng mục đích, còn hạn, chưa dùng, chưa bị thay; tài khoản đủ điều kiện.
 
-**Luồng chính:**
+**Các bước:**
 
-1. Người dùng mở liên kết; GET không dùng token. Người dùng nhập và gửi mật khẩu mới.
-2. Hệ thống kiểm tra policy mật khẩu trước khi consume; dưới khóa kiểm tra lại token, rồi cập nhật mật khẩu, security stamp, reset lockout và thu hồi mọi phiên.
-3. Hệ thống đánh dấu token đã dùng và hoàn tất toàn bộ thay đổi; giao diện xóa phiên/cache liên quan và hướng dẫn đăng nhập lại.
+1. Mở link (mở link không dùng token). Nhập mật khẩu mới và gửi.
+2. Kiểm tra mật khẩu mới hợp lệ trước. Sau đó, dưới khóa, kiểm tra lại token; đổi mật khẩu, đổi security stamp, xóa khóa đăng nhập tạm và đăng xuất mọi phiên.
+3. Đánh dấu token đã dùng, commit tất cả cùng lúc. Giao diện xóa phiên và dữ liệu đệm, hướng dẫn đăng nhập lại.
 
-**Ngoại lệ:** Mật khẩu trái policy trả lỗi và giữ token hợp lệ để sửa lại. Token sai/hết hạn/đã dùng/bị thay thế trả lỗi chung và đường yêu cầu mới. Hai consume chỉ một thành công. Đổi mật khẩu bằng UC-ACC-08 trước đó làm token reset cũ không còn dùng được. Mật khẩu mới trùng mật khẩu hiện tại được chấp nhận nếu hợp lệ theo ACC-016/DEC-113; token vẫn bị consume và mọi phiên vẫn bị thu hồi.
+**Ngoại lệ:**
 
-**Kết quả sau cùng:** Mật khẩu được lưu theo policy đã chốt, mọi phiên cũ bị thu hồi, không tự đăng nhập. Trạng thái xác minh email giữ nguyên; tài khoản pending vẫn phải thực hiện UC-ACC-02. Token verify còn hạn độc lập với reset.
+- Mật khẩu không hợp lệ: báo lỗi, token vẫn dùng được để thử lại.
+- Token sai, hết hạn, đã dùng hoặc bị thay: một lỗi chung kèm đường yêu cầu link mới.
+- Hai lần dùng cùng token: chỉ một lần thành công.
+- Nếu trước đó đã đổi mật khẩu (UC-ACC-08), token đặt lại cũ không dùng được nữa.
+- Mật khẩu mới trùng mật khẩu cũ: được chấp nhận; token vẫn bị dùng và mọi phiên vẫn bị đăng xuất.
+
+**Kết quả:** mật khẩu mới có hiệu lực, mọi phiên cũ bị đăng xuất, không tự đăng nhập. Trạng thái xác minh email không đổi; tài khoản chưa xác minh vẫn phải làm UC-ACC-02.
 
 <a id="uc-uc-acc-08"></a>
 
@@ -73,100 +78,112 @@ Mật khẩu giữ nguyên nội dung, không trim; policy 8–128 `.Length`, í
 
 ### UC-ACC-08 — Đổi mật khẩu khi đã đăng nhập
 
-**Tác nhân:** Người đã đăng nhập và biết mật khẩu hiện tại.
+**Ai làm:** người đã đăng nhập và biết mật khẩu hiện tại.
 
-**Điều kiện trước:** Phiên của chính tài khoản hợp lệ; tài khoản active và đã xác minh.
+**Điều kiện trước:** phiên hợp lệ; tài khoản hoạt động và đã xác minh.
 
-**Luồng chính:**
+**Các bước:**
 
-1. Người dùng mở ACC-S07, nhập mật khẩu hiện tại và mật khẩu mới hợp lệ khác mật khẩu hiện tại.
-2. Hệ thống kiểm tra mật khẩu hiện tại, cập nhật mật khẩu/security stamp, reset lockout, vô hiệu token reset đang có và thu hồi mọi phiên trong cùng transaction.
-3. Giao diện xóa phiên/cache liên quan và về đăng nhập; người dùng đăng nhập lại bằng mật khẩu mới.
+1. Mở màn hình Đổi mật khẩu (ACC-S07), nhập mật khẩu hiện tại và mật khẩu mới (hợp lệ, khác mật khẩu hiện tại).
+2. Trong một transaction: kiểm tra mật khẩu hiện tại, đổi mật khẩu và security stamp, xóa khóa đăng nhập tạm, hủy token đặt lại đang có, đăng xuất mọi phiên.
+3. Giao diện xóa phiên và dữ liệu đệm, chuyển về đăng nhập.
 
-**Ngoại lệ:** Sai mật khẩu hiện tại hoặc mật khẩu mới trái policy trả lỗi; không đổi mật khẩu, vô hiệu token reset hay thu hồi phiên. Mật khẩu mới trùng hiện tại bị từ chối bằng `Identity.PasswordUnchanged` theo ACC-016/DEC-113 và không gây thay đổi dữ liệu. Login/refresh chạy đồng thời không được giữ phiên dùng mật khẩu/stamp cũ sau commit.
+**Ngoại lệ:**
 
-**Kết quả sau cùng:** Mật khẩu mới có hiệu lực; mọi thiết bị, gồm thiết bị thực hiện, phải đăng nhập lại. Token reset cấp trước đổi mật khẩu không còn dùng được; thao tác không đổi trạng thái xác minh email.
+- Sai mật khẩu hiện tại hoặc mật khẩu mới không hợp lệ: báo lỗi; không đổi gì.
+- Mật khẩu mới trùng hiện tại: `Identity.PasswordUnchanged`; không đổi gì.
+- Đăng nhập hay làm mới token chạy cùng lúc không được giữ lại phiên dùng mật khẩu cũ sau khi commit.
+
+**Kết quả:** mật khẩu mới có hiệu lực; mọi thiết bị, kể cả thiết bị đang dùng, phải đăng nhập lại. Token đặt lại cấp trước đó không dùng được. Trạng thái xác minh email không đổi.
 
 <a id="ux"></a>
 
 ## Giao diện
 
-| Màn hình | Trạng thái và thao tác | Phản hồi/kết quả |
+| Màn hình | Trạng thái | Phản hồi |
 |---|---|---|
-| ACC-S04 Quên mật khẩu | Nhập email, đang gửi, đã tiếp nhận | Phản hồi không tiết lộ email có tài khoản hay không; không hứa email đã được giao nếu mới tiếp nhận yêu cầu |
-| ACC-S05 Đặt lại mật khẩu | Liên kết hợp lệ/không dùng được; mật khẩu mới; hoàn tất | Không hiển thị token; thành công dẫn đến đăng nhập, mọi phiên cũ bị thu hồi; nếu chưa xác minh thì vẫn phải xác minh |
-| ACC-S07 Đổi mật khẩu | Đang nhập/đang lưu/sai mật khẩu hiện tại/thành công | Khi thành công xóa phiên giao diện và về đăng nhập; mọi thiết bị phải đăng nhập lại |
+| ACC-S04 Quên mật khẩu | Nhập email, đang gửi, đã tiếp nhận | Không tiết lộ email có tài khoản hay không; không hứa email đã được giao |
+| ACC-S05 Đặt lại mật khẩu | Link hợp lệ hoặc không; nhập mật khẩu mới; hoàn tất | Không hiện token. Thành công thì chuyển tới đăng nhập; chưa xác minh thì vẫn phải xác minh |
+| ACC-S07 Đổi mật khẩu | Đang nhập, đang lưu, sai mật khẩu hiện tại, thành công | Thành công thì xóa phiên và về đăng nhập |
 
-Trang reset chỉ POST khi người dùng gửi mật khẩu mới hợp lệ; không consume bằng GET. Link sai/hết hạn/đã dùng có cùng thông báo và đường yêu cầu lại. Đổi/reset thành công xóa phiên/cache và về login; pending vẫn quay về xác minh.
+Trang đặt lại chỉ gửi POST khi người dùng bấm gửi mật khẩu mới hợp lệ; không dùng token khi mở trang (GET). Link sai, hết hạn hay đã dùng đều hiện cùng một thông báo kèm nút yêu cầu link mới.
 
 <a id="contracts"></a>
 
-## API, dữ liệu và transaction
+## API và dữ liệu
 
-Prefix `/api/v1`; các endpoint sau có trong nền `900e226`. Reset pending/cooldown/email chưa tích hợp vào nền này; source trên nhánh Identity và giới hạn bằng chứng theo [email-links](email-links.md#status).
+Tiền tố `/api/v1`. Các endpoint dưới đã có trong nền `900e226`.
 
-| Method / đường dẫn | Xác thực và đầu vào JSON | Kết quả thành công |
+| Method và đường dẫn | Đầu vào | Kết quả |
 |---|---|---|
-| `POST /auth/forgot-password` | Public; `email` | 202 `PasswordResetRequestedResponse` |
-| `POST /auth/reset-password` | Public; `token, newPassword` | 204 |
-| `POST /auth/change-password` | Bearer; `currentPassword, newPassword` | 204; thu hồi phiên, cần đăng nhập lại |
+| `POST /auth/forgot-password` | Không cần đăng nhập; `email` | 202 `PasswordResetRequestedResponse` (`accepted, developmentResetToken`) |
+| `POST /auth/reset-password` | Không cần đăng nhập; `token, newPassword` | 204 |
+| `POST /auth/change-password` | Bearer; `currentPassword, newPassword` | 204; đăng xuất mọi phiên |
 
-- `PasswordResetRequestedResponse`: `accepted, developmentResetToken`.
-
-| Mã hiện tại | HTTP | Cách xử lý |
+| Mã lỗi | HTTP | Xử lý |
 |---|---|---|
-| `Identity.InvalidOrExpiredToken` | 400 | Liên kết không dùng được |
-| `Identity.RegistrationInvalid`, `Identity.PasswordInvalid`, `Identity.ProfileInvalid` và lỗi trường | 400 | Hiển thị `errors` tại trường; validation MVC có thể trả `Common.ValidationFailed` trước service |
-| `Identity.CurrentPasswordInvalid`, `Identity.PasswordUnchanged` | 400 | Báo tại trường mật khẩu hiện tại/mới; không xóa phiên khi đổi mật khẩu bị từ chối; trường hợp mật khẩu trùng theo DEC-113 |
+| `Identity.InvalidOrExpiredToken` | 400 | Link không dùng được |
+| `Identity.RegistrationInvalid`, `Identity.PasswordInvalid`, `Identity.ProfileInvalid` | 400 | Hiện lỗi theo trường. Validation của MVC có thể trả `Common.ValidationFailed` trước |
+| `Identity.CurrentPasswordInvalid`, `Identity.PasswordUnchanged` | 400 | Báo ở trường mật khẩu; không đăng xuất khi đổi bị từ chối |
 
-| Bảng | Trách nhiệm và ràng buộc |
+| Bảng | Nội dung |
 |---|---|
-| `identity.password_credentials` | Hash mật khẩu, phiên bản và thời điểm đổi; không lưu mật khẩu thô |
-| `identity.user_security_states` | Bộ đếm sai, thời hạn khóa, security stamp |
-| `identity.auth_sessions` / `refresh_tokens` | Phiên/thu hồi và chuỗi rotation; DB giữ hash token |
-| `identity.account_tokens` | Token băm, mục đích, target email, hạn và thời điểm dùng; token verify/reset không thay thế nhau |
+| `identity.password_credentials` | Hash mật khẩu, phiên bản, thời điểm đổi; không lưu mật khẩu thô |
+| `identity.user_security_states` | Số lần sai, thời hạn khóa đăng nhập, security stamp |
+| `identity.auth_sessions`, `refresh_tokens` | Phiên, thu hồi và chuỗi làm mới token; chỉ lưu hash token |
+| `identity.account_tokens` | Hash token, mục đích, email đích, hạn, thời điểm dùng. Token xác minh và đặt lại độc lập |
 
-Reset kiểm tra policy trước consume; dưới khóa user đọc lại token đúng purpose/target/hạn/active, rồi đổi hash/stamp, reset lockout, consume token và thu hồi phiên cùng transaction. Change-password khóa user trước credentials/sessions/tokens; thành công vô hiệu reset token cũ. Verify token độc lập với reset. Tranh khóa login/refresh không được giữ phiên/stamp cũ sau commit. Thiết kế consume/email đầy đủ ở [email-links](email-links.md#token-transaction).
+**Đặt lại:** kiểm tra mật khẩu trước; khóa dòng người dùng, đọc lại token (đúng mục đích, đúng email, còn hạn, còn hiệu lực); rồi trong cùng transaction đổi hash và stamp, xóa khóa đăng nhập tạm, đánh dấu token đã dùng, đăng xuất mọi phiên.
+
+**Đổi mật khẩu:** khóa người dùng trước, rồi mới tới mật khẩu, phiên và token; thành công thì hủy token đặt lại cũ.
+
+Đăng nhập hay làm mới token tranh khóa không được giữ phiên dùng stamp cũ sau commit. Thiết kế đầy đủ việc dùng token và email xem [liên kết email](email-links.md#token-transaction).
 
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận và ca kiểm thử
 
-| Mã | Tình huống kiểm tra | Kết quả mong đợi |
+| Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| AC-ACC-06 | Người dùng yêu cầu đặt lại mật khẩu qua email và hoàn tất luồng với thông tin hợp lệ. | Người dùng đăng nhập được bằng mật khẩu mới; thông tin đặt lại đã dùng không thể dùng lại. |
-| AC-ACC-10 | Tài khoản chưa xác minh hoàn tất đặt lại mật khẩu. | Mật khẩu mới có hiệu lực nhưng tài khoản vẫn chưa được vào ứng dụng cho tới khi xác minh email. |
-| AC-ACC-18 | Tài khoản mất quyền truy cập email tìm cách khôi phục. | Chỉ có luồng qua email đã đăng ký; thông tin trợ giúp không hứa có khôi phục thủ công hoặc qua kênh khác trong v1. |
-| AC-ACC-22 | Đổi và đặt lại mật khẩu với mật khẩu mới trùng mật khẩu hiện tại. | Đổi bị từ chối bằng `Identity.PasswordUnchanged`, không đổi dữ liệu hoặc thu hồi phiên/token reset; reset hợp lệ thành công, consume token, đổi stamp và thu hồi mọi phiên. Cả hai tuân policy mật khẩu; trạng thái xác minh không đổi (DEC-113). |
+| AC-ACC-06 | Tài khoản đã xác minh yêu cầu đặt lại mật khẩu và hoàn tất | Đăng nhập được bằng mật khẩu mới; link đã dùng không dùng lại được |
+| AC-ACC-10 | Tài khoản chưa xác minh đặt lại mật khẩu | Mật khẩu mới có hiệu lực nhưng vẫn chưa vào được ứng dụng cho tới khi xác minh |
+| AC-ACC-18 | Người mất truy cập email tìm cách khôi phục | Chỉ có luồng qua email đã đăng ký; trợ giúp không hứa kênh khác |
+| AC-ACC-22 | Đổi và đặt lại với mật khẩu mới trùng mật khẩu hiện tại | Đổi: bị từ chối (`Identity.PasswordUnchanged`), không đổi gì. Đặt lại: thành công, dùng hết token, đổi stamp, đăng xuất mọi phiên. Trạng thái xác minh không đổi |
 
-Mọi AC/TC dưới đây cần kết quả chạy gắn commit/build; danh mục ca và assertion trong source không phải kết quả nghiệm thu. A là tài khoản đã xác minh, U chưa xác minh, A1/A2 là hai phiên của A. Dùng DB/email thử riêng và phiên trình duyệt độc lập.
+Ký hiệu: A là tài khoản đã xác minh, U chưa xác minh, A1 và A2 là hai phiên của A. Dùng DB và email thử riêng.
 
-| Mã ca | Tiền điều kiện và thao tác | Kết quả cần quan sát | Dẫn chiếu |
+| Mã ca | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| TC-ACC-03 | U đặt lại mật khẩu rồi đăng nhập trước/sau xác minh | Khôi phục không tự xác minh; chỉ sau xác minh mới vào ứng dụng | AC-ACC-10 |
-| TC-ACC-19 | A có A1/A2 và token reset còn hạn: A1 đổi sang mật khẩu hiện tại rồi dùng token reset để đặt lại chính mật khẩu đó; lặp reset cho U sau khi triển khai ACC-GAP-01 | Change trả 400 `Identity.PasswordUnchanged`; mật khẩu/stamp/phiên/token reset giữ nguyên. Reset trả 204, đổi stamp, A1/A2 và refresh token cũ bị từ chối, token reset dùng lại bị từ chối; vẫn đăng nhập được bằng mật khẩu đó. U vẫn chưa xác minh và chưa được login. Ca chưa chạy; chưa có assertion tự động. | AC-ACC-22, UC-ACC-06/08, DEC-113 |
+| TC-ACC-03 | U đặt lại mật khẩu, đăng nhập trước và sau khi xác minh | Đặt lại không tự xác minh; chỉ sau xác minh mới vào được | AC-ACC-10 |
+| TC-ACC-19 | A có A1, A2 và một token đặt lại. A1 đổi sang chính mật khẩu hiện tại; rồi dùng token đặt lại về chính mật khẩu đó. Lặp với U sau khi xong ACC-GAP-01 | Đổi: 400 `Identity.PasswordUnchanged`, không gì thay đổi. Đặt lại: 204, stamp đổi, A1, A2 và refresh token cũ bị từ chối, token không dùng lại được; vẫn đăng nhập được bằng mật khẩu đó. U vẫn chưa xác minh. Chưa chạy, chưa có test tự động | AC-ACC-22 |
 
-AC-ACC-06 áp dụng tài khoản đã xác minh, AC-ACC-10 bao phủ pending. TC-ACC-15 kiểm tra trợ giúp khi mất email cùng hồ sơ ở [profile](profile.md#acceptance); TC-ACC-06/07/12/13/16/17/18 và AC-ACC-14/15/19/20/21 ở [email-links](email-links.md#acceptance).
+Ca khác: TC-ACC-15 (trợ giúp khi mất email) ở [hồ sơ](profile.md#acceptance); TC-ACC-06, 07, 12, 13, 16, 17, 18 và AC-ACC-14, 15, 19, 20, 21 ở [liên kết email](email-links.md#acceptance).
+
+Kết quả phải ghi kèm commit và build.
 
 <a id="status"></a>
 
-## Hiện trạng và khoảng trống
+## Hiện trạng
 
-Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Đối chiếu với [nền MVP `900e226`](../../releases/mvp.md) ngày 2026-10-13. Bảng test Identity giữ phần rà soát ngày 2026-10-04 và 05. Lần cập nhật này không chạy lại test. Phản hồi 200 hay 204 chưa chứng minh mọi kết quả sau đó.
 
-| UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
+| UC | Liên quan | Code hiện có | Test tự động | Còn thiếu |
 |---|---|---|---|---|
-| UC-ACC-05 | AC-10/14/18/19/21; TC-03/07/12/15/16/18 | `ForgotPasswordAsync`; `POST /auth/forgot-password`; form quên mật khẩu | Lifecycle: accepted và token reset cho account đã verify | ACC-GAP-01/02/05; chưa cấp token cho pending; chưa có cooldown/email thật hoặc test phản hồi các trạng thái |
-| UC-ACC-06 | AC-06/10/12/15/16/20/22; TC-03/06/10/13/14/17/18/19 | `ResetPasswordAsync`; `POST /auth/reset-password`; wrapper reset | Lifecycle: reset 204 với mật khẩu khác, access cũ bị từ chối, mật khẩu cũ không đăng nhập được; `Concurrent_reset_requests_can_consume_a_token_only_once` | Chưa có trang reset; thiếu test pending, biên hạn token, reset sai policy giữ token, verify/reset độc lập và reset mật khẩu trùng |
-| UC-ACC-08 | AC-12/16/17/22; TC-10/14/17/19 | `ChangePasswordAsync`; `POST /auth/change-password`; form đổi mật khẩu | Lifecycle: đổi 204, access cũ bị từ chối; `Changing_password_invalidates_previously_issued_reset_tokens`; hai test login/đổi mật khẩu tranh khóa | UI chưa xóa phiên ngay sau thành công; thiếu test sai mật khẩu hiện tại/policy/trùng |
+| UC-ACC-05 | AC-ACC-10, 14, 18, 19, 21; TC-ACC-03, 07, 12, 15, 16, 18 | `ForgotPasswordAsync`; `POST /auth/forgot-password`; form quên mật khẩu | Trả "đã tiếp nhận" và token cho tài khoản đã xác minh | ACC-GAP-01, 02, 05. Chưa cấp token cho tài khoản chưa xác minh; chưa có thời gian chờ, email thật, test phản hồi cho các trạng thái |
+| UC-ACC-06 | AC-ACC-06, 10, 12, 15, 16, 20, 22; TC-ACC-03, 06, 10, 13, 14, 17, 18, 19 | `ResetPasswordAsync`; `POST /auth/reset-password`; hàm gọi API | Đặt lại 204 với mật khẩu khác; access token cũ bị từ chối; mật khẩu cũ không đăng nhập được; `Concurrent_reset_requests_can_consume_a_token_only_once` | Chưa có trang đặt lại. Thiếu test cho: tài khoản chưa xác minh, hạn token, mật khẩu sai quy tắc vẫn giữ token, token xác minh và đặt lại độc lập, mật khẩu trùng |
+| UC-ACC-08 | AC-ACC-12, 16, 17, 22; TC-ACC-10, 14, 17, 19 | `ChangePasswordAsync`; `POST /auth/change-password`; form đổi mật khẩu | Đổi 204, access token cũ bị từ chối; `Changing_password_invalidates_previously_issued_reset_tokens`; hai test đăng nhập và đổi mật khẩu tranh khóa | Giao diện chưa đăng xuất ngay; thiếu test sai mật khẩu hiện tại, sai quy tắc, trùng |
 
-| Mã | Yêu cầu/căn cứ | Source hiện tại | Việc phải hoàn tất |
+| Mã | Yêu cầu | Code hiện tại | Cần làm |
 |---|---|---|---|
-| ACC-GAP-01 | Khôi phục trước xác minh — ACC-007/014, AC-ACC-10 | `ForgotPasswordAsync` trong `900e226` không tạo token nếu `VerifiedAt` null; nhánh Identity đã bổ sung theo [email-links](email-links.md#status) | Tích hợp triển khai nhánh Identity; chứng minh reset không tự xác minh bằng TC-ACC-03 |
+| ACC-GAP-01 | Khôi phục trước khi xác minh (ACC-007, 014, AC-ACC-10) | `ForgotPasswordAsync` trong `900e226` không tạo token khi `VerifiedAt` là null; nhánh Identity đã sửa ([email](email-links.md#status)) | Ghép nhánh Identity; chứng minh đặt lại không tự xác minh (TC-ACC-03) |
 
-| Test hiện có | Hành vi có assertion | Coverage còn thiếu |
+| Test hiện có | Đã kiểm tra | Còn thiếu |
 |---|---|---|
-| `Changing_password_invalidates_previously_issued_reset_tokens` | Đổi mật khẩu vô hiệu token reset cũ | Token verify phải độc lập; kiểm thử email đến trễ |
-| `Concurrent_reset_requests_can_consume_a_token_only_once` | Chỉ một reset dùng cùng token thành công | Verify đồng thời và resend |
+| `Changing_password_invalidates_previously_issued_reset_tokens` | Đổi mật khẩu hủy token đặt lại cũ | Token xác minh phải độc lập; email đến trễ |
+| `Concurrent_reset_requests_can_consume_a_token_only_once` | Chỉ một lần đặt lại thành công với cùng token | Xác minh đồng thời; gửi lại email |
 
-DEC-113 đã chốt ngày 2026-10-05: change từ chối trùng, reset cho phép trùng; chưa có assertion tự động cho trường hợp trùng. UI chưa có trang reset và chưa xóa phiên ngay sau đổi mật khẩu. ACC-GAP-02/05 về cooldown/email nằm ở [email-links](email-links.md#status).
+ACC-GAP-02 và 05 (thời gian chờ, email) xem [liên kết email](email-links.md#status).
+
+---
+
+Nguồn: DEC-042 (ACC-006), DEC-051, DEC-067 (ACC-014), DEC-089 (hoãn giới hạn tần suất), DEC-113 (ACC-016, chốt 2026-10-05).

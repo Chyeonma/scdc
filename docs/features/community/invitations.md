@@ -1,57 +1,38 @@
-# Liên kết mời và lời mời đích danh
+# SCDC — Lời mời
 
-Community / Invitations sở hữu lời mời, hiệu lực, lượt sử dụng, token và transition nhận/thu hồi. Quy tắc, luồng sử dụng, UX, thiết kế dữ liệu/API và tiêu chí kiểm chứng của chủ đề được quản lý tại trang này.
+Có hai cách mời người vào server: **link mời** (ai có link đều dùng được, có hạn và giới hạn lượt) và **mời đích danh** (gửi cho một người cụ thể, người đó phải bấm nhận). Phần Invitations của Community sở hữu lời mời, hạn, lượt dùng, token và các thao tác nhận, từ chối, thu hồi.
 
 <a id="implementation"></a>
 
-## Trạng thái theo khả năng
+**Trạng thái:** chỉ có thiết kế, chưa có code được nghiệm thu cho link mời (UC-COM-09, 10, 11) và mời đích danh (UC-COM-12, 13). Xem [kế hoạch](../../project/planning.md#community-work-items). Bảng API và cách lưu token bên dưới là thiết kế mục tiêu; schema và fixture không thay được bằng chứng nhận, thu hồi hay tranh lượt cuối.
 
-Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md), đã hợp nhất Community và DM trong một host. Bằng chứng từng gói và hợp nhất Community ngày 2026-10-08 giữ revision lịch sử; [kiểm tra tích hợp ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) có phạm vi riêng. Lần cập nhật này không chạy lại test; Hub/dispatcher DM đã có, chưa thay proof tin phòng hoặc thu hồi quyền Community.
-
-| Khả năng | Trạng thái và giới hạn | Bằng chứng |
-|---|---|---|
-| Link mời — UC-COM-09/10/11 | Thiết kế mục tiêu; chưa có gói runtime được nghiệm thu | [Kế hoạch](../../project/planning.md#community-work-items) |
-| Mời đích danh — UC-COM-12/13 | Thiết kế mục tiêu; chưa có gói runtime được nghiệm thu | [Kế hoạch](../../project/planning.md#community-work-items) |
-
-Bảng API và secret envelope bên dưới là thiết kế mục tiêu; schema/fixture hiện có không thay bằng chứng accept/revoke/lượt cuối.
-
-## Mục lục
-
-- [Quy tắc](#requirements)
-- [Use case](#use-cases)
-- [UX và trạng thái](#ux)
-- [Thiết kế dữ liệu và xử lý](#technical)
-- [Tiêu chí chấp nhận](#acceptance)
-- [Ca kiểm thử](#tests)
-- [Việc còn lại](#gaps)
-
-[Điều kiện chung và cơ chế Community](../../system/community.md#use-case-conditions) · [Hướng dẫn chạy và kiểm thử](../../guides/community-development.md) · [Mục lục Community](README.md).
+Điều kiện chung: [cơ chế Community](mechanics.md#use-case-conditions). Cách chạy: [hướng dẫn Community](../../guides/development.md#community). Tổng quan: [Community](README.md).
 
 <a id="requirements"></a>
 
 <a id="phạm-vi-và-quy-tắc"></a>
 
-## Phạm vi và quy tắc
+## Quy tắc
 
-| Mã | Quy tắc | Căn cứ |
-|---|---|---|
-| <a id="com-004"></a> COM-004 | Liên kết mời hợp lệ cho vào ngay, kể cả khi cộng đồng bật chế độ chờ duyệt. | DEC-025 |
-| <a id="com-005"></a> COM-005 | Người tạo liên kết mời chọn thời hạn hiệu lực. | DEC-028 |
-| <a id="com-010"></a> COM-010 | Chủ sở hữu hoặc người được cấp quyền có thể tạo liên kết mời. | DEC-031 |
-| <a id="com-019"></a> COM-019 | Cộng đồng riêng tư có thể tham gia bằng liên kết mời hoặc được thêm trực tiếp. | DEC-043 |
-| <a id="com-020"></a> COM-020 | Người có quyền tạo liên kết mời có thể thu hồi liên kết trước hạn; liên kết đã thu hồi không còn dùng để tham gia. | DEC-044 |
-| <a id="com-031"></a> COM-031 | Chủ sở hữu/người có quyền tạo mời gửi lời mời đích danh vào cộng đồng riêng tư; người nhận chấp nhận mới trở thành thành viên. | DEC-074 |
-| <a id="com-032"></a> COM-032 | Link mời chọn hạn 1 giờ/1 ngày/7 ngày/không hết hạn, mặc định 7 ngày; maxUses nguyên dương hoặc không giới hạn; người có quyền tạo mời được thu hồi. | DEC-075 |
-| <a id="com-036"></a> COM-036 | Mời đích danh hạn 7 ngày; đúng người nhận từ chối, người có quyền tạo mời hủy pending; sau trạng thái cuối không accept được. | DEC-087 |
-| <a id="com-041"></a> COM-041 | Lời mời đã tạo không tự vô hiệu khi creator rời/mất quyền; actor tạo/duyệt/hủy/thu hồi vẫn kiểm tra quyền hiện hành. | DEC-097 |
+| Mã | Quy tắc |
+|---|---|
+| <a id="com-004"></a> COM-004 | Link mời còn hiệu lực cho vào ngay, kể cả khi server bật chờ duyệt. |
+| <a id="com-005"></a> COM-005 | Người tạo link chọn thời hạn. |
+| <a id="com-010"></a> COM-010 | Chủ server hoặc người có quyền mời (`manage_invites`) tạo được link. |
+| <a id="com-019"></a> COM-019 | Server riêng tư vào được bằng link mời hoặc được mời trực tiếp. |
+| <a id="com-020"></a> COM-020 | Người có quyền mời thu hồi được link trước hạn; link đã thu hồi không dùng được. |
+| <a id="com-031"></a> COM-031 | Chủ server hoặc người có quyền mời gửi lời mời đích danh vào server riêng tư; người nhận bấm nhận mới thành thành viên. |
+| <a id="com-032"></a> COM-032 | Link mời có hạn 1 giờ, 1 ngày, 7 ngày (mặc định) hoặc không hết hạn; số lượt là số nguyên dương hoặc không giới hạn. |
+| <a id="com-036"></a> COM-036 | Mời đích danh có hạn 7 ngày. Người nhận từ chối được; người có quyền mời hủy được khi còn chờ. Đã kết thúc thì không nhận được nữa. |
+| <a id="com-041"></a> COM-041 | Lời mời đã tạo không mất hiệu lực khi người tạo rời server hay mất quyền. Nhưng người thực hiện tạo, hủy, thu hồi luôn được kiểm tra quyền hiện tại. |
 
 <a id="use-cases"></a>
 
 <a id="use-case"></a>
 
-## Use case
+## Ca sử dụng
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](../../system/community.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](traceability.md#use-case-coverage).
+Điều kiện, version, epoch, gửi lại và lỗi dùng chung: [quy ước tích hợp](mechanics.md#use-case-conditions). Quy tắc, AC, TC của từng ca: [bảng truy vết](traceability.md#use-case-coverage).
 
 <a id="uc-com-09"></a>
 
@@ -59,25 +40,24 @@ Bảng API và secret envelope bên dưới là thiết kế mục tiêu; schema
 
 ### UC-COM-09 — Tạo, xem và sao chép link mời
 
-**Module phụ trách:** Community / Invitations.
+**Ai làm:** chủ server hoặc thành viên có `manage_invites`, phiên và tư cách thành viên hợp lệ.
 
-**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+**Khi nào:** mở màn hình Lời mời (COM-S05) để tạo link hoặc sao chép lại link còn dùng được.
 
-**Tác nhân:** Owner hoặc thành viên có manage_invites.
+**Các bước:**
 
-**Điều kiện trước:** Actor có phiên/membership hợp lệ và quyền mời hiện hành trong server.
+1. Chọn hạn và số lượt ([COM-032](#com-032)). Hệ thống kiểm tra quyền và dữ liệu, ghi link cùng bản ghi chống trùng.
+2. Sau commit, trả thông tin và URL mời. Danh sách quản lý chỉ có thông tin, không có token.
+3. Khi sao chép lại: kiểm tra quyền hiện tại và link còn hiệu lực, đọc token đã bảo vệ, trả đúng URL.
 
-**Kích hoạt:** Actor mở COM-S05 để tạo link hoặc sao chép lại link còn dùng được.
+**Ngoại lệ:**
 
-**Luồng chính:**
+- Tạo lặp cùng khóa và nội dung không tạo link khác.
+- Link hết hạn, đã thu hồi hay hết lượt thì không trả lại URL.
+- Thiếu khóa giải mã thì báo lỗi phụ thuộc, không tự đổi token.
+- Người tạo đã rời hay mất quyền: link vẫn hiệu lực, nhưng người đó không còn lấy được link hay thu hồi được.
 
-1. Actor chọn hạn/lượt theo [COM-032](#com-032); hệ thống kiểm tra quyền/dữ liệu và ghi invite cùng operation tạo.
-2. Sau commit, trả metadata và URL mời; danh sách quản lý chỉ chứa metadata, không chứa token.
-3. Khi cần sao chép lại, hệ thống kiểm tra quyền hiện hành và hiệu lực invite, đọc secret được bảo vệ rồi trả đúng URL theo thiết kế.
-
-**Ngoại lệ:** Tạo lặp cùng khóa/payload không tạo link khác. Link hết hạn/thu hồi/hết lượt không được cấp lại URL sử dụng. Key thiếu trả lỗi phụ thuộc, không đổi token âm thầm. Creator rời/mất manage_invites không tự vô hiệu link, nhưng không còn quyền lấy link hoặc thu hồi chỉ vì từng tạo.
-
-**Kết quả sau cùng:** Link đã tạo có hạn/lượt đã chọn, có thể chia sẻ để người nhận dùng [UC-COM-11](#uc-com-11). Việc tạo/copy link chưa tạo membership và không cấp custom role qua link.
+**Kết quả:** link có hạn và lượt đã chọn, để chia sẻ cho [UC-COM-11](#uc-com-11). Tạo hay sao chép link chưa tạo thành viên, và link không cấp vai trò tùy chỉnh.
 
 <a id="uc-com-10"></a>
 
@@ -85,129 +65,126 @@ Bảng API và secret envelope bên dưới là thiết kế mục tiêu; schema
 
 ### UC-COM-10 — Thu hồi link mời
 
-**Module phụ trách:** Community / Invitations.
+**Ai làm:** chủ server hoặc thành viên hiện có `manage_invites` (không cần là người tạo).
 
-**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+**Khi nào:** chọn Thu hồi ở COM-S05.
 
-**Tác nhân:** Owner hoặc thành viên hiện có manage_invites, không cần là creator.
+**Các bước:**
 
-**Điều kiện trước:** Phiên/membership/quyền hợp lệ; actor biết invite thuộc server và version đã tải.
+1. Xác nhận link cần thu hồi, gửi `expectedVersion`.
+2. Kiểm tra quyền và version; đánh dấu đã thu hồi và xử lý token trong cùng transaction.
+3. Sau commit, danh sách hiện link đã thu hồi; xem trước hay tham gia bằng link đó bị từ chối.
 
-**Kích hoạt:** Actor chọn thu hồi tại COM-S05.
+**Ngoại lệ:**
 
-**Luồng chính:**
+- Version cũ hoặc người thực hiện đã mất quyền: từ chối.
+- Thu hồi tranh với tham gia: theo thứ tự commit. Tham gia commit trước thì giữ; thu hồi trước thì chặn.
+- Mất phản hồi: đọc lại thông tin, không tự gửi lại.
 
-1. Actor xác nhận invite cần thu hồi và gửi expectedVersion.
-2. Hệ thống kiểm tra quyền/version, đánh dấu revoked và xử lý secret theo thiết kế trong transaction.
-3. Sau commit, danh sách hiển thị invite đã thu hồi; preview/join tiếp theo không sử dụng được link đó.
-
-**Ngoại lệ:** Version cũ hoặc actor đã mất quyền từ chối. Revoke tranh join tuân thứ tự commit: join đã commit trước được giữ; revoke thắng trước chặn join. Mất response đọc lại metadata, không tự phát lại mutation.
-
-**Kết quả sau cùng:** Link không cấp membership mới. Thành viên đã tham gia bằng link không bị rời server vì thao tác thu hồi link.
+**Kết quả:** link không còn tạo thành viên mới. Người đã vào bằng link không bị đưa ra khỏi server.
 
 <a id="uc-com-11"></a>
 
 <a id="uc-com-11--xem-trước-và-tham-gia-bằng-link-mời"></a>
 
-### UC-COM-11 — Xem trước và tham gia bằng link mời
+### UC-COM-11 — Xem trước và tham gia bằng link
 
-**Module phụ trách:** Community / Invitations.
+**Ai làm:** người dùng đủ điều kiện, đang giữ link mời.
 
-**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+**Khi nào:** mở link và chọn Tham gia ở COM-S02.
 
-**Tác nhân:** Người dùng đủ điều kiện ứng dụng đang giữ link mời.
+**Các bước:**
 
-**Điều kiện trước:** Phiên hợp lệ; hiệu lực token/server được kiểm tra riêng khi preview và khi join.
+1. Giao diện lấy token từ link. Xem trước kiểm tra link còn hiệu lực và trả thông tin server, hạn và lượt còn lại; không trả phòng hay tin.
+2. Người dùng xác nhận. Dưới khóa, hệ thống kiểm tra lại hạn, thu hồi, lượt; tạo hoặc kích hoạt tư cách thành viên và tăng lượt trong cùng transaction.
+3. Kết thúc yêu cầu tham gia hay lời mời đích danh đang chờ (lý do `joined_elsewhere`). Sau commit, mở server và các phòng được xem; bỏ qua chế độ chờ duyệt.
 
-**Kích hoạt:** Người dùng mở link và chọn tham gia tại COM-S02.
+**Ngoại lệ:**
 
-**Luồng chính:**
+- Xem trước không tiêu lượt, không giữ chỗ.
+- Token sai, hết hạn, đã thu hồi: không tạo thành viên, không lộ nội dung server riêng tư.
+- Hai người tranh lượt cuối: chỉ một người vào; rollback không tiêu lượt.
+- Người đã là thành viên dùng link: không tiêu thêm lượt.
+- Người tạo đã rời hay mất quyền: link vẫn dùng được.
 
-1. Giao diện lấy token theo thiết kế link; preview kiểm tra hiệu lực và trả summary server cùng hạn/lượt còn lại, không trả phòng/tin.
-2. Người dùng xác nhận join; hệ thống kiểm tra lại hạn/thu hồi/lượt dưới khóa, tạo/kích hoạt membership và tăng lượt trong cùng transaction.
-3. Kết thúc pending join request hoặc mời đích danh đang chờ theo joined_elsewhere. Sau commit, mở server và phòng được phép, bỏ qua join mode chờ duyệt.
-
-**Ngoại lệ:** Preview không tiêu lượt hoặc giữ chỗ. Token sai/hết hạn/thu hồi không cấp membership hoặc lộ nội dung private. Hai người tranh lượt cuối chỉ một người vào; rollback không tiêu lượt. Người đang active join bằng link còn hợp lệ không tiêu thêm lượt. Creator đã rời/mất quyền không làm link mất hiệu lực.
-
-**Kết quả sau cùng:** Có một membership active với role mặc định; rejoin dùng epoch mới. Link không còn hợp lệ không trở thành cách phục hồi membership đã left.
+**Kết quả:** có một tư cách thành viên với vai trò mặc định; tham gia lại thì dùng epoch mới. Link hết hiệu lực không dùng để khôi phục tư cách đã rời.
 
 <a id="uc-com-12"></a>
 
 <a id="uc-com-12--gửi-xem-và-hủy-lời-mời-đích-danh"></a>
 
-### UC-COM-12 — Gửi, xem và hủy lời mời đích danh
+### UC-COM-12 — Gửi, xem, hủy lời mời đích danh
 
-**Module phụ trách:** Community / Invitations.
+**Ai làm:** chủ server hoặc thành viên có `manage_invites`.
 
-**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+**Điều kiện trước:** server riêng tư; người được mời chưa là thành viên.
 
-**Tác nhân:** Owner hoặc thành viên có manage_invites.
+**Khi nào:** mở quản lý lời mời (COM-S11), gửi mời hoặc hủy mời đang chờ.
 
-**Điều kiện trước:** Phiên/membership/quyền hợp lệ; tạo mời đích danh vào server private, recipient chưa là thành viên active.
+**Các bước:**
 
-**Kích hoạt:** Actor mở quản lý lời mời tại COM-S11, gửi mời hoặc hủy mời pending.
+1. Chọn người nhận theo ID. Hệ thống kiểm tra và tạo lời mời đang chờ, hạn 7 ngày, ghi bản ghi chống trùng.
+2. Người có quyền xem danh sách lời mời. Người nhận được thông báo để mở [UC-COM-13](#uc-com-13). Chưa nhận thì chưa là thành viên.
+3. Hủy: người có quyền hiện tại chọn hủy; hệ thống kiểm tra version và trạng thái, chuyển sang đã hủy, báo người nhận sau commit.
 
-**Luồng chính:**
+**Ngoại lệ:**
 
-1. Actor chọn recipient theo ID; hệ thống kiểm tra điều kiện và tạo mời pending hạn 7 ngày, ghi operation tạo.
-2. Actor xem danh sách mời theo quyền; recipient nhận thông báo để mở [UC-COM-13](#uc-com-13). Chưa accept chưa tạo membership.
-3. Khi actor có quyền hiện hành chọn hủy pending, hệ thống kiểm tra version/trạng thái rồi chuyển cancelled và thông báo đúng recipient sau commit.
+- Người nhận đã là thành viên: lỗi xung đột.
+- Tạo lặp khi lời mời còn chờ và còn hạn: trả lại lời mời đó, không kéo dài hạn. Lời mời đã quá hạn được kết thúc trước khi tạo mới.
+- Hủy tranh với nhận hay từ chối: chỉ một thao tác thắng.
+- Người tạo đã mất quyền thì không hủy được, nhưng lời mời vẫn hiệu lực.
 
-**Ngoại lệ:** Recipient đã active nhận xung đột. Pending còn hạn được trả lại khi tạo lặp, không kéo dài hạn; pending quá hạn được kết thúc trước khi tạo mời mới theo thiết kế. Cancel tranh accept/reject chỉ một transition thắng. Lời mời không tự vô hiệu khi creator rời/mất quyền; creator đó không được hủy nếu mất manage_invites.
-
-**Kết quả sau cùng:** Mời pending hoặc cancelled có trạng thái theo dõi được; tạo/hủy mời không cấp quyền đọc phòng. Trạng thái terminal của khóa tạo cũ không bị mở lại.
+**Kết quả:** lời mời ở trạng thái đang chờ hoặc đã hủy. Tạo hay hủy không cấp quyền đọc phòng. Lời mời đã kết thúc không mở lại được bằng khóa tạo cũ.
 
 <a id="uc-com-13"></a>
 
 <a id="uc-com-13--xem-chấp-nhận-hoặc-từ-chối-lời-mời-đích-danh"></a>
 
-### UC-COM-13 — Xem, chấp nhận hoặc từ chối lời mời đích danh
+### UC-COM-13 — Nhận hoặc từ chối lời mời đích danh
 
-**Module phụ trách:** Community / Invitations.
+**Ai làm:** đúng người được mời, đủ điều kiện dùng ứng dụng.
 
-**Phối hợp:** Identity (tài khoản/phiên), WebClient (giao diện).
+**Khi nào:** mở hộp lời mời (COM-S11), chọn Nhận hoặc Từ chối.
 
-**Tác nhân:** Đúng recipient của lời mời.
+**Các bước:**
 
-**Điều kiện trước:** Recipient đủ điều kiện ứng dụng; đọc inbox của mình. Accept/reject kiểm tra pending còn hạn và server/actor hiện hành.
+1. Hệ thống chỉ trả lời mời của chính người dùng, kèm thông tin server được phép biết; chưa nhận thì không tải phòng hay tin.
+2. **Nhận:** kiểm tra người nhận, hạn, trạng thái; chuyển sang đã nhận và tạo tư cách thành viên với vai trò mặc định trong cùng transaction. Không cần duyệt thêm.
+3. **Từ chối:** kiểm tra `expectedVersion`, chuyển sang đã từ chối.
+4. Giao diện hiện trạng thái cuối; nếu nhận thì mở các phòng được xem ([UC-COM-17](channels.md#uc-com-17)).
 
-**Kích hoạt:** Recipient mở inbox/COM-S11 rồi chọn accept hoặc reject.
+**Ngoại lệ:**
 
-**Luồng chính:**
+- Người khác nhận thay: bị từ chối.
+- Hết hạn, đã hủy, đã từ chối: không nhận được. Nhận, từ chối, hủy cùng lúc: chỉ một thắng.
+- Nhận lặp chỉ trả lại đúng tư cách đã tạo; không đưa người đã rời vào lại.
+- Đã vào bằng cách khác: lời mời đang chờ kết thúc (`joined_elsewhere`).
+- Người tạo mất quyền không ảnh hưởng lời mời còn hiệu lực.
 
-1. Hệ thống chỉ trả lời mời của recipient cùng summary server được phép biết; chưa nhận không tải phòng/tin.
-2. Khi accept, kiểm tra recipient/expiry/trạng thái rồi chuyển accepted và tạo/kích hoạt membership với role mặc định cùng transaction, không cần reviewer duyệt thêm.
-3. Khi reject, kiểm tra expectedVersion rồi chuyển rejected. Sau commit, giao diện hiển thị trạng thái cuối; accept mở phòng được xem qua [UC-COM-17](channels.md#uc-com-17).
-
-**Ngoại lệ:** Người khác nhận thay bị từ chối. Expired/cancelled/rejected không accept được; accept/reject/cancel đồng thời chỉ một transition thắng. Accept lặp chỉ trả membership còn đúng epoch đã tạo, không rejoin người đã rời. Joined bằng đường khác kết thúc pending mời theo joined_elsewhere. Creator mất quyền không ảnh hưởng hiệu lực mời còn hợp lệ.
-
-**Kết quả sau cùng:** Accept có một membership active và mời accepted; reject/expiry không tạo membership. Recipient vẫn xem được trạng thái lời mời của mình theo contract.
+**Kết quả:** nhận thì có một tư cách thành viên và lời mời ở trạng thái đã nhận. Từ chối hay hết hạn thì không tạo thành viên. Người nhận vẫn xem được trạng thái lời mời của mình.
 
 <a id="ux"></a>
 
 <a id="ux-và-trạng-thái"></a>
 
-## UX và trạng thái
+## Giao diện
 
-COM-S11 Lời mời đích danh theo DEC-074: người nhận xem đúng cộng đồng, chấp nhận hoặc từ chối; người mời được hủy khi còn chờ theo DEC-087; chưa nhận không tải phòng/tin.
-
-Preview/join link dùng [COM-S02](servers.md#ux); chưa accept không tải phòng/tin.
-
-| Màn hình | Người thực hiện | Nội dung và trạng thái cần thiết |
+| Màn hình | Ai dùng | Nội dung |
 |---|---|---|
-| COM-S05 Lời mời | Chủ sở hữu/người có quyền tạo lời mời | Tạo, chọn 1 giờ/1 ngày/7 ngày/không hết hạn, đặt lượt nguyên dương hoặc không giới hạn, sao chép, xem và thu hồi |
+| COM-S05 Lời mời | Chủ server, người có quyền mời | Tạo link; chọn hạn (1 giờ, 1 ngày, 7 ngày, không hết hạn) và số lượt; sao chép; xem; thu hồi |
+| COM-S11 Lời mời đích danh | Người nhận; người mời | Người nhận xem đúng server, nhận hoặc từ chối. Người mời hủy khi còn chờ. Chưa nhận thì không tải phòng hay tin |
+| COM-S02 Xem trước | Người có link | Xem trước và tham gia ([servers](servers.md#ux)); chưa vào thì không tải phòng hay tin |
 
 <a id="trạng-thái-lời-mời-đích-danh"></a>
 
 ### Trạng thái lời mời đích danh
 
-| Đối tượng/trạng thái | Thao tác | Kết quả và quyền |
+| Trạng thái | Sự kiện | Kết quả |
 |---|---|---|
-| Mời đích danh pending | Đúng người nhận chấp nhận, lời mời còn hợp lệ | Accepted và tạo membership cùng transaction; không thêm bước duyệt |
-| Mời đích danh pending | Người nhận từ chối / người có quyền tạo mời hủy / đủ 7 ngày | Rejected / Cancelled / Expired; không tạo membership, không chấp nhận sau trạng thái cuối |
+| Đang chờ | Đúng người nhận bấm nhận, còn hiệu lực | Đã nhận; tạo tư cách thành viên cùng transaction |
+| Đang chờ | Người nhận từ chối; người có quyền hủy; đủ 7 ngày | Đã từ chối; đã hủy; hết hạn. Không tạo thành viên; không nhận được nữa |
 
-Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích hợp UX](../../system/community.md#ux).
-
+Màn hình hẹp và trạng thái chung: [giao diện chung](mechanics.md#ux).
 
 <a id="technical"></a>
 
@@ -217,42 +194,59 @@ Phạm vi màn hình hẹp/trình duyệt và trạng thái chung theo [tích h�
 
 <a id="invite-thiết-kế-dữ-liệuapi"></a>
 
-### Thiết kế dữ liệu/API
+### API (mục tiêu)
 
-HTTP mục tiêu và quy ước chung ở [tích hợp](../../system/community.md#contracts); [OpenAPI Community](../../contracts/community.openapi.json) chứa contract đầy đủ và metadata trạng thái từng operation. Các route Invitations ở trang này còn là mục tiêu; phần đã chạy của những thành phần khác được quản lý tại [trạng thái theo khả năng](#implementation). Mỗi use case ứng dụng phối hợp dữ liệu của các phần trong [transaction chung](../../system/community.md#transactions).
+Quy ước chung: [Community](mechanics.md#contracts). Hợp đồng đầy đủ: [OpenAPI Community](../../contracts/community.openapi.json). Transaction: [transaction chung](mechanics.md#transactions).
 
-| Method / đường dẫn | Đầu vào | Kết quả và kiểm tra quyền |
+| Method và đường dẫn | Đầu vào | Kết quả và quyền |
 |---|---|---|
-| `POST /servers/{id}/invites` | `{expiresInSeconds,maxUses?}` | 201 metadata/link; expiresInSeconds là 3600/86400/604800/null, bỏ trường dùng mặc định 604800; quyền tạo mời |
-| `DELETE /servers/{id}/invites/{inviteId}` | ID link và expectedVersion | 204 thu hồi; đúng quyền, join sau thu hồi bị từ chối |
-| `POST /invites/preview` | `{token}` | 200 summary khi link hợp lệ; không tạo membership/tiêu lượt; không trả phòng/tin |
-| `POST /invites/join` | `{token}` | 200 membership; token trong body, kiểm tra hạn/thu hồi/lượt dưới khóa; không ghi body/token vào log |
-| `POST /servers/{id}/member-invitations` | `{recipientUserId}` | 201 mời pending; owner/quyền tạo mời; chưa tạo membership |
-| `POST /member-invitations/{invitationId}/accept` | Không có body | 200 membership; đúng người nhận, mời còn hợp lệ; không thêm bước duyệt |
-| `POST /member-invitations/{invitationId}/reject` | `{expectedVersion}` | 200 rejected; đúng người nhận; chỉ pending còn hạn |
-| `DELETE /servers/{id}/member-invitations/{invitationId}` | `expectedVersion` | 200 cancelled; quyền tạo mời; chỉ pending |
+| `POST /servers/{id}/invites` | `{expiresInSeconds, maxUses?}` | 201 thông tin và link. `expiresInSeconds` là 3600, 86400, 604800 hoặc null; bỏ trống thì 604800. Cần quyền mời |
+| `DELETE /servers/{id}/invites/{inviteId}` | ID link, `expectedVersion` | 204; cần quyền; tham gia sau đó bị từ chối |
+| `POST /invites/preview` | `{token}` | 200 thông tin server khi link hợp lệ; không tạo thành viên, không tiêu lượt, không trả phòng hay tin |
+| `POST /invites/join` | `{token}` | 200 tư cách thành viên. Token nằm trong body; kiểm tra hạn, thu hồi, lượt dưới khóa; không ghi body hay token vào log |
+| `POST /servers/{id}/member-invitations` | `{recipientUserId}` | 201 lời mời đang chờ; cần quyền mời; chưa tạo thành viên |
+| `POST /member-invitations/{invitationId}/accept` | Không có body | 200 tư cách thành viên; đúng người nhận, còn hiệu lực |
+| `POST /member-invitations/{invitationId}/reject` | `{expectedVersion}` | 200 đã từ chối; đúng người nhận, còn chờ và còn hạn |
+| `DELETE /servers/{id}/member-invitations/{invitationId}` | `expectedVersion` | 200 đã hủy; cần quyền mời; chỉ khi còn chờ |
 
 <a id="invite-giao-dịch-của-thành-phần"></a>
 
-#### Giao dịch của thành phần
+#### Mời đích danh
 
-- Mời đích danh: chỉ vào private theo DEC-074; unique pending/server/recipient, hạn 7 ngày, accept đúng recipient active/verified. Đang active thì create mời nhận 409 ALREADY_MEMBER; pending còn hạn thì POST lặp trả cùng mời, không kéo dài hạn. Accept và membership cùng transaction; accepted lặp chỉ trả membership nếu còn đúng membershipId đã tạo, không rejoin sau người nhận đã rời. Join bằng đường khác hủy mời pending với reason joined_elsewhere; sau trạng thái cuối hoặc expiry, lời mời cũ không được mở lại.
+- Chỉ cho server riêng tư (DEC-074). Mỗi server và người nhận chỉ có một lời mời đang chờ; hạn 7 ngày; người nhận phải đang hoạt động và đã xác minh.
+- Người nhận đã là thành viên: `409 ALREADY_MEMBER`. Lời mời còn chờ và còn hạn: gửi lặp trả lại lời mời đó, không kéo dài hạn.
+- Nhận và tạo thành viên trong cùng transaction. Nhận lặp chỉ trả tư cách nếu vẫn đúng `membershipId` đã tạo; không đưa người đã rời vào lại.
+- Vào bằng cách khác thì lời mời đang chờ bị hủy (`joined_elsewhere`). Đã kết thúc hay hết hạn thì không mở lại.
 
 <a id="invite-invite-secret"></a>
 
 <a id="invite-link-mời-hiệu-lực-và-secret"></a>
 
-#### Link mời, hiệu lực và secret
+#### Link mời: token và hiệu lực
 
-Link token kỹ thuật đề xuất là 32 byte ngẫu nhiên base64url, DB tra bằng SHA-256. Route SPA `/invite#token=…` lấy token vào RAM rồi bỏ fragment khỏi URL; API preview/join nhận token trong body. Điều chỉnh route draft cũ `/invites/{token}/join` để secret không nằm trong request path; không ghi body/token/URL mời trong log, audit hoặc outbox.
+**Token:**
 
-Theo DEC-097, hiệu lực link/mời đích danh không phụ thuộc creator còn là member/còn manage_invites. Revoke/cancel vẫn cần actor hiện có quyền; creator đã mất quyền không tự được hủy chỉ vì từng tạo. Không tự refresh hạn 7 ngày khi gọi lại POST mời đích danh. Pending quá hạn được chuyển expired dưới khóa trước khi tạo mời mới; partial index chỉ dùng trạng thái pending, không đặt `now()` trong predicate.
+- 32 byte ngẫu nhiên, mã hóa base64url; DB tra bằng SHA-256.
+- Link dạng `/invite#token=…`; trang lấy token vào bộ nhớ rồi xóa khỏi URL. API nhận token trong body (không đặt trong đường dẫn như bản nháp cũ `/invites/{token}/join`).
+- Không ghi body, token hay URL mời vào log, audit hay outbox.
 
-Preview chỉ trả server summary khi token còn hợp lệ, không có phòng/tin, không tiêu lượt và không giữ chỗ. Join khóa server/invite và kiểm tra `expiresAt > now`, revokedAt null, số lượt trước tạo membership; chỉ tăng lượt cho membership mới/reactivate. Rollback không tiêu lượt. Thành viên đang active gọi lại không tiêu lượt; link sai/không còn hợp lệ không cấp quyền mới. Người tranh lượt cuối chỉ một người join thành công; không hứa preview thành công là join chắc chắn còn lượt.
+**Hiệu lực (DEC-097):**
 
-Để người có quyền sao chép lại link khi response tạo bị mất, đề xuất giữ token trong envelope Data Protection `Community.InviteSecret.v1`, ngoài hash tra cứu. Metadata/list không có token; `GET /servers/{id}/invites/{inviteId}/link` trả URL chỉ cho manage_invites khi link còn dùng được, `Cache-Control:no-store`. Purge envelope khi thu hồi/hết hạn/hết lượt; link không hết hạn cần giữ key ring tương ứng qua restart/deploy. Phần backup liên quan chuyển sang [sau v1 theo DEC-156](../../project/overview.md#backup-scope). Key thiếu trả 503, không đổi token/link âm thầm.
+- Link và lời mời không phụ thuộc người tạo còn là thành viên hay còn quyền. Thu hồi và hủy vẫn cần người thực hiện có quyền hiện tại.
+- Gửi lại lời mời đích danh không làm mới hạn 7 ngày. Lời mời quá hạn được chuyển sang hết hạn dưới khóa trước khi tạo mới. Partial index chỉ lọc trạng thái "đang chờ", không dùng `now()`.
 
-Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](../../system/community.md#schema-migration). Thiết kế chưa được coi triển khai trước khi có migration và proof của writer/guard.
+**Xem trước và tham gia:**
+
+- Xem trước chỉ trả thông tin server khi link hợp lệ; không có phòng hay tin, không tiêu lượt, không giữ chỗ. Xem trước thành công không đảm bảo còn lượt khi bấm tham gia.
+- Tham gia khóa server và link; kiểm tra `expiresAt > now`, chưa thu hồi, còn lượt; rồi mới tạo thành viên. Chỉ tăng lượt khi tạo mới hoặc kích hoạt lại. Rollback không tiêu lượt. Người đã là thành viên gọi lại không tiêu lượt. Hai người tranh lượt cuối chỉ một người vào.
+
+**Sao chép lại link (đề xuất):**
+
+- Ngoài hash, giữ token trong envelope Data Protection `Community.InviteSecret.v1` để người có quyền lấy lại link khi lỡ mất phản hồi tạo.
+- Danh sách không chứa token. `GET /servers/{id}/invites/{inviteId}/link` chỉ trả URL cho người có `manage_invites` khi link còn dùng được, kèm `Cache-Control: no-store`.
+- Xóa envelope khi thu hồi, hết hạn, hết lượt. Link không hết hạn cần giữ key ring qua khởi động lại và triển khai. Thiếu khóa: 503, không tự đổi token. Backup khóa để [sau v1](../../project/overview.md#backup-scope).
+
+Thay đổi schema: [COM-SQL-01 đến 10](mechanics.md#schema-migration). Chưa được coi là đã làm khi chưa có migration và bằng chứng.
 
 <a id="acceptance"></a>
 
@@ -260,19 +254,18 @@ Các cột/ràng buộc/mapping cần thay theo [COM-SQL-01–10](../../system/c
 
 ## Tiêu chí chấp nhận
 
-| Mã | Tình huống kiểm tra | Kết quả mong đợi |
+| Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| <a id="ac-com-04"></a> AC-COM-04 | Người dùng mở liên kết mời còn hiệu lực của cộng đồng đang bật chờ duyệt. | Người dùng được vào ngay. |
-| <a id="ac-com-05"></a> AC-COM-05 | Người dùng mở liên kết mời đã hết hạn. | Người dùng không thể dùng liên kết đó để tham gia. |
-| <a id="ac-com-09"></a> AC-COM-09 | Chủ sở hữu, người được cấp quyền và thành viên thường lần lượt thử tạo liên kết mời. | Hai nhóm đầu tạo được liên kết; thành viên thường bị từ chối. |
-| <a id="ac-com-19"></a> AC-COM-19 | Người dùng thử tìm cộng đồng riêng tư, rồi dùng liên kết mời hợp lệ hoặc được thêm trực tiếp. | Cộng đồng không xuất hiện trong tìm kiếm; hai cách còn lại cho phép trở thành thành viên theo điều kiện tương ứng. |
-| <a id="ac-com-20"></a> AC-COM-20 | Người có quyền tạo lời mời thu hồi một liên kết còn hạn; người khác mở liên kết đó. | Hệ thống không cho tham gia bằng liên kết đã thu hồi. |
-| <a id="ac-com-31"></a> AC-COM-31 | Mời đích danh A vào cộng đồng riêng tư; B cố chấp nhận thay; A chưa nhận rồi nhận | B bị từ chối; A chưa nhận không có quyền phòng; sau nhận có một membership và không cần duyệt thêm |
-| <a id="ac-com-32"></a> AC-COM-32 | Link ở biên hạn/lượt; join đồng thời và gọi lặp của thành viên | Không vượt maxUses, không tăng lượt cho thành viên hiện hành; hết hạn/thu hồi không join được |
-| <a id="ac-com-41"></a> AC-COM-41 | Creator của link/mời đích danh rời hoặc mất manage_invites | Mời đã phát hành còn hiệu lực tới hạn/lượt/thu hồi; creator không còn quyền tự hủy, đúng actor hiện hành mới xử lý theo DEC-097 |
+| <a id="ac-com-04"></a> AC-COM-04 | Mở link mời còn hiệu lực của server đang bật chờ duyệt | Vào ngay |
+| <a id="ac-com-05"></a> AC-COM-05 | Mở link mời đã hết hạn | Không vào được |
+| <a id="ac-com-09"></a> AC-COM-09 | Chủ server, người có quyền, thành viên thường lần lượt thử tạo link | Hai người đầu tạo được; thành viên thường bị từ chối |
+| <a id="ac-com-19"></a> AC-COM-19 | Tìm server riêng tư; rồi dùng link hợp lệ hoặc được mời trực tiếp | Không thấy trong tìm kiếm; hai cách kia vào được theo điều kiện |
+| <a id="ac-com-20"></a> AC-COM-20 | Người có quyền thu hồi link còn hạn; người khác mở link | Không vào được |
+| <a id="ac-com-31"></a> AC-COM-31 | Mời A vào server riêng tư; B nhận thay; A chưa nhận rồi nhận | B bị từ chối; A chưa nhận thì chưa có quyền phòng; sau khi nhận có một tư cách thành viên, không cần duyệt |
+| <a id="ac-com-32"></a> AC-COM-32 | Link ở biên hạn và lượt; tham gia đồng thời; thành viên gọi lặp | Không vượt số lượt; không tăng lượt cho thành viên đã có; hết hạn hay đã thu hồi thì không vào được |
+| <a id="ac-com-41"></a> AC-COM-41 | Người tạo link hay lời mời rời server hoặc mất quyền | Lời mời vẫn hiệu lực tới khi hết hạn, hết lượt hay bị thu hồi; người tạo không tự hủy được nữa |
 
-
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](traceability.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [trạng thái theo khả năng](#implementation).
+Tiêu chí liên quan nhiều phần được định nghĩa ở trang chính; xem [bảng truy vết](traceability.md#use-case-coverage).
 
 <a id="tests"></a>
 
@@ -280,27 +273,29 @@ Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành p
 
 ## Ca kiểm thử
 
-Dùng [dữ liệu và cách ghi bằng chứng chung](../messaging/channel-messaging.md#evidence). Các ca bên dưới là đặc tả kiểm chứng; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
+Dữ liệu và cách ghi bằng chứng: [dùng chung](../messaging/channel-messaging.md#evidence). Mỗi ca cần test cho từng endpoint và kiểm tra quyền qua API.
 
-| Mã ca | Thao tác và dữ liệu | Kết quả cần quan sát | Dẫn chiếu |
+| Mã ca | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| <a id="tc-com-06"></a> TC-COM-06 | Link hợp lệ/hết hạn/thu hồi; dùng link trong cộng đồng chờ duyệt | Link hợp lệ tạo membership ngay; các link khác bị từ chối; pending cũ kết thúc cùng giao dịch | [AC-COM-04](#ac-com-04), [AC-COM-05](#ac-com-05), [AC-COM-20](#ac-com-20) |
-| <a id="tc-com-07"></a> TC-COM-07 | N/M tạo/thu hồi link và đổi join mode | Chỉ quyền tương ứng; link hợp lệ vẫn bỏ qua chờ duyệt | [AC-COM-08](servers.md#ac-com-08), [AC-COM-09](#ac-com-09), [AC-COM-20](#ac-com-20) |
-| <a id="tc-com-08"></a> TC-COM-08 | M mời đích danh P; N nhận thay; P nhận hai lần/đồng thời | N bị từ chối; trước nhận không là thành viên; nhận tạo một membership | [AC-COM-19](#ac-com-19), [AC-COM-31](#ac-com-31) |
-| <a id="tc-com-13"></a> TC-COM-13 | Dùng link đúng lúc hết hạn/hết lượt; nhiều request tranh lượt cuối; thành viên join lặp | Không vượt lượt, không nhân membership; rollback không tiêu lượt | [AC-COM-32](#ac-com-32) |
-| <a id="tc-com-17"></a> TC-COM-17 | Mời đích danh accept/cancel/reject đồng thời, ở cutoff 7 ngày và gọi sau trạng thái cuối | Một transition thắng; một membership nếu accept thắng; hết hạn không accept được | [AC-COM-31](#ac-com-31), [AC-COM-35](memberships.md#ac-com-35) |
-| <a id="tc-com-21"></a> TC-COM-21 | Creator leave/mất quyền; recipient accept hoặc join link; creator cố cancel/revoke | Mời vẫn dùng nếu hợp lệ; kiểm tra quyền actor hiện hành | [AC-COM-41](#ac-com-41) |
-| <a id="tc-com-24"></a> TC-COM-24 | Preview link rồi tranh lượt cuối; copy link thiếu key, revoke/expiry đúng cutoff | Preview không giữ chỗ; một membership/lượt; thiếu key không tạo token khác | [AC-COM-32](#ac-com-32) |
+| <a id="tc-com-06"></a> TC-COM-06 | Link hợp lệ, hết hạn, đã thu hồi; dùng link ở server chờ duyệt | Link hợp lệ tạo thành viên ngay; các link khác bị từ chối; yêu cầu đang chờ kết thúc cùng transaction | [AC-COM-04](#ac-com-04), [05](#ac-com-05), [20](#ac-com-20) |
+| <a id="tc-com-07"></a> TC-COM-07 | N và M tạo, thu hồi link, đổi cách tham gia | Chỉ người có quyền làm được; link hợp lệ vẫn bỏ qua chờ duyệt | [AC-COM-08](servers.md#ac-com-08), [09](#ac-com-09), [20](#ac-com-20) |
+| <a id="tc-com-08"></a> TC-COM-08 | M mời đích danh P; N nhận thay; P nhận hai lần hoặc đồng thời | N bị từ chối; trước khi nhận chưa là thành viên; nhận tạo đúng một tư cách | [AC-COM-19](#ac-com-19), [31](#ac-com-31) |
+| <a id="tc-com-13"></a> TC-COM-13 | Dùng link đúng lúc hết hạn, hết lượt; nhiều request tranh lượt cuối; thành viên tham gia lặp | Không vượt lượt, không nhân tư cách; rollback không tiêu lượt | [AC-COM-32](#ac-com-32) |
+| <a id="tc-com-17"></a> TC-COM-17 | Nhận, hủy, từ chối đồng thời; ở mốc 7 ngày; gọi sau khi đã kết thúc | Một thao tác thắng; một tư cách nếu nhận thắng; hết hạn không nhận được | [AC-COM-31](#ac-com-31), [AC-COM-35](memberships.md#ac-com-35) |
+| <a id="tc-com-21"></a> TC-COM-21 | Người tạo rời hay mất quyền; người nhận vẫn nhận hoặc dùng link; người tạo thử hủy hay thu hồi | Lời mời vẫn dùng được nếu hợp lệ; kiểm tra quyền người thực hiện hiện tại | [AC-COM-41](#ac-com-41) |
+| <a id="tc-com-24"></a> TC-COM-24 | Xem trước rồi tranh lượt cuối; sao chép link khi thiếu khóa; thu hồi hay hết hạn đúng mốc | Xem trước không giữ chỗ; một tư cách và một lượt; thiếu khóa không tạo token khác | [AC-COM-32](#ac-com-32) |
 
 <a id="gaps"></a>
 
 <a id="việc-còn-lại"></a>
 
-## Việc còn lại
+## Còn mở
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../../project/planning.md#community-work-items), [migration](../../system/community.md#schema-migration) và [vòng đời dữ liệu](../../system/data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Phụ thuộc chung: [kế hoạch](../../project/planning.md#community-work-items), [migration](mechanics.md#schema-migration), [vòng đời dữ liệu](../../system/data-lifecycle.md).
 
-| Nội dung | Thiết kế, triển khai và kiểm chứng còn lại | Liên quan |
-|---|---|---|
-| Lời mời | Hạn/lượt/issuer theo DEC-075/087/097; đã có thiết kế schema/secret/transaction, còn triển khai luồng xử lý, migration/key store và kiểm chứng. | OQ-003, OQ-004, OQ-008 |
-| Cộng đồng riêng tư | Đã chốt DEC-074/087/096; schema/inbox/notification có thiết kế; còn rà soát, triển khai và kiểm chứng. Không xóa server v1 theo DEC-094. | OQ-003, OQ-008 |
+- **Lời mời:** hạn, lượt, hiệu lực theo người tạo đã chốt (DEC-075, 087, 097); đã có thiết kế schema, token, transaction. Còn: làm code, migration, kho khóa, kiểm thử (OQ-003, 004, 008).
+- **Server riêng tư:** đã chốt (DEC-074, 087, 096); đã thiết kế schema, hộp lời mời, thông báo. Còn: rà soát, làm, kiểm thử. v1 không có xóa server (DEC-094).
+
+---
+
+Nguồn: DEC-025 (COM-004), DEC-028 (COM-005), DEC-031 (COM-010), DEC-043 (COM-019), DEC-044 (COM-020), DEC-074 (COM-031), DEC-075 (COM-032), DEC-087 (COM-036), DEC-097 (COM-041).

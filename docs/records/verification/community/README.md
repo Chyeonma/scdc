@@ -16,7 +16,7 @@ Cập nhật: 2026-10-08. Bảng này nối [truy vết đặc tả đầy đủ
 | Roles | `9a513d1` / `eae64c3` | 158 backend, 21 Node, 39 Chromium; [acceptance](roles.md) |
 | Phòng text/ACL | `eaaa2e3` / `f8d582d` | 191 backend, 24 Node, 50 Chromium; Release/production build đạt; [acceptance](channels-access.md) |
 
-Các số là tổng suite tại từng revision, gồm hồi quy; không cộng các gói để tính tổng test hoặc tiến độ. Bảng bên dưới đối chiếu source backend `eaaa2e3`, WebClient `f8d582d` trên `feat/community-channels` với kết quả gói cuối. Bổ sung tài liệu này không chạy lại test sản phẩm. TRX đã ghi ở `artifacts/community-channels/backend/community-channels.trx`, browser output/ảnh ở `artifacts/community-channels/`; artifact local bị ignore, không bảo đảm có sẵn trong checkout mới. Muốn bằng chứng mới dùng [hướng dẫn chạy lại](../../../guides/community-development.md), ghi revision và actual result mới vào acceptance tương ứng.
+Các số là tổng suite tại từng revision, gồm hồi quy; không cộng các gói để tính tổng test hoặc tiến độ. Bảng bên dưới đối chiếu source backend `eaaa2e3`, WebClient `f8d582d` trên `feat/community-channels` với kết quả gói cuối. Bổ sung tài liệu này không chạy lại test sản phẩm. TRX đã ghi ở `artifacts/community-channels/backend/community-channels.trx`, browser output/ảnh ở `artifacts/community-channels/`; artifact local bị ignore, không bảo đảm có sẵn trong checkout mới. Muốn bằng chứng mới dùng [hướng dẫn chạy lại](../../../guides/development.md#community), ghi revision và actual result mới vào acceptance tương ứng.
 
 Tên test dùng dạng `file::method` hoặc `file::test title`, tra theo commit nguồn của gói; các file feature đã được hợp nhất vào `main`. Backend prefix `tests/SCDC.Api.Tests/Community/`; browser prefix `clients/WebClient/e2e/`; Node prefix `clients/WebClient/tests/`. Các method theory có nhiều trường hợp trong TRX. Bảng giữ assertion đại diện cho từng nhóm tiêu chí; đọc toàn file/acceptance để xem fixture, fault injection và các assertion bổ sung. Những mô tả chưa merge trong acceptance cũ phản ánh thời điểm kiểm chứng của gói; trạng thái hiện tại theo [status](../../../features/community/README.md).
 
@@ -39,7 +39,7 @@ Môi trường: .NET SDK 10.0.112, PostgreSQL 18 trong container Podman tạm th
 | `npm run test:e2e -- --output ../../artifacts/community-main-merge/browser --reporter=line` với API/DB thật | 50 Chromium đạt trong 54,4 giây; log `artifacts/community-main-merge/browser.log` |
 | `podman-compose config` với khóa tổng hợp chỉ cho kiểm tra | Đạt cấu hình HMAC và volume keyring Community |
 
-Các artifact local bị ignore; checkout mới cần chạy lại theo [hướng dẫn](../../../guides/community-development.md). Kết quả này kiểm chứng nền Community/Identity hiện có và migrations, không thay proof tích hợp writer tin, Hub/dispatcher, reconnect hoặc deadline thu hồi ≤5 giây. Các gate chat MVP tiếp tục chưa được nghiệm thu; giới hạn theo [phần chưa kiểm chứng](#unverified).
+Các artifact local bị ignore; checkout mới cần chạy lại theo [hướng dẫn](../../../guides/development.md#community). Kết quả này kiểm chứng nền Community/Identity hiện có và migrations, không thay proof tích hợp writer tin, Hub/dispatcher, reconnect hoặc deadline thu hồi ≤5 giây. Các gate chat MVP tiếp tục chưa được nghiệm thu; giới hạn theo [phần chưa kiểm chứng](#unverified).
 
 <a id="backend"></a>
 

@@ -1,18 +1,33 @@
 # SCDC — Thoại, video và chia sẻ màn hình
 
-Phạm vi REQ-007/008/009, SCP-006/007 của [v1](../../releases/v1.md). Gọi riêng hai người và phòng thoại trong Community cùng dùng điều khiển nguồn, quota và provider. Cuộc gọi nhóm ngoài server không thuộc v1.
+Người dùng có thể gọi riêng cho một người, hoặc vào phòng thoại trong server để nói chuyện nhóm, bật camera và chia sẻ màn hình. Gọi nhóm ngoài server không thuộc v1.
 
-## Mục lục
+**Trạng thái:** đã thiết kế, chưa có code backend. Âm thanh và video truyền qua LiveKit tự host.
 
-| Chủ đề | Nội dung |
+**Người phụ trách:** Thái (xem [phân công](../../project/planning.md#team)). Phạm vi Media trên mobile chưa chốt, xem [Mobile](../../experience/mobile.md).
+
+## Các trang
+
+| Trang | Nội dung |
 |---|---|
-| [Cuộc gọi riêng](direct-calls.md) | Điều kiện DM, ringing/accept/reject/cancel/end, UX, API, dữ liệu/transaction, AC và hiện trạng |
-| [Phòng thoại](voice-rooms.md) | View/membership/epoch, vào/rời, tích hợp vòng đời channel, UX/API/AC và hiện trạng |
-| [Micro, video và chia sẻ](video-screen-sharing.md) | Capture, mic/camera/share, reservation/publish, quota nguồn, UX/API/AC và hiện trạng |
-| [Participation, quota và kết nối](participation-lifecycle.md) | Guard/claims/counter, reconnect, grant, realtime, LiveKit admission/cutoff, restart/restore và MEDIA-GAP |
+| [Cuộc gọi riêng](direct-calls.md) | Gọi, đổ chuông, nhận, từ chối, hủy, kết thúc; giao diện, API và tiêu chí chấp nhận |
+| [Phòng thoại](voice-rooms.md) | Ai được vào, vào và rời phòng, liên hệ với vòng đời phòng trong server |
+| [Micro, camera và chia sẻ màn hình](video-screen-sharing.md) | Bật, tắt nguồn phát; giới hạn số nguồn |
+| [Tham gia, hạn mức và kết nối](participation-lifecycle.md) | Cơ chế chung: kiểm tra quyền, đếm hạn mức, kết nối lại, cấp quyền LiveKit, ngắt khi mất quyền |
 
-## Phạm vi đọc và bàn giao
+Hai loại gọi dùng chung cơ chế điều khiển nguồn phát, hạn mức và LiveKit. Cơ chế chung được mô tả một lần trong trang [Tham gia, hạn mức và kết nối](participation-lifecycle.md).
 
-Mỗi chủ đề giữ hành vi, UX, API/dữ liệu/transaction, AC/TC và hiện trạng tương ứng. Các cơ chế participation/SFU dùng chung có một chủ sở hữu trong lifecycle. Contract máy đọc ở [OpenAPI](../../contracts/media.openapi.json) và [catalogue realtime](../../contracts/media-realtime.schema.json); không chỉnh schema bằng bản sao trong Markdown.
+## Hợp đồng máy đọc
 
-Gói V1-MEDIA-01–05 và phân công ở [hồ sơ v1](../../project/planning.md#v1-media-packages). Kết quả gắn commit/provider build/môi trường vào hồ sơ kiểm chứng của gói; fixture/danh mục test chưa tự chứng minh đạt. Các mô tả hiện trạng được giữ theo lần đối chiếu nguồn, việc tổ chức tài liệu này không chạy lại test.
+- API: [media.openapi.json](../../contracts/media.openapi.json)
+- Sự kiện realtime: [media-realtime.schema.json](../../contracts/media-realtime.schema.json)
+
+Sửa schema trực tiếp trong các file trên, không sửa bản chép trong Markdown.
+
+## Kế hoạch và kiểm thử
+
+Các gói V1-MEDIA-01 đến 05 nằm trong [kế hoạch Media](../../project/planning.md#v1-media-packages). Kết quả kiểm thử của mỗi gói phải ghi rõ commit, phiên bản LiveKit và môi trường chạy. Fixture và danh sách ca kiểm thử chưa chứng minh tính năng đã đạt.
+
+---
+
+Nguồn: REQ-007, REQ-008, REQ-009, SCP-006, SCP-007, [DEC-171](../../records/decisions/README.md#dec-171), [v1](../../releases/v1.md).

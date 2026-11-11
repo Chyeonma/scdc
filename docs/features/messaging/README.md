@@ -1,25 +1,46 @@
-# Messaging
+# SCDC — Nhắn tin
 
-Messaging phụ trách DM và tin trong phòng Community. Identity cung cấp danh tính/phiên; Community cung cấp channel, membership và quyền phòng. Một nền lưu/đồng bộ tin phục vụ cả hai ngữ cảnh; DM không dùng role/ACL cộng đồng.
+Người dùng có thể nhắn tin riêng với một người (DM) hoặc nhắn trong phòng của server. Cả hai dùng chung một cơ chế lưu và đồng bộ tin. DM không dùng vai trò hay quyền của cộng đồng.
 
-| Chủ đề | Nội dung |
+**Trạng thái:** nhắn tin riêng đã có trong nền MVP (commit `900e226`). Tin phòng mới có phần nền, chưa có ghi tin và realtime.
+
+**Người phụ trách:** Sáng (xem [phân công](../../project/planning.md#team)).
+
+## Các trang
+
+| Trang | Nội dung |
 |---|---|
-| [Nhắn tin riêng](direct-messaging.md) | Tìm người, hội thoại hai người, quyền DM, UI, API và AC/TC |
-| [Tin phòng](channel-messaging.md) | UC-COM-23/24/25, quyền phòng, API/Hub và kiểm chứng tích hợp |
-| [Lưu và thay đổi tin](message-lifecycle.md) | Tiếp nhận tin, chuyển sang hàng đợi, transaction, chống trùng, sửa/xóa và state client |
-| [Lịch sử và đồng bộ](synchronization.md) | Cursor/history, outbox, Hub, reconnect và thu hồi |
-| [Nội dung văn bản](text-policy.md) | Unicode, UTF-16, pipeline validation và TC-TEXT |
+| [Nhắn tin riêng](direct-messaging.md) | Tìm người, mở cuộc trò chuyện, quyền, giao diện, API và ca kiểm thử |
+| [Tin phòng](channel-messaging.md) | Nhắn trong phòng của server, quyền phòng, API và Hub realtime |
+| [Lưu và thay đổi tin](message-lifecycle.md) | Nhận tin, chống gửi trùng, sửa và xóa tin, trạng thái tin phía client |
+| [Lịch sử và đồng bộ](synchronization.md) | Tải lịch sử, outbox, Hub realtime, kết nối lại và thu hồi quyền |
+| [Nội dung văn bản](text-policy.md) | Kiểm tra Unicode, cách đếm độ dài và ca kiểm thử TC-TEXT |
 
-## Trạng thái và cách dùng
+## Đã có trong nền MVP
 
-Các chủ đề giữ quy tắc, UI, kỹ thuật và cách kiểm chứng liên quan cùng chỗ. Phạm vi sản phẩm tại [tổng quan v1](../../project/overview.md#scope); [MVP](../../releases/mvp.md) ghi nền nội bộ được kế thừa. Đối chiếu mã nền `900e226`: đã có tìm người, mở DM, inbox, gửi/lịch sử, retry chủ động, sửa/xóa, ChatHub/outbox và reconnect; nền vẫn là một API host Modular Monolith. Lifecycle space đã có, writer/realtime tin phòng và cơ chế xuyên service v1 còn là phần việc tiếp theo.
+Tìm người, mở DM, hộp thư, gửi tin, xem lịch sử, gửi lại khi lỗi, sửa và xóa tin, Hub realtime (`ChatHub`), outbox và kết nối lại. Tất cả chạy trong một ứng dụng API duy nhất.
 
-Kết quả được giữ theo revision và phạm vi tại [hồ sơ DM](../../records/verification/messaging/README.md), [gói DM-MVP](../../records/verification/messaging/DM-MVP.md) và [kiểm tra hợp nhất ngày 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md). Các hồ sơ có bằng chứng agent và xác nhận người dùng của từng gói; không suy toàn bộ hợp đồng/AC hoặc v1 đã nghiệm thu. Lần cập nhật hiện trạng này không chạy lại test ứng dụng.
+Chưa có: ghi tin và realtime cho tin phòng, cơ chế liên service của v1.
 
-Sáng phụ trách nền Messaging và UI DM; Vg giữ quyền/Community và review tích hợp; Thái cung cấp bộ chạy/dataset theo [phân công](../../project/planning.md#team). Chuẩn dữ liệu/API, trạng thái dự thảo và phụ thuộc trực tiếp được ghi ở từng chủ đề. Giữ mã DM/ACL/UC/AC/TC/DEC; schema hoặc fixture không thay bằng chứng chạy trên build cụ thể.
+Kết quả kiểm thử nằm ở [hồ sơ DM](../../records/verification/messaging/README.md), [gói DM-MVP](../../records/verification/messaging/DM-MVP.md) và [kiểm tra hợp nhất 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md). Mỗi hồ sơ chỉ chứng minh phạm vi của gói đó, không phải toàn bộ v1.
+
+## Phối hợp
+
+- Identity cung cấp danh tính và phiên đăng nhập.
+- Community cung cấp phòng, thành viên và quyền phòng.
+- [Thông báo](../notifications/README.md) và [gửi file](../files/README.md) là phần bổ sung, chưa chốt đợt bàn giao.
 
 <a id="detailed-design"></a>
 
 ## Hợp đồng chung
 
-REST xử lý mutation, SignalR `/hubs/chat` nhận cập nhật theo DEC-081; lỗi theo [quy ước API](../../system/api-conventions.md#contracts). Tài liệu [vòng đời tin](message-lifecycle.md), [đồng bộ](synchronization.md) và [nội dung](text-policy.md) là nguồn cơ chế chung; [Community](../../system/community.md) giữ điều kiện nền và ownership dữ liệu tích hợp. Transaction/guard của một host MVP phải được rà soát lại khi chuyển microservice ở v1.
+- Thao tác thay đổi dữ liệu đi qua REST. Cập nhật realtime đi qua SignalR tại `/hubs/chat` (DEC-081).
+- Mã lỗi theo [quy ước API](../../system/api-conventions.md#contracts).
+- Cơ chế chung nằm ở [vòng đời tin](message-lifecycle.md), [đồng bộ](synchronization.md) và [nội dung văn bản](text-policy.md).
+- Điều kiện liên quan tới Community nằm ở [tích hợp Community](../community/mechanics.md).
+
+MVP dùng transaction trong cùng một ứng dụng. Khi tách service ở v1, phần này phải thiết kế lại.
+
+---
+
+Nguồn: [DEC-081](../../records/decisions/README.md#dec-081), [DEC-171](../../records/decisions/README.md#dec-171), DEC-173.

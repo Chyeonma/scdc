@@ -1,40 +1,43 @@
 # SCDC — Cuộc gọi riêng
 
-Phạm vi REQ-007/008/009 và SCP-006/007 của v1. Hai người gọi từ hội thoại riêng; không cần kết bạn hoặc cùng Community, người nhận phải accept trước khi nghe media. Cuộc gọi nhóm ngoài server không thuộc v1; cuộc gọi nhỡ không ghi vào lịch sử DM (DEC-046, DEC-047, DEC-078).
+Hai người có thể gọi cho nhau từ cuộc trò chuyện riêng (DM). Không cần kết bạn hay cùng server. Người nhận phải bấm nhận thì cuộc gọi mới bắt đầu.
 
-## Mục lục
+**Trạng thái:** đã thiết kế, chưa có code (backend, API, LiveKit).
 
-- [Điều kiện và luồng](#flows)
-- [Giao diện](#ux)
-- [API, dữ liệu và transaction](#contracts)
-- [Tiêu chí và kiểm thử](#acceptance)
-- [Hiện trạng](#status)
+v1 không có gọi nhóm ngoài server, và không lưu cuộc gọi nhỡ vào lịch sử DM.
 
 <a id="flows"></a>
 
-## Điều kiện và luồng
+## Quy tắc
 
-Gọi riêng kiểm tra cả hai user đủ điều kiện DM, không gọi chính mình và không đòi kết bạn/cùng cộng đồng. User/session phía gọi phải còn hợp lệ khi accept; accept gắn phiên phía nhận. Nếu một bên mất phiên/quyền tài khoản hoặc rời sau accept, kết thúc cả cuộc gọi hai người. Trong phòng thoại chỉ kết thúc participation bị ảnh hưởng; xóa phòng kết thúc tất cả. Quyền quản lý phòng không cấp quyền tắt/bật thiết bị người khác; v1 không thêm kick/mute/ghi âm cuộc gọi từ quyền quản lý.
+- Cả hai người phải đủ điều kiện nhắn tin riêng với nhau. Không gọi cho chính mình.
+- Khi người nhận bấm nhận, phiên của người gọi vẫn phải còn hiệu lực.
+- Sau khi bắt đầu, nếu một bên rời, mất phiên hoặc mất quyền thì cả cuộc gọi kết thúc.
+- Ban đầu micro và camera tắt ([điều khiển nguồn](video-screen-sharing.md#rules)).
+- Không có chức năng đuổi, tắt tiếng hay ghi âm người khác.
 
-`clientInstanceId` là UUIDv4 trong RAM tab, không dùng ID session chung nhiều tab thay nó. Participation gắn user, session, client instance và connection epoch. Các ID này phục vụ phân biệt phiên, không thay Bearer hoặc kiểm tra quyền. Mỗi participation có một kết nối provider hợp lệ; sao chép token sang tab khác không được thay kết nối đang hoạt động. Grant chỉ trả cho phiên/tab sở hữu; snapshot chung không chứa grant, token, session ID hoặc security stamp.
+### Nhiều tab và nhiều thiết bị
 
-DEC-100: báo cuộc gọi đến cho các phiên desktop khả dụng; lần accept đầu thắng, nơi khác ngừng đổ chuông, không tự chiếm/chuyển participation. Ringing tối đa 30 giây; hai participation chỉ được cấp sau accept. Thiết bị ban đầu tắt theo [DEC-101 và điều khiển nguồn](video-screen-sharing.md#rules).
+- Cuộc gọi đến được báo trên mọi phiên máy tính đang mở của người nhận. Lần bấm nhận đầu tiên thắng; các nơi khác ngừng đổ chuông và không tự chuyển cuộc gọi sang.
+- Mỗi tab có một mã riêng `clientInstanceId` (UUIDv4, chỉ giữ trong bộ nhớ của tab). Lượt tham gia gắn với người dùng, phiên, tab và epoch kết nối. Các mã này chỉ để phân biệt phiên, không thay cho xác thực.
+- Mỗi lượt tham gia chỉ có một kết nối LiveKit. Sao chép token sang tab khác không chiếm được kết nối đang chạy.
+- Quyền LiveKit (grant) chỉ trả cho đúng tab sở hữu. Thông tin trạng thái gửi chung không chứa grant, token, mã phiên hay security stamp.
 
-| Luồng/trạng thái | Trigger | Kết quả |
+### Các trạng thái
+
+| Trạng thái | Sự kiện | Kết quả |
 |---|---|---|
-| Gọi riêng / requested | Kiểm tra hai tài khoản, phiên và điều kiện DM | Ringing nếu người nhận khả dụng; busy/unavailable nếu không; không cấp quyền nghe media trước accept |
-| Ringing | Người nhận accept trong 30 giây | Kiểm tra lại phiên/trạng thái/busy, cấp đủ hai slot trong một giao dịch rồi connecting |
-| Ringing | Reject, caller cancel hoặc hết 30 giây | Rejected/cancelled/no-answer; không tạo lịch sử cuộc gọi nhỡ trong DM |
+| Bắt đầu gọi | Kiểm tra hai tài khoản, phiên và điều kiện DM | Đổ chuông nếu người nhận khả dụng; báo bận hoặc vắng mặt nếu không. Chưa ai nghe được gì |
+| Đang đổ chuông | Người nhận bấm nhận trong 30 giây | Kiểm tra lại phiên, trạng thái và bận; cấp đủ hai chỗ trong một transaction rồi bắt đầu kết nối |
+| Đang đổ chuông | Từ chối, người gọi hủy, hoặc hết 30 giây | Kết thúc (từ chối, đã hủy, không trả lời). Không ghi cuộc gọi nhỡ |
 
-Sau accept, cả hai theo [vòng đời participation](participation-lifecycle.md#flows): connecting, connected, reconnect tối đa 30 giây, ended và provider draining. Một phía rời hoặc mất phiên/quyền sau accept kết thúc cả cuộc gọi.
+Sau khi nhận, cả hai đi theo [vòng đời tham gia](participation-lifecycle.md#flows): đang kết nối, đã kết nối, kết nối lại (tối đa 30 giây), kết thúc.
 
 <a id="ux"></a>
 
 ## Giao diện
 
-| Bước | Vùng giao diện dự kiến | Phản hồi cần thể hiện |
-|---|---|---|
-| Gọi riêng | Thao tác gọi từ hội thoại và màn hình cuộc gọi đến. | Người nhận bấm chấp nhận trước khi bắt đầu; người gọi biết trạng thái chờ/đã nhận/không nhận. Cuộc gọi nhỡ chưa lưu vào hội thoại ở đợt đầu. |
+Người gọi bấm nút gọi trong cuộc trò chuyện. Người gọi thấy trạng thái chờ, đã nhận hoặc không nhận.
 
 ```text
 MEDIA-S01 · Gọi đến
@@ -45,32 +48,41 @@ MEDIA-S01 · Gọi đến
 └────────────────────────────┘
 ```
 
-MEDIA-S04 báo người nhận bận/vắng mặt hoặc hệ thống hết chỗ; không tự retry accept/create khi kết quả chưa rõ. Sau nhận dùng MEDIA-S02 với điều khiển nguồn, MEDIA-S03 khi reconnect theo các chủ đề liên quan. Wireframe là đề xuất, chưa có prototype/kết quả review.
+- MEDIA-S04 báo người nhận bận, vắng mặt, hoặc hệ thống hết chỗ.
+- Không tự thử lại khi chưa rõ kết quả nhận hay tạo cuộc gọi.
+- Sau khi nhận: màn hình cuộc gọi MEDIA-S02 (có điều khiển nguồn); MEDIA-S03 khi đang kết nối lại.
+
+Wireframe là đề xuất, chưa có prototype hay review.
 
 <a id="contracts"></a>
 
-## API, dữ liệu và transaction
+## API
 
-[media.openapi.json](../../contracts/media.openapi.json) là schema HTTP mục tiêu, mọi endpoint chưa triển khai. Prefix `/api/v1`; actor/session do server lấy, lỗi theo [catalogue dùng chung](participation-lifecycle.md#errors).
+Schema mục tiêu: [media.openapi.json](../../contracts/media.openapi.json). Chưa endpoint nào được làm. Tiền tố `/api/v1`. Server tự xác định người gọi từ phiên đăng nhập. Mã lỗi xem [danh mục lỗi chung](participation-lifecycle.md#errors).
 
-| Endpoint công khai | Đầu vào/kết quả | Điều kiện |
+| Endpoint | Đầu vào → Trả về | Điều kiện |
 |---|---|---|
-| POST `/media/calls` | peerUserId + operation/instance → CallSnapshot | Hai user đủ điều kiện, presence desktop, claims trống |
-| GET `/media/calls/{callId}` | CallSnapshot | Chỉ hai user, kiểm tra phiên/quyền trước trả metadata |
-| POST `/media/calls/{callId}/accept`, `/reject`, `/cancel`, `/end` | operation/instance/expectedVersion → CallSnapshot | Accept/reject phía nhận; cancel phía gọi khi ringing; end một trong hai binding khi đã accept |
+| POST `/media/calls` | `peerUserId`, mã thao tác, mã tab → CallSnapshot | Hai người đủ điều kiện, người nhận đang online trên máy tính, cả hai đang rảnh |
+| GET `/media/calls/{callId}` | CallSnapshot | Chỉ hai người trong cuộc gọi; kiểm tra phiên và quyền trước |
+| POST `/media/calls/{callId}/accept` | mã thao tác, mã tab, `expectedVersion` → CallSnapshot | Người nhận |
+| POST `/media/calls/{callId}/reject` | như trên | Người nhận |
+| POST `/media/calls/{callId}/cancel` | như trên | Người gọi, khi đang đổ chuông |
+| POST `/media/calls/{callId}/end` | như trên | Một trong hai người, sau khi đã nhận |
 
-GET `/media/state` và grant/heartbeat của participation ở [hợp đồng lifecycle](participation-lifecycle.md#contracts). Snapshot không chứa JWT/grant/session ID/security stamp cho các tab khác.
+GET `/media/state`, cấp quyền LiveKit và heartbeat xem [API chung](participation-lifecycle.md#contracts).
 
-| Bảng đề xuất | Trường/ràng buộc cần review |
-|---|---|
-| `calls` | caller/callee, caller session/instance, callee binding sau accept, state, reason, ringExpiresAt, version, roomId; không lưu thành tin DM/lịch sử cuộc gọi nhỡ |
+### Dữ liệu
 
-Room/participation/claims/capacity/operation/outbox có một model dùng chung ở [lifecycle](participation-lifecycle.md#data). Call direct chỉ có hai user đã accept; hai slot phải được cấp atomically.
+Bảng đề xuất `calls`: người gọi, người nhận, phiên và tab của người gọi, phiên và tab của người nhận (sau khi nhận), trạng thái, lý do kết thúc, `ringExpiresAt`, `version`, `roomId`. Không lưu thành tin DM.
 
-1. Tạo call kiểm tra hai user và presence desktop; khóa hai user claims rồi tạo `ringing` với ringExpiresAt = thời điểm server +30 giây. Nếu bận/vắng mặt trả lỗi tương ứng, không cấp participation/token. Ringing chiếm ngữ cảnh hai user để tránh lời gọi chồng; quy tắc này còn cần review cùng lựa chọn nhiều thiết bị.
-2. Accept kiểm tra người nhận, phiên gọi vẫn hoạt động và `now < ringExpiresAt`. Khóa call, kiểm tra expectedVersion; nếu toàn hệ thống còn dưới hai chỗ thì cả call giữ ringing, trả `Media.SystemFull`, không tạo một participation lẻ. Đủ chỗ thì cấp hai participation, chuyển hai claim và call/room sang connecting trong cùng commit. Caller lấy participation/grant qua state, không đính JWT vào sự kiện gửi nhiều tab.
+Phòng, lượt tham gia, hạn mức và outbox dùng [mô hình chung](participation-lifecycle.md#data).
 
-Tất cả writer giữ cùng [thứ tự khóa và idempotency](participation-lifecycle.md#transaction). Lệnh provider chạy sau commit; rollback không tạo side effect SFU. `clientOperationId` dùng lại cho cùng thao tác, UI `retry:false`; khi chưa rõ kết quả đọc state, không tự accept hay cấp participation mới.
+### Xử lý
+
+1. **Tạo cuộc gọi:** kiểm tra hai người và trạng thái online; khóa trạng thái bận của cả hai; tạo cuộc gọi `ringing` với `ringExpiresAt` = giờ server + 30 giây. Nếu bận hoặc vắng mặt thì trả lỗi, không cấp gì. Khi đổ chuông, cả hai bị tính là bận để tránh gọi chồng.
+2. **Nhận cuộc gọi:** kiểm tra người nhận, phiên người gọi còn hiệu lực, và chưa hết giờ. Khóa cuộc gọi và kiểm tra `expectedVersion`. Nếu hệ thống còn dưới hai chỗ, giữ trạng thái đổ chuông và trả `Media.SystemFull`, không tạo lượt tham gia lẻ. Nếu đủ chỗ, cấp hai lượt tham gia và chuyển sang đang kết nối trong cùng một commit. Người gọi lấy quyền LiveKit qua API trạng thái, không nhận token qua sự kiện realtime.
+
+Mọi thao tác ghi dùng chung [thứ tự khóa và chống trùng](participation-lifecycle.md#transaction). Lệnh gửi LiveKit chạy sau commit, nên rollback không để lại gì trên LiveKit. Cùng một thao tác dùng lại `clientOperationId`; giao diện không tự thử lại. Khi chưa rõ kết quả, client đọc lại trạng thái, không tự nhận hay tạo lượt mới.
 
 <a id="acceptance"></a>
 
@@ -78,23 +90,28 @@ Tất cả writer giữ cùng [thứ tự khóa và idempotency](participation-l
 
 | Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| AC-MEDIA-01 | Hai người đã đăng nhập thực hiện cuộc gọi riêng rồi bật micro. | Người nhận có thể nhận hoặc từ chối; sau nhận và bật micro, hai bên nghe được nhau; ban đầu thiết bị tắt theo DEC-101. |
-| AC-MEDIA-06 | A gọi riêng cho B; B chưa bấm nhận, sau đó bấm chấp nhận. | Trước khi B chấp nhận, cuộc gọi chưa bắt đầu; sau khi B chấp nhận, hai bên vào cuộc gọi. |
-| AC-MEDIA-07 | A gọi riêng cho B nhưng B không nhận trong đợt đầu. | Cuộc gọi không bắt đầu; không tạo mục cuộc gọi nhỡ trong lịch sử hội thoại. |
-| AC-MEDIA-14 | Accept/reject/cancel/timeout xảy ra đồng thời hoặc trên nhiều thiết bị | Chỉ một trạng thái cuối; không có cuộc gọi bắt đầu sau cancel/timeout; không tạo cuộc gọi nhỡ trong lịch sử DM |
-| AC-MEDIA-16 | Người nhận online ở hai thiết bị, cả hai bấm nhận | Lần accept đầu thắng; thiết bị còn lại ngừng đổ chuông/báo bận, không chiếm hoặc chuyển phiên theo DEC-100 |
+| AC-MEDIA-01 | Hai người gọi cho nhau rồi bật micro | Người nhận nhận hoặc từ chối được; sau khi nhận và bật micro, hai bên nghe được nhau; ban đầu thiết bị tắt |
+| AC-MEDIA-06 | A gọi B; B chưa nhận, sau đó nhận | Trước khi B nhận, cuộc gọi chưa bắt đầu; sau khi nhận, hai bên vào cuộc gọi |
+| AC-MEDIA-07 | A gọi B nhưng B không nhận | Cuộc gọi không bắt đầu; không có mục cuộc gọi nhỡ trong lịch sử |
+| AC-MEDIA-14 | Nhận, từ chối, hủy, hết giờ xảy ra cùng lúc hoặc trên nhiều thiết bị | Chỉ có một kết quả cuối; không cuộc gọi nào bắt đầu sau khi đã hủy hoặc hết giờ |
+| AC-MEDIA-16 | Người nhận online trên hai thiết bị, cả hai bấm nhận | Lần nhận đầu thắng; thiết bị kia ngừng đổ chuông hoặc báo bận, không chiếm cuộc gọi |
 
-Mọi AC-MEDIA/TC-MEDIA chưa có kết quả chạy được ghi nhận. Dùng tài khoản thử, provider/môi trường và thiết bị có phiên bản cụ thể; kết quả phải gắn commit/provider build/môi trường theo [phương pháp đo](../../system/quality.md#quality-targets).
-
-| Mã | Thao tác | Kết quả cần quan sát | Dẫn chiếu |
+| Mã | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| TC-MEDIA-01 | Gọi người khả dụng/vắng mặt/bận; accept/reject/cancel/timeout 30 giây | Đúng trạng thái, chưa accept chưa nghe; không lưu missed call | AC-MEDIA-01/06/07/14 |
-| TC-MEDIA-11 | Accept hai thiết bị cùng version, rồi tab thứ ba join | Một bên thắng, nơi khác ngừng ring/busy; không tự handoff | AC-MEDIA-16 |
+| TC-MEDIA-01 | Gọi người khả dụng, vắng mặt, bận; nhận, từ chối, hủy, hết 30 giây | Đúng trạng thái; chưa nhận thì chưa nghe; không lưu cuộc gọi nhỡ | AC-MEDIA-01, 06, 07, 14 |
+| TC-MEDIA-11 | Nhận trên hai thiết bị cùng phiên bản, rồi tab thứ ba thử vào | Một bên thắng; nơi khác ngừng đổ chuông hoặc báo bận; không tự chuyển | AC-MEDIA-16 |
 
-TC-MEDIA-09 kiểm tra provider callback/accept-cancel và TC-MEDIA-05 về claim đa thiết bị ở [lifecycle](participation-lifecycle.md#acceptance).
+TC-MEDIA-09 (callback LiveKit, nhận và hủy cùng lúc) và TC-MEDIA-05 (bận trên nhiều thiết bị) xem [vòng đời tham gia](participation-lifecycle.md#acceptance).
+
+Chưa ca nào được chạy. Khi chạy, ghi rõ commit, phiên bản LiveKit, môi trường và thiết bị theo [phương pháp đo](../../system/quality.md#quality-targets).
 
 <a id="status"></a>
 
-## Hiện trạng và khoảng trống
+## Còn mở
 
-Đối chiếu tài liệu ngày 2026-10-06: chưa có backend/API/provider thực thi gọi riêng; contract, coordinator và UX là thiết kế mục tiêu. OQ-006, MEDIA-GAP-01/02/05 còn review limiter và proof accept/cancel/timeout/multi-device race. Định nghĩa các MEDIA-GAP và bằng chứng cần có ở [lifecycle](participation-lifecycle.md#status). Chưa có kết quả AC/TC hoặc nghiệm thu media/provider.
+- Quy tắc "đang đổ chuông thì cả hai bị tính là bận" cần xem lại cùng thiết kế nhiều thiết bị.
+- OQ-006 và MEDIA-GAP-01, 02, 05: giới hạn tần suất, bằng chứng cho các trường hợp nhận, hủy, hết giờ, nhiều thiết bị xảy ra cùng lúc. Định nghĩa xem [vòng đời tham gia](participation-lifecycle.md#status).
+
+---
+
+Nguồn: REQ-007, REQ-008, REQ-009, SCP-006, SCP-007, DEC-046, DEC-047, DEC-078 (phạm vi), DEC-100 (nhiều thiết bị), DEC-101 (thiết bị ban đầu tắt). Đối chiếu tài liệu ngày 2026-10-06.

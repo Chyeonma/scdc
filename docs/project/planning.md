@@ -2,399 +2,391 @@
 
 # SCDC — Kế hoạch và nguồn lực
 
-Nguồn chuẩn cho nhân sự, công suất, COST/AS/RSK, dự toán và lịch theo giai đoạn. Phạm vi sản phẩm tại [tổng quan](overview.md); phạm vi từng mốc tại [MVP](../releases/mvp.md) và [v1](../releases/v1.md).
+Trang này là nơi duy nhất ghi: ai phụ trách gì, công suất của nhóm, ngân sách và giả định, rủi ro, các gói công việc và thứ tự làm. Phạm vi sản phẩm xem [tổng quan](overview.md); phạm vi từng mốc xem [MVP](../releases/mvp.md) và [v1](../releases/v1.md).
 
 <a id="team"></a>
 
 <a id="nhân-sự-và-phối-hợp"></a>
 
-## Nhân sự và phối hợp
+## Nhân sự
 
 <a id="phân-công-thực-hiện-hiện-hành"></a>
 
-### Phân công thực hiện hiện hành
+### Phân công (từ 2026-11-01)
 
-Theo [DEC-117](../records/decisions/README.md#dec-117), phân công được cập nhật để mỗi người có đầu ra trọn vẹn và cân tải theo từng giai đoạn. Nhóm dùng AI hỗ trợ; gói việc bao gồm DB, backend, frontend, kiểm thử và tích hợp cần thiết. Vai trò frontend/QA riêng cho Thái và backend chung cho Sáng trước đây được thay bằng phân công dưới đây.
+Mỗi người phụ trách trọn một hoặc vài service: phân tích yêu cầu, thiết kế giao diện, dữ liệu, backend, frontend, kiểm thử, tích hợp và tài liệu. Nhóm dùng AI hỗ trợ; mỗi người phải hiểu và giải thích được kết quả của mình.
 
-| Thành viên | MVP — một host Modular Monolith | v1 — microservice và bản hoàn thiện | Khả năng tham gia |
+| Thành viên | Phụ trách | Trách nhiệm chung | Thời gian |
 |---|---|---|---|
-| Vg | Trưởng nhóm/đại diện sản phẩm; chốt quyết định quan trọng, hoàn thiện phần Identity còn lại và phụ trách Community từ DB tới frontend | Chủ trì ranh giới service và chính sách quyền/phiên/media; chuyển Identity, hoàn thiện Community và review phần rủi ro cao | 3–4 ngày/tuần theo DEC-088 |
-| Sáng | Phụ trách Direct Messaging từ DB tới frontend; nền lưu/gửi/nhận/lịch sử dùng chung cho tin phòng | Chuyển Messaging và các hợp đồng liên quan; hoàn thiện nhắn tin, backend và frontend điều khiển lifecycle cuộc gọi | 3–4 ngày/tuần theo DEC-088 |
-| Thái | Phụ trách Email Worker; bộ chạy Compose/config/CI, dữ liệu demo và công cụ kiểm tra tích hợp | Hiện thực môi trường nhiều service, định tuyến/CI; tích hợp provider/SDK media, thiết bị và hiển thị nguồn theo hợp đồng đã chốt; hoàn thiện worker/công cụ vận hành | 3–4 ngày/tuần theo DEC-088 |
+| Vg | Identity và Community | Trưởng nhóm, đại diện sản phẩm: mục tiêu, phạm vi, kiến trúc tổng thể, quyết định quan trọng, kế hoạch, điều phối, triển khai hệ thống | 3–4 ngày/tuần |
+| Sáng | Messaging và thông báo | Hợp đồng tin nhắn và thông báo, tích hợp với service khác, chuẩn bị triển khai phần mình | 3–4 ngày/tuần |
+| Thái | Media control và LiveKit; gửi file; gửi email | Vòng đời cuộc gọi và phòng thoại, thiết bị, hợp đồng file và email, chuẩn bị triển khai phần mình | 3–4 ngày/tuần |
 
-Vg giữ thẩm quyền chốt phạm vi và quyết định kỹ thuật quan trọng. Phân công phát triển không tự chọn người ký nghiệm thu/mở công khai hoặc cấp quyền production; các nội dung này vẫn thuộc DEC-111/OQ-011.
+- Vg quyết định phạm vi và thiết kế tổng thể. Mỗi người tự thiết kế chi tiết và tạo nhiệm vụ Trello trong phạm vi đã thống nhất. Thay đổi ảnh hưởng phạm vi, kiến trúc hay hợp đồng chung phải thống nhất với Vg.
+- Phân công phát triển chưa chọn người ký nghiệm thu hay người quyết định mở công khai (DEC-111, OQ-011).
+- Phân công trong [MVP](../releases/mvp.md) giữ lại làm lịch sử.
 
 <a id="ranh-giới-phối-hợp"></a>
 
-### Ranh giới phối hợp
+### Phối hợp
 
-| Hạng mục | Người chịu trách nhiệm | Cách phối hợp để tránh dồn việc |
+| Việc | Người chịu trách nhiệm | Phối hợp |
 |---|---|---|
-| Sản phẩm và kiến trúc | Vg | Chốt quy tắc, hợp đồng và lựa chọn quan trọng; Sáng/Thái tự xử lý chi tiết trong gói đã thống nhất, chỉ đưa lên các thay đổi ảnh hưởng phạm vi/quyền/dữ liệu/tích hợp |
-| Identity và Community | Vg | Sáng cung cấp nền Messaging cho tin phòng; Thái cung cấp email worker và môi trường thử. Tận dụng code/UI đã có, tính công sức review/hướng dẫn trong quỹ của Vg |
-| DM và tin phòng | Sáng | Sở hữu nền Messaging và UI DM; Vg cung cấp quyền/lifecycle phòng và làm UI Community. Không xây hai cơ chế nhắn tin khác nhau |
-| Email và công cụ chạy hệ thống | Thái | Identity giữ logic cấp/consume token, hiệu lực link và dữ liệu job; Thái hiện thực delivery/retry và công cụ theo hợp đồng/policy Vg chốt |
-| Microservice ở v1 | Cả ba, Vg chủ trì thiết kế | Vg: ranh giới/Identity/quyền; Sáng: Messaging/hợp đồng/dữ liệu; Thái: container/config/định tuyến/CI. Việc chuyển Community được xếp trong quỹ Vg hoặc điều chuyển một gói triển khai đã thiết kế rõ khi quá tải |
-| Media ở v1 | Chia theo trách nhiệm | Vg: quyền/admission/quota/thu hồi và review; Sáng: lifecycle gọi riêng/phòng và trạng thái điều khiển; Thái: adapter provider/SDK, mic/camera/share, hiển thị nguồn và môi trường. Chốt hợp đồng trước khi làm; mỗi phần tự kiểm thử |
-| Kiểm thử và hồi quy | Người sở hữu gói; người khác kiểm tra lại | Vg thử Identity/Community, Sáng thử Messaging/lifecycle, Thái thử worker/adapter/môi trường và duy trì bộ chạy. Vg/Sáng viết kỳ vọng quyền/đồng thời; Thái chuẩn bị dữ liệu và tổng hợp kết quả, không chịu một mình chất lượng cả sản phẩm |
+| Sản phẩm, kiến trúc, kế hoạch chung | Vg | Sáng và Thái cung cấp ước lượng, tiến độ, phụ thuộc, đề xuất |
+| Identity và Community | Vg | Công bố hợp đồng tài khoản, phiên, thành viên, quyền, vòng đời phòng |
+| Messaging và thông báo | Sáng | Vg cung cấp quyền và phiên; Thái cung cấp thông tin file và sự kiện Media cần thông báo |
+| Media control và LiveKit | Thái | Làm trọn vòng đời, giao diện, LiveKit, thiết bị; dùng hợp đồng quyền của Identity và Community; phối hợp thông báo với Sáng |
+| Gửi file | Thái | Tải lên, lưu, tải xuống và giao diện. Sáng gắn file vào tin nhắn; Vg phối hợp quyền |
+| Email tài khoản | Vg (nghiệp vụ) và Thái (gửi thư) | Identity cấp và dùng token, quyết định link còn hiệu lực. Thái làm mẫu thư, worker, gửi lại và kết quả gửi ([email](../features/accounts/email-links.md)) |
+| Giao diện web và mobile | Người phụ trách từng mảng | Vg thống nhất trải nghiệm và bố cục chung ([mobile](../experience/mobile.md)) |
+| Triển khai và môi trường chung | Vg chủ trì | Mỗi người cung cấp cấu hình, migration, đóng gói, cách chạy, kiểm tra sau triển khai cho phần mình |
+| Kiểm thử và tích hợp | Người làm phần đó | Tự chuẩn bị dữ liệu và công cụ; một người khác kiểm tra lại, ghi tên trên thẻ Trello |
 
-Thái nhận gói có đầu vào/đầu ra và cách kiểm chứng rõ; thời gian học và sửa lại được tính trong công suất. Không giao cho Thái tự quyết định nghiệp vụ quyền hoặc lifecycle cuộc gọi chỉ vì dùng AI. Vg review các thay đổi nhạy cảm, Sáng kiểm tra luồng tích hợp liên quan; mỗi người phải chạy và giải thích kết quả của gói mình làm.
-
-Cơ sở nguồn lực giữ 3–4 ngày/tuần; 8 giờ/ngày và 3,5 ngày/tuần chỉ là baseline giả định. Phân bổ 80% công suất cho công việc đã xếp, giữ 20% dự phòng; xem [cân tải theo giai đoạn](#capacity). Tính thiết kế, học/hướng dẫn, kiểm thử, review và sửa lỗi trong gói tương ứng, không cộng thêm ngoài quỹ thời gian.
+- Phân công không tự tạo thêm service riêng cho thông báo, file hay email ([kiến trúc](../system/architecture.md#ownership)).
+- Thống nhất hợp đồng chung trước khi làm phần phụ thuộc. Lỗi làm người khác dừng việc thì báo ngay, tổng hợp ở họp tuần.
+- Công suất: 3–4 ngày/tuần (giả định 8 giờ/ngày, 3,5 ngày/tuần). Lập kế hoạch dùng 80%, giữ 20% dự phòng. Thiết kế, code, test, họp, review, học, triển khai đều tính trong quỹ của từng người. Không chia đều công sức theo số service; xem [công suất](#capacity).
 
 <a id="công-việc-làm-rõ-nhu-cầu-tiếp-theo"></a>
 
-### Công việc làm rõ nhu cầu tiếp theo
+### Làm rõ nhu cầu
 
-| Công việc | Kết quả cần có | Điều kiện thực hiện |
+| Việc | Kết quả | Điều kiện |
 |---|---|---|
-| Làm rõ quy tắc còn mở với đại diện sản phẩm | Kết luận hoặc giả định có đầu mối tại SCDC-LOG-001. | Các câu hỏi ảnh hưởng đến hành trình và tiêu chí chấp nhận đã được xác định. |
-| Rà soát bản nháp đặc tả | Hành vi, ngoại lệ và tiêu chí chấp nhận nhất quán với phạm vi đã thống nhất. | Có đầu vào trong SCDC-DIS-001 và quyết định tương ứng. |
-| Lập kế hoạch kiểm thử và nghiệm thu | Kịch bản kiểm tra chức năng, phân quyền, mất kết nối và kết quả mong đợi. | Quy tắc đủ rõ để QA viết kịch bản. |
+| Làm rõ quy tắc còn mở với đại diện sản phẩm | Có kết luận hoặc giả định có người chịu trách nhiệm (SCDC-LOG-001) | Đã xác định câu hỏi ảnh hưởng hành trình và tiêu chí |
+| Rà soát đặc tả | Hành vi, ngoại lệ, tiêu chí nhất quán với phạm vi | Có đầu vào trong SCDC-DIS-001 và quyết định liên quan |
+| Lập kế hoạch kiểm thử và nghiệm thu | Kịch bản chức năng, quyền, mất kết nối, kết quả mong đợi | Quy tắc đủ rõ để viết kịch bản |
 
-Các nhận định nội bộ được quản lý như giả định sản phẩm cho đến khi có bằng
-chứng kiểm chứng. OQ-013 được xử lý cho đợt này bằng DEC-030; OQ-001 và
-OQ-012 vẫn mở về người dùng đại diện và cách đánh giá giá trị sản phẩm.
+Nhận định nội bộ được coi là giả định cho tới khi có bằng chứng. OQ-013 đã xử lý (DEC-030); OQ-001 và OQ-012 vẫn mở.
 
 <a id="ảnh-hưởng-đến-kế-hoạch"></a>
 
-### Ảnh hưởng đến kế hoạch
+### Ảnh hưởng tới kế hoạch
 
-- Cập nhật AS-001 theo cơ cấu nhân sự hiện có.
-- Tính thời gian hướng dẫn, học và rà soát vào công sức của nhóm.
-- Tính DB/backend/frontend và tự kiểm thử trong gói tính năng của Vg/Sáng;
-  Thái sở hữu worker/công cụ/provider và tự kiểm chứng các đầu ra đó.
-- Chỉ phân bổ 80% công suất theo giai đoạn; giữ 20% dự phòng, tính cả
-  review/hướng dẫn của Vg và thời gian học/sửa lại của Thái.
-- Đánh giá lại mốc ba tháng và dự toán; chi tiết tại
-  [SCDC-EST-001](#budget).
+- Giả định AS-001 (ba kỹ sư toàn thời gian) không còn đúng; xem [giả định](#giả-định-lập-kế-hoạch).
+- Tính thời gian hướng dẫn, học và rà soát vào công sức.
+- Mỗi gói gồm yêu cầu, giao diện, DB, backend, frontend, kiểm thử, tài liệu của người phụ trách.
+- Mobile, thông báo, gửi file phải chốt đợt và ước lượng trước khi cập nhật lịch và chi phí.
+- Đánh giá lại mốc 3 tháng và dự toán ([ngân sách](#budget)).
 
 <a id="budget"></a>
 
 <a id="ngân-sách-giả-định-và-rủi-ro"></a>
 
-## Ngân sách, giả định và rủi ro
+## Ngân sách, giả định, rủi ro
 
 <a id="mô-hình-ngân-sách-minh-họa-cập-nhật-2026-10-04"></a>
 
-### Mô hình ngân sách minh họa cập nhật 2026-10-04
+### Ngân sách minh họa (2026-10-04)
 
-Theo DEC-088, ngân sách mang tính tượng trưng và được phép điều chỉnh để trình bày rõ. Mô hình **250.000.000 VNĐ** dưới đây do agent ước lượng cho phương án **16 tuần** trước khi tách MVP/v1 và cân lại phân công; chỉ giữ làm cơ sở dự toán cũ. Đơn giá chưa được các thành viên cung cấp, không phải mức lương thị trường/báo giá hoặc nghĩa vụ thanh toán. Mốc 500 triệu giữ làm lịch sử. Lịch mới cần ước lượng theo giai đoạn và kết quả thực tế tại [kế hoạch](#delivery); không đổi phạm vi v1 hoặc tự loại media.
+Ngân sách chỉ mang tính tượng trưng (DEC-088). Mô hình **250.000.000 VNĐ** dưới đây được ước lượng cho phương án 16 tuần, **trước** khi tách MVP và v1 và trước phân công hiện tại. Đơn giá không phải lương thị trường, báo giá hay nghĩa vụ thanh toán.
 
-| Hạng mục | Cơ sở minh họa | Số tiền |
+| Hạng mục | Cơ sở | Số tiền |
 |---|---|---:|
-| Vg | 4 tháng × 20 triệu/tháng; gồm sản phẩm, kiến trúc, UX, code và hướng dẫn | 80.000.000 VNĐ |
-| Sáng | 4 tháng × 20 triệu/tháng; gồm DM/nền tin phòng, lifecycle media, tích hợp, tự kiểm thử và review | 80.000.000 VNĐ |
-| Thái | 4 tháng × 10 triệu/tháng; gồm worker/môi trường/provider, học, tự kiểm thử và sửa lỗi | 40.000.000 VNĐ |
-| Hạ tầng/công cụ | Khoản minh họa cho môi trường, LiveKit tự host/TURN, email, backup và giám sát | 20.000.000 VNĐ |
-| Dự phòng | Khoản minh họa cho biến động công sức, tích hợp và vận hành | 30.000.000 VNĐ |
-| **Tổng** | Không cộng thêm BA/UX/QA như nhân sự độc lập vì đang kiêm nhiệm | **250.000.000 VNĐ** |
+| Vg | 4 tháng × 20 triệu: sản phẩm, kiến trúc, UX, code, hướng dẫn | 80.000.000 VNĐ |
+| Sáng | 4 tháng × 20 triệu (theo phân công cũ) | 80.000.000 VNĐ |
+| Thái | 4 tháng × 10 triệu (theo phân công cũ) | 40.000.000 VNĐ |
+| Hạ tầng, công cụ | Môi trường, LiveKit, TURN, email, backup, giám sát | 20.000.000 VNĐ |
+| Dự phòng | Biến động công sức, tích hợp, vận hành | 30.000.000 VNĐ |
+| **Tổng** | BA, UX, QA kiêm nhiệm, không tính riêng | **250.000.000 VNĐ** |
 
-Mức tháng giả định đã ứng với sự tham gia 3–4 ngày/tuần, không nhân thêm tỷ lệ công suất rồi tính trùng. Khi có đơn giá thực tế, thay từng giả định và tính lại thời gian/chi phí. Chi phí hạ tầng thật cần topology, số giờ camera/share, lưu lượng TURN, lưu trữ và báo giá; 20 triệu chưa chứng minh đủ. Chưa bao gồm thuế, marketing hoặc vận hành dài hạn ngoài kỳ minh họa.
+- Mức tháng đã tương ứng 3–4 ngày/tuần; không nhân thêm tỷ lệ công suất.
+- 20 triệu hạ tầng chưa chứng minh là đủ; cần topology, giờ camera và chia sẻ, lưu lượng TURN, lưu trữ, báo giá.
+- Chưa gồm thuế, marketing, vận hành dài hạn.
+- Có đơn giá thật thì thay từng giả định và tính lại.
 
 <a id="cơ-cấu-dự-toán-ban-đầu"></a>
 
-### Cơ cấu dự toán ban đầu
+### Dự toán ban đầu 500 triệu (lịch sử)
 
-| Mã | Hạng mục | Cơ sở tính | Thành tiền |
+Phương án đầu tiên, giả định ba kỹ sư toàn thời gian 3 tháng. **Không còn dùng**; giữ lại để đối chiếu.
+
+| Mã | Hạng mục | Cơ sở | Thành tiền |
 |---|---|---|---:|
-| COST-001 | Phát triển và kỹ thuật | 3 kỹ sư × 3 tháng × 35.000.000 VNĐ/người/tháng | 315.000.000 VNĐ |
-| COST-002 | QA/kiểm thử | 2 tháng công × 25.000.000 VNĐ/tháng công | 50.000.000 VNĐ |
-| COST-003 | Phân tích nghiệp vụ và UX/UI | 1 tháng công × 30.000.000 VNĐ/tháng công | 30.000.000 VNĐ |
-| COST-004 | Hạ tầng và công cụ | Khoản dự trù trong thời gian phát triển, kiểm thử và phát hành ban đầu | 20.000.000 VNĐ |
-| COST-005 | Dự phòng | Công việc phát sinh, tích hợp, kiểm thử và chênh lệch chi phí | 85.000.000 VNĐ |
-| | **Tổng trước dự phòng** | | **415.000.000 VNĐ** |
-| | **Tổng dự toán** | | **500.000.000 VNĐ** |
-
-Các đơn giá và tháng công trong bảng thuộc phương án ước tính ban đầu, chưa
-phản ánh chi phí của từng thành viên hiện tại. Đơn giá thực tế và phương án
-tính công sức kiêm nhiệm cần được xác định khi cập nhật dự toán.
+| COST-001 | Phát triển | 3 kỹ sư × 3 tháng × 35 triệu | 315.000.000 VNĐ |
+| COST-002 | QA, kiểm thử | 2 tháng công × 25 triệu | 50.000.000 VNĐ |
+| COST-003 | BA, UX/UI | 1 tháng công × 30 triệu | 30.000.000 VNĐ |
+| COST-004 | Hạ tầng, công cụ | Dự trù trong phát triển, kiểm thử, phát hành ban đầu | 20.000.000 VNĐ |
+| COST-005 | Dự phòng | Phát sinh, tích hợp, kiểm thử, chênh lệch | 85.000.000 VNĐ |
+| | **Trước dự phòng** | | **415.000.000 VNĐ** |
+| | **Tổng** | | **500.000.000 VNĐ** |
 
 <a id="nguồn-lực-và-công-sức-cần-ước-lượng-lại"></a>
 
-### Nguồn lực và công sức cần ước lượng lại
+### Cần ước lượng lại
 
-- Ba thành viên dự kiến 3–4 ngày/tuần mỗi người; cần tính quỹ thời gian thực tế theo DEC-088.
-- Vg làm Identity còn lại/Community, giữ quyết định quan trọng, điều phối
-  và review/hướng dẫn; chuyển service và media được xếp ở giai đoạn v1.
-- Sáng làm DM/nền tin phòng từ DB tới frontend, sau đó chuyển Messaging
-  và lifecycle/UI điều khiển media; thiết kế, tích hợp và tự kiểm thử nằm trong gói.
-- Thái làm email worker/môi trường/công cụ, sau đó provider/SDK/thiết bị
-  media; tính cả học, tự kiểm thử, sửa lại và review với Vg/Sáng trong quỹ thời gian.
-- QA 2 tháng công và BA/UX/UI 1 tháng công là giả định khối lượng từ dự toán
-  ban đầu; cần ước lượng lại theo phân công kiêm nhiệm hiện có và làm rõ
-  công việc phân tích nghiệp vụ.
+- Ba thành viên, 3–4 ngày/tuần; chỉ ước lượng phần còn lại từ nền đã có.
+- Mỗi gói gồm yêu cầu, giao diện, dữ liệu, code, kiểm thử, tích hợp, tài liệu, chuẩn bị triển khai.
+- Mobile, thông báo, gửi file chưa có đợt, nền tảng, hợp đồng, công sức. Mô hình 250 triệu chưa bao phủ phạm vi mới.
+- QA, BA, UX là kiêm nhiệm. Tính cả học, hướng dẫn, họp tuần, kiểm tra chéo.
 
-Khi lập lịch, tổng phân bổ của mỗi người phải bao gồm công việc kiêm nhiệm,
-học, hướng dẫn và rà soát; tránh tính cùng một khoảng thời gian cho nhiều vai trò.
-[Bảng công suất](#capacity) là cơ sở hiện hành; tỷ lệ cần điều chỉnh sau khi đo kết quả thực tế.
+Theo dõi thời gian thực tế để điều chỉnh lịch và dự toán.
 
 <a id="cơ-sở-ước-lượng-hạ-tầng"></a>
 
-### Cơ sở ước lượng hạ tầng
+### Hạ tầng (COST-004)
 
-Khoản COST-004 bao gồm tài nguyên chạy ứng dụng, cơ sở dữ liệu, xử lý
-thoại/video, email hệ thống, lưu trữ, sao lưu, giám sát và công cụ phát triển.
-Nhà cung cấp và cấu hình chưa được lựa chọn.
+Gồm: chạy ứng dụng, database, thoại và video, email, lưu trữ, backup, giám sát, công cụ. Chưa chọn nhà cung cấp và cấu hình. Muốn tính chi tiết cần:
 
-Để xác lập chi phí chi tiết cần có:
+- Số môi trường và tài nguyên mỗi môi trường.
+- Tổng giờ gọi, tỷ lệ bật video và chia sẻ màn hình, lưu lượng mỗi tháng.
+- Dung lượng dữ liệu, thời hạn lưu, chính sách backup.
+- Đơn giá, hạn mức đi kèm, phí vượt hạn mức, tỷ giá.
 
-- Số môi trường và tài nguyên tính toán cho từng môi trường.
-- Tổng thời lượng tham gia gọi, tỷ lệ sử dụng video/chia sẻ màn hình và
-  lưu lượng truyền tải hằng tháng.
-- Dung lượng dữ liệu, thời hạn lưu trữ và chính sách sao lưu.
-- Đơn giá dịch vụ, hạn mức đi kèm, chi phí vượt hạn mức và tỷ giá thanh toán.
-
-Khoản 20.000.000 VNĐ là dự trù ban đầu, cần kiểm tra lại bằng cấu hình và mức
-sử dụng cụ thể trước khi lựa chọn dịch vụ.
+20 triệu là dự trù ban đầu; phải kiểm tra lại trước khi chọn dịch vụ.
 
 <a id="mô-hình-chi-phí-vận-hành-minh-họa"></a>
 
-### Mô hình chi phí vận hành minh họa
+### Mô hình chi phí vận hành (minh họa)
 
-Để khớp khoản hạ tầng 20 triệu của kế hoạch, dùng **5 triệu/tháng × 4 tháng** làm khoản phân bổ tượng trưng: Web/API/worker 0,8 triệu; DB 1,2 triệu; SFU/TURN 1,5 triệu; backup 0,5 triệu; email/quan sát 0,4 triệu; dự phòng hạ tầng 0,6 triệu. Đây là số chia ngân sách, không phải giá dịch vụ hoặc bằng chứng cấu hình đủ tải. Khoản backup là dự toán minh họa; triển khai được hoãn [sau v1](overview.md#backup-scope), chưa tính lại ngân sách. Không tính lại phần này bên ngoài tổng 250 triệu.
+**Phân bổ tượng trưng:** 5 triệu/tháng × 4 tháng = 20 triệu. Mỗi tháng: Web, API, worker 0,8; DB 1,2; LiveKit và TURN 1,5; backup 0,5; email và giám sát 0,4; dự phòng 0,6 (triệu VNĐ). Đây chỉ là chia ngân sách, không phải giá dịch vụ. Backup để [sau v1](overview.md#backup-scope).
 
-Chi phí thật mỗi tháng = tài nguyên cố định + GB truyền ra × đơn giá vượt hạn + GB-tháng DB/backup × đơn giá + số email × đơn giá + khoản khác được xác nhận. Ghi currency/tỷ giá, lưu lượng bao gồm trong gói, cách tính TURN và thuế khi có báo giá; không cộng cùng một lưu lượng hai lần chỉ vì đã đi qua cả SFU và TURN.
+**Công thức chi phí thật mỗi tháng:** tài nguyên cố định + GB truyền ra × đơn giá vượt hạn + GB-tháng DB và backup × đơn giá + số email × đơn giá + khoản khác. Ghi tiền tệ, tỷ giá, lưu lượng có sẵn trong gói, cách tính TURN, thuế. Không tính một lưu lượng hai lần vì đi qua cả LiveKit và TURN.
 
-Ví dụ kỹ thuật để nhìn độ nhạy, **chưa phải mức dùng được xác nhận**: 2.000 giờ-người/tháng, trung bình 4 người/phòng, mọi người bật camera, thời lượng share bằng 20% giờ-người; bitrate giả định camera 1,5 Mbps, audio 0,064 Mbps, share 1 Mbps. Giả định mọi người đăng ký nhận mọi nguồn của người khác: giờ-luồng = giờ-người × (4−1); 1 Mbps truyền liên tục một giờ = 0,45 GB theo đơn vị thập phân. Camera khoảng 4.050 GB, audio 172,8 GB, share 540 GB, tổng 4.762,8 GB; cộng giả định 20% overhead khoảng **5.715 GB/tháng**. Simulcast/chọn nguồn/FPS/tỷ lệ bật camera/TURN làm số thực tế khác; cần đo GB thật thay hệ số minh họa.
+**Ví dụ độ nhạy (không phải mức dùng thật):**
 
-Ở workload media 10 + 8 + 2 người, số lượt nhận camera từ người khác = 10×9 + 8×7 + 2×1 = 148; với bitrate giả định trên và hai nguồn share trong mỗi phòng/call, lưu lượng ra minh họa khoảng 265 Mbps, khoảng 319 Mbps nếu cộng 20%. Con số này không suy ra chất lượng đã đạt hoặc thay kiểm thử mạng từng máy. Ghi chỉ số SFU/NIC và hóa đơn để điều chỉnh model.
+- Giả định: 2.000 giờ-người/tháng; trung bình 4 người/phòng; mọi người bật camera; chia sẻ màn hình 20% thời gian; camera 1,5 Mbps, âm thanh 0,064 Mbps, chia sẻ 1 Mbps; mỗi người nhận mọi nguồn của người khác (giờ-luồng = giờ-người × 3); 1 Mbps trong 1 giờ = 0,45 GB.
+- Kết quả: camera khoảng 4.050 GB, âm thanh 172,8 GB, chia sẻ 540 GB; tổng 4.762,8 GB; cộng 20% là khoảng **5.715 GB/tháng**.
+- Với tải media 10 + 8 + 2 người: 148 lượt nhận camera (10×9 + 8×7 + 2×1); thêm hai nguồn chia sẻ mỗi phòng thì khoảng 265 Mbps ra, khoảng 319 Mbps nếu cộng 20%.
+- Simulcast, chọn nguồn, FPS, tỷ lệ bật camera, TURN đều làm số thật khác; phải đo GB thật.
 
-Dữ liệu cần thu thập cho OQ-010: giờ-người, tỷ lệ camera/share, số người/phòng, tỷ lệ qua TURN, bitrate/GB ra, tốc độ tăng DB và email được provider nhận; số liệu WAL/GB backup 30 ngày bổ sung khi lập gói sau v1. Trước mở công khai phải chốt nhà cung cấp/cấu hình/hạn mức và cơ chế cảnh báo chi phí. Không tự mua dịch vụ trong quá trình hoàn thiện tài liệu.
+**Cần thu thập (OQ-010):** giờ-người, tỷ lệ camera và chia sẻ, số người mỗi phòng, tỷ lệ qua TURN, bitrate và GB ra, tốc độ tăng DB, số email được nhận. Sau v1 thêm WAL và GB backup 30 ngày. Trước khi mở công khai phải chọn nhà cung cấp, cấu hình, hạn mức và cảnh báo chi phí. Không tự mua dịch vụ.
 
 <a id="giả-định-lập-kế-hoạch"></a>
 
-### Giả định lập kế hoạch
+### Giả định
 
-AS-001 đã được đối chiếu với cơ cấu nhân sự hiện tại và không còn phù hợp.
-Các giả định còn lại đang chờ kiểm chứng. Chúng là đầu vào ước tính công sức
-và chi phí, chưa phải cam kết năng lực hoặc hạn mức đăng ký của sản phẩm.
+AS-001 không còn đúng. Các giả định khác chờ kiểm chứng; chúng dùng để ước lượng, không phải cam kết.
 
-| Mã | Giả định | Cách kiểm chứng | Đầu mối dự kiến |
+| Mã | Giả định | Cách kiểm chứng | Theo dõi |
 |---|---|---|---|
-| AS-001 | Giả định ban đầu: có 3 kỹ sư có kinh nghiệm làm toàn thời gian trong 3 tháng. | Không còn phù hợp: đội ngũ 3 thành viên, mỗi người 3–4 ngày/tuần, có 1 thành viên mới cần hướng dẫn; phải ước lượng lại theo phân công và năng lực. | Vg, Sáng |
-| AS-002 | QA 2 tháng công và BA/UX/UI 1 tháng công đáp ứng khối lượng công việc. | Cơ sở dự toán cũ cần ước lượng lại: người sở hữu tính năng làm UX/tự kiểm thử, Vg chốt nghiệp vụ và review, Thái cung cấp dữ liệu/bộ chạy; không tính QA/UX như công suất riêng ngoài ba người. | Vg, Sáng, Thái theo phần sở hữu |
-| AS-003 | Tích hợp nền tảng media có sẵn cho thoại/video và chia sẻ màn hình. | Đánh giá tính phù hợp, khả năng tích hợp, chi phí và vận hành. | Tech Lead, kỹ sư media |
-| AS-004 | Quy mô dự trù 1.000 tài khoản. | Xác định nhóm người dùng ban đầu và nhu cầu lưu trữ. | Khách hàng, BA |
-| AS-005 | Có khoảng 100 người trực tuyến đồng thời trên toàn hệ thống. | Xác định nhu cầu tải dự kiến; kiểm chứng khả năng đáp ứng bằng kiểm thử tải. | Khách hàng, Tech Lead, QA |
-| AS-006 | Dự trù ban đầu 20 người gọi đồng thời; ngày 2026-10-04 thành giới hạn v1 theo DEC-079. | Đã chốt quy tắc 10/phòng, 20/toàn hệ thống, 2 share/phòng; khả năng đáp ứng vẫn cần kiểm thử. | Khách hàng, kỹ sư media, QA |
-| AS-007 | Hạ tầng và công cụ cần khoảng 20.000.000 VNĐ trong thời gian dự án. | Lập mô hình chi phí theo cấu hình, mức sử dụng và báo giá. | Phụ trách vận hành |
-| AS-008 | Phạm vi có thể hoàn thành trong khoảng 3 tháng. | Ước lượng công việc, phụ thuộc và lịch nguồn lực sau phân tích, thiết kế. | Quản lý dự án, nhóm kỹ thuật |
+| AS-001 | Ba kỹ sư có kinh nghiệm, toàn thời gian, 3 tháng | **Không còn đúng:** ba người, 3–4 ngày/tuần, một người mới cần hướng dẫn; phải ước lượng lại | Vg, Sáng |
+| AS-002 | QA 2 tháng công, BA/UX/UI 1 tháng công là đủ | Ước lượng lại: người phụ trách tự làm UX và tự kiểm thử, kiểm tra chéo; không tính QA hay UX như người riêng | Vg, Sáng, Thái |
+| AS-003 | Dùng nền tảng media có sẵn cho thoại, video, chia sẻ màn hình | Đánh giá phù hợp, tích hợp, chi phí, vận hành | Thái |
+| AS-004 | 1.000 tài khoản | Xác định nhóm người dùng đầu và nhu cầu lưu trữ | Khách hàng, BA |
+| AS-005 | 100 người online cùng lúc | Xác định tải; kiểm thử tải | Khách hàng, kỹ thuật, QA |
+| AS-006 | 20 người gọi cùng lúc; từ 2026-10-04 là giới hạn v1 (DEC-079) | Đã chốt 10 mỗi phòng, 20 toàn hệ thống, 2 chia sẻ mỗi phòng; khả năng đáp ứng cần kiểm thử | Khách hàng, kỹ sư media, QA |
+| AS-007 | Hạ tầng và công cụ khoảng 20 triệu | Lập mô hình chi phí theo cấu hình, mức dùng, báo giá | Vận hành |
+| AS-008 | Làm xong phạm vi trong khoảng 3 tháng | Ước lượng việc, phụ thuộc, lịch sau phân tích thiết kế | Quản lý dự án, kỹ thuật |
 
-Khả năng tiết kiệm từ tái sử dụng mã nguồn được tính vào dự toán sau khi có
-kết quả đánh giá kỹ thuật.
+Tiết kiệm từ tái sử dụng code được tính khi có đánh giá kỹ thuật.
 
 <a id="các-khoản-chưa-bao-gồm"></a>
 
-### Các khoản chưa bao gồm
+### Chưa tính
 
-- Marketing và thu hút người dùng.
-- Thuế và phí phát sinh theo điều kiện hợp đồng.
-- Vận hành, hỗ trợ và bảo trì dài hạn sau thời gian dự án.
-- Tính năng và nền tảng ngoài phạm vi bản hoàn thiện v1.
+- Marketing, thu hút người dùng.
+- Thuế và phí theo hợp đồng.
+- Vận hành, hỗ trợ, bảo trì dài hạn.
+- Tính năng và nền tảng ngoài phạm vi v1.
 
 <a id="rủi-ro"></a>
 
 ### Rủi ro
 
-| Mã | Rủi ro | Ảnh hưởng | Biện pháp xử lý | Đầu mối dự kiến |
+| Mã | Rủi ro | Ảnh hưởng | Xử lý | Theo dõi |
 |---|---|---|---|---|
-| RSK-001 | Phòng thoại trong server và gọi riêng hai người có video/chia sẻ màn hình; yêu cầu chất lượng chưa đầy đủ. | Tăng công sức tích hợp, kiểm thử và kéo dài tiến độ. | Làm rõ ma trận chức năng, giới hạn và điều kiện nghiệm thu trước khi ước lượng chi tiết. | Tech Lead, QA |
-| RSK-002 | Giới hạn phòng/media đã chốt DEC-079; lượng sử dụng, bitrate thực tế và giá hạ tầng còn thiếu. | Chi phí hạ tầng vượt dự trù. | Tính chi phí theo thời lượng, dữ liệu truyền tải và theo dõi mức sử dụng. | Phụ trách vận hành |
-| RSK-003 | Chuyển source một host của MVP sang microservice ở v1 theo DEC-116 có thể vượt ước lượng. | Tăng công sức triển khai, kiểm thử tích hợp và vận hành. | Chốt ranh giới/dữ liệu và cách thay transaction/guard; dành giai đoạn V1-0 riêng, chia phần hiện thực cho cả ba và giữ hồi quy MVP. | Vg chủ trì; Sáng/Thái phối hợp |
-| RSK-004 | Gói fullstack, review/hướng dẫn và công cụ/provider có công sức khác nhau; tỷ lệ kế hoạch chưa chứng minh tải thực tế. | Một người quá tải hoặc chờ việc, tiến độ bàn giao bị lệch. | Theo dõi ngày công/kết quả/chờ việc hằng tuần, tối đa một gói chính, giữ 20% dự phòng và điều chuyển đầu ra rõ; khóa cấu hình nghiệm thu/người trực trước phát hành v1. | Vg, Sáng, Thái |
-| RSK-005 | Thời gian học, hướng dẫn, sửa lại và rà soát của Thái chưa được lượng hóa. | Giảm thời gian dành cho các công việc khác và tăng độ bất định của tiến độ. | Giao gói có contract/AC rõ, tính học/review trong công suất người làm/người hướng dẫn, đánh giá bằng đầu ra chạy được và giải thích kết quả. | Vg, Sáng, Thái |
+| RSK-001 | Phòng thoại và gọi riêng có video, chia sẻ màn hình; yêu cầu chất lượng chưa đủ | Tăng công tích hợp, kiểm thử, chậm tiến độ | Làm rõ chức năng, giới hạn, điều kiện nghiệm thu trước khi ước lượng chi tiết | Thái, QA |
+| RSK-002 | Giới hạn media đã chốt; lượng dùng, bitrate, giá hạ tầng còn thiếu | Chi phí vượt dự trù | Tính theo thời lượng, dữ liệu truyền; theo dõi mức dùng | Vận hành |
+| RSK-003 | Chuyển MVP sang microservice có thể vượt ước lượng | Tăng công triển khai, kiểm thử tích hợp, vận hành | Chốt ranh giới, dữ liệu, cách thay transaction và guard; dành giai đoạn V1-0 riêng; chia việc cho cả ba; chạy lại luồng MVP | Vg chủ trì; Sáng, Thái phối hợp |
+| RSK-004 | Gói fullstack, review, hướng dẫn, công cụ có công sức khác nhau; tỷ lệ kế hoạch chưa chứng minh | Một người quá tải hoặc chờ việc | Theo dõi ngày công, kết quả, thời gian chờ hằng tuần; mỗi người tối đa một gói chính; giữ 20% dự phòng | Vg, Sáng, Thái |
+| RSK-005 | Thời gian học, hướng dẫn, sửa lại, rà soát của Thái chưa lượng hóa | Ít thời gian cho việc khác, tiến độ bất định | Giao gói có hợp đồng và AC rõ; tính học và review vào công suất; đánh giá bằng đầu ra chạy được | Vg, Sáng, Thái |
 
 <a id="điều-kiện-cập-nhật-dự-toán"></a>
 
-### Điều kiện cập nhật dự toán
+### Khi nào cập nhật dự toán
 
-Cập nhật khi có thay đổi phạm vi, thời gian, nguồn lực, giải pháp kỹ thuật,
-mức sử dụng hoặc đơn giá dịch vụ. Mỗi điều chỉnh cần thể hiện cơ sở tính,
-chênh lệch và tác động đến tiến độ; khách hàng xác nhận các thay đổi làm tăng
-ngân sách hoặc thay đổi phạm vi bàn giao.
+Cập nhật khi đổi phạm vi, thời gian, nguồn lực, giải pháp kỹ thuật, mức dùng hay đơn giá. Mỗi lần ghi cơ sở tính, chênh lệch, ảnh hưởng tiến độ. Khách hàng xác nhận các thay đổi làm tăng ngân sách hay đổi phạm vi. Mobile, thông báo, gửi file có thể làm tăng công sức và chi phí; mỗi người phụ trách làm rõ đầu ra và ước lượng, Vg thống nhất đợt trước khi đưa vào lịch.
 
 <a id="delivery"></a>
 
 <a id="kế-hoạch-bàn-giao-và-ước-lượng"></a>
 
-## Kế hoạch bàn giao và ước lượng
+## Bàn giao và ước lượng
 
-Theo [DEC-116](../records/decisions/README.md#dec-116), MVP dùng một host Modular Monolith để nhóm bắt đầu làm; chuyển microservice thuộc v1. Phân công theo DEC-117 và [nhân sự](#team). Mục tiêu ba tháng, mô hình 16 tuần/250 triệu là cơ sở minh họa cũ; chưa có lịch riêng MVP/v1 hoặc số liệu năng suất để cam kết. Không bắt đầu lại toàn bộ kế hoạch sau MVP.
+MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc v1 ([DEC-116](../records/decisions/README.md#dec-116)). Mục tiêu 3 tháng và mô hình 16 tuần, 250 triệu chỉ là cơ sở minh họa cũ; chưa có lịch riêng MVP, v1 hay số liệu năng suất để cam kết. Không làm lại toàn bộ kế hoạch sau MVP.
 
 <a id="package-design"></a>
 
-### Thiết kế trước code theo từng gói việc
+### Thiết kế trước khi code, theo từng gói
 
-MVP là bước khởi động để nhóm có thể làm và tích hợp sớm. Trước khi viết code cho một gói, làm rõ đầu ra/tiêu chí nghiệm thu, phụ thuộc trực tiếp và các phần UI/UX, dữ liệu, hợp đồng, tổ chức code, môi trường mà gói tác động. Gói đủ thông tin có thể bắt đầu; không chờ toàn bộ thiết kế hoặc tài liệu v1 hoàn chỉnh. Gói còn quyết định chưa chốt chỉ chờ phần phụ thuộc đó; các gói độc lập vẫn tiếp tục.
+Trước khi code một gói, làm rõ: đầu ra, tiêu chí nghiệm thu, phụ thuộc trực tiếp, và phần giao diện, dữ liệu, hợp đồng, tổ chức code, môi trường mà gói ảnh hưởng. Gói đủ thông tin thì bắt đầu; không chờ toàn bộ thiết kế v1. Gói còn chờ quyết định chỉ chờ đúng phần đó; gói độc lập vẫn làm tiếp.
 
-Thiết kế và thay đổi được cập nhật tại tài liệu chủ đề tương ứng; hồ sơ gói giữ phạm vi, phụ thuộc và liên kết đến nguồn chuẩn, không chép lại toàn bộ đặc tả.
+Thiết kế cập nhật vào trang tính năng; hồ sơ gói chỉ giữ phạm vi, phụ thuộc và link.
 
 <a id="đợt-bàn-giao-và-điều-kiện-chuyển-tiếp"></a>
 
-### Đợt bàn giao và điều kiện chuyển tiếp
+### Các đợt
 
-Các hàng MVP-0–2 giữ bối cảnh kế hoạch nền nội bộ trước [snapshot bàn giao](../releases/mvp.md), không là các đợt phải hoàn tất lại hoặc điều kiện bắt đầu v1. Phần chưa triển khai/kiểm chứng tiếp tục trong các gói v1; chọn gói theo phụ thuộc trực tiếp. Các hàng V1-0–2 mô tả trình tự công việc hiện hành, chưa có lịch cam kết.
+MVP-0 đến 2 là bối cảnh lịch sử trước [bản chụp MVP](../releases/mvp.md), không cần làm lại. V1-0 đến 2 là trình tự hiện hành, chưa có lịch cam kết.
 
 | Đợt | Đầu ra | Vg | Sáng | Thái | Điều kiện chuyển |
 |---|---|---|---|---|---|
-| MVP-0. Chốt gói đầu | Luồng Identity đủ dùng, hợp đồng module/job email, gói triển khai và môi trường thử | Hoàn thiện phần Identity trực tiếp cần; chốt quyền và hợp đồng | Chốt gói DM/nền tin và ca thử | Dựng Compose/CI/dataset hiện có; bắt đầu worker theo job contract | Phụ thuộc trực tiếp đủ rõ; không chờ toàn bộ media/kiến trúc v1 |
-| MVP-1. Làm song song | Community, DM, email và bộ chạy hoạt động từ DB tới UI | Community trọn luồng | DM trọn luồng; nền tin phòng | Email Worker và bộ chạy/kiểm tra hệ thống | Ba tính năng nền tích hợp thật, quyền và dữ liệu được kiểm chứng |
-| MVP-2. Bàn giao | Chạy lại trên bản checkout/dataset được ghi rõ, lỗi chính được sửa | Review quyền/Identity/Community và điều phối | Sửa/kiểm tra Messaging và luồng liên thông | Smoke/hồi quy, dữ liệu demo và hồ sơ build/kết quả | Đạt [điều kiện MVP](../releases/mvp.md#acceptance); chưa yêu cầu microservice/media |
-| V1-0. Chuyển microservice | Ranh giới được chốt, API/dữ liệu/triển khai độc lập, sửa các giả định transaction xuyên service | Thiết kế ranh giới/chính sách; chuyển Identity và phần Community liên quan | Chuyển Messaging, hợp đồng/dữ liệu và kiểm thử tích hợp | Compose nhiều service, cấu hình/định tuyến/CI và bộ chạy hồi quy | Đạt gói kiến trúc v1; luồng MVP tiếp tục hoạt động |
-| V1-1. Hoàn thiện và media | Đủ Community/Messaging; gọi riêng/phòng thoại, camera và share theo scope | Community/Identity còn lại; quyền/admission/quota/thu hồi media | Nhắn tin còn lại; lifecycle và UI điều khiển cuộc gọi | Provider/SDK, thiết bị/nguồn media; worker và công cụ chạy | Các gói theo [kế hoạch v1](#v1-planning) có bằng chứng; chức năng lớn không xếp chồng ngoài công suất |
-| V1-2. Ổn định/phát hành | Kiểm thử phạm vi v1, dữ liệu online, rollback ứng dụng và bàn giao | Review phần rủi ro cao, sửa gói sở hữu | Kiểm thử đồng thời/chất lượng và sửa gói sở hữu | Bộ chạy, diễn tập theo runbook, tổng hợp evidence và sửa gói sở hữu | Đạt gate v1; người duyệt/người vận hành còn phải được chọn theo DEC-111/OQ-011 |
+| MVP-0. Chốt gói đầu | Identity đủ dùng, hợp đồng module và job email, môi trường thử | Phần Identity cần thiết; chốt quyền và hợp đồng | Gói DM, nền tin, ca thử | Compose, CI, dữ liệu thử; bắt đầu worker | Phụ thuộc đủ rõ |
+| MVP-1. Làm song song | Community, DM, email, công cụ chạy từ DB tới giao diện | Community trọn luồng | DM trọn luồng; nền tin phòng | Worker email; công cụ kiểm tra hệ thống | Ba tính năng nền tích hợp thật; quyền và dữ liệu đã kiểm thử |
+| MVP-2. Bàn giao | Chạy lại trên bản và dữ liệu xác định; sửa lỗi chính | Review quyền, Identity, Community; điều phối | Sửa và kiểm tra Messaging, luồng liên thông | Kiểm tra nhanh, hồi quy, dữ liệu demo, hồ sơ | Đạt [điều kiện MVP](../releases/mvp.md#acceptance) |
+| V1-0. Chuyển microservice | Ranh giới chốt; API, dữ liệu, triển khai độc lập; sửa giả định transaction | Chuyển Identity, Community; thiết kế tổng thể và môi trường | Chuyển Messaging, hợp đồng, dữ liệu, chuẩn bị triển khai | Thiết kế Media; tích hợp email; cấu hình và công cụ chạy | Đạt gói kiến trúc v1; luồng MVP vẫn chạy |
+| V1-1. Hoàn thiện, Media | Đủ Community, Messaging; gọi riêng, phòng thoại, camera, chia sẻ | Identity, Community, quyền, triển khai | Nhắn tin; hợp đồng thông báo | Media và LiveKit trọn luồng; email; hợp đồng file | Các gói có bằng chứng; không xếp chồng vượt công suất |
+| V1-2. Ổn định, phát hành | Kiểm thử v1, dữ liệu online, rollback, bàn giao | Điều phối, triển khai và diễn tập chung; sửa phần mình | Kiểm thử, hồ sơ, sửa phần mình; kiểm tra chéo | Kiểm thử, hồ sơ, sửa phần mình; kiểm tra chéo | Đạt điều kiện v1; còn phải chọn người duyệt và vận hành |
 
-V1-1 có nhiều gói; hoàn thiện nhắn tin/Community và làm media được xếp theo phụ thuộc và công suất, không mặc định cùng lúc. Gói nào chưa đủ kỹ thuật/quyền/provider thì người đó tiếp tục một gói độc lập trong scope; không thêm tính năng ngoài scope chỉ để lấp thời gian.
+Trong V1-1, các gói được xếp theo phụ thuộc và công suất, không mặc định làm cùng lúc. Gói nào chưa đủ đầu vào thì làm gói độc lập khác trong phạm vi; không thêm tính năng ngoài phạm vi để lấp thời gian.
 
 <a id="v1-planning"></a>
 
 ### Lập kế hoạch v1 từ nền MVP
 
-1. Đối chiếu [nền MVP đã bàn giao](../releases/mvp.md) với đặc tả đầy đủ; chỉ ước lượng phần còn lại và việc sửa/nâng cấp cần thiết.
-2. Chốt và thực hiện các gói chuyển microservice bên dưới: transaction/guard theo monolith của MVP phải được điều chỉnh trước khi triển khai xuyên service; giữ phần đã chạy để kiểm tra hồi quy.
-3. Thử nghiệm media trước khi khóa công sức và chi phí; giữ rõ phần yêu cầu đã xác nhận và phần kỹ thuật chưa có bằng chứng.
-4. Phân công và lập lịch theo [công suất thật](#capacity) và [quy tắc ước lượng](#ước-lượng-và-khóa-lịchchi-phí). Phương án 16 tuần/250 triệu ở [dự toán](#budget) là cơ sở minh họa cũ, chưa phải một lịch v1 mới bắt đầu sau MVP.
+1. Đối chiếu [nền MVP](../releases/mvp.md) với đặc tả; chỉ ước lượng phần còn lại.
+2. Làm các gói chuyển microservice: sửa transaction và guard của MVP trước khi chạy giữa service; giữ phần đã chạy để hồi quy.
+3. Thử Media sớm trước khi chốt công sức và chi phí.
+4. Lập lịch theo [công suất thật](#capacity) và [quy tắc ước lượng](#ước-lượng-và-khóa-lịchchi-phí).
 
 <a id="v1-next-design"></a>
 
-### Công việc thiết kế tiếp theo
+### Việc thiết kế tiếp theo (rà soát 2026-11-01)
 
-Rà soát ngày 2026-10-18. Bảng dưới chia đầu ra thiết kế trong các gói V1-ARCH/V1-MEDIA đã có; không tạo thêm giai đoạn phải hoàn tất toàn bộ trước code. Các lựa chọn sản phẩm/phát hành còn thiếu nằm tại [danh mục quyết định v1](open-questions.md#v1-decisions). Kết quả thiết kế cập nhật tại nguồn chủ đề, cùng hợp đồng và ca kiểm chứng trực tiếp áp dụng.
+Các đầu ra thiết kế nằm trong gói V1-ARCH và V1-MEDIA; không tạo thêm giai đoạn phải xong trước khi code. Quyết định sản phẩm còn thiếu xem [câu hỏi còn mở](open-questions.md#v1-decisions).
 
-| Thứ tự | Phần việc / gói | Đầu ra thiết kế cần có | Nguồn và phụ thuộc |
+| Thứ tự | Việc | Đầu ra | Nguồn và phụ thuộc |
 |---|---|---|---|
-| 1 | Xác thực và phiên giữa service — V1-ARCH-01, phối hợp V1-ARCH-02/03 | Danh tính/quyền RPC và context actor; hợp đồng JWT/khóa; schema, nhất quán và phục hồi view Redis; lỗi tạm thời/hết phiên và phản hồi UI. Có ca mất Redis, trạng thái cũ, restart và khóa đổi | [D20/D28/D29](../system/api-conventions.md#v1-service-authentication), [D30/D31](../system/access-revocation.md#v1-session-validation); dùng luồng DM hiện có làm phạm vi đầu |
-| 2 | Quyền tới commit và giao nhận liên service — V1-ARCH-01/02 | Scope/owner, gate/epoch, lệnh và ACK sau commit, idempotency/receipt, deadline/retry và phục hồi kết quả chưa rõ; `.proto` theo owner. Có ca thu hồi tranh ghi, mất response, worker dừng và đo cutoff | [D05–D07](../system/access-revocation.md#v1-authorization-coordination), [D27](../system/api-conventions.md#v1-integration-event-transport), [D46](../system/api-conventions.md#v1-grpc-contract-sources); dùng hợp đồng phiên ở phần 1 |
-| 3 | Dữ liệu và chuyển offline — V1-ARCH-01/02/03 | Mapping theo DB owner, thay FK/JOIN/transaction xuyên service, bảo toàn ID/sequence/version/tombstone/ledger và khóa liên quan; migration runner, thứ tự dừng ghi/chuyển/đối soát/mở lại và cách quay lại an toàn. Có kế hoạch chạy thử trên bản dữ liệu thử riêng | [D02](../system/database.md#v1-database-layout), [D48–D52](../system/database.md#v1-migration-execution); đối chiếu invariant/quyền của phần 1–2, không đưa backup/restore sau v1 vào gói này |
-| 4 | Tạo phòng và tin phòng — V1-ARCH-01/02, COM-W01–07 | Hợp đồng chuẩn bị/tra cứu/hủy/bù theo owner, trạng thái công bố phòng, quyền reader/writer/subscription và hồi quy DM dùng chung. Có ca hủy tranh hoàn tất, thành công muộn, reload, replay và mất quyền | [D14–D19](../features/community/channels.md#v1-channel-provisioning), [tin phòng](../features/messaging/channel-messaging.md), [COM-W](#community-work-items); không chuyển guard cùng transaction của monolith thành RPC đơn lẻ |
-| Song song theo đầu vào | Môi trường demo và bộ chạy — V1-ARCH-03 | Cấu hình container/network/volume, routing, mTLS/secrets/keyring, migration theo owner, CI và telemetry; bộ chạy dựng mới, restart/triển khai riêng từng service và hồi quy. Khóa cấu hình cần thiết khi các hợp đồng trên ổn định | [Môi trường](../system/environments.md), [D36](../system/environments.md#v1-secret-provisioning), [giám sát](../system/observability.md); dùng máy phát triển/demo đã có, nơi chạy công khai vẫn còn mở |
-| Thử sớm theo công suất | Tính khả thi provider và quyền media — V1-MEDIA-01/05 | Đề xuất pin server/SDK, adapter/extension và cách thử RTP thật, admission/nguồn/quota/cutoff khi dependency lỗi; xác định phần cần triển khai thử và cách ghi kết quả trước ước lượng media đầy đủ | [MEDIA-GAP-03/04/06](../features/media/participation-lifecycle.md#proof-fixture-và-gói-kiểm-chứng), [chất lượng](../system/quality.md#measurement-readiness); thí nghiệm quyền không chờ quy tắc kết luận hình ảnh, nghiệm thu hình ảnh phải có quy tắc |
+| 1 | Xác thực và phiên giữa service (V1-ARCH-01, phối hợp 02, 03) | Danh tính và quyền gọi RPC; hợp đồng JWT và khóa; schema, nhất quán, phục hồi Redis; lỗi tạm thời và phản hồi giao diện. Ca kiểm thử: mất Redis, dữ liệu cũ, khởi động lại, đổi khóa | [D20, D28, D29](../system/api-conventions.md#v1-service-authentication), [D30, D31](../system/access-revocation.md#v1-session-validation); bắt đầu với luồng DM |
+| 2 | Quyền tới commit và giao nhận giữa service (V1-ARCH-01, 02) | Phạm vi, owner, hàng rào, epoch; lệnh và xác nhận sau commit; chống trùng; thời hạn, thử lại, phục hồi; `.proto`. Ca kiểm thử: thu hồi tranh ghi, mất phản hồi, worker dừng, đo thời gian ngắt | [D05–D07](../system/access-revocation.md#v1-authorization-coordination), [D27](../system/api-conventions.md#v1-integration-event-transport), [D46](../system/api-conventions.md#v1-grpc-contract-sources) |
+| 3 | Dữ liệu và chuyển offline (V1-ARCH-01, 02, 03) | Mapping theo database; thay khóa ngoại, JOIN, transaction giữa service; giữ ID, sequence, version, tombstone, ledger, khóa; công cụ migration; trình tự dừng ghi, chuyển, đối chiếu, mở lại; cách quay lại an toàn. Chạy thử trên dữ liệu thử | [D02](../system/database.md#v1-database-layout), [D48–D52](../system/database.md#v1-migration-execution); không gồm backup |
+| 4 | Tạo phòng và tin phòng (V1-ARCH-01, 02; COM-W01–07) | Hợp đồng chuẩn bị, tra cứu, hủy, bù; trạng thái công bố phòng; quyền đọc, ghi, đăng ký; hồi quy DM. Ca kiểm thử: hủy tranh hoàn tất, thành công muộn, tải lại, gửi lại, mất quyền | [D14–D19](../features/community/channels.md#v1-channel-provisioning), [tin phòng](../features/messaging/channel-messaging.md), [COM-W](#community-work-items) |
+| Song song | Môi trường demo và công cụ chạy (V1-ARCH-03) | Container, mạng, volume; định tuyến; mTLS, bí mật, key ring; migration; CI; telemetry; dựng mới, khởi động lại, triển khai riêng từng service, hồi quy | [Môi trường](../system/environments.md), [D36](../system/environments.md#v1-secret-provisioning), [giám sát](../system/observability.md) |
+| Thử sớm | Khả thi LiveKit và quyền media (V1-MEDIA-01, 05) | Đề xuất phiên bản server, SDK, extension; cách thử luồng thật, kiểm soát vào, nguồn, hạn mức, ngắt khi phụ thuộc lỗi | [MEDIA-GAP-03, 04, 06](../features/media/participation-lifecycle.md#proof-fixture-và-gói-kiểm-chứng), [chất lượng](../system/quality.md#measurement-readiness) |
 
-Đề xuất bắt đầu bằng hợp đồng phiên và thu hồi Identity–Messaging trong V1-ARCH-01, cùng phần phối hợp của V1-ARCH-02/03. Đầu ra đủ để rà soát đường HTTP, ghi DM và subscription khi tách host; sau đó mở rộng sang quyền Community/Media. Trước triển khai từng phần, đối chiếu [READY-01–08](workflow.md#readiness), người thực hiện/review và [công suất](#capacity); không coi thiết kế hoặc bằng chứng một host là đã đạt yêu cầu xuyên service.
+Đề xuất bắt đầu với hợp đồng phiên và thu hồi giữa Identity và Messaging (V1-ARCH-01), đủ để rà soát HTTP, ghi DM và đăng ký realtime khi tách service; sau đó mở rộng sang Community và Media. Trước khi làm từng phần, kiểm tra [READY-01 đến 08](workflow.md#readiness), người làm và review, [công suất](#capacity).
 
 <a id="v1-architecture-packages"></a>
 
 ### Gói chuyển microservice
 
-Ranh giới bốn service đã xác nhận tại [kiến trúc](../system/architecture.md#service-boundaries). Dữ liệu, hợp đồng mạng, quyền/thu hồi và triển khai cần thiết kế trước migration. Phân công chia phần thiết kế và hiện thực, không dồn toàn bộ hạ tầng vào Vg hoặc toàn bộ tích hợp/QA vào Thái.
+Ranh giới bốn service đã chốt ([kiến trúc](../system/architecture.md#service-boundaries)). Dữ liệu, hợp đồng mạng, quyền, thu hồi và triển khai cần thiết kế trước migration.
 
-| Gói | Đầu ra | Người phụ trách | Review/phối hợp |
+| Gói | Đầu ra | Phụ trách | Review, phối hợp |
 |---|---|---|---|
-| V1-ARCH-01 | Thiết kế dữ liệu, xác thực/hợp đồng mạng và chính sách thu hồi/quyền theo ranh giới đã chọn; chuyển Identity và phần Community liên quan | Vg | Sáng rà soát phần Messaging; Thái đối chiếu khả năng chạy/config |
-| V1-ARCH-02 | Chuyển persistence/bootstrap/hợp đồng Messaging; hồi quy DM/tin phòng và lỗi giao tiếp | Sáng | Vg review quyền, dữ liệu và chính sách nhất quán |
-| V1-ARCH-03 | Container/config/định tuyến qua [đầu vào API chung](../system/api-conventions.md#v1-public-routing), CI, migration runner và bộ chạy tích hợp | Thái | Vg chốt công nghệ/topology/chính sách; Vg/Sáng cung cấp migration và kỳ vọng nghiệp vụ, tự sửa gói của mình |
+| V1-ARCH-01 | Thiết kế dữ liệu, xác thực, hợp đồng mạng, chính sách thu hồi và quyền; chuyển Identity và phần Community liên quan | Vg | Sáng rà phần Messaging; Thái đối chiếu cấu hình |
+| V1-ARCH-02 | Chuyển lưu trữ, khởi động, hợp đồng của Messaging; hồi quy DM và tin phòng; lỗi giao tiếp | Sáng | Vg review quyền, dữ liệu, nhất quán |
+| V1-ARCH-03 | Container, cấu hình, định tuyến qua [cổng vào chung](../system/api-conventions.md#v1-public-routing), CI, công cụ migration, môi trường tích hợp | Vg | Sáng, Thái cung cấp migration, cấu hình, đóng gói, công cụ chạy phần mình |
 
-Điều kiện kiểm chứng gói kiến trúc theo [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion). [Phân bổ công suất](#capacity) tách giai đoạn chuyển service khỏi giai đoạn hoàn thiện/media; không cộng hai giai đoạn vào cùng một tuần.
+Điều kiện xong: [hoàn tất v1](../releases/acceptance.md#v1-completion). Giai đoạn chuyển service và giai đoạn hoàn thiện, Media không cộng vào cùng một tuần.
 
 <a id="v1-media-packages"></a>
 
-### Gói media sau nền MVP
+### Gói Media
 
-Thứ tự dưới đây là đề xuất để chia phần việc có thể kiểm chứng. Các điều kiện quyền, quota, thu hồi và vòng đời phải được thiết kế xuyên các gói; chia gói không thay ngưỡng hoặc tự giảm phạm vi của đặc tả Media.
+Thái phụ trách toàn bộ Media control và LiveKit, tự chia nhiệm vụ trên Trello. Vg quyết định tổng thể và cung cấp quyền Identity, Community; Sáng phối hợp thông báo; một người khác review từng gói.
 
-| Gói | Đầu ra | Người phụ trách | Phụ thuộc/kiểm chứng |
+| Gói | Đầu ra | Phụ thuộc và kiểm thử |
+|---|---|---|
+| V1-MEDIA-01 | Chọn LiveKit, SDK; một phiên âm thanh thật | Trình phương án và phiên bản để Vg duyệt; thử kết nối thật trước khi ước lượng đầy đủ |
+| V1-MEDIA-02 | Gọi riêng từ backend tới giao diện | Hợp đồng Identity và thông báo; thử nhận, từ chối, hủy, hết giờ, bận, kết thúc |
+| V1-MEDIA-03 | Phòng thoại từ backend tới giao diện | Quyền và vòng đời phòng Community; thử vào, rời, hạn mức, mất quyền, xóa phòng |
+| V1-MEDIA-04 | Micro, camera, chia sẻ; thiết bị; hiển thị nguồn | Thử quyền thiết bị, dừng nguồn từ trình duyệt, kết nối lại |
+| V1-MEDIA-05 | Kiểm soát vào, hạn mức, thu hồi, dừng khi lỗi; kiểm thử Media | Vg cung cấp hợp đồng phiên và quyền; chứng minh ngắt, đồng thời, tải, lỗi phụ thuộc |
+
+File và email cũng là việc của Thái; phải xếp chung quỹ thời gian, không làm tất cả cùng lúc.
+
+<a id="extension-packages"></a>
+
+### Gói bổ sung: mobile, thông báo, gửi file
+
+Đã thống nhất làm ([DEC-173](../records/decisions/README.md#dec-173)); chưa chốt thuộc v1 hay đợt sau. Đây là đầu ra thiết kế ban đầu, chưa phải cam kết.
+
+| Gói | Đầu ra | Phụ trách | Phụ thuộc |
 |---|---|---|---|
-| V1-MEDIA-01 | Tích hợp provider/SDK và một phiên âm thanh chạy thật trên môi trường thử | Thái | Vg chốt/pin LiveKit và contract adapter; Sáng kiểm tra luồng dùng adapter. Chưa phải một tính năng đã nghiệm thu |
-| V1-MEDIA-02 | Backend và UI điều khiển cuộc gọi riêng có lifecycle đầy đủ | Sáng | Vg chốt quyền/policy; Thái cung cấp adapter và component nguồn. Kiểm chứng accept/reject/cancel/timeout/busy và kết thúc truyền thật |
-| V1-MEDIA-03 | Backend và trạng thái điều khiển phòng thoại | Sáng | Vg phụ trách membership/quyền/lifecycle phòng Community; Thái adapter. Kiểm chứng vào/rời, quota, mất quyền/xóa phòng |
-| V1-MEDIA-04 | Mic/camera/share, thiết bị và hiển thị nguồn trong cả hai ngữ cảnh | Thái | Sáng giữ trạng thái điều khiển; Vg giữ admission/quota/thu hồi. Kiểm chứng capture, dừng từ browser, nguồn/tác giả và quyền thiết bị |
-| V1-MEDIA-05 | Quyền/admission/quota/thu hồi/fail-close và kiểm chứng media đầy đủ | Vg phụ trách chính sách/đường kiểm soát; mỗi người chứng minh phần sở hữu | Sáng: lifecycle/đồng thời/reconnect; Thái: provider/nguồn/mạng/tải và bộ chạy; Vg: quyền/cutoff/nhất quán theo AC/TC |
+| EXT-MOBILE-01 | Nền tảng, chức năng, hành trình, khung app, công nghệ, đợt bàn giao | Vg thống nhất; mỗi người thiết kế phần mình | [Mobile](../experience/mobile.md), chất lượng, công suất |
+| EXT-NOTIFY-01 | Loại sự kiện, người nhận, trong app hay push, đăng ký thiết bị, giao diện, hợp đồng | Sáng | [Thông báo](../features/notifications/README.md), Identity, Community, Media, mobile |
+| EXT-FILE-01 | Ngữ cảnh gửi, loại và kích thước file, quyền, lưu trữ, vòng đời, giao diện, hợp đồng đính kèm | Thái | [Gửi file](../features/files/README.md), Messaging, quyền |
 
-Thái sở hữu tích hợp provider/SDK và thiết bị/nguồn, không tự quyết định lifecycle/quyền/quota. Sáng sở hữu logic và UI điều khiển cuộc gọi; Vg giữ chính sách nhạy cảm và phần kiểm soát tương ứng. Mỗi gói tính cả tự kiểm thử, học/review và sửa lỗi; các gói lớn được xếp theo quỹ công suất, không coi tất cả phải chạy song song. Nếu thử nghiệm SFU/admission vượt ước lượng, điều chỉnh lịch/phân bổ trước khi nhận thêm việc, giữ các tiêu chí media đã chốt.
+Sau thiết kế, người phụ trách tự tạo nhiệm vụ, ước lượng, và đưa phụ thuộc cần quyết định vào họp tuần.
 
 <a id="capacity"></a>
 
 <a id="phân-bổ-công-suất-để-cân-tải"></a>
 
-### Phân bổ công suất để cân tải
+### Công suất
 
-Tỷ lệ dưới đây là baseline lập kế hoạch, không phải đo năng lực hoặc ước lượng thời gian hoàn thành. Mỗi hàng là quỹ của **một người trong một giai đoạn**, tổng 100%; các giai đoạn không cộng cùng một tuần. Với 3–4 ngày/tuần, 80% công việc tương ứng 2,4–3,2 ngày và 20% dự phòng là 0,6–0,8 ngày. Baseline 3,5 ngày là 2,8 ngày công việc + 0,7 ngày dự phòng.
+Cơ sở 3–4 ngày/tuần; dùng 80% cho công việc, 20% dự phòng. Với 3,5 ngày/tuần là 2,8 ngày công việc, 0,7 ngày dự phòng. Chưa có số liệu để chia tỷ lệ theo từng service.
 
-| Giai đoạn | Người | Công việc chính | Phần phối hợp đã tính trong quỹ | Dự phòng |
-|---|---|---|---|---|
-| MVP | Vg | 50% Community + 15% Identity còn lại | 15% quyết định/hợp đồng/review/hướng dẫn | 20% |
-| MVP | Sáng | 55% DM + 15% nền tin phòng dùng chung | 10% kiểm tra tích hợp và review gói liên quan | 20% |
-| MVP | Thái | 40% Email Worker + 25% môi trường/CI | 15% dataset/smoke, học và tổng hợp kết quả | 20% |
-| V1-0 — chuyển service | Vg | 60% thiết kế/chuyển Identity/Community và chính sách xuyên service | 20% review/điều phối/hướng dẫn | 20% |
-| V1-0 — chuyển service | Sáng | 60% chuyển Messaging, hợp đồng và dữ liệu | 20% hồi quy/kiểm tra tích hợp | 20% |
-| V1-0 — chuyển service | Thái | 60% môi trường nhiều service/định tuyến/CI | 20% bộ chạy hồi quy, dataset và học | 20% |
-| V1-1 — hoàn thiện/media | Vg | 45% Community/Identity còn lại + 15% chính sách/admission/quota/thu hồi media | 20% review/điều phối/hướng dẫn | 20% |
-| V1-1 — hoàn thiện/media | Sáng | 50% lifecycle/UI điều khiển cuộc gọi + 20% nhắn tin còn lại | 10% kiểm tra liên thông/đồng thời | 20% |
-| V1-1 — hoàn thiện/media | Thái | 50% provider/SDK/thiết bị/hiển thị nguồn + 25% worker/công cụ vận hành | 5% tổng hợp smoke/chẩn đoán; tự kiểm thử/học tính trong gói chính | 20% |
-| V1-2 — ổn định | Mỗi người | 60% kiểm chứng/sửa lỗi phần sở hữu | 20% kiểm tra chéo, hồ sơ và diễn tập được phân công | 20% |
+| Người | Tính trong quỹ | Theo dõi |
+|---|---|---|
+| Vg | Identity, Community; phạm vi, kiến trúc, quyết định, điều phối, review, triển khai chung | Ghi cả việc tổng thể lẫn service; thống nhất ưu tiên ở họp tuần |
+| Sáng | Messaging, thông báo, giao diện, kiểm thử, tài liệu, tích hợp, chuẩn bị triển khai | Ước lượng theo nhiệm vụ còn lại trên Trello |
+| Thái | Media, LiveKit, file, email, giao diện, kiểm thử, tài liệu, chuẩn bị triển khai | Thử Media sớm; tính cả học, tích hợp, sửa lại |
 
-Mỗi người giữ tối đa một gói chính đang thực hiện và một gói hỗ trợ nhỏ. Khi Vg đang chốt chuyển service, không đồng thời cam kết phát triển toàn bộ Community/media; khi Sáng làm lifecycle cuộc gọi, phần nhắn tin còn lại được xếp theo quỹ 20%, không coi là một việc toàn thời gian thứ hai. Công cụ của Thái bắt đầu ở MVP và tiếp tục mở rộng ở v1, không chờ hai người khác làm xong mới có việc.
+Mỗi người giữ tối đa một gói chính và một gói hỗ trợ nhỏ. Mobile, thông báo, gửi file chỉ vào lịch khi phạm vi và công sức đã rõ.
 
 <a id="điều-chỉnh-theo-kết-quả-thực-tế"></a>
 
-### Điều chỉnh theo kết quả thực tế
+### Điều chỉnh theo thực tế
 
-- Cuối mỗi tuần làm việc, ghi ngày công đã dùng, gói chạy được, lỗi/việc phải làm lại, thời gian review/hướng dẫn và phần bị chặn.
-- Nếu gói được ước lượng vượt quỹ 80%, giảm phần xếp trong kỳ, kéo lịch hoặc chuyển một đầu ra triển khai đã có thiết kế và cách thử rõ cho người còn công suất. Vg giữ quyết định nghiệp vụ/kiến trúc, không phải tự code mọi phần.
-- Khi Vg quá tải Community hoặc Thái hoàn tất worker/bộ chạy sớm, ưu tiên chuyển cho Thái một gói từ DB tới UI đã chốt contract/AC, chẳng hạn tạo phòng text trong [UC-COM-16](../features/community/channels.md#uc-com-16). Vg giữ chính sách/quyền và review; chỉ giao Sáng khi gói DM/lifecycle hiện tại đã bàn giao. Gói chuyển chủ thay thế một phần quỹ công việc hiện có, không cộng thêm nhiệm vụ hoặc tự mở rộng scope MVP.
-- Nếu người hoàn thành sớm, lấy gói kế tiếp trong scope của mình; nếu chuyển gói từ người khác, ghi người sở hữu mới, phụ thuộc, người review và phần việc cũ được giảm tương ứng.
-- Nếu review/hướng dẫn hoặc thử nghiệm media vượt phần đã dành, cập nhật phân bổ/lịch trước khi nhận thêm gói. Dùng dữ liệu sau 1–2 tuần để hiệu chỉnh baseline; chưa tuyên bố công việc đã cân bằng chỉ từ các tỷ lệ.
+- Hằng tuần mỗi người báo: đầu ra chạy được, ngày công dự kiến và thực tế, lỗi, phụ thuộc, thời gian review và hỗ trợ, kế hoạch tiếp ([họp tuần](workflow.md#weekly-meeting)).
+- Vg tổng hợp và quyết định điều chỉnh ưu tiên, phạm vi, lịch.
+- Ước lượng vượt quỹ thì giảm việc, đổi thứ tự hoặc dời lịch. Đổi người phụ trách phải thống nhất và ghi trên thẻ.
+- Ai xong sớm thì lấy việc tiếp theo trong phạm vi mình; kiểm tra chéo để chia sẻ kiến thức.
 
 <a id="ước-lượng-và-khóa-lịchchi-phí"></a>
 
-### Ước lượng và khóa lịch/chi phí
+### Ước lượng và chốt lịch, chi phí
 
-Ước lượng **ngày công còn lại** cho từng gói, gồm thiết kế, code, học/hướng dẫn, review, test, tích hợp và sửa lỗi. Chỉ tính phần Identity còn lại theo [hiện trạng Accounts](../features/accounts/README.md). AI là công cụ của cả nhóm; không tự gán hệ số tăng năng suất hay coi viết code xong là gói đã hoàn tất.
-
-Phương án 16 tuần cũ chỉ giữ làm cơ sở ngân sách minh họa ở [dự toán](#budget); bảng ngày công theo vai trò frontend/backend cũ không tiếp tục dùng để phân công sau DEC-117. Lịch mới cần kết quả MVP, thử nghiệm chuyển service/media, ngày nghỉ và công suất thực tế. Chi phí nhân sự/hạ tầng vẫn thay theo đơn giá và cấu hình được xác nhận; không dùng ngân sách tượng trưng làm bằng chứng đủ công sức.
-
-Microservice thuộc v1 theo DEC-116. Các lựa chọn D01–D52/DEC-119–170 được tập hợp tại [kiến trúc v1](../system/architecture.md#target); chi tiết tại [hợp đồng](../system/api-conventions.md), [phiên/quyền](../system/access-revocation.md), [dữ liệu](../system/database.md), [backend](../system/backend.md), [môi trường](../system/environments.md) và [giám sát](../system/observability.md). Baseline hạ tầng hiện có phục vụ phát triển/demo; nơi chạy/email công khai và cấu hình/tài nguyên thực tế còn cần xác nhận. Backup/restore giữ ở [sau v1](overview.md#backup-scope). Các [đầu ra thiết kế kế tiếp](#v1-next-design) được làm theo gói; gói độc lập đủ đầu vào có thể tiếp tục, không chờ hoàn tất toàn bộ thiết kế v1.
+- Ước lượng **ngày công còn lại** cho từng gói: thiết kế, code, học, hướng dẫn, review, test, tích hợp, sửa lỗi. Phần Identity chỉ tính phần còn lại theo [hiện trạng](../features/accounts/README.md).
+- AI là công cụ của cả nhóm; không tự gán hệ số tăng năng suất, không coi viết code xong là gói xong.
+- Phương án 16 tuần chỉ còn là cơ sở ngân sách minh họa. Lịch mới cần kết quả MVP, kết quả thử chuyển service và Media, ngày nghỉ, công suất thực.
+- Các quyết định kiến trúc (D01 đến D52) tổng hợp ở [kiến trúc v1](../system/architecture.md#target). Nơi chạy và email cho bản công khai còn mở. Backup để [sau v1](overview.md#backup-scope).
 
 <a id="preparation"></a>
 
 ## Gói chuẩn bị
 
-| Gói | Đầu ra | Phụ thuộc | Thực hiện / rà soát dự kiến | Điều kiện hoàn tất |
-|---|---|---|---|---|
-| PREP-01 | Hoàn thiện thiết kế tài khoản/job email và fixture cho luồng đã chọn | ACC-GAP-01–07, OQ-002 | Vg giữ contract; Thái proof delivery / Sáng kiểm tra phần DM dùng | Quy tắc/token/job không còn chỗ diễn giải khác nhau; AC của luồng được cập nhật |
-| PREP-02 | UI tài khoản/DM và cộng đồng theo mã màn hình | Wireframe, quyết định liên quan | Vg: Identity/Community; Sáng: DM / kiểm tra chéo; Thái dataset/bộ chạy | Có trạng thái rỗng/lỗi/mất mạng/mất quyền; ghi kết quả rà soát |
-| PREP-03 | Hợp đồng API có schema máy đọc được và mock | SCDC-API-DM-001, PREP-01 | Sáng sở hữu DM; Vg review quyền / Thái dùng mock cho bộ chạy | Request/response/lỗi thống nhất; không trả dữ liệu ngoài quyền |
-| PREP-04 | Thử nghiệm DM lưu bền/chống trùng/phân trang | PREP-03, lựa chọn công nghệ | Sáng / Vg review quyền/dữ liệu; Thái hỗ trợ bộ chạy | Các [kịch bản thử nghiệm](workflow.md#technical-evidence) có bằng chứng theo scope; rủi ro được ghi nhận |
-| PREP-05 | Thử nghiệm cập nhật, reconnect và thu hồi phiên | PREP-04, thiết kế phiên | Sáng: realtime; Vg: session/revoke / Thái bộ chạy lỗi mạng | Không trùng/sót dữ liệu; kết nối bị thu hồi đúng ngưỡng áp dụng |
-| PREP-06 | Ma trận thiết bị và fixture kiểm thử | DEC-059, AC và ca kiểm thử | Thái: matrix/dataset/bộ chạy; Vg/Sáng: kỳ vọng và thực thi phần sở hữu | Danh sách trình duyệt/phiên bản, kích thước, dữ liệu và kết quả mong đợi rõ |
-| PREP-07 | Ước lượng và lịch đợt tài khoản/DM | PREP-01–06 đủ rõ | Vg, Sáng, Thái | Ngày công, người làm/rà soát, thời gian hướng dẫn và phụ thuộc không trùng quỹ thời gian |
+PREP nằm trong quỹ của gói tính năng tương ứng, không phải việc toàn thời gian thêm. Chỉ làm phần còn thiếu cho gói v1 sắp làm; không làm lại đầu ra đã có ([nền MVP](../releases/mvp.md)).
 
-Đây là phân công kế hoạch theo DEC-117; không ghi các gói đã hoàn tất hoặc lịch đã được cam kết. PREP nằm trong quỹ của gói tính năng/công cụ tương ứng, không cộng thành việc toàn thời gian bổ sung. Chọn phần PREP còn thiếu theo gói v1 sắp làm và [bằng chứng nền đã bàn giao](../releases/mvp.md); không làm lại các đầu ra đã có hoặc chờ nghiệm thu toàn MVP.
+| Gói | Đầu ra | Phụ thuộc | Làm, rà soát | Xong khi |
+|---|---|---|---|---|
+| PREP-01 | Thiết kế tài khoản, job email, fixture | ACC-GAP-01 đến 07, OQ-002 | Vg giữ hợp đồng; Thái chứng minh gửi thư; Sáng kiểm phần DM dùng | Quy tắc, token, job không còn cách hiểu khác nhau; AC cập nhật |
+| PREP-02 | Giao diện tài khoản, DM, cộng đồng theo mã màn hình | Wireframe, quyết định | Vg: Identity, Community; Sáng: DM; review chéo | Có trạng thái trống, lỗi, mất mạng, mất quyền |
+| PREP-03 | Hợp đồng API có schema máy đọc và mock | SCDC-API-DM-001, PREP-01 | Sáng; Vg review quyền | Request, response, lỗi thống nhất; không trả dữ liệu ngoài quyền |
+| PREP-04 | Thử DM lưu bền, chống trùng, phân trang | PREP-03 | Sáng; Vg review | Các [tình huống kỹ thuật](workflow.md#technical-evidence) có bằng chứng |
+| PREP-05 | Thử cập nhật, kết nối lại, thu hồi phiên | PREP-04 | Sáng: realtime; Vg: phiên | Không trùng, không sót; thu hồi đúng hạn |
+| PREP-06 | Danh sách thiết bị, fixture kiểm thử | DEC-059, AC | Vg thống nhất; mỗi người chuẩn bị phần mình | Trình duyệt, phiên bản, kích thước, dữ liệu, kết quả mong đợi rõ |
+| PREP-07 | Ước lượng và lịch cho đợt tài khoản và DM | PREP-01 đến 06 | Vg, Sáng, Thái | Ngày công, người làm và rà soát, thời gian hướng dẫn, phụ thuộc không chồng quỹ |
 
 <a id="community-work-items"></a>
 
 ## Công việc Community
 
-Danh sách kế hoạch kế thừa phạm vi DEC-118. COM-W01–07 là công việc nền còn thiếu chuyển tiếp sang v1 từ [snapshot MVP](../releases/mvp.md#community-scope); COM-W08–12 hoàn thiện các nhánh còn lại. Giữ mã COM-W/UC/AC/TC và kỳ vọng nghiệp vụ; trạng thái triển khai nằm trong [chủ đề Community](../features/community/README.md) và [tin phòng](../features/messaging/channel-messaging.md).
+COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ [MVP](../releases/mvp.md#community-scope) sang v1. COM-W08 đến 13 hoàn thiện các nhánh khác. Mã COM-W chỉ là tên công việc, không thay mã UC, AC, TC. Trạng thái thật xem [Community](../features/community/README.md) và [tin phòng](../features/messaging/channel-messaging.md). Người phụ trách tự chia nhiệm vụ Trello và làm khi đủ [điều kiện](workflow.md#readiness).
 
-Các hàng dưới đây là gói đề xuất để lập kế hoạch, chưa được duyệt bắt đầu code. Trước mỗi gói cần tham khảo người dùng về scope, thiết kế và cách kiểm chứng theo [quy trình bàn giao](../records/verification/community/README.md#history-use-case-delivery). Đầu mối là phân công kế hoạch theo [DEC-117](../records/decisions/README.md#dec-117), chưa phải xác nhận nhận việc hoặc cam kết lịch. `COM-Wxx` chỉ định danh công việc, không thay mã UC/AC/TC.
-
-| Mã / ưu tiên | UC / phạm vi | Phụ thuộc trực tiếp | Đầu mối kế hoạch | Đầu ra và điều kiện hoàn tất | Trạng thái |
+| Mã | Ca sử dụng | Phụ thuộc | Phụ trách | Đầu ra và điều kiện xong | Trạng thái |
 |---|---|---|---|---|---|
-| COM-W01 / chuyển tiếp v1 | UC-COM-17, nền tin dùng chung | Identity guard, channel guard và lifecycle create đã có; hợp đồng [Messaging](../features/messaging/README.md) | Sáng; Vg rà soát quyền | Migration/model tin, thứ tự per-space, cursor và reader lịch sử có guard; thử phân trang, room ẩn/cross-server, session sai và epoch cũ trên DB thật | Đề xuất; chưa bắt đầu |
-| COM-W02 / chuyển tiếp v1 | UC-COM-23 gửi/retry | COM-W01; [transaction/lease](../system/community.md#transactions) | Sáng; Vg rà soát Community | Writer dùng guard tới commit; operation chống trùng, tin/sequence/outbox nguyên tử; thử retry/đồng thời/restart và quyền thay đổi tranh commit | Đề xuất; chưa bắt đầu |
-| COM-W03 / chuyển tiếp v1 | UC-COM-17/23 giao diện lịch sử/gửi | COM-W01/02 | Vg phối hợp Sáng | Mở phòng → lịch sử → gửi → reload với API thật; trạng thái lưu/thất bại rõ; retry do người dùng, đổi tài khoản/mất quyền không phục hồi dữ liệu riêng | Đề xuất; chưa bắt đầu |
-| COM-W04 / chuyển tiếp v1 | UC-COM-25 nhận tin | COM-W02; hợp đồng realtime/dispatcher của Messaging | Sáng; Thái hỗ trợ bộ chạy | Outbox dispatcher, Hub và subscription có admission; hai tài khoản nhận tin đã commit, dedup và đối soát sau reconnect bằng sequence/cursor; ghi proof mất kết nối | Đề xuất; chưa bắt đầu |
-| COM-W05 / chuyển tiếp v1 | UC-COM-25 mất quyền; tích hợp UC-COM-20/21/22 | COM-W04; mutation role/ACL và Identity đã có | Sáng + Vg; Thái hỗ trợ đo | HTTP/gửi/subscribe/resume dùng quyền hiện hành; đo kết nối đang mở ngừng truy cập trong ≤5 giây từ commit theo DEC-083, gồm session/account và role/ACL; có race test và fail-close | Đề xuất; chưa bắt đầu |
-| COM-W06 / chuyển tiếp v1 | UC-COM-03/06/16/17/23/25 toàn luồng | COM-W03/04/05 | Vg + Sáng; Thái bộ chạy | Tạo → tìm → public/immediate join → phòng text → lịch sử/gửi/nhận → mất quyền trên DB/API/Hub thật; hồi quy create/join/search/role/ACL/edit; ghi commit, môi trường, actual result và phần chưa đạt | Đề xuất; chưa bắt đầu |
-| COM-W07 / chuyển tiếp v1 | Tích hợp và kiểm chứng Community chuyển tiếp sang v1 | COM-W06; tích hợp Identity/DM và bộ chạy kế thừa | Vg + Sáng + Thái; người kiểm tra ghi trong hồ sơ | Checkout chạy lại theo [hướng dẫn local](../guides/community-development.md), cấu hình/key/ledger rõ, hồ sơ kết quả đối chiếu [tiêu chí chuyển tiếp Community](../releases/mvp.md#community-acceptance); merge/phát hành cần quyết định riêng | Đề xuất; chưa bắt đầu |
+| COM-W01 | UC-COM-17, nền tin dùng chung | Guard Identity và phòng, tạo phòng đã có; hợp đồng [Messaging](../features/messaging/README.md) | Sáng; Vg rà quyền | Migration và model tin, thứ tự theo không gian, cursor, đọc lịch sử có guard. Thử phân trang, phòng ẩn, khác server, phiên sai, epoch cũ trên DB thật | Chưa bắt đầu |
+| COM-W02 | UC-COM-23 gửi, gửi lại | COM-W01; [transaction](../features/community/mechanics.md#transactions) | Sáng; Vg rà Community | Ghi tin có guard tới commit; chống trùng; tin, sequence, outbox nguyên tử. Thử gửi lại, đồng thời, khởi động lại, đổi quyền tranh commit | Chưa bắt đầu |
+| COM-W03 | UC-COM-17, 23 giao diện | COM-W01, 02 | Sáng; Vg ghép khung | Mở phòng → lịch sử → gửi → tải lại với API thật; trạng thái đã lưu, lỗi rõ; gửi lại do người dùng bấm | Chưa bắt đầu |
+| COM-W04 | UC-COM-25 nhận tin | COM-W02; hợp đồng realtime Messaging | Sáng | Worker outbox, Hub, đăng ký có kiểm soát; hai tài khoản nhận tin; loại trùng; đối chiếu sau kết nối lại; ghi bằng chứng mất kết nối | Chưa bắt đầu |
+| COM-W05 | UC-COM-25 mất quyền; UC-COM-20, 21, 22 | COM-W04 | Sáng + Vg | HTTP, gửi, đăng ký, bù tin dùng quyền hiện tại; đo kết nối ngừng trong 5 giây từ commit (DEC-083) cho cả phiên và vai trò, ACL; có test tranh chấp và dừng khi lỗi | Chưa bắt đầu |
+| COM-W06 | Toàn luồng UC-COM-03, 06, 16, 17, 23, 25 | COM-W03, 04, 05 | Vg + Sáng | Tạo → tìm → tham gia → phòng chữ → lịch sử, gửi, nhận → mất quyền trên DB, API, Hub thật; hồi quy các chức năng cũ; ghi commit, môi trường, kết quả | Chưa bắt đầu |
+| COM-W07 | Tích hợp và kiểm thử | COM-W06 | Vg điều phối; Sáng kiểm Messaging | Chạy lại theo [hướng dẫn](../guides/development.md#community); hồ sơ đối chiếu [tiêu chí chuyển tiếp](../releases/mvp.md#community-acceptance) | Chưa bắt đầu |
 
-COM-W01–07 tiếp tục phần tin phòng/realtime còn thiếu trong v1. Trước COM-W01, đối chiếu nền Messaging/DM đã có và thiết kế ranh giới service để chỉ làm phần còn lại. COM-W03 và COM-W04 có thể thực hiện song song sau khi hợp đồng COM-W02 ổn định. Kiểm chứng COM-W05 chạy từ khi có Hub tin phòng, rồi lặp trong toàn luồng COM-W06; guard transaction một host hiện có chưa chứng minh deadline thu hồi realtime hoặc giao thức xuyên service. COM-W07 ghi kết quả tích hợp trong phạm vi, không mở lại một mốc nghiệm thu toàn MVP riêng.
+- Trước COM-W01, đối chiếu phần DM đã có và ranh giới service để chỉ làm phần còn thiếu.
+- COM-W03 và 04 làm song song được khi hợp đồng COM-W02 ổn định.
+- COM-W05 kiểm thử từ khi có Hub tin phòng, rồi lặp trong COM-W06. Guard hiện có chưa chứng minh thời hạn ngắt realtime hay giao thức giữa service.
 
 <a id="community-plan-công-việc-mở-rộng-sau-phạm-vi-mvp-đã-chọn"></a>
 
-### Công việc mở rộng sau phạm vi MVP đã chọn
+### Công việc mở rộng
 
-| Mã | UC / đầu ra | Phụ thuộc và điều kiện hoàn tất | Đầu mối kế hoạch | Trạng thái |
+| Mã | Ca sử dụng | Điều kiện xong | Phụ trách | Trạng thái |
 |---|---|---|---|---|
-| COM-W08 | UC-COM-19 xóa phòng | Lifecycle delete channel/space cùng transaction, operation/outbox và chặn HTTP/Hub; proof tranh gửi/xóa và retention theo [Channels](../features/community/channels.md) | Vg + Sáng | Chưa bắt đầu |
-| COM-W09 | UC-COM-04/05/07/08 metadata server, join mode và approval | Server/pending writer nguyên tử, private switch kết thúc request và quyền reviewer; proof CAS/approve/cancel/join đồng thời | Vg | Chưa bắt đầu |
-| COM-W10 | UC-COM-09–13 lời mời | Token/lượt dùng/issuer lifetime, mời đích danh và membership epoch; proof consume lượt cuối, thu hồi/accept đồng thời | Vg | Chưa bắt đầu |
-| COM-W11 | UC-COM-14/15 chuyển owner và rời | Ownership/membership/epoch/ACL cleanup nguyên tử; owner không tự rời, stale epoch và thu hồi HTTP/realtime; rejoin fixture đã có chưa thay proof leave API | Vg + Sáng | Chưa bắt đầu |
-| COM-W12 | UC-COM-24 sửa/xóa tin | Messaging writer, quyền tác giả và placeholder/version/outbox; proof CAS/tranh mutation/quyền hiện hành | Sáng; Vg tích hợp UI | Chưa bắt đầu |
-| COM-W13 | Phần voice của UC-COM-16/17/25 và Media | Module/lifecycle Media, admission, provider và cutoff riêng; [đặc tả media](../features/media/README.md) | Theo gói v1 tại DEC-117 | Chưa bắt đầu |
+| COM-W08 | UC-COM-19 xóa phòng | Xóa phòng và không gian cùng transaction; chống trùng, outbox; chặn HTTP và Hub; chứng minh tranh gửi và xóa ([phòng](../features/community/channels.md)) | Vg + Sáng | Chưa bắt đầu |
+| COM-W09 | UC-COM-04, 05, 07, 08 thông tin server, cách tham gia, duyệt | Ghi server và yêu cầu nguyên tử; chuyển sang riêng tư kết thúc yêu cầu đang chờ; quyền người duyệt; chứng minh CAS, duyệt, hủy, tham gia đồng thời | Vg | Chưa bắt đầu |
+| COM-W10 | UC-COM-09 đến 13 lời mời | Token, lượt dùng, hiệu lực theo người tạo, mời đích danh, epoch; chứng minh lượt cuối, thu hồi và nhận đồng thời | Vg | Chưa bắt đầu |
+| COM-W11 | UC-COM-14, 15 chuyển chủ và rời | Chủ, tư cách, epoch, dọn ACL nguyên tử; chủ không tự rời; epoch cũ; thu hồi HTTP và realtime | Vg + Sáng | Chưa bắt đầu |
+| COM-W12 | UC-COM-24 sửa, xóa tin | Ghi tin, quyền tác giả, placeholder, version, outbox; chứng minh CAS, tranh chấp, quyền hiện tại | Sáng; Vg phối hợp | Chưa bắt đầu |
+| COM-W13 | Phần thoại của UC-COM-16, 17, 25 | Module Media, kiểm soát vào, LiveKit, ngắt ([Media](../features/media/README.md)) | Thái: Media; Vg: vòng đời và quyền phòng | Chưa bắt đầu |
 
-UC-COM-02 còn đường gửi request approval và UC-COM-06 còn nhánh approval/pending trong phạm vi đầy đủ. UC-COM-03 còn đối soát theo leave/rejoin API. Các phần này vẫn giữ trong đặc tả v1, không dùng kết quả search/join hiện tại để đóng toàn bộ UC.
+UC-COM-02 còn nhánh gửi yêu cầu duyệt; UC-COM-06 còn nhánh chờ duyệt; UC-COM-03 còn đối chiếu khi rời và tham gia lại. Kết quả tìm kiếm và tham gia hiện tại không đóng được toàn bộ các ca này.
 
-Các OQ/ACL-O giữ tại nguồn chủ trì: [Servers](../features/community/servers.md#gaps), [Memberships](../features/community/memberships.md#gaps), [Invitations](../features/community/invitations.md#gaps), [Channels](../features/community/channels.md#gaps), [Permissions](../features/community/access-control.md#gaps), [tích hợp](../features/messaging/channel-messaging.md#gaps). Thu hồi quyền, restore và Media giữ proof riêng theo [thiết kế tích hợp](../system/community.md) và [vòng đời dữ liệu](../system/data-lifecycle.md).
+Câu hỏi mở của từng phần: [Servers](../features/community/servers.md#gaps), [Memberships](../features/community/memberships.md#gaps), [Invitations](../features/community/invitations.md#gaps), [Channels](../features/community/channels.md#gaps), [Permissions](../features/community/access-control.md#gaps), [tin phòng](../features/messaging/channel-messaging.md#gaps).
+
+---
+
+Nguồn: DEC-030, DEC-059, DEC-079, DEC-083, DEC-088, DEC-111, DEC-116, DEC-117, DEC-118, [DEC-171](../records/decisions/README.md#dec-171), DEC-172, [DEC-173](../records/decisions/README.md#dec-173).

@@ -1,69 +1,41 @@
-# Lưu và thay đổi tin
+# SCDC — Lưu và thay đổi tin
 
-Messaging sở hữu tin, sequence, SendOperation và outbox cho DM và tin phòng. Tài liệu này giữ cách tiếp nhận tin, model, transaction, retry, sửa/xóa và trạng thái client. [Nội dung văn bản](text-policy.md) và [đồng bộ](synchronization.md) là các cơ chế liên quan.
+Trang này mô tả cách một tin nhắn được lưu: mô hình dữ liệu, cách gửi và chống gửi trùng, cách sửa và xóa, và trạng thái tin phía client. Áp dụng cho DM và tin phòng.
 
-Backup/restore, sổ bảo vệ độc lập và placeholder phát sinh từ restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Lưu bền qua restart, retention online, khóa, version, tombstone và chống trùng vẫn thuộc v1.
+**Trạng thái:** DM trong nền `900e226` đã có: ghi tin, chống trùng bằng HMAC, sequence theo cuộc trò chuyện, sửa, xóa và outbox (một ứng dụng duy nhất). Bằng chứng xem [hồ sơ DM](../../records/verification/messaging/README.md), [DM-MVP](../../records/verification/messaging/DM-MVP.md) và [kiểm tra hợp nhất](../../records/verification/messaging/merge-2026-10-13.md). Tin phòng chưa có: khi làm phải dùng không gian Messaging tương ứng với phòng và [guard Community](channel-messaging.md#channel-admission).
 
-## Trạng thái và phạm vi
+Các ví dụ dưới dùng DM (cặp người dùng, `conversationId`). Nội dung văn bản xem [text-policy](text-policy.md); đồng bộ xem [synchronization](synchronization.md).
 
-Nền DM `900e226` đã có writer gửi, SendOperation/HMAC, sequence theo hội thoại, sửa/xóa và outbox trong một API host. Bằng chứng theo revision tại [hồ sơ DM](../../records/verification/messaging/README.md), [DM-MVP](../../records/verification/messaging/DM-MVP.md) và [kiểm tra hợp nhất 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md); không suy toàn bộ hợp đồng hoặc các AC v1 đã đạt. Các ví dụ cặp user/recipient và `conversationId` minh họa DM; writer tin phòng còn phải áp dụng Messaging space tương ứng channel và [guard Community](channel-messaging.md#channel-admission). Cơ chế xuyên service v1 và nhánh restore sau v1 vẫn là thiết kế mục tiêu.
-
-<a id="v1-message-intake"></a>
-
-## D08 — Tiếp nhận tin và khả năng chuyển sang hàng đợi
-
-Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-125](../../records/decisions/README.md#dec-125). Quyết định áp dụng cho gửi tin DM/tin phòng trong kiến trúc v1. Nền DM monolith đã ghi trực tiếp qua REST cùng outbox; writer tin phòng và tách database/service còn là phần việc v1. Phương án hàng đợi B là khả năng chuyển đổi về sau, chưa triển khai.
-
-**A — Ghi trực tiếp:** WebClient gửi REST tới Messaging. Sau kiểm tra quyền, writer ghi tin, SendOperation, sequence và outbox trong cùng transaction của DB Messaging; trả kết quả thành công sau commit. Bộ phát cập nhật xử lý outbox sau đó theo [hợp đồng đồng bộ](synchronization.md#contract-9). Outbox bảo vệ việc phát cập nhật của tin đã lưu; không tiếp nhận thay request chưa tới được Messaging hoặc chưa commit.
-
-**B — Hàng đợi tiếp nhận:** phương án chuyển đổi về sau. Một thành phần tiếp nhận bền lưu lệnh trước khi worker gọi writer. Chỉ giảm phụ thuộc vào writer đang hoạt động nếu thành phần tiếp nhận và hàng đợi có thể nhận lệnh khi writer ngừng. Chưa chọn thành phần, broker hoặc vị trí chạy.
-
-### Điều kiện thiết kế để chuyển sang B
-
-- Tách transport nhận request khỏi use case ghi tin. REST hiện tại và worker tương lai phải dùng chung quy tắc nghiệp vụ, không tạo hai cách ghi khác nhau.
-- Giữ `clientMessageId`, payload ban đầu và khóa chống trùng qua retry hoặc đổi transport. Tra lại thao tác đã commit trả tin hiện hành/tombstone theo [hợp đồng gửi](#contract-7).
-- Mọi đường ghi kiểm tra quyền tới commit theo [D05/D06](../../system/access-revocation.md#v1-authorization-coordination). Lệnh nằm trong hàng đợi không giữ quyền gửi mãi; mất quyền trước khi ghi có thể làm lệnh bị từ chối.
-- Writer quyết định sequence trong transaction, theo thứ tự commit của từng hội thoại. Thứ tự broker hoặc thời điểm client gửi không thay sequence chuẩn.
-- Giữ nghĩa “Đã gửi” là tin đã commit. Khi bổ sung B, phải phân biệt lệnh được tiếp nhận với tin đã lưu; xác nhận của broker không phải kết quả ghi tin.
-
-### Công việc khi chuyển sang B
-
-Trước khi triển khai B, chốt hợp đồng tiếp nhận/kết quả, giới hạn backlog, xử lý quá tải, phạm vi từng đợt chuyển đổi và rollback. Kiểm chứng quyền, chống trùng và sequence khi hai đường cùng tồn tại hoặc còn lệnh đang xử lý; timeout không chứng minh lệnh đã rollback. Không phát lại lịch sử như lệnh gửi mới. Cần kiểm chứng retry trùng, mất phản hồi, worker khởi động lại và thu hồi quyền trong lúc chuyển đổi.
-
-Đây là yêu cầu giữ khả năng chuyển đổi, chưa là thiết kế migration hoàn chỉnh hoặc cam kết chỉ cần bật cấu hình. Không cần triển khai trước broker hay worker tiếp nhận. Hàng đợi giúp lưu đệm tải tăng đột biến; năng lực xử lý và giới hạn backlog vẫn cần đo theo [mẫu tải](https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling).
-
-D08 độc lập với [D07 — truyền lệnh thu hồi](../../system/access-revocation.md#v1-revocation-transport). Tự động thử lại ở client, lưu tin chờ qua reload và trạng thái đã nhận/đã xem chưa được chọn thêm; [chính sách client hiện hành](#client-state) vẫn áp dụng.
+Backup, khôi phục và placeholder sau khôi phục để [sau v1](../../project/overview.md#backup-scope). Lưu bền khi khởi động lại, thời hạn lưu, khóa, version, tin đã xóa và chống trùng vẫn thuộc v1.
 
 <a id="contract-4"></a>
 
 <a id="hợp-đồng-4--đối-tượng-dữ-liệu-và-ràng-buộc"></a>
 
-## Đối tượng dữ liệu và ràng buộc
+## Mô hình dữ liệu
 
-| Đối tượng | Trường chính đề xuất | Ràng buộc |
+| Đối tượng | Trường chính | Ràng buộc |
 |---|---|---|
-| UserSummary | `id, username, displayName` | Không trả email, phiên hoặc trạng thái bảo mật |
-| DirectConversation | `id, participantLowId, participantHighId, createdAt, lastSequence, lastActivityAt` | Đúng hai người khác nhau; cặp đã chuẩn hóa duy nhất; tạo đồng thời trả cùng hội thoại; DTO trả hai UserSummary trong `participants` |
-| Message | `id, conversationId, authorId, clientMessageId, createSequence, version, content, createdAt, editedAt, deletedAt` | Tác giả thuộc hội thoại; sequence tạo tin tăng theo thứ tự commit trong hội thoại |
-| SendOperation | `conversationId, authorId, clientMessageId, requestFingerprint, messageId` | Duy nhất theo ba trường đầu; cùng transaction với tin; còn tồn tại sau khi tin bị xóa |
-| NotificationOutbox | `eventId, type, conversationId, messageId, version, occurredAt` | Cùng transaction với thay đổi tin; chỉ tham chiếu, không lưu bản nội dung cũ |
+| UserSummary | `id, username, displayName` | Không có email, phiên hay trạng thái bảo mật |
+| DirectConversation | `id, participantLowId, participantHighId, createdAt, lastSequence, lastActivityAt` | Đúng hai người khác nhau; mỗi cặp chỉ có một cuộc trò chuyện; tạo đồng thời trả cùng một cuộc; DTO trả hai UserSummary trong `participants` |
+| Message | `id, conversationId, authorId, clientMessageId, createSequence, version, content, createdAt, editedAt, deletedAt` | Tác giả thuộc cuộc trò chuyện; sequence tăng theo thứ tự commit |
+| SendOperation | `conversationId, authorId, clientMessageId, requestFingerprint, messageId` | Duy nhất theo ba trường đầu; ghi cùng transaction với tin; vẫn giữ khi tin bị xóa |
+| NotificationOutbox | `eventId, type, conversationId, messageId, version, occurredAt` | Ghi cùng transaction với thay đổi tin; chỉ chứa ID, không chứa nội dung |
 
-Hai người được sắp thứ tự ID bằng một quy tắc nhất quán ở mọi writer
-trước khi áp unique pair. Không tạo membership thứ ba hoặc hội thoại
-nhóm bằng endpoint DM. Chủ ý gửi hai tin cùng nội dung dùng hai
-`clientMessageId` khác nhau và tạo hai tin.
+- Hai người được sắp theo ID bằng cùng một quy tắc ở mọi nơi ghi, trước khi kiểm tra cặp duy nhất. Endpoint DM không tạo người thứ ba hay nhóm.
+- Muốn gửi hai tin giống nhau thì dùng hai `clientMessageId` khác nhau.
+- **Sửa tin:** thay nội dung và tăng `version`. Không lưu lịch sử nội dung cũ (DEC-052).
+- **Xóa tin:** đặt `content=null`, giữ ID, tác giả, thời điểm và khóa thao tác (gọi là tombstone); tăng `version` ở lần xóa đầu.
+- Không ghi nội dung tin vào log, audit hay sự kiện, để không vô tình tạo lịch sử sửa.
+- Tin không tự hết hạn (DEC-070). v1 không có tự xóa tài khoản (DEC-103); khóa tài khoản không xóa lịch sử (DEC-104).
 
-Sửa tin thay nội dung hiện hành và tăng `version`; không tạo bảng lịch
-sử nội dung cũ (DEC-052). Xóa tin đặt `content=null`, giữ tombstone, ID,
-tác giả, thời điểm và khóa thao tác; tăng `version` khi xóa lần đầu. Không lưu nội dung
-tin trong log, audit hoặc payload sự kiện để vô tình tạo lịch sử sửa.
-Tin không tự hết hạn DEC-070; chưa self-delete account DEC-103, khóa không xóa lịch sử DEC-104. Thiết kế sau v1 giữ backup/WAL tối đa tuổi 30 ngày DEC-086/109 và trả placeholder khi restore mất bản sửa mới nhất theo DEC-108. [Vòng đời dữ liệu](../../system/data-lifecycle.md#restore) là nguồn chuẩn; chỉ bản mới nhất không phải cam kết xóa ngay mọi backup hoặc dữ liệu người nhận tự sao chép.
+Sau v1: backup giữ tối đa 30 ngày (DEC-086, 109); nếu khôi phục làm mất bản sửa mới nhất thì trả placeholder (DEC-108). Nguồn chuẩn: [vòng đời dữ liệu](../../system/data-lifecycle.md#restore).
 
 <a id="contract-7"></a>
 
 <a id="hợp-đồng-7--gửi-thử-lại-và-sửaxóa-đồng-thời"></a>
 
-## Gửi, thử lại và sửa/xóa đồng thời
+## Gửi, gửi lại, sửa và xóa
 
 ```mermaid
 sequenceDiagram
@@ -89,79 +61,140 @@ sequenceDiagram
     W-->>UI: Cập nhật cho hai người có phiên hợp lệ
 ```
 
-- Nếu cùng khóa nhưng payload khác, trả `409 OPERATION_CONFLICT`.
-  Không lấy nội dung đã sửa để so với nội dung gửi ban đầu.
-- Unique constraint và transaction ngăn hai request cùng khóa tạo hai
-  tin. Mọi writer phải tuần tự hóa cấp sequence theo từng hội thoại để
-  thứ tự sequence cũng là thứ tự commit của tin mới.
-- Response mất sau commit: lần thử lại trả cùng `messageId`. Tin đã
-  bị sửa/xóa: trả trạng thái hiện hành, không hồi sinh nội dung cũ.
-- Peer bị khóa sau commit: retry cùng khóa/nội dung chỉ đọc lại tin đã lưu
-  nếu actor còn quyền. Khóa chưa tồn tại phải kiểm tra peer hiện hành;
-  không tạo tin mới hoặc outbox mới khi peer bị khóa.
-- Giữ khóa chống trùng suốt vòng đời dữ liệu hội thoại, kể cả tombstone.
-  Không tự hết hạn khóa sau vài giờ trong khi UI còn cho thử lại. Việc
-  thanh lọc toàn hội thoại chưa được chọn; [vòng đời dữ liệu](../../system/data-lifecycle.md#cleanup) giữ marker khi payload được dọn, không purge hội thoại/tin live.
-- Trước khi sửa/xóa, kiểm tra lại tác giả và quyền truy cập. Sai version
-  trả xung đột; giao diện tải bản hiện hành, không ghi đè âm thầm. Sửa
-  tin đã xóa trả `409 MESSAGE_DELETED`; xóa lặp vẫn phải kiểm tra tác giả.
-- Client không tự gửi lại POST khi có mạng hoặc khi làm mới phiên.
-  Tải lịch sử/kết nối lại được tự thực hiện; thử lại một tin lỗi do người
-  gửi bấm, theo DEC-021. Nếu thư viện HTTP tự retry mutation phải tắt
-  hành vi đó cho luồng gửi tin.
+### Gửi và chống trùng
+
+- **Cùng khóa, cùng nội dung:** trả lại tin đã lưu (cùng `messageId`). Nếu tin đã bị sửa hay xóa thì trả trạng thái hiện tại, không hồi sinh nội dung cũ.
+- **Cùng khóa, khác nội dung:** `409 OPERATION_CONFLICT`. So với nội dung gửi ban đầu, không so với nội dung đã sửa.
+- Ràng buộc unique và transaction đảm bảo hai request cùng khóa không tạo hai tin.
+- Sequence được cấp tuần tự trong từng cuộc trò chuyện, nên thứ tự sequence cũng là thứ tự commit.
+- **Người kia bị khóa sau khi tin đã lưu:** gửi lại cùng khóa chỉ đọc lại tin cũ (nếu người gửi còn quyền). Khóa mới thì phải kiểm tra người kia; không tạo tin hay outbox mới.
+- Khóa chống trùng giữ suốt đời cuộc trò chuyện, kể cả khi tin đã xóa. Không tự hết hạn khóa khi giao diện vẫn cho gửi lại. Khi dọn dữ liệu, giữ lại dấu hiệu chống trùng ([vòng đời dữ liệu](../../system/data-lifecycle.md#cleanup)).
+
+### Gửi lại
+
+- Client **không tự gửi lại** POST khi có mạng trở lại hay khi làm mới token. Người gửi phải bấm "Thử lại" (DEC-021).
+- Tải lịch sử và kết nối lại thì được tự động.
+- Nếu thư viện HTTP tự gửi lại, phải tắt cho luồng gửi tin.
+
+### Sửa và xóa
+
+- Trước khi sửa hoặc xóa, kiểm tra lại tác giả và quyền truy cập.
+- Tin không thuộc cuộc trò chuyện: 404. Không phải tác giả: 403.
+- Dùng `expectedVersion`. Sai version: `409 VERSION_CONFLICT`; giao diện tải lại trang đang xem, không ghi đè âm thầm.
+- Sửa tin đã xóa: `409 MESSAGE_DELETED`.
+- Xóa lặp: vẫn kiểm tra tác giả; trả tombstone hiện tại, không tăng version thêm.
+- Sửa thành đúng nội dung hiện tại (đã chuẩn hóa) với version đúng: không làm gì, không gắn "Đã sửa", không tạo outbox.
 
 <a id="uuid-fingerprint-và-khóa-giao-dịch"></a>
 
-### UUID, fingerprint và khóa giao dịch
+## Fingerprint và khóa
 
-Chuẩn hóa cặp user theo so sánh unsigned từng byte UUID ở thứ tự RFC/network. Trong .NET dùng `Guid.ToByteArray(bigEndian:true)` để lấy 16 byte theo [API Microsoft](https://learn.microsoft.com/en-us/dotnet/api/system.guid.tobytearray?view=net-10.0); phù hợp comparator byte trong [PostgreSQL 18 uuid.c](https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/utils/adt/uuid.c). Không so `ToByteArray()` mặc định. Fixture dùng cặp `00000001-0000-4000-8000-000000000000` và `00000100-0000-4000-8000-000000000000` để bắt lỗi endian.
+### Sắp xếp UUID
 
-Fingerprint v1 dùng HMAC-SHA256, key ngẫu nhiên riêng tối thiểu 32 byte; lưu `fingerprint_version,key_id,fingerprint` trong SendOperation. Input binary gồm ASCII domain `SCDC.Send.v1` + byte 0, UUID space/author/client theo network order, độ dài UTF-8 content dạng UInt32 big-endian, rồi UTF-8 content đã chuẩn hóa. Không serialize JSON tùy thứ tự field, không đưa thời gian hoặc access token vào fingerprint. So sánh hash constant-time; không dùng SHA-256 không khóa để lưu dấu vết nội dung ngắn dễ đoán.
+Cặp người dùng được sắp bằng cách so từng byte UUID (không dấu) theo thứ tự network. Trong .NET dùng `Guid.ToByteArray(bigEndian:true)` ([Microsoft](https://learn.microsoft.com/en-us/dotnet/api/system.guid.tobytearray?view=net-10.0)), khớp với cách so của [PostgreSQL 18](https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/utils/adt/uuid.c). Không dùng `ToByteArray()` mặc định. Fixture dùng cặp `00000001-0000-4000-8000-000000000000` và `00000100-0000-4000-8000-000000000000` để bắt lỗi endian.
 
-Retry tra SendOperation trước, lấy đúng key/version từng dùng để tính lại fingerprint; không so với nội dung message hiện hành sau sửa/xóa. Rotation chỉ đổi key cho thao tác mới; v1 giữ key cũ cho mọi SendOperation còn tồn tại. Giữ khóa cho cửa sổ backup 30 ngày liên quan áp dụng sau v1. Key thiếu/không đọc được trả 503 `FINGERPRINT_KEY_UNAVAILABLE`, không tạo tin mới hoặc giả 409 payload conflict. HMAC key tách khỏi key ring cursor/email; không lưu secret trong DB/docs.
+### Fingerprint
 
-Thứ tự khóa thống nhất: Identity user rows theo UUID → chat space → message/operation → outbox. [IAccountAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) đã có implementation Identity: kiểm tra actor active/verified, session/stamp/expiry và giữ share lock trên user trong transaction của caller, tương thích với `LockUserAsync` dùng NO KEY UPDATE. [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) đã quản lý shared connection/transaction trong BuildingBlocks; Messaging không JOIN bảng Identity.
+- HMAC-SHA256 với khóa ngẫu nhiên riêng, tối thiểu 32 byte. Lưu `fingerprint_version`, `key_id`, `fingerprint` trong SendOperation.
+- Dữ liệu đầu vào (dạng byte): chuỗi ASCII `SCDC.Send.v1` + byte 0; UUID không gian, tác giả, client theo thứ tự network; độ dài UTF-8 của nội dung dạng UInt32 big-endian; nội dung UTF-8 đã chuẩn hóa.
+- Không dùng JSON (thứ tự trường không ổn định); không đưa thời gian hay token vào. So sánh bằng hàm thời gian không đổi. Không dùng SHA-256 không khóa (nội dung ngắn dễ đoán).
+- Khi gửi lại: tra SendOperation trước, lấy đúng khóa và phiên bản đã dùng để tính lại.
+- Xoay khóa chỉ áp dụng cho thao tác mới; giữ khóa cũ cho mọi SendOperation còn tồn tại (sau v1: giữ thêm cho cửa sổ backup 30 ngày).
+- Thiếu khóa: `503 FINGERPRINT_KEY_UNAVAILABLE`; không tạo tin mới, không trả 409.
+- Khóa HMAC tách riêng khỏi khóa cursor và email; không lưu trong DB hay tài liệu.
 
-Các khóa xuyên module và shared transaction ở đoạn trên thuộc nền monolith MVP. Khi tách v1, không truyền transaction qua mạng hoặc đọc DB Identity/Community từ Messaging; thay bằng [hàng rào ghi D05](../../system/access-revocation.md#v1-authorization-coordination). Một RPC kiểm tra quyền riêng lẻ không đủ bảo vệ quyền tới commit. Giao thức chi tiết và proof còn mở.
+### Khóa trong transaction (MVP)
 
-Writer DM đã dùng [IAccountPairAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs), do Identity triển khai, cùng [shared database session](../../../services/SCDC.Contracts/Persistence/ISharedDatabaseSession.cs). Guard giữ khóa user/session theo thứ tự trong transaction của caller; [TextMessageSender](../../../services/Modules/Messaging/Infrastructure/Services/TextMessageSender.cs) chỉ đòi peer đủ điều kiện khi tạo tin mới. Read/retry đã commit và author edit/delete không đòi peer active. Caller phải giữ guard tới commit và kiểm tra hạn phiên ngay trước commit. Bằng chứng race/rollback theo revision tại [DM-MVP](../../records/verification/messaging/DM-MVP.md) chưa thay proof hàng rào xuyên service v1 hoặc xác nhận mọi nhánh hợp đồng đã đạt.
+Thứ tự khóa: dòng người dùng Identity (theo UUID) → không gian chat → tin và thao tác → outbox.
 
-Gửi: dưới guard actor/space lock, tra operation; retry đúng trả tin hiện hành/tombstone, kể cả peer đã bị khóa, nếu actor còn quyền đọc. Nhánh placeholder sau restore áp dụng sau v1. Khóa mới: kiểm tra peer đủ điều kiện dưới guard đã giữ, tăng counter của space, insert message/operation/outbox và cập nhật projection trong cùng transaction. Khi rollback mọi thay đổi biến mất; writer sau chỉ cấp counter khi writer trước commit/rollback. Read-committed đủ cho writer đã có khóa; snapshot phân trang là mốc sequence, không phải lịch sử nội dung cũ.
+- [IAccountAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) (Identity cài đặt): kiểm tra người dùng đang hoạt động, đã xác minh, phiên, security stamp, hạn; giữ khóa chia sẻ trên dòng người dùng trong transaction của bên gọi.
+- [IAccountPairAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) và [ISharedDatabaseSession](../../../services/SCDC.Contracts/Persistence/ISharedDatabaseSession.cs) được DM dùng; [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) quản lý kết nối và transaction dùng chung. Messaging không JOIN bảng Identity.
+- [TextMessageSender](../../../services/Modules/Messaging/Infrastructure/Services/TextMessageSender.cs) chỉ đòi người kia đủ điều kiện khi tạo tin mới. Đọc, gửi lại tin đã lưu, tác giả sửa hoặc xóa thì không cần người kia còn hoạt động.
+- Bên gọi giữ guard tới commit và kiểm tra hạn phiên ngay trước commit.
 
-Sửa/xóa dùng compare-and-update version trong transaction. Kiểm tra membership/tác giả trước cả delete lặp; message không thuộc space trả 404, tác giả khác 403. Deleted rồi PATCH trả 409 `MESSAGE_DELETED`; DELETE lặp trả tombstone hiện hành sau auth, không tăng version lần nữa. PATCH cùng nội dung chuẩn hóa hiện hành là no-op nếu expectedVersion đúng; không tạo dấu “Đã sửa” hoặc outbox mới chỉ vì click lại. Sai expectedVersion trả 409 `VERSION_CONFLICT`, UI tải lại trang đang hiển thị; không thêm HTTP thứ tám chỉ để đọc một message.
+**Luồng gửi:** dưới khóa người gửi và không gian, tra thao tác. Gửi lại đúng thì trả tin hiện tại. Khóa mới thì kiểm tra người kia, tăng counter của không gian, ghi tin, thao tác, outbox và cập nhật danh sách cuộc trò chuyện trong cùng transaction. Rollback thì mọi thứ biến mất; người ghi sau chỉ lấy counter khi người trước xong. Mức cô lập read-committed là đủ khi đã có khóa.
+
+**v1:** không truyền transaction qua mạng, Messaging không đọc DB Identity hay Community. Thay bằng [hàng rào ghi D05](../../system/access-revocation.md#v1-authorization-coordination). Một lời gọi RPC kiểm tra quyền riêng lẻ không đủ giữ quyền tới commit.
 
 <a id="vòng-đời-và-placeholder-bổ-sung"></a>
 
-### Vòng đời và placeholder bổ sung
+### Trạng thái nội dung
 
-`UserSummary.availability` tùy chọn phục vụ projection lịch sử; search vẫn chỉ user active đủ điều kiện. `Message.contentState` có available/deleted/unavailable_after_restore. Nhánh unavailable sau restore thuộc sau v1: bắt buộc contentState, content=null/deletedAt=null, version không dưới protection floor; không biến thành tác giả đã xóa. History/realtime dùng cùng schema, actor-author còn quyền được PATCH body mới bằng expectedVersion hiện hành. Migration restore_redacted_at, constraint placeholder và sổ bảo vệ độc lập theo [thiết kế chung](../../system/data-lifecycle.md#restore) chưa triển khai, thuộc sau v1. Giữ khóa, version, tombstone và dedup cho dữ liệu hiện hành vẫn thuộc v1. Guard và outbox dispatcher phải dùng purpose read/author-mutation/send; không lấy peer active làm điều kiện chung cho mọi thao tác.
+- `UserSummary.availability` (tùy chọn) dùng khi hiển thị lịch sử; tìm người vẫn chỉ trả người đang hoạt động.
+- `Message.contentState`: `available`, `deleted`, hoặc `unavailable_after_restore`.
+- `unavailable_after_restore` thuộc sau v1: `content=null`, `deletedAt=null`, version không thấp hơn mốc bảo vệ. Không hiểu nhầm là tác giả đã xóa. Tác giả còn quyền có thể gửi nội dung mới bằng PATCH với version hiện tại.
+- Guard và worker outbox phân biệt mục đích: đọc, tác giả sửa, gửi mới. Không dùng "người kia còn hoạt động" làm điều kiện chung.
 
 <a id="mapping-dữ-liệu-và-migration"></a>
 
-### Mapping dữ liệu và migration
+## Bảng SQL
 
-| Mục tiêu logic | Mapping SQL nền DM | Ràng buộc/đầu việc |
+| Khái niệm | Trong SQL hiện tại | Ràng buộc |
 |---|---|---|
-| Conversation ID | `direct_conversations.space_id = spaces.id` | Unique low/high pair hiện có; tạo space/cặp cùng transaction, xử lý unique conflict bằng đọc lại |
-| Sequence tạo tin | Đã có `messages.conversation_sequence bigint`; `sequence_no` legacy/global vẫn tồn tại | Unique `(space_id,conversation_sequence)`, >0; history index `(space_id,conversation_sequence DESC)`; wire `sequence` lấy trường mới |
-| Counter | `spaces.last_message_sequence` | Default 0, dưới row lock cấp next cùng transaction; không dùng global identity hoặc `MAX+1` ngoài khóa |
-| Tin/version | `messages.id,author_user_id,content,version,created_at,edited_at,deleted_at` | DTO `createSequence` logic → wire `sequence`; version tăng đúng một lần, tối thiểu 1; không ghi message_edits |
-| SendOperation | Đã có `messaging.send_operations` | PK `(space_id,author_user_id,client_message_id)`, FK cùng space/message, fingerprint/key version; giữ khi tombstone |
-| Deleted text | Constraint đã cho tombstone có content null | Text live content khác null; deleted content null; UTF-16 ở validator, constraint DB không thay bằng char_length 2.000 |
-| Outbox | `integration.outbox_events` đã có lease fields | Payload chỉ ID/space/version, không có nội dung tin |
+| ID cuộc trò chuyện | `direct_conversations.space_id = spaces.id` | Cặp low/high duy nhất; tạo không gian và cặp cùng transaction; trùng thì đọc lại |
+| Sequence | `messages.conversation_sequence bigint` (cột cũ `sequence_no` vẫn còn) | Duy nhất theo `(space_id, conversation_sequence)`, > 0; index `(space_id, conversation_sequence DESC)`; API trả trường `sequence` từ cột mới |
+| Counter | `spaces.last_message_sequence` | Mặc định 0; tăng dưới khóa dòng trong transaction; không dùng identity toàn cục hay `MAX+1` |
+| Tin, version | `messages.id, author_user_id, content, version, created_at, edited_at, deleted_at` | Version ≥ 1, tăng đúng một lần mỗi thay đổi; không dùng `message_edits` |
+| SendOperation | `messaging.send_operations` | Khóa chính `(space_id, author_user_id, client_message_id)`; khóa ngoại tới tin cùng không gian; lưu fingerprint và phiên bản khóa; giữ khi tin bị xóa |
+| Tin đã xóa | Ràng buộc cho phép `content` null khi đã xóa | Tin còn sống phải có nội dung. Giới hạn UTF-16 kiểm tra ở code, không bằng `char_length` trong DB |
+| Outbox | `integration.outbox_events` (có cột lease) | Chỉ chứa ID, không gian, version; không chứa nội dung |
 
-[Migration text DM](../../../database/postgres/migrations/20261009_dm_p2_text_message.sql) đã backfill `conversation_sequence` theo `(sequence_no,id)` trong từng space, cập nhật counter rồi bật index/NOT NULL; [migration outbox](../../../database/postgres/migrations/20261010_dm_p4_outbox_lease.sql) bổ sung lease. Bằng chứng fresh/upgrade/replay theo revision tại [P2-T01](../../records/verification/messaging/DM-P2-T01.md) và [DM-MVP](../../records/verification/messaging/DM-MVP.md), không thay kế hoạch chuyển dữ liệu thật sang database v1. Không thể khôi phục đúng nội dung gửi ban đầu cho fingerprint từ message đã sửa; không bịa fingerprint từ bản hiện hành. Legacy không có fingerprint trả 409 `OPERATION_UNVERIFIABLE` khi retry cùng client ID đã có, không tạo bản trùng; dữ liệu vẫn đọc được theo quyền. Dữ liệu gửi mới qua writer DM có fingerprint ngay từ lần đầu; import/cutover vẫn phải rà soát dữ liệu legacy, khóa và ledger trước phát hành.
+Migration: [tin văn bản DM](../../../database/postgres/migrations/20261009_dm_p2_text_message.sql) đã điền `conversation_sequence` theo `(sequence_no, id)` trong từng không gian rồi bật index và NOT NULL; [outbox](../../../database/postgres/migrations/20261010_dm_p4_outbox_lease.sql) thêm lease. Bằng chứng cài mới, nâng cấp và chạy lại xem [P2-T01](../../records/verification/messaging/DM-P2-T01.md) và [DM-MVP](../../records/verification/messaging/DM-MVP.md); đây chưa phải kế hoạch chuyển dữ liệu sang database v1.
+
+**Dữ liệu cũ không có fingerprint:** không thể dựng lại fingerprint từ tin đã sửa, và không được bịa. Gửi lại với `clientMessageId` đã có trả `409 OPERATION_UNVERIFIABLE`, không tạo bản trùng; tin vẫn đọc được. Tin gửi qua writer hiện tại đều có fingerprint. Trước khi phát hành phải rà dữ liệu cũ, khóa và sổ migration.
 
 <a id="client-state"></a>
 
-## Trạng thái gửi và bản nháp phía client
+## Trạng thái phía client
 
-State UI: `draft → sending → sent` hoặc `sendFailed`. Bấm Gửi tạo UUIDv4, copy nội dung vào tin tạm; từ thời điểm đó không đổi nội dung gắn với khóa gửi. Bấm Thử lại dùng đúng khóa/nội dung; muốn gửi bản đã đổi là thao tác mới với khóa mới. Tin tạm/sự kiện/response merge theo actor + clientMessageId và message ID; giữ version lớn nhất. Event đến trước HTTP response vẫn chỉ một dòng.
+**Trạng thái tin:** `draft → sending → sent`, hoặc `sendFailed`.
 
-Bản nháp Map `(userId,conversationId)` chỉ ở bộ nhớ tab theo DEC-091; khi logout/đổi account/hết phiên không khôi phục được thì xóa Map và cache tin. Reload bỏ cả tin tạm/lỗi phía tab; tin đã commit được tìm lại trong lịch sử, tin chưa commit không được coi là đã lưu. Không coi hai tab cùng tài khoản là tự đồng bộ bản nháp.
+- Bấm Gửi: tạo UUIDv4, chép nội dung vào tin tạm. Từ lúc này nội dung gắn với khóa không đổi nữa.
+- Bấm Thử lại: dùng đúng khóa và nội dung cũ. Muốn gửi nội dung đã sửa thì là thao tác mới, khóa mới.
+- Tin tạm, sự kiện và phản hồi HTTP được gộp theo người dùng + `clientMessageId` và `messageId`; giữ version lớn nhất. Sự kiện đến trước phản hồi HTTP vẫn chỉ hiện một dòng.
 
-Wrapper [api.js](../../../clients/WebClient/src/api.js) hiện mặc định retry request sau 401. Luồng gửi/sửa/xóa DM đã dùng `retry:false`; yêu cầu này tiếp tục áp dụng khi tích hợp tin phòng, không để refresh/reconnect/service worker/HTTP library tự replay mutation. Client có thể refresh trước lần gửi đầu bằng `getAccessToken`; khi request gửi đã xảy ra mà thất bại, giữ trạng thái lỗi để người dùng chủ động xử lý. GET lịch sử có thể retry sau refresh; không retry token consume hoặc refresh đã có kết quả không rõ.
+**Bản nháp:** lưu trong bộ nhớ của tab theo `(userId, conversationId)` (DEC-091).
 
-## Kiểm chứng
+- Đăng xuất, đổi tài khoản hoặc phiên hết hạn mà không làm mới được: xóa bản nháp và dữ liệu đệm.
+- Tải lại trang: mất tin tạm và tin lỗi. Tin đã commit tìm lại được trong lịch sử; tin chưa commit không được coi là đã lưu.
+- Hai tab cùng tài khoản không tự đồng bộ bản nháp.
 
-Các ca lưu bền, rollback, lost response, retry đồng thời, sửa/xóa và HMAC rotation được định nghĩa tại [TC-DM](direct-messaging.md#tests) và [TC-COM](channel-messaging.md#tests); validation dùng [TC-TEXT](text-policy.md#tests). Hồ sơ DM đã ghi kết quả theo gói/revision, gồm [retry/đồng thời](../../records/verification/messaging/DM-P3-T02.md) và [DM-MVP](../../records/verification/messaging/DM-MVP.md). Tin phòng và nền microservice v1 phải có bằng chứng riêng. Mỗi kết quả cần ghi commit/build, dataset, thao tác, actual result và giới hạn; không coi các hồ sơ nền là nghiệm thu toàn Messaging/v1.
+**Gọi API:** hàm trong [api.js](../../../clients/WebClient/src/api.js) mặc định gửi lại sau lỗi 401. Gửi, sửa, xóa DM dùng `retry:false`; tin phòng cũng phải làm vậy. Không để làm mới token, kết nối lại, service worker hay thư viện HTTP tự gửi lại thao tác ghi. Client có thể làm mới token trước lần gửi đầu (`getAccessToken`); nếu request gửi đã đi mà thất bại thì giữ trạng thái lỗi cho người dùng xử lý. GET lịch sử được thử lại sau khi làm mới token; không thử lại thao tác dùng token hay làm mới token khi chưa rõ kết quả.
+
+<a id="v1-message-intake"></a>
+
+## D08 — Nhận tin ở v1
+
+**Quyết định:** v1 ghi tin trực tiếp (phương án A), nhưng giữ khả năng chuyển sang hàng đợi (phương án B) về sau.
+
+**A — Ghi trực tiếp (dùng cho v1):** WebClient gửi REST tới Messaging. Sau khi kiểm tra quyền, writer ghi tin, SendOperation, sequence và outbox trong một transaction của DB Messaging, rồi trả thành công. Worker xử lý outbox sau đó ([đồng bộ](synchronization.md#contract-9)). Outbox chỉ bảo vệ việc phát sự kiện cho tin đã lưu; nó không thay cho request chưa tới được Messaging.
+
+**B — Hàng đợi (để sau):** một thành phần nhận lệnh và lưu bền trước, worker gọi writer sau. Chỉ có ích nếu thành phần nhận vẫn hoạt động khi writer ngừng. Chưa chọn công nghệ hay nơi chạy.
+
+**Để giữ khả năng chuyển sang B:**
+
+- Tách phần nhận request khỏi phần xử lý ghi tin. REST hiện tại và worker sau này dùng chung quy tắc nghiệp vụ.
+- Giữ `clientMessageId`, nội dung ban đầu và khóa chống trùng khi gửi lại hay đổi cách truyền.
+- Mọi đường ghi kiểm tra quyền tới commit ([D05, D06](../../system/access-revocation.md#v1-authorization-coordination)). Lệnh trong hàng đợi không giữ quyền mãi; mất quyền trước khi ghi thì bị từ chối.
+- Writer quyết định sequence trong transaction. Thứ tự trong hàng đợi hay thời điểm client gửi không thay sequence.
+- "Đã gửi" vẫn nghĩa là đã commit. Xác nhận của hàng đợi chỉ là "đã nhận lệnh", không phải "đã lưu".
+
+**Khi thật sự chuyển sang B:** chốt hợp đồng nhận lệnh và trả kết quả, giới hạn hàng đợi, xử lý quá tải, các bước chuyển và rollback. Kiểm thử quyền, chống trùng, sequence khi hai đường cùng tồn tại; gửi lại trùng, mất phản hồi, worker khởi động lại, thu hồi quyền giữa chừng. Không phát lại lịch sử như lệnh gửi mới. Tham khảo [mẫu cân bằng tải bằng hàng đợi](https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling).
+
+D08 độc lập với [D07](../../system/access-revocation.md#v1-revocation-transport). Tự động gửi lại, lưu tin chờ qua lần tải lại trang, trạng thái đã nhận hay đã xem: chưa chọn.
+
+## Kiểm thử
+
+Ca kiểm thử cho lưu bền, rollback, mất phản hồi, gửi lại đồng thời, sửa, xóa và xoay khóa HMAC nằm ở [TC-DM](direct-messaging.md#tests) và [TC-COM](channel-messaging.md#tests); kiểm tra nội dung ở [TC-TEXT](text-policy.md#tests).
+
+Kết quả DM đã có: [gửi lại và đồng thời](../../records/verification/messaging/DM-P3-T02.md), [DM-MVP](../../records/verification/messaging/DM-MVP.md). Tin phòng và v1 cần bằng chứng riêng. Mỗi kết quả ghi commit, build, dữ liệu thử, thao tác, kết quả thực tế và giới hạn.
+
+## Còn mở
+
+- Giao thức hàng rào ghi giữa service và bằng chứng (D05).
+- Migration và ràng buộc cho placeholder sau khôi phục, sổ bảo vệ độc lập (sau v1).
+- Kế hoạch chuyển dữ liệu thật sang database v1.
+
+---
+
+Nguồn: DEC-021 (gửi lại thủ công), DEC-052 (không lưu lịch sử sửa), DEC-070, DEC-103, DEC-104 (thời hạn lưu), DEC-086, DEC-108, DEC-109, DEC-156 (backup sau v1), DEC-091 (bản nháp), [DEC-125](../../records/decisions/README.md#dec-125) (D08).

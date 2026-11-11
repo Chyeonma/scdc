@@ -1,59 +1,73 @@
-# SCDC — Phòng thoại trong Community
+# SCDC — Phòng thoại
 
-Phạm vi phòng thoại nhiều thành viên của v1. Thành viên có quyền View vào ngay; không có quyền không thấy/không vào được (DEC-048). Video và chia sẻ dùng chung cơ chế nguồn với gọi riêng; không thêm quyền kick/mute/ghi âm từ quyền quản lý phòng.
+Phòng thoại là một loại phòng trong server. Thành viên có quyền xem phòng thì bấm vào là tham gia ngay; người không có quyền thì không thấy và không vào được.
 
-## Mục lục
+**Trạng thái:** đã thiết kế, chưa có code. Chưa có module Media, API, LiveKit hay migration.
 
-- [Quy tắc và luồng](#flows)
-- [Giao diện](#ux)
-- [API, dữ liệu và transaction](#contracts)
-- [Tiêu chí và kiểm thử](#acceptance)
-- [Hiện trạng](#status)
+Video và chia sẻ màn hình dùng chung cơ chế với cuộc gọi riêng, xem [micro, camera và chia sẻ màn hình](video-screen-sharing.md). Quyền quản lý phòng không cho phép đuổi, tắt tiếng hay ghi âm người khác; v1 không có các chức năng đó.
 
 <a id="flows"></a>
 
-## Quy tắc và luồng
+## Quy tắc
 
-Community kiểm tra member, membership epoch, channel loại voice chưa deleted và quyền View hiện hành. Identity kiểm tra active/verified và session/stamp. Media cấp participation/room/quota; LiveKit không tự tạo membership hoặc bỏ qua quyền Community.
+Khi người dùng vào phòng, hệ thống kiểm tra:
 
-| Luồng/trạng thái | Trigger | Kết quả |
-|---|---|---|
-| Phòng thoại / chưa tham gia | Join với quyền xem | Kiểm tra member/phòng còn tồn tại, giới hạn 10/20 và một phiên tham gia/người; allocate slot rồi connecting |
+- **Identity:** tài khoản đang hoạt động, đã xác minh, phiên đăng nhập còn hiệu lực.
+- **Community:** là thành viên (đúng epoch), phòng là loại thoại, chưa bị xóa, và có quyền xem.
+- **Media:** còn chỗ, và người dùng chưa ở cuộc gọi hay phòng thoại nào khác.
 
-Giới hạn 10 người/phòng và 20 toàn hệ thống gồm reserved/connected/reconnect/draining; mỗi user có một ngữ cảnh gọi. Room đầy từ chối, không để token/slot dở dang. Mất quyền chỉ kết thúc participation bị ảnh hưởng; xóa phòng kết thúc tất cả, cutoff ≤5 giây từ commit. Reconnect giữ chỗ tối đa 30 giây theo [lifecycle](participation-lifecycle.md#flows).
+LiveKit không tự quyết định ai được vào; nó chỉ làm theo Media.
+
+| Giới hạn | Giá trị |
+|---|---|
+| Người mỗi phòng | 10 |
+| Người toàn hệ thống | 20 |
+| Phòng hoặc cuộc gọi mỗi người cùng lúc | 1 |
+| Giữ chỗ khi mất kết nối | Tối đa 30 giây |
+
+Số người được tính gồm cả người đang kết nối, đang ở trong phòng, đang kết nối lại và đang thoát. Phòng đầy thì từ chối, không cấp token hay giữ chỗ dở dang.
+
+- **Mất quyền** (rời server, bị đổi quyền): chỉ người đó bị ngắt.
+- **Phòng bị xóa:** tất cả bị ngắt.
+- Thời gian ngắt tối đa 5 giây kể từ lúc commit.
+
+Chi tiết kết nối lại xem [vòng đời tham gia](participation-lifecycle.md#flows).
 
 <a id="ux"></a>
 
 ## Giao diện
 
-| Bước | Vùng giao diện dự kiến | Phản hồi cần thể hiện |
-|---|---|---|
-| Vào phòng thoại | Danh sách phòng và màn hình cuộc gọi nhóm. | Thành viên có quyền xem phòng vào ngay; người không có quyền không thấy/không vào được. |
+- Người dùng bấm vào phòng thoại trong danh sách phòng để vào ngay; màn hình cuộc gọi nhóm (MEDIA-S02) hiện tên phòng, người tham gia, nguồn phát và nút rời. Điều khiển nguồn xem [video và chia sẻ](video-screen-sharing.md#ux).
+- MEDIA-S04 báo phòng đầy hoặc hệ thống đầy.
+- MEDIA-S03 báo đang kết nối lại và thời gian còn lại.
+- Phòng chưa có ai thì hiện danh sách trống, không báo lỗi "không tìm thấy".
 
-MEDIA-S02 hiển thị room/người/nguồn và nút rời theo [điều khiển nguồn](video-screen-sharing.md#ux). MEDIA-S04 báo room/system full; MEDIA-S03 báo reconnect và hạn còn lại. GET room chưa có người phải trả snapshot rỗng, không giả 404. Wireframe/prototype chưa được kiểm chứng.
+Wireframe và prototype chưa được kiểm tra.
 
 <a id="contracts"></a>
 
-## API, dữ liệu và transaction
+## API
 
-Schema mục tiêu tại [media.openapi.json](../../contracts/media.openapi.json); mọi endpoint chưa triển khai. Prefix `/api/v1`.
+Schema mục tiêu: [media.openapi.json](../../contracts/media.openapi.json). Chưa endpoint nào được làm. Tiền tố `/api/v1`.
 
-| Endpoint công khai | Đầu vào/kết quả | Điều kiện |
+| Endpoint | Trả về | Điều kiện |
 |---|---|---|
-| GET `/servers/{serverId}/channels/{channelId}/media` | RoomSnapshot | Member có view; không trả danh sách nguồn/provider secret cho người mất quyền |
-| POST cùng đường dẫn + `/join` | operation/instance → ParticipationSnapshot | Channel voice, guard view, capacity và một ngữ cảnh/user |
+| GET `/servers/{serverId}/channels/{channelId}/media` | RoomSnapshot | Thành viên có quyền xem. Người mất quyền không nhận danh sách nguồn hay bí mật của LiveKit |
+| POST `/servers/{serverId}/channels/{channelId}/media/join` | ParticipationSnapshot | Phòng thoại, có quyền xem, còn chỗ, chưa ở cuộc gọi khác. Gửi kèm mã thao tác và mã tab |
 
-Leave, state/grant/heartbeat của participation dùng [hợp đồng lifecycle](participation-lifecycle.md#contracts); camera/share dùng [hợp đồng nguồn](video-screen-sharing.md#contracts). Mọi request đọc snapshot cũng kiểm tra quyền hiện hành.
+Rời phòng, trạng thái, cấp quyền LiveKit và heartbeat dùng [API chung](participation-lifecycle.md#contracts). Camera và chia sẻ dùng [API nguồn phát](video-screen-sharing.md#contracts). Mọi request đọc đều kiểm tra lại quyền hiện tại.
 
-Theo [D14](../community/channels.md#v1-channel-provisioning), v1 chuẩn bị room DB rỗng tại Media trước khi báo tạo voice channel hoàn tất. GET phòng thoại chưa có người trả snapshot rỗng, không giả 404 phòng không tồn tại; bước chuẩn bị dữ liệu chưa provision SFU, giữ quota hoặc cấp token. Community giữ tiến độ bền và điều phối theo [D15](../community/channels.md#v1-channel-creation-coordination); gọi gRPC trực tiếp và nhận kết quả sau Media commit theo [D16](../community/channels.md#v1-channel-preparation-transport). Hợp đồng mạng chi tiết, schema/backfill và phục hồi chưa chốt.
+### Dữ liệu và xử lý
 
-Đề xuất `IMediaRoomLifecycle` tạo room cùng transaction Community create và đánh dấu closing khi xóa trước đây giả định một host/database. Không áp shared scope nguyên trạng cho database riêng v1; hợp đồng xóa xuyên service còn mở. Interface/schema/source hiện chưa có.
+Phòng, lượt tham gia, epoch và bộ đếm dùng chung một mô hình, xem [vòng đời tham gia](participation-lifecycle.md#data). Mỗi phòng thoại chỉ có một "thế hệ" phòng đang mở.
 
-Room/participation/epoch/counter là model dùng chung ở [lifecycle](participation-lifecycle.md#data); room generation đang mở của mỗi channel là duy nhất. Không gọi provider trong transaction Community create/delete.
+**Khi tạo phòng thoại:** Media chuẩn bị bản ghi phòng trống trước khi Community báo tạo xong. Bước này chưa tạo phòng trên LiveKit, chưa giữ chỗ, chưa cấp token. Community lưu tiến độ và điều phối; Media nhận lệnh qua gRPC và trả kết quả sau khi commit. Xem [tạo phòng](../community/channels.md#v1-channel-provisioning), [điều phối](../community/channels.md#v1-channel-creation-coordination) và [truyền lệnh](../community/channels.md#v1-channel-preparation-transport).
 
-3. Join phòng kiểm tra guard view, loại voice và epoch; cấp đúng một chỗ khi global <20, room <10 và user không có claim. Rời/kết thúc chuyển participation sang ended và chỗ provider sang draining; hết quyền ngay, chỗ chỉ tái cấp sau bằng chứng provider đã ngừng.
+**Khi vào phòng:** kiểm tra quyền xem, loại phòng và epoch; cấp đúng một chỗ khi toàn hệ thống dưới 20, phòng dưới 10 và người dùng chưa ở cuộc gọi nào.
 
-Thứ tự khóa/guard/counter và idempotency dùng chung ở [lifecycle](participation-lifecycle.md#transaction). Chỗ draining chỉ tái cấp khi có bằng chứng SFU ngừng; HTTP leave/websocket close chưa đủ. Các điều kiện transaction hiện giả định một API host, phải review theo microservice v1.
+**Khi rời hoặc kết thúc:** lượt tham gia chuyển sang kết thúc, chỗ trên LiveKit chuyển sang đang thoát. Quyền mất ngay, nhưng chỗ chỉ được cấp lại khi có bằng chứng LiveKit đã ngừng luồng; request rời hay websocket đóng chưa đủ.
+
+Không gọi LiveKit bên trong transaction tạo hoặc xóa phòng của Community. Thứ tự khóa và chống trùng xem [vòng đời tham gia](participation-lifecycle.md#transaction).
 
 <a id="acceptance"></a>
 
@@ -61,18 +75,25 @@ Thứ tự khóa/guard/counter và idempotency dùng chung ở [lifecycle](parti
 
 | Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| AC-MEDIA-02 | Thành viên có quyền xem phòng thoại trong cộng đồng chọn vào phòng. | Vào ngay và rời được; thành viên không có quyền xem bị từ chối. |
+| AC-MEDIA-02 | Thành viên có quyền xem phòng thoại bấm vào phòng | Vào ngay và rời được; người không có quyền bị từ chối |
 
-Mọi AC-MEDIA/TC-MEDIA chưa có kết quả chạy được ghi nhận. Dùng tài khoản thử, provider/môi trường và thiết bị có phiên bản cụ thể; kết quả phải gắn commit/provider build/môi trường theo [phương pháp đo](../../system/quality.md#quality-targets).
-
-| Mã | Thao tác | Kết quả cần quan sát | Dẫn chiếu |
+| Mã | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| TC-MEDIA-02 | Join/rời phòng với member có/không quyền xem | Chỉ đúng quyền tham gia; rời giải phóng slot | AC-MEDIA-02 |
+| TC-MEDIA-02 | Vào và rời phòng với người có và không có quyền xem | Chỉ người có quyền vào được; rời thì giải phóng chỗ | AC-MEDIA-02 |
 
-AC-MEDIA-10/11/15, TC-MEDIA-05/06/08 kiểm chứng đa thiết bị, quota và thu hồi ở [lifecycle](participation-lifecycle.md#acceptance); nguồn share ở [video-screen-sharing](video-screen-sharing.md#acceptance).
+Nhiều thiết bị, hạn mức và thu hồi quyền (AC-MEDIA-10, 11, 15; TC-MEDIA-05, 06, 08) xem [vòng đời tham gia](participation-lifecycle.md#acceptance). Chia sẻ màn hình xem [video và chia sẻ](video-screen-sharing.md#acceptance).
+
+Chưa ca nào được chạy. Khi chạy, dùng tài khoản thử, ghi rõ commit, phiên bản LiveKit, môi trường và thiết bị theo [phương pháp đo](../../system/quality.md#quality-targets).
 
 <a id="status"></a>
 
-## Hiện trạng và khoảng trống
+## Còn mở
 
-Đối chiếu tài liệu ngày 2026-10-06: View, giới hạn và cutoff/fail-close đã chốt; room lifecycle/reservation/draining, interface và schema còn là thiết kế. Chưa có module Media/API/provider hoặc migration/guard/SFU proof. OQ-004/006 và MEDIA-GAP-02/03/04 theo dõi ở [lifecycle](participation-lifecycle.md#status); chưa có kết quả chạy AC/TC hoặc nghiệm thu.
+- Hợp đồng gRPC chi tiết khi tạo phòng, cấu trúc dữ liệu, chuyển dữ liệu cũ và phục hồi khi lỗi.
+- Hợp đồng xóa phòng giữa Community và Media. Thiết kế cũ (`IMediaRoomLifecycle` trong cùng transaction) giả định một ứng dụng và một database, không dùng được cho v1.
+- Quy tắc transaction hiện giả định một ứng dụng, phải xem lại cho microservice.
+- Các mục OQ-004, OQ-006, MEDIA-GAP-02, 03, 04, theo dõi tại [vòng đời tham gia](participation-lifecycle.md#status).
+
+---
+
+Nguồn: DEC-048 (quyền vào phòng), [DEC-132 đến 134](../../records/decisions/README.md#dec-132) (tạo phòng). Đối chiếu tài liệu ngày 2026-10-06.

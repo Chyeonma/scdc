@@ -30,7 +30,7 @@ Permission matrix API, hidden privacy/owner foundation, Unicode/collision/immuta
 
 ## Kết quả theo revision
 
-Ngày kiểm chứng: 2026-10-07. Phạm vi [kế hoạch](channels-access.md), [thiết kế](../../../features/community/channels.md). Hồ sơ ghi kết quả theo revision; tiến độ hiện tại tại [các chủ đề Community](../../../features/community/README.md), UC/AC/TC → test cụ thể tại [verification](README.md). Hướng dẫn chạy lại đầy đủ ở [development](../../../guides/community-development.md).
+Ngày kiểm chứng: 2026-10-07. Phạm vi [kế hoạch](channels-access.md), [thiết kế](../../../features/community/channels.md). Hồ sơ ghi kết quả theo revision; tiến độ hiện tại tại [các chủ đề Community](../../../features/community/README.md), UC/AC/TC → test cụ thể tại [verification](README.md). Hướng dẫn chạy lại đầy đủ ở [development](../../../guides/development.md#community).
 
 | Phần | Commit trên feat/community-channels | Bằng chứng |
 |---|---|---|

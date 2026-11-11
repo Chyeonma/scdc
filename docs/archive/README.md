@@ -6,6 +6,8 @@ Tài liệu hiện hành bắt đầu từ [docs/README.md](../README.md). Nội
 
 | Bản lưu | Nội dung |
 |---|---|
+| [Kế hoạch DM và readiness tháng 10](2026-10-planning/messaging/direct-messaging.md) | Kế hoạch, prompt theo task DM và [đánh giá readiness 2026-10-08](2026-10-planning/readiness-2026-10-08.md); chuyển từ `records/planning` ngày 2026-11-11 |
+| [Bản đồ chuyển đổi 2026-10-11](2026-10-11-docs-migration/2026-10-11.md) | Nguồn và đích khi chuyển sang cấu trúc theo chủ đề; chuyển từ `records/migrations` ngày 2026-11-11 |
 | [Tài liệu DM trước merge MVP](2026-10-13-dm-merge/README.md) | Thiết kế/UX và ghi chú bàn giao theo cấu trúc cũ; hồ sơ triển khai đã chuyển sang records |
 | [Trước khi hợp nhất](2026-10-03-before-consolidation/ARCHIVE-NOTE.md) | README/docs hiện hành cũ và README module giữ nguyên byte; MANIFEST.sha256 để kiểm tra |
 | [Hồ sơ quy trình gốc](project-specs/README.md) | Requirements, scope, quyết định, UX, kiến trúc, kế hoạch và kiểm thử trước hợp nhất; giữ nguyên nội dung |
@@ -32,7 +34,7 @@ Tài liệu hiện hành bắt đầu từ [docs/README.md](../README.md). Nội
 | SCDC-FR-ACL-001 | `project-specs/03-requirements/05-access-control-matrix.md` | [Community](../features/community/access-control.md#permissions) |
 | SCDC-UX-001 | `project-specs/04-ux/01-core-user-flows.md` | [Kiến trúc và UX](../experience/overview.md#journeys) |
 | SCDC-UX-DM-001 | `project-specs/04-ux/02-account-dm-wireframes.md` | [Nhắn tin riêng](../features/messaging/direct-messaging.md#ux) |
-| SCDC-UX-COM-001 | `project-specs/04-ux/03-community-wireframes.md` | [Community](../system/community.md#ux) |
+| SCDC-UX-COM-001 | `project-specs/04-ux/03-community-wireframes.md` | [Community](../features/community/mechanics.md#ux) |
 | SCDC-ARC-001 | `project-specs/05-architecture/01-solution-outline.md` | [Kiến trúc và UX](../system/architecture.md#boundaries) |
 | SCDC-API-DM-001 | `project-specs/05-architecture/02-account-dm-contracts.md` | [Nhắn tin riêng](../features/messaging/direct-messaging.md#contracts) |
 | SCDC-QA-001 | `project-specs/07-quality/01-test-and-acceptance-plan.md` | [Nghiệm thu](../releases/acceptance.md#testing) |
@@ -47,7 +49,7 @@ REQ-012/SUC-005 được cập nhật theo DEC-060; DEC-007 giữ lịch sử b�
 
 ## Tổ chức lại Community — 2026-10-07
 
-Trang `features/community.md` được tách thành [tổng quan](../features/community/README.md), [truy vết](../features/community/README.md), [thiết kế](../system/community.md), [các gói](../records/verification/community/README.md) và [trạng thái](../features/community/README.md). Năm thành phần cùng điều kiện/use case tích hợp chuyển vào `specs/`; phần dữ liệu/API/giao dịch chuyển vào `design/`.
+Trang `features/community.md` được tách thành [tổng quan](../features/community/README.md), [truy vết](../features/community/README.md), [thiết kế](../features/community/mechanics.md), [các gói](../records/verification/community/README.md) và [trạng thái](../features/community/README.md). Năm thành phần cùng điều kiện/use case tích hợp chuyển vào `specs/`; phần dữ liệu/API/giao dịch chuyển vào `design/`.
 
 `create-view-design.md` chuyển thành `design/create-view.md`; hai báo cáo backend/UI được hợp nhất vào `delivery/create-view/acceptance.md` với commit đã thử. Rà soát nghiệp vụ và scope/tiêu chí gói đầu nằm ở `delivery/create-view/plan.md`. Mã UC/COM/AC/TC/ACL/COM-SQL và quy tắc giữ nguyên. Git giữ bản trước chuyển đổi; các snapshot lịch sử và MANIFEST hiện có giữ nguyên byte.
 
@@ -72,4 +74,4 @@ không tạo thêm bản sao toàn bộ docs cho đợt chuyển này.
 
 ## Cấu trúc theo chủ đề — 2026-10-11
 
-[Bản đồ chuyển đổi](../records/migrations/2026-10-11.md) ghi nguồn và đích sau khi hợp nhất quy tắc, UX, dữ liệu/API, thiết kế và hiện trạng vào từng chủ đề. Hồ sơ kiểm chứng giữ revision và kết quả lịch sử. Các snapshot và MANIFEST dưới archive giữ nguyên.
+[Bản đồ chuyển đổi](2026-10-11-docs-migration/2026-10-11.md) ghi nguồn và đích sau khi hợp nhất quy tắc, UX, dữ liệu/API, thiết kế và hiện trạng vào từng chủ đề. Hồ sơ kiểm chứng giữ revision và kết quả lịch sử. Các snapshot và MANIFEST dưới archive giữ nguyên.

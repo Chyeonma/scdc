@@ -1,27 +1,22 @@
 # SCDC — Đăng ký và xác minh email
 
-Phạm vi REQ-010/SCP-002; UC-ACC-01–03. Identity tạo tài khoản chờ xác minh; người dùng xác minh rồi đăng nhập. MVP chọn luồng nền, v1 hoàn thiện các nhánh theo hồ sơ release.
+Người dùng tạo tài khoản bằng email, tên tài khoản (username), tên hiển thị và mật khẩu. Tài khoản mới ở trạng thái chờ xác minh; người dùng bấm link trong email để xác minh rồi mới đăng nhập được.
 
-## Mục lục
-
-- [Quy tắc](#rules)
-- [Hành trình](#flows)
-- [Giao diện](#ux)
-- [API, dữ liệu và transaction](#contracts)
-- [Tiêu chí và kiểm thử](#acceptance)
-- [Hiện trạng](#status)
+**Trạng thái:** API đăng ký và xác minh đã có trong nền `900e226`. Giao diện hiện tự xác minh bằng token Development thay vì email thật; chưa có trang mở link xác minh. Gửi lại email xác minh nằm ở nhánh Identity riêng ([hiện trạng email](email-links.md#status)).
 
 <a id="rules"></a>
 
 ## Quy tắc
 
-| Mã | Quy tắc/hành vi | Căn cứ |
-|---|---|---|
-| ACC-001 | Màn hình đăng ký thu thập email, tên tài khoản, tên hiển thị và mật khẩu. | DEC-054, DEC-062 |
-| ACC-008 | Tên tài khoản 3–32 ký tự ASCII chữ/số/`_`/`.`; duy nhất không phân biệt hoa/thường, chưa cho đổi. Tên hiển thị Unicode dài 1–64 đơn vị UTF-16 sau trim, không chỉ khoảng trắng; không bắt buộc duy nhất. | DEC-054, DEC-063, DEC-068 |
-| ACC-009 | Email được bỏ khoảng trắng đầu/cuối, chuẩn hóa chữ thường để kiểm tra duy nhất; chưa cho đổi trong v1. Không tự bỏ dấu chấm hoặc phần `+tag` trong email. | DEC-063; không áp dụng quy tắc riêng của một nhà cung cấp email |
+| Mã | Quy tắc |
+|---|---|
+| ACC-001 | Đăng ký cần: email, tên tài khoản, tên hiển thị và mật khẩu. |
+| ACC-008 | **Tên tài khoản:** 3–32 ký tự, chỉ gồm chữ ASCII, số, `_` và `.`; duy nhất (không phân biệt hoa thường); không đổi được. **Tên hiển thị:** Unicode, 1–64 đơn vị UTF-16 sau khi cắt khoảng trắng hai đầu, không được chỉ có khoảng trắng; được trùng với người khác. |
+| ACC-009 | **Email:** cắt khoảng trắng hai đầu, chuyển chữ thường để kiểm tra trùng; không đổi được trong v1. Không bỏ dấu chấm hay phần `+tag` (không áp quy tắc riêng của nhà cung cấp email nào). |
 
-Tên tài khoản duy nhất và chưa cho đổi; tên hiển thị được đổi và không bắt buộc duy nhất. Email không công khai, không đổi trong v1. Mật khẩu tuân [ACC-010](sessions.md#rules); verify/reset dùng [ACC-012 và cơ chế liên kết email](email-links.md). Tài khoản pending chỉ dùng xác minh hoặc khôi phục, chưa có phiên ứng dụng theo [ACC-005/007](account-state.md#rules).
+- Email không công khai.
+- Mật khẩu theo [ACC-010](sessions.md#rules). Link xác minh và đặt lại theo [ACC-012](email-links.md).
+- Tài khoản chưa xác minh chỉ dùng được xác minh và khôi phục, chưa có phiên ứng dụng ([ACC-005, 007](account-state.md#rules)).
 
 <a id="flows"></a>
 
@@ -31,21 +26,23 @@ Tên tài khoản duy nhất và chưa cho đổi; tên hiển thị được đ
 
 <a id="uc-uc-acc-01--đăng-ký-tài-khoản"></a>
 
-### UC-ACC-01 — Đăng ký tài khoản
+### UC-ACC-01 — Đăng ký
 
-**Tác nhân:** Người chưa có tài khoản; hệ thống email hỗ trợ gửi liên kết.
+**Ai làm:** người chưa có tài khoản. Không cần đăng nhập.
 
-**Điều kiện trước:** Người dùng mở ACC-S01; không cần đăng nhập. Tính hợp lệ và duy nhất của dữ liệu được kiểm tra trong luồng đăng ký.
+**Các bước:**
 
-**Luồng chính:**
+1. Người dùng mở màn hình Đăng ký (ACC-S01), nhập email, tên tài khoản, tên hiển thị, mật khẩu rồi gửi.
+2. Hệ thống chuẩn hóa và kiểm tra dữ liệu (ACC-008 đến 010). Tạo tài khoản chờ xác minh, hồ sơ, mật khẩu đã băm, và yêu cầu gửi link xác minh, tất cả trong một transaction.
+3. Trả kết quả; giao diện hướng dẫn kiểm tra email, có nút gửi lại email và nút quên mật khẩu.
 
-1. Người dùng nhập email, username, tên hiển thị và mật khẩu, rồi gửi đăng ký.
-2. Hệ thống chuẩn hóa và kiểm tra dữ liệu theo ACC-008–010, tạo tài khoản chờ xác minh cùng hồ sơ, mật khẩu băm và yêu cầu gửi liên kết xác minh.
-3. Hệ thống trả kết quả tạo tài khoản; giao diện hướng dẫn kiểm tra email và cung cấp đường gửi lại xác minh/khôi phục mật khẩu.
+**Ngoại lệ:**
 
-**Ngoại lệ:** Dữ liệu sai trả lỗi trường; username/email trùng trả xung đột. Hai đăng ký cùng định danh chỉ tạo một tài khoản; yêu cầu thất bại không để lại tài khoản dở dang. Tiếp nhận yêu cầu email chưa chứng minh email đã giao; thất bại giao email được xử lý qua UC-ACC-03.
+- Dữ liệu sai: lỗi theo trường. Tên tài khoản hoặc email trùng: lỗi xung đột.
+- Hai người đăng ký cùng tên cùng lúc: chỉ tạo một tài khoản. Lỗi không để lại tài khoản dở dang.
+- Đưa yêu cầu email vào hàng chưa có nghĩa email đã tới; nếu không nhận được thì dùng UC-ACC-03.
 
-**Kết quả sau cùng:** Tài khoản ở `PendingVerification`, chưa có phiên ứng dụng. Liên kết xác minh dùng một lần, hạn 30 phút; lần cấp đầu tính vào cooldown gửi lại. Không tự xác minh tài khoản bằng token Development trên giao diện sản phẩm.
+**Kết quả:** tài khoản ở trạng thái `PendingVerification`, chưa có phiên. Link xác minh dùng một lần, hạn 30 phút; lần gửi đầu cũng tính thời gian chờ gửi lại. Giao diện sản phẩm không được tự xác minh bằng token Development.
 
 <a id="uc-uc-acc-02"></a>
 
@@ -53,39 +50,45 @@ Tên tài khoản duy nhất và chưa cho đổi; tên hiển thị được đ
 
 ### UC-ACC-02 — Xác minh email
 
-**Tác nhân:** Người kiểm soát hộp thư của tài khoản đăng ký.
+**Ai làm:** người truy cập được hộp thư đã đăng ký. Không cần đăng nhập.
 
-**Điều kiện trước:** Người dùng có liên kết xác minh; thao tác không đòi hỏi đăng nhập ứng dụng.
+**Các bước:**
 
-**Luồng chính:**
+1. Người dùng mở link. Trang hiện hướng dẫn; chỉ mở trang (GET) chưa thay đổi gì.
+2. Người dùng bấm Xác minh. Hệ thống kiểm tra token: đúng mục đích, đúng email, còn hạn, chưa dùng; tài khoản đủ điều kiện. Rồi đánh dấu token đã dùng.
+3. Email được xác minh, tài khoản chuyển sang hoạt động; giao diện hướng dẫn đăng nhập.
 
-1. Người dùng mở liên kết. Trang hướng dẫn xác minh; chỉ mở trang bằng GET chưa làm thay đổi tài khoản.
-2. Người dùng bấm xác minh; hệ thống kiểm tra đúng mục đích, email đích, thời hạn, trạng thái token và tài khoản, rồi dùng token một lần.
-3. Hệ thống xác minh email, chuyển tài khoản đang chờ xác minh sang active và hướng dẫn đăng nhập.
+**Ngoại lệ:**
 
-**Ngoại lệ:** Token sai mục đích, hết hạn, đã dùng hoặc bị thay thế trả lỗi liên kết không dùng được và đường yêu cầu lại. Hai request dùng cùng token chỉ một request thành công; consume và resend tuân thứ tự commit. Khi response mất sau commit, dùng lại token bị từ chối; người dùng có thể thử đăng nhập hoặc yêu cầu lại. Xác minh không tự mở khóa tài khoản bị khóa theo DEC-104.
+- Token sai mục đích, hết hạn, đã dùng hoặc bị thay: báo link không dùng được, kèm nút yêu cầu link mới.
+- Hai lần bấm cùng token: chỉ một lần thành công. Xác minh và gửi lại theo thứ tự commit.
+- Mất phản hồi sau khi đã xác minh: bấm lại sẽ bị từ chối; người dùng thử đăng nhập hoặc yêu cầu link mới.
+- Xác minh không mở khóa tài khoản đang bị khóa (DEC-104).
 
-**Kết quả sau cùng:** Email đã xác minh, token không dùng lại được; chưa cấp phiên đăng nhập. Token reset còn hiệu lực được giữ độc lập. Không hiện token kỹ thuật trên màn hình; cách đọc và xóa fragment trong URL thuộc [thiết kế liên kết](email-links.md#contracts).
+**Kết quả:** email đã xác minh, token không dùng lại được, chưa có phiên đăng nhập. Token đặt lại mật khẩu (nếu có) không bị ảnh hưởng. Token không hiện trên màn hình; cách đọc và xóa token khỏi URL xem [liên kết email](email-links.md#contracts).
 
 <a id="uc-uc-acc-03"></a>
 
 <a id="uc-uc-acc-03--yêu-cầu-gửi-lại-xác-minh"></a>
 
-### UC-ACC-03 — Yêu cầu gửi lại xác minh
+### UC-ACC-03 — Gửi lại email xác minh
 
-**Tác nhân:** Người chưa hoàn tất xác minh email; hệ thống email hỗ trợ gửi liên kết.
+**Ai làm:** người chưa xác minh xong. Không cần đăng nhập; cần nhập email hợp lệ.
 
-**Điều kiện trước:** Người dùng biết email đăng ký. Yêu cầu công khai không cần phiên ứng dụng và phải có email hợp lệ.
+**Các bước:**
 
-**Luồng chính:**
+1. Người dùng nhập email ở màn hình Xác minh (ACC-S03) và bấm gửi lại.
+2. Nếu tài khoản đủ điều kiện và đã cách lần gửi trước ít nhất 60 giây: trong một transaction, hủy token xác minh cũ, cấp token mới hạn 30 phút, đưa email vào hàng.
+3. Trả `202 {accepted:true}`; giao diện hướng dẫn kiểm tra email. Không xác nhận email đã tới hay tài khoản có tồn tại.
 
-1. Người dùng nhập email và yêu cầu gửi lại từ ACC-S03.
-2. Nếu tài khoản đủ điều kiện và đã cách lần cấp token verify trước ít nhất 60 giây, hệ thống vô hiệu token verify cũ, cấp token mới hạn 30 phút và tiếp nhận yêu cầu email trong cùng transaction.
-3. Hệ thống trả `202 {accepted:true}`; giao diện hướng dẫn kiểm tra email, không xác nhận email đã giao hoặc tài khoản tồn tại.
+**Ngoại lệ:**
 
-**Ngoại lệ:** Email không tồn tại, đã xác minh, tài khoản không đủ điều kiện hoặc đang cooldown đều có cùng phản hồi công khai. Trong cooldown không cấp token, không vô hiệu liên kết đang dùng. Hai yêu cầu đồng thời chỉ cấp tối đa một token mới; không tiết lộ thời gian chờ riêng của email. Email cũ đến trễ vẫn chứa link đã bị vô hiệu. Dữ liệu email sai trả lỗi validation; limiter bổ sung vẫn hoãn theo DEC-089.
+- Email không tồn tại, đã xác minh, tài khoản không đủ điều kiện, hoặc đang trong thời gian chờ: cùng một phản hồi. Trong thời gian chờ không cấp token mới và link cũ vẫn dùng được.
+- Hai yêu cầu đồng thời: tối đa một token mới. Không tiết lộ thời gian chờ còn lại.
+- Email cũ đến muộn vẫn chứa link đã bị hủy.
+- Email sai định dạng: lỗi validation. Giới hạn tần suất bổ sung vẫn hoãn (DEC-089).
 
-**Kết quả sau cùng:** Khi thực sự cấp mới, chỉ link verify mới có hiệu lực và token reset không bị thay đổi. Khi không đủ điều kiện cấp, dữ liệu token được giữ nguyên. Người dùng vẫn chưa có phiên ứng dụng.
+**Kết quả:** nếu cấp mới, chỉ link mới dùng được; token đặt lại mật khẩu không bị ảnh hưởng. Nếu không cấp, token giữ nguyên. Người dùng vẫn chưa có phiên.
 
 <a id="ux"></a>
 
@@ -99,97 +102,120 @@ ACC-S01 · Đăng ký
 │ Tên tài khoản     [          ] │
 │ Tên hiển thị      [          ] │
 │ Mật khẩu          [          ] │
-│ [Tạo tài khoản]                 │
-│ Đã có tài khoản? [Đăng nhập]    │
+│ [Tạo tài khoản]                │
+│ Đã có tài khoản? [Đăng nhập]   │
 └────────────────────────────────┘
 ```
 
-| Màn hình | Trạng thái và thao tác | Phản hồi/kết quả |
+| Màn hình | Trạng thái | Phản hồi |
 |---|---|---|
-| ACC-S01 Đăng ký | Đang nhập, dữ liệu sai, đang gửi, thất bại | Giữ email/tên tài khoản/tên hiển thị đã nhập; lỗi tại trường phù hợp; tránh bấm gửi lặp trong khi chờ |
-| ACC-S03 Xác minh email | Đã tiếp nhận yêu cầu, mở liên kết, đang xác minh, thành công, liên kết không dùng được | Hướng dẫn kiểm tra email; có đường gửi lại, tối thiểu 60 giây giữa hai yêu cầu cùng mục đích; liên kết mới vô hiệu liên kết cũ; không hứa email đã giao khi mới tiếp nhận |
+| ACC-S01 Đăng ký | Đang nhập, dữ liệu sai, đang gửi, thất bại | Giữ email, tên tài khoản, tên hiển thị đã nhập; lỗi hiện ở đúng trường; chặn bấm gửi lặp |
+| ACC-S03 Xác minh email | Đã tiếp nhận, mở link, đang xác minh, thành công, link không dùng được | Hướng dẫn kiểm tra email; nút gửi lại (cách nhau tối thiểu 60 giây); link mới hủy link cũ; không hứa email đã tới |
 
-ACC-S03 là điểm dừng của tài khoản chưa xác minh; có đường khôi phục mật khẩu. Không tự xác minh bằng token Development trong giao diện sản phẩm. Link được đọc/xóa khỏi URL và consume bằng thao tác chủ động theo [liên kết email](email-links.md#browser-links). Desktop/điện thoại theo DEC-059 và ma trận DEC-082; prototype, thiết bị/kích thước và tiêu chí tiếp cận còn OQ-007.
+- ACC-S03 là nơi tài khoản chưa xác minh dừng lại; có đường tới khôi phục mật khẩu.
+- Link được đọc và xóa khỏi URL, chỉ dùng khi người dùng bấm ([liên kết email](email-links.md#browser-links)).
+- Hỗ trợ máy tính và điện thoại (DEC-059, DEC-082). Prototype, thiết bị và tiêu chí truy cập còn mở (OQ-007).
 
 <a id="contracts"></a>
 
-## API, dữ liệu và transaction
+## API và dữ liệu
 
-Prefix hiện tại `/api/v1`; Swagger sinh từ source ở `/swagger/v1/swagger.json` khi chạy Development.
+Tiền tố `/api/v1`. Swagger: `/swagger/v1/swagger.json` khi chạy Development.
 
-| Method / đường dẫn | Xác thực và đầu vào JSON | Kết quả thành công |
+| Method và đường dẫn | Đầu vào | Kết quả |
 |---|---|---|
-| `POST /auth/register` | Public; `username, displayName, email, password` | 201 `RegistrationResponse`; chưa cấp phiên |
-| `POST /auth/verify-email` | Public; `token` | 204 |
+| `POST /auth/register` | Không cần đăng nhập; `username, displayName, email, password` | 201 `RegistrationResponse`; chưa cấp phiên |
+| `POST /auth/verify-email` | Không cần đăng nhập; `token` | 204 |
 
-- `RegistrationResponse`: `userId, username, email, verificationRequired, developmentVerificationToken`.
-
-Token Development chỉ được trả khi `ExposeDevelopmentTokens` bật, không dùng làm UX sản phẩm. Email service trim/chữ thường, giới hạn 254; HTTP/service/DB phải thống nhất normalize → validate → transaction → constraint.
+`RegistrationResponse`: `userId, username, email, verificationRequired, developmentVerificationToken`. Token Development chỉ trả về khi bật `ExposeDevelopmentTokens`.
 
 <a id="api-hợp-đồng-gửi-lại-cần-triển-khai"></a>
 
-### Hợp đồng gửi lại cần triển khai
+### API gửi lại (chưa có trong nền)
 
-`POST /api/v1/auth/resend-verification` chưa có controller/service trong nền `900e226`; triển khai trên nhánh Identity chưa tích hợp theo [hiện trạng email](email-links.md#status). Hợp đồng mục tiêu: đầu vào `{email}` hợp lệ; thành công `202 {accepted: true}` cùng ý nghĩa cho email tồn tại/không tồn tại/đã xác minh/không đủ điều kiện. Với tài khoản chờ xác minh đủ điều kiện, trong một transaction khóa tài khoản, kiểm tra cooldown, vô hiệu token verify cũ rồi tạo token/outbox mới. Hai request đồng thời chỉ tạo tối đa một token mới trong cooldown; không vô hiệu token reset khi gửi lại verify.
+`POST /api/v1/auth/resend-verification` chưa có trong `900e226`; đã làm ở nhánh Identity nhưng chưa ghép ([hiện trạng email](email-links.md#status)).
 
-Cooldown theo email yêu cầu cần có cùng phản hồi công khai cho các trạng thái tài khoản để tránh tiết lộ tồn tại; limiter theo nguồn có thể trả 429 ProblemDetails và `Retry-After` mà không phụ thuộc email tồn tại. Schema/mã lỗi và ngưỡng bổ sung là thiết kế cần rà soát. Không trả token thô ngoài Development.
+- **Đầu vào:** `{email}` hợp lệ.
+- **Thành công:** `202 {accepted: true}`, giống nhau cho mọi trường hợp (có tài khoản, không có, đã xác minh, không đủ điều kiện).
+- **Xử lý:** với tài khoản chờ xác minh đủ điều kiện, trong một transaction: khóa tài khoản, kiểm tra thời gian chờ, hủy token cũ, tạo token mới và outbox. Không đụng token đặt lại mật khẩu.
+- Thời gian chờ theo email phải cho cùng phản hồi ở mọi trạng thái, để không lộ email có tồn tại hay không. Giới hạn theo nguồn (IP) có thể trả 429 kèm `Retry-After`.
+- Không trả token ngoài môi trường Development.
+- Schema, mã lỗi và ngưỡng bổ sung cần review.
 
-| Bảng | Trách nhiệm và ràng buộc |
+### Bảng
+
+| Bảng | Nội dung |
 |---|---|
-| `identity.users` | ID ổn định, username và trạng thái; unique username chuẩn hóa |
-| `identity.user_profiles` | Một hồ sơ mỗi user; tên hiển thị không phải khóa đăng nhập |
-| `identity.user_emails` | Unique email chuẩn hóa; tối đa một email primary; `verified_at` tách khỏi mật khẩu |
-| `identity.password_credentials` | Hash mật khẩu, phiên bản và thời điểm đổi; không lưu mật khẩu thô |
-| `identity.account_tokens` | Token băm, mục đích, target email, hạn và thời điểm dùng; token verify/reset không thay thế nhau |
+| `identity.users` | ID cố định, tên tài khoản, trạng thái; tên tài khoản (đã chuẩn hóa) duy nhất |
+| `identity.user_profiles` | Một hồ sơ mỗi người dùng |
+| `identity.user_emails` | Email (đã chuẩn hóa) duy nhất; tối đa một email chính; `verified_at` tách khỏi mật khẩu |
+| `identity.password_credentials` | Hash mật khẩu, phiên bản, thời điểm đổi |
+| `identity.account_tokens` | Hash token, mục đích, email đích, hạn, thời điểm dùng; token xác minh và đặt lại độc lập |
 
-Đăng ký phải ghi user/hồ sơ/email/mật khẩu băm/token/yêu cầu email cùng transaction; unique username/email xử lý cả request đồng thời. Lần cấp token đầu ghi cooldown. Verify và resend giữ khóa/consume theo [cơ chế email dùng chung](email-links.md#token-transaction); source verify hiện còn phải kiểm chứng concurrent consume.
+Đăng ký ghi người dùng, hồ sơ, email, mật khẩu, token và yêu cầu email trong một transaction. Ràng buộc unique trên tên tài khoản và email xử lý cả trường hợp đăng ký đồng thời. Lần cấp token đầu ghi mốc thời gian chờ. Cách khóa và dùng token xem [liên kết email](email-links.md#token-transaction).
 
-| Mã hiện tại | HTTP | Cách xử lý |
+### Mã lỗi
+
+| Mã | HTTP | Xử lý |
 |---|---|---|
-| `Identity.UsernameAlreadyExists`, `Identity.EmailAlreadyExists`, `Identity.RegistrationConflict` | 409 | Báo xung đột đăng ký |
-| `Identity.InvalidOrExpiredToken` | 400 | Liên kết không dùng được |
-| `Identity.RegistrationInvalid`, `Identity.PasswordInvalid`, `Identity.ProfileInvalid` và lỗi trường | 400 | Hiển thị `errors` tại trường; validation MVC có thể trả `Common.ValidationFailed` trước service |
+| `Identity.UsernameAlreadyExists`, `Identity.EmailAlreadyExists`, `Identity.RegistrationConflict` | 409 | Báo trùng |
+| `Identity.InvalidOrExpiredToken` | 400 | Link không dùng được |
+| `Identity.RegistrationInvalid`, `Identity.PasswordInvalid`, `Identity.ProfileInvalid` | 400 | Hiện lỗi theo trường. Validation MVC có thể trả `Common.ValidationFailed` trước |
 
-Định danh phải đi qua cùng pipeline trước validation HTTP/service/DB: email bỏ khoảng trắng đầu/cuối rồi chuyển chữ thường theo DEC-063; username trim rồi kiểm tra ASCII/quy tắc duy nhất; tên hiển thị trim, từ chối toàn khoảng trắng, đếm UTF-16. Không trim/chuẩn hóa mật khẩu hoặc nội dung tin ngoài bước CRLF→LF đã đặc tả ở DM. Locale/timezone giữ validation độ dài hiện tại; việc giới hạn danh sách locale/zone hỗ trợ cần lựa chọn riêng, không tự đổi policy trong bước thiết kế.
+### Chuẩn hóa
+
+Thứ tự: chuẩn hóa → kiểm tra → transaction → ràng buộc DB; HTTP, service và DB dùng cùng quy tắc.
+
+- Email: cắt khoảng trắng, chuyển chữ thường, tối đa 254 ký tự.
+- Tên tài khoản: cắt khoảng trắng, rồi kiểm tra ký tự ASCII và tính duy nhất.
+- Tên hiển thị: cắt khoảng trắng, từ chối nếu chỉ có khoảng trắng, đếm UTF-16.
+- Mật khẩu: không cắt, không chuẩn hóa.
+- Ngôn ngữ và múi giờ: chỉ kiểm tra độ dài; giới hạn theo danh sách giá trị cần quyết định riêng.
 
 <a id="acceptance"></a>
 
 ## Tiêu chí chấp nhận và ca kiểm thử
 
-| Mã | Tình huống kiểm tra | Kết quả mong đợi |
+| Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| AC-ACC-01 | Người chưa có tài khoản điền thông tin đăng ký hợp lệ. | Tài khoản được tạo ở trạng thái chờ xác minh email để có thể nhắn tin. |
-| AC-ACC-05 | Tài khoản chưa xác minh email thử gửi tin riêng hoặc tin trong phòng; sau đó xác minh email và thử lại. | Trước xác minh hệ thống từ chối gửi tin; sau xác minh có thể gửi theo quyền tương ứng. |
-| AC-ACC-09 | Hai đăng ký cùng tên tài khoản chạy đồng thời. | Chỉ một tài khoản được tạo; yêu cầu còn lại nhận lỗi dữ liệu trùng, không để lại tài khoản dở dang. |
-| AC-ACC-11 | Đăng ký/sửa hồ sơ với định danh ở biên độ dài, hoa/thường và khoảng trắng đầu/cuối. | Username/email có cùng quy tắc chuẩn hóa và unique; tên hiển thị Unicode đếm UTF-16; không cho đổi username/email. |
+| AC-ACC-01 | Người chưa có tài khoản điền thông tin hợp lệ (gồm tên hiển thị) | Tài khoản được tạo, chờ xác minh email |
+| AC-ACC-05 | Tài khoản chưa xác minh thử gửi tin; sau đó xác minh rồi thử lại | Trước xác minh bị từ chối; sau xác minh gửi được theo quyền |
+| AC-ACC-09 | Hai người đăng ký cùng tên tài khoản cùng lúc | Chỉ một tài khoản được tạo; người kia nhận lỗi trùng; không có dữ liệu dở dang |
+| AC-ACC-11 | Đăng ký hoặc sửa hồ sơ với giá trị ở biên độ dài, khác hoa thường, có khoảng trắng hai đầu | Tên tài khoản và email chuẩn hóa và kiểm tra trùng giống nhau; tên hiển thị đếm UTF-16; không đổi được tên tài khoản và email |
 
-Mọi AC/TC dưới đây cần kết quả chạy gắn commit/build; danh mục ca và assertion trong source không phải kết quả nghiệm thu. A là tài khoản đã xác minh, U chưa xác minh, A1/A2 là hai phiên của A. Dùng DB/email thử riêng và phiên trình duyệt độc lập.
+Ký hiệu: A là tài khoản đã xác minh, U chưa xác minh. Dùng DB và email thử riêng.
 
-| Mã ca | Tiền điều kiện và thao tác | Kết quả cần quan sát | Dẫn chiếu |
+| Mã ca | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| TC-ACC-01 | Đăng ký hợp lệ; dùng email và tên tài khoản đăng nhập sau xác minh | Cả hai cách vào cùng tài khoản; tên tài khoản không đổi | AC-ACC-01, AC-ACC-02 |
-| TC-ACC-04 | Hai request đăng ký cùng tên tài khoản đồng thời | Một tài khoản; request còn lại lỗi trùng; không có dữ liệu dở dang | AC-ACC-09 |
-| TC-ACC-09 | Biên username 2/3/32/33; tên hiển thị 0/1/64/65 UTF-16; hai email/username chỉ khác hoa thường; khoảng trắng đầu/cuối | Chuẩn hóa/validation nhất quán; một định danh duy nhất; không lưu tài khoản dở dang | AC-ACC-11 |
+| TC-ACC-01 | Đăng ký hợp lệ; sau xác minh đăng nhập bằng email và bằng tên tài khoản | Cả hai cách vào cùng một tài khoản; tên tài khoản không đổi | AC-ACC-01, 02 |
+| TC-ACC-04 | Hai request đăng ký cùng tên tài khoản đồng thời | Một tài khoản; request kia lỗi trùng; không có dữ liệu dở dang | AC-ACC-09 |
+| TC-ACC-09 | Tên tài khoản dài 2, 3, 32, 33; tên hiển thị 0, 1, 64, 65 đơn vị UTF-16; hai email hoặc tên chỉ khác hoa thường; khoảng trắng hai đầu | Chuẩn hóa và kiểm tra nhất quán; chỉ một định danh; không có dữ liệu dở dang | AC-ACC-11 |
 
-AC-ACC-01 bao gồm displayName bắt buộc theo DEC-062. AC/TC dùng chung cho link/email/cooldown ở [email-links](email-links.md#acceptance); truy cập pending ở [account-state](account-state.md#acceptance).
+Ca về link, email và thời gian chờ xem [liên kết email](email-links.md#acceptance); truy cập khi chưa xác minh xem [trạng thái tài khoản](account-state.md#acceptance).
+
+Kết quả phải ghi kèm commit và build.
 
 <a id="status"></a>
 
-## Hiện trạng và khoảng trống
+## Hiện trạng
 
-Hiện trạng source kế thừa từ [nền MVP `900e226`](../../releases/mvp.md), đối chiếu ngày 2026-10-13. Ma trận test Identity giữ phần rà soát ngày 2026-10-04/05; bằng chứng DM bổ sung được dẫn riêng, không thay nghiệm thu toàn bộ Accounts. Lần cập nhật này không chạy lại test. Trong bảng, `AC-01` là `AC-ACC-01`, `TC-01` là `TC-ACC-01`. Assertion 200/204 chưa chứng minh mọi hậu điều kiện.
+Đối chiếu với [nền MVP `900e226`](../../releases/mvp.md) ngày 2026-10-13. Bảng test Identity giữ phần rà soát ngày 2026-10-04 và 05. Lần cập nhật này không chạy lại test. Phản hồi 200 hay 204 chưa chứng minh mọi kết quả sau đó.
 
-| UC | AC / TC liên quan | Source / API hiện có | Assertion tự động hiện có | Chênh lệch hoặc bằng chứng cần bổ sung |
+| UC | Liên quan | Code hiện có | Test tự động | Còn thiếu |
 |---|---|---|---|---|
-| UC-ACC-01 | AC-01/09/11/12/19; TC-01/04/09/10/16 | `RegisterAsync`; `POST /auth/register`; form đăng ký | Lifecycle: status 201, token Development, từ chối login trước verify | ACC-GAP-04/05/07; đăng ký trùng đồng thời/Unicode/policy mật khẩu chưa có test; UI đang tự verify bằng token Development |
-| UC-ACC-02 | AC-05/07/15/19/20; TC-01/02/06/13/17/18 | `VerifyEmailAsync`; `POST /auth/verify-email`; wrapper verify | Lifecycle: verify 204, login sau verify, `emailVerified=true` | ACC-GAP-03/05; chưa có test verify đồng thời/hết hạn/dùng lại; chưa có trang mở liên kết và xác minh chủ động |
-| UC-ACC-03 | AC-14/19/20/21; TC-07/12/16/17/18 | Nền `900e226` chưa có resend; nhánh Identity có triển khai riêng theo [email-links](email-links.md#status) | Test resend nằm trên nhánh Identity chưa tích hợp | ACC-GAP-02/05; cần tích hợp endpoint/cooldown/email, hoàn thiện UI và kiểm chứng |
+| UC-ACC-01 | AC-ACC-01, 09, 11, 12, 19; TC-ACC-01, 04, 09, 10, 16 | `RegisterAsync`; `POST /auth/register`; form đăng ký | Trả 201, có token Development, chặn đăng nhập trước khi xác minh | ACC-GAP-04, 05, 07. Chưa có test đăng ký trùng đồng thời, Unicode, quy tắc mật khẩu. Giao diện đang tự xác minh bằng token Development |
+| UC-ACC-02 | AC-ACC-05, 07, 15, 19, 20; TC-ACC-01, 02, 06, 13, 17, 18 | `VerifyEmailAsync`; `POST /auth/verify-email`; hàm gọi API | Xác minh 204, đăng nhập được sau đó, `emailVerified=true` | ACC-GAP-03, 05. Chưa có test xác minh đồng thời, hết hạn, dùng lại; chưa có trang mở link |
+| UC-ACC-03 | AC-ACC-14, 19, 20, 21; TC-ACC-07, 12, 16, 17, 18 | Chưa có trong nền; có ở nhánh Identity ([email](email-links.md#status)) | Test nằm ở nhánh Identity chưa ghép | ACC-GAP-02, 05. Cần ghép endpoint, thời gian chờ, email; làm giao diện và kiểm thử |
 
-| Mã | Yêu cầu/căn cứ | Source hiện tại | Việc phải hoàn tất |
+| Mã | Yêu cầu | Code hiện tại | Cần làm |
 |---|---|---|---|
-| ACC-GAP-04 | Chuẩn hóa định danh nhất quán — ACC-008/009 | Service trim nhưng MVC kiểm tra regex/độ dài trước service | Khóa thứ tự chuẩn hóa/validation HTTP–service–DB; fixture khoảng trắng/hoa thường |
-| ACC-GAP-07 | Tên hiển thị UTF-16 — ACC-008, DEC-068 | Service dùng `.Length`; MVC và DB có giới hạn riêng | Fixture tiếng Việt tổ hợp/emoji và biên 64; kiểm chứng HTTP–DB |
+| ACC-GAP-04 | Chuẩn hóa định danh nhất quán (ACC-008, 009) | Service cắt khoảng trắng, nhưng MVC kiểm tra regex và độ dài trước service | Chốt thứ tự chuẩn hóa và kiểm tra ở HTTP, service, DB; fixture khoảng trắng và hoa thường |
+| ACC-GAP-07 | Tên hiển thị đếm UTF-16 (ACC-008, DEC-068) | Service dùng `.Length`; MVC và DB có giới hạn riêng | Fixture tiếng Việt tổ hợp, emoji, biên 64; kiểm tra từ HTTP tới DB |
 
-ACC-GAP-02/03/05 và việc chọn provider/domain/key store theo dõi tại [email-links](email-links.md#status). ACC-P01: định danh ACC-008/009 và tên hiển thị UTF-16 đã chốt DEC-063/068; chuẩn hóa còn cần kiểm chứng.
+ACC-GAP-02, 03, 05 và việc chọn nhà cung cấp email, domain, kho khóa xem [liên kết email](email-links.md#status).
 
-Source: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthScreen](../../../clients/WebClient/src/components/AuthScreen.jsx), [IdentityV1FlowTests](../../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs).
+Code: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthScreen](../../../clients/WebClient/src/components/AuthScreen.jsx), [IdentityV1FlowTests](../../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs).
+
+---
+
+Nguồn: REQ-010, SCP-002, DEC-054, DEC-062 (thông tin đăng ký), DEC-063 (định danh), DEC-068 (UTF-16), DEC-059, DEC-082 (thiết bị), DEC-089 (hoãn giới hạn tần suất), DEC-104 (khóa tài khoản).

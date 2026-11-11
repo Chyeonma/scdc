@@ -1,16 +1,23 @@
 # SCDC — Quy ước API
 
-Nguồn chung cho giao thức API, lỗi và hợp đồng máy đọc. Quyền và nghiệp vụ cụ thể nằm trong từng chủ đề.
+Trang này quy định cách viết API công khai (định dạng, mã lỗi) và các quyết định v1 về giao tiếp: giữa trình duyệt và service, giữa các service với nhau, và cách xác thực. Quyền và nghiệp vụ cụ thể nằm trong tài liệu từng tính năng.
+
+**Trạng thái:** quy ước API công khai đang dùng trong nền `900e226`. Các quyết định v1 (D04, D09, D10, D20, D27 đến D29, D46) đã chốt nhưng chưa có code.
 
 <a id="contracts"></a>
 
 <a id="3-hợp-đồng-và-lỗi-chung"></a>
 
-## 3. Hợp đồng và lỗi chung
+## API công khai
 
-API nền hợp nhất `900e226` dùng prefix `/api/v1`. ID dùng định danh ổn định; actor lấy từ phiên xác thực. Thời điểm truyền theo UTC. DM đã truyền `sequence`/`version` dưới dạng chuỗi số nguyên để client xử lý chính xác; đối chiếu runtime tại [DirectConversationsController](../../services/SCDC.Api/Controllers/Messaging/DirectConversationsController.cs) và [MessageResponse](../../services/Modules/Messaging/Application/ITextMessageSender.cs).
+- Tiền tố `/api/v1`.
+- ID là định danh cố định. Người thực hiện lấy từ phiên đăng nhập, không lấy từ request.
+- Thời gian theo UTC.
+- `sequence` và `version` của DM gửi dạng chuỗi số nguyên để client xử lý chính xác ([DirectConversationsController](../../services/SCDC.Api/Controllers/Messaging/DirectConversationsController.cs), [MessageResponse](../../services/Modules/Messaging/Application/ITextMessageSender.cs)).
 
-Theo DEC-061, lỗi dùng `application/problem+json` với các trường `type`, `title`, `status`, `detail`, `instance`, `errorCode`, `traceId`; lỗi validation có thêm `errors`. Các trường mở rộng xuất hiện ở cấp ngoài cùng, không nằm trong object `extensions`.
+### Lỗi
+
+Lỗi trả `application/problem+json` (DEC-061) với các trường `type`, `title`, `status`, `detail`, `instance`, `errorCode`, `traceId`; lỗi validation có thêm `errors`. Các trường thêm nằm ở cấp ngoài cùng, không nằm trong object `extensions`.
 
 ```json
 {
@@ -25,160 +32,36 @@ Theo DEC-061, lỗi dùng `application/problem+json` với các trường `type`
 }
 ```
 
-| HTTP | Ý nghĩa và cách dùng |
+| HTTP | Khi nào |
 |---|---|
-| 400 | Validation đầu vào theo `ErrorType.Validation` hiện tại |
-| 401 | Thiếu hoặc không còn phiên hợp lệ; cần xác thực lại |
-| 403 | Không đủ quyền/điều kiện cho thao tác được phép biết |
-| 404 | Không tồn tại; DM cũng dùng cho tài nguyên người gọi không được biết |
+| 400 | Dữ liệu đầu vào không hợp lệ |
+| 401 | Chưa đăng nhập hoặc phiên không còn hợp lệ |
+| 403 | Không đủ quyền hoặc điều kiện, với tài nguyên người gọi được phép biết |
+| 404 | Không tồn tại; DM cũng dùng cho tài nguyên người gọi không được phép biết |
 | 409 | Xung đột dữ liệu, phiên bản hoặc khóa thao tác |
-| 429 | Vượt giới hạn / bị khóa tạm; chi tiết retry của endpoint tương lai cần đặc tả |
-| 503 | Phụ thuộc tạm không đáp ứng |
+| 429 | Vượt giới hạn hoặc bị khóa tạm |
+| 503 | Phụ thuộc tạm thời không phản hồi |
 
-DM trong nền hợp nhất đã dùng cùng ánh xạ validation 400 này; hợp đồng v1 cần tiếp tục đối chiếu theo operation khi chuyển service. Client xử lý theo `errorCode` và `errors`, không phụ thuộc câu chữ `detail`. Không đưa stack trace, mật khẩu, token hoặc nội dung chat vào response lỗi hay log.
+- Client xử lý theo `errorCode` và `errors`, không dựa vào câu chữ `detail`.
+- Không đưa stack trace, mật khẩu, token hay nội dung chat vào response lỗi hoặc log.
 
-OpenAPI cho endpoint đã triển khai được sinh từ source: `/swagger/v1/swagger.json` trong môi trường Development; UI tại `/swagger`. Hợp đồng tương lai vẫn được đánh dấu đề xuất trong đặc tả tính năng, chưa coi là endpoint có thể gọi. Thay đổi schema phải cập nhật frontend, backend, mock, docs và dữ liệu thử liên quan.
+### Tài liệu API
 
-Nguồn: [ApiProblemDetails](../../services/SCDC.Api/Errors/ApiProblemDetails.cs), [ApiErrorMapper](../../services/SCDC.Api/Errors/ApiErrorMapper.cs), [ApiErrorDefaults](../../services/SCDC.Api/Errors/ApiErrorDefaults.cs).
+- Endpoint đã làm: Swagger sinh từ code, tại `/swagger/v1/swagger.json` và `/swagger` khi chạy Development.
+- Endpoint chưa làm: ghi trong tài liệu tính năng với nhãn "đề xuất"; chưa gọi được.
+- Đổi schema thì sửa luôn frontend, backend, mock, tài liệu và dữ liệu thử liên quan.
 
-<a id="v1-internal-protocol"></a>
+Code: [ApiProblemDetails](../../services/SCDC.Api/Errors/ApiProblemDetails.cs), [ApiErrorMapper](../../services/SCDC.Api/Errors/ApiErrorMapper.cs), [ApiErrorDefaults](../../services/SCDC.Api/Errors/ApiErrorDefaults.cs).
 
-## D04 — Giao thức gọi nội bộ đồng bộ
+---
 
-Trạng thái: đã xác nhận phương án B ngày 2026-10-11 — [DEC-122](../records/decisions/README.md#dec-122). Những lời gọi trực tiếp giữa bốn service nghiệp vụ v1 cần request–response dùng gRPC + Protobuf: bên gọi chờ kết quả từ bên nhận.
-
-| Nội dung | Lựa chọn |
-|---|---|
-| Giao thức | gRPC trên HTTP/2 |
-| Hợp đồng và định dạng | `.proto`, Protobuf |
-| Client nội bộ | Sinh mã từ hợp đồng `.proto`; vị trí nguồn đã chọn tại [D46](#v1-grpc-contract-sources), project hợp đồng và project reference tại [D47](backend.md#v1-grpc-code-generation); version còn cần thiết kế |
-
-Lợi ích là hợp đồng kiểu dữ liệu, mã client sinh tự động và payload nhị phân gọn. Đánh đổi là bổ sung tooling `.proto`/generated code và cấu hình HTTP/2 bên cạnh API HTTP hiện có. Chưa có kết quả đo hiệu năng cho cấu hình v1. Nguồn đặc điểm giao thức: [Microsoft — gRPC và HTTP API](https://learn.microsoft.com/en-us/aspnet/core/grpc/comparison?view=aspnetcore-10.0).
-
-API phía WebClient giữ các lựa chọn REST/SignalR đã xác nhận tại DEC-081. Tích hợp provider và webhook theo hợp đồng của provider, chưa được D04 chuyển sang gRPC. Luồng nghiệp vụ cụ thể xác định trong từng chủ đề; sự kiện sau commit dùng outbox/worker và gRPC theo [D27](#v1-integration-event-transport), chưa thêm broker trong cấu hình ban đầu. Endpoint, timeout/retry và cơ chế nhất quán chi tiết cần thiết kế riêng. Xác thực danh tính service dùng mTLS theo [D20](#v1-service-authentication); cấu hình và quyền gọi RPC cần thiết kế chi tiết. Ánh xạ status/lỗi nghiệp vụ gRPC chưa chốt; ProblemDetails ở trên là hợp đồng HTTP.
-
-[D07 — truyền lệnh thu hồi](access-revocation.md#v1-revocation-transport) đã chốt gRPC trực tiếp cho yêu cầu cài hàng rào và kết quả xác nhận theo DEC-126. Các luồng khác tiếp tục xác định trong tài liệu chủ đề; cơ chế chuyển sự kiện sau commit đã xác nhận riêng tại [D27](#v1-integration-event-transport).
-
-Giao thức không tự thay được transaction/guard giữa các module trong MVP. Hợp đồng mạng phải được thiết kế riêng cho quyền tới commit, lỗi mạng và ngưỡng thu hồi theo [thu hồi truy cập](access-revocation.md); một lần kiểm tra HTTP hoặc gRPC không tự đáp ứng các yêu cầu đó. Xác thực danh tính service theo [D20](#v1-service-authentication). Nguồn phân biệt request–response với sự kiện và lỗi liên service: [Microsoft — giao tiếp microservice](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/interservice-communication).
-
-<a id="v1-grpc-contract-sources"></a>
-
-## D46 — Vị trí nguồn hợp đồng gRPC
-
-Trạng thái: đã chọn phương án A ngày 2026-10-12 theo ủy quyền của người dùng — [DEC-164](../records/decisions/README.md#dec-164). Nguồn `.proto` nội bộ giữa bốn service theo D04/D27 tập trung tại `docs/contracts/grpc/`, chia theo service triển khai endpoint RPC. Project hợp đồng và cách cấp mã C# đã chọn tại [D47](backend.md#v1-grpc-code-generation). Hợp đồng SMTP/LiveKit/provider giữ theo bên cung cấp.
-
-File `.proto` mô tả phương thức RPC và cấu trúc thông điệp, dùng làm nguồn sinh mã client/server. Mỗi hợp đồng có một nguồn chỉnh sửa; bên gọi không duy trì bản sao riêng. Nguồn: [Microsoft — gRPC services](https://learn.microsoft.com/en-us/aspnet/core/grpc/basics?view=aspnetcore-10.0).
-
-| Nội dung | A — Tập trung theo service trong danh mục hợp đồng | B — Đặt cạnh mã của service cung cấp RPC |
-|---|---|---|
-| Đường dẫn mục tiêu | `docs/contracts/grpc/{identity,community,messaging,media}/` | `services/{Identity,Community,Messaging,Media}/Protos/` |
-| Lợi ích | Tìm và review hợp đồng liên service tại một nơi, cùng danh mục OpenAPI/JSON Schema hiện có | Hợp đồng gần mã triển khai, thuận tiện nếu tách repository theo service về sau |
-| Bất lợi | Build cần lấy nguồn schema ngoài thư mục mã service | Nguồn hợp đồng nằm tại nhiều thư mục service; bên gọi cần tham chiếu đúng vị trí |
-
-Chọn A để giữ nguồn hợp đồng tại [danh mục máy đọc](../contracts/README.md) hiện có và thuận tiện rà soát giao tiếp liên service. Đánh đổi là build cần tham chiếu schema ngoài thư mục mã service. Cây thư mục mục tiêu:
-
-```text
-docs/contracts/grpc/
-├── identity/
-├── community/
-├── messaging/
-└── media/
-```
-
-Mỗi nhóm do service triển khai endpoint RPC duy trì, bên gọi cùng review thay đổi. Thư mục chung không chia sẻ domain model hoặc quyền sở hữu dữ liệu giữa service.
-
-Với [D27](#v1-integration-event-transport), RPC nhận sự kiện Community → Messaging thuộc nhóm Messaging; Community vẫn sở hữu ý nghĩa nghiệp vụ của sự kiện do mình phát. Schema sự kiện, envelope và cách import cần thiết kế riêng; vị trí RPC không chuyển quyền sở hữu nghiệp vụ.
-
-[Danh mục hợp đồng](../contracts/README.md) dẫn tới nguồn `.proto` khi được tạo, không chứa thêm bản chỉnh sửa riêng. Hành vi, quyền và ngoại lệ giữ trong tài liệu chủ đề; schema máy đọc giữ tại nguồn hợp đồng. `Protos/` trong phương án B đã so sánh chỉ là thư mục nguồn, không mặc định thêm project.
-
-D46 chỉ xác nhận vị trí nguồn và trách nhiệm duy trì hợp đồng; project hợp đồng và cách cấp mã C# đã chọn riêng tại [D47](backend.md#v1-grpc-code-generation). Công cụ/phiên bản sinh mã, namespace, versioning, CI và phương thức/trường cụ thể cần thiết kế tiếp. [D44](backend.md#v1-shared-library-distribution) không áp cho hợp đồng/mã sinh; kiểu Protobuf giữ ngoài Domain, hợp đồng Application và `SCDC.Shared.Core` theo [D43/D45](backend.md#v1-code-layout). Chưa tạo thư mục, `.proto`, project hoặc cấu hình.
-
-<a id="v1-integration-event-transport"></a>
-
-## D27 — Chuyển sự kiện sau commit bằng gRPC
-
-Trạng thái: đã xác nhận phương án A ngày 2026-10-12 — [DEC-145](../records/decisions/README.md#dec-145). Sự kiện sau commit đi từ outbox qua worker của owner, chuyển bằng gRPC tới service nhận; chưa bổ sung broker trong cấu hình v1 ban đầu.
-
-[D04](#v1-internal-protocol) đã chọn gRPC + Protobuf cho lời gọi trực tiếp cần request–response. D27 dùng giao thức đó cho việc bàn giao sự kiện nền, xác thực service bằng mTLS theo [D20](#v1-service-authentication).
-
-Nhu cầu cụ thể đã có trong [đặc tả realtime Community](../features/messaging/channel-messaging.md#channel-messaging): Community sở hữu thay đổi cộng đồng/thành viên/yêu cầu/lời mời, còn Messaging phát thông báo qua ChatHub. Cần đường chuyển thông tin Community → Messaging khi tách service. Các thông báo browser `CommunityChanged`, `MembershipChanged`, `JoinRequestChanged` và `MemberInvitationChanged` giữ hợp đồng hiện có; tên/schema sự kiện nội bộ v1 chưa chốt. Đặc tả này chưa chứng minh dispatcher đã có runtime.
-
-| Bước | Yêu cầu |
-|---|---|
-| Lưu sự kiện | Dữ liệu nghiệp vụ và outbox cùng commit trong DB owner |
-| Chuyển nền | Worker owner đọc outbox của mình, lưu tiến độ theo bên nhận và gọi gRPC; chạy cùng API theo D12 |
-| Xác nhận nhận | Service nhận kiểm tra danh tính/quyền gọi và chỉ xác nhận sau khi lưu bền sự kiện hoặc công việc cần xử lý trong DB mình |
-| Mất xác nhận | Worker thử lại cùng định danh sự kiện; bên nhận chống xử lý trùng, tiến độ gửi không dựa vào bộ nhớ tiến trình |
-| Xử lý/phát thông báo | Service nhận xử lý từ dữ liệu đã lưu; Messaging kiểm tra quyền hiện hành trước phát tới connection |
-
-Lựa chọn giảm thành phần vận hành trên hạ tầng một máy, tận dụng gRPC/mTLS đã chọn. Đánh đổi là nhóm tự quản lý danh sách bên nhận, giao nhận bền, thử lại và lỗi từng phần. Tách lớp vận chuyển khỏi xử lý sự kiện để có thể chuyển sang broker về sau; chưa chọn sản phẩm hoặc quy trình chuyển. Nguồn so sánh giao tiếp: [Microsoft — giao tiếp microservice](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/interservice-communication).
-
-Việc bàn giao sự kiện xử lý nền sau commit, không yêu cầu HTTP nghiệp vụ chờ bàn giao hoàn tất. Mỗi lần gọi gRPC vẫn chờ xác nhận nhận bền; xác nhận này không có nghĩa công việc đã xử lý xong hoặc trình duyệt đã nhận thông báo. Timeout/mất xác nhận không chứng minh bên nhận chưa lưu. Cần thiết kế định danh/version, xử lý trùng/đảo thứ tự, lỗi không thể xử lý, lượng chờ và đối soát sau restart. Service chỉ đọc/ghi DB mình.
-
-D27 không thay [D07 — truyền lệnh hàng rào](access-revocation.md#v1-revocation-transport), [D16 — chuẩn bị phòng](../features/community/channels.md#v1-channel-preparation-transport) hoặc [D08 — ghi tin trực tiếp](../features/messaging/message-lifecycle.md#v1-message-intake). Sự kiện không thay cơ chế giữ quyền tới commit hoặc chứng minh cutoff 5 giây. Job email và outbox → Hub trong cùng owner không tự thuộc transport liên service này.
-
-Danh mục sự kiện/consumer đầy đủ, schema/`.proto`, quyền gọi chi tiết, cơ chế lưu nhận/chống trùng, ordering, retry/backlog/retention và cách chuyển transport chưa chốt. Chưa thay hợp đồng máy đọc, code hoặc cấu hình.
-
-<a id="v1-service-authentication"></a>
-
-## D20 — Xác thực danh tính service
-
-Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-138](../records/decisions/README.md#dec-138). Lời gọi gRPC giữa bốn service nghiệp vụ v1 dùng mTLS để xác thực hai chiều và mã hóa đường truyền, gồm các lời gọi từ API và worker.
-
-| Nội dung | Yêu cầu |
-|---|---|
-| Danh tính service | Mỗi service có chứng chỉ và khóa riêng; danh tính cụ thể còn cần thiết kế |
-| Xác minh kết nối | Hai phía kiểm tra chứng chỉ theo cấu hình trust và ánh xạ về danh tính service được tin cậy |
-| Quyền gọi RPC | Service nhận kiểm tra danh tính được phép gọi thao tác; chứng chỉ hợp lệ không tự cho phép mọi RPC |
-| Vận hành | Cấp bí mật phát triển/demo theo [D36](environments.md#v1-secret-provisioning); cấp, gia hạn, thu hồi chứng chỉ và bảo vệ khóa chi tiết còn mở |
-
-Lựa chọn dùng chứng chỉ để xác minh danh tính service, chưa cần chọn bên cấp token runtime cho các lời gọi này. Đánh đổi là phải quản lý vòng đời chứng chỉ, khóa và trust. Phương án TLS + token của service đã được so sánh nhưng không được chọn tại D20. gRPC hỗ trợ xác thực bằng chứng chỉ client theo [gRPC — Authentication](https://grpc.io/docs/guides/auth/) và [Microsoft — gRPC authentication](https://learn.microsoft.com/en-us/aspnet/core/grpc/authn-and-authz?view=aspnetcore-10.0).
-
-Ví dụ Messaging phải nhận diện Community và kiểm tra quyền gọi RPC trước khi xử lý yêu cầu chuẩn bị phòng. Quyền của actor, fence/epoch và điều kiện tới commit vẫn theo [D05](access-revocation.md#v1-authorization-coordination); xác thực service không thay kiểm tra này.
-
-Worker thu hồi/bù/dọn dùng danh tính service để tiếp tục công việc đã được chấp nhận theo quyền hệ thống được cấp; không phụ thuộc việc giữ access token người dùng còn hiệu lực. Điều này không cấp quyền tiếp tục tạo/phát nội dung bằng phiên/quyền người dùng đã mất hiệu lực. Credential/service principal của worker và context actor cần thiết kế riêng.
-
-Nguồn cấp khóa riêng cho phát triển/demo theo [D36](environments.md#v1-secret-provisioning). CA/provider, danh tính cụ thể, định dạng/quyền file và bảo vệ khóa, cấp/gia hạn/thu hồi, trust theo môi trường, kết thúc TLS/proxy, ma trận quyền RPC và cách truyền context actor còn mở. Nếu có proxy kết thúc TLS, phải thiết kế cách bảo toàn và xác minh danh tính service gọi; kết nối mTLS tới proxy chưa tự chứng minh danh tính service gốc. D20 không chọn service mesh, thay Identity public auth hoặc cấu hình Gateway/LiveKit. Chưa đổi code, chứng chỉ, secrets hoặc topology; cần kiểm chứng xác thực và vòng đời chứng chỉ trước triển khai.
-
-<a id="v1-user-token-signing"></a>
-
-## D28 — Khóa ký access token người dùng
-
-Trạng thái: đã xác nhận phương án A ngày 2026-10-12 — [DEC-146](../records/decisions/README.md#dec-146). Access token người dùng v1 dùng chữ ký bất đối xứng: Identity giữ khóa riêng để ký, các service xác minh chữ ký bằng khóa công khai được tin cậy.
-
-| Nội dung | Yêu cầu |
-|---|---|
-| Quyền ký | Khóa riêng chỉ thuộc Identity; không phân phối cho các service xác minh hoặc WebClient |
-| Xác minh | Các service dùng khóa công khai được tin cậy để kiểm tra chữ ký; khóa này không cấp khả năng ký thay Identity |
-| Vận hành | Thiết kế nguồn khóa tin cậy, phân phối và vòng đời khóa trước triển khai |
-
-Lựa chọn giữ quyền ký tại Identity; đánh đổi là phải quản lý phân phối khóa công khai và thay khóa. Phương án chia sẻ khóa bí mật giữa các service đã được so sánh nhưng không được chọn. Microsoft khuyến nghị khóa bất đối xứng cho access token; cơ chế ký bằng khóa riêng và xác minh bằng khóa công khai được mô tả trong [Microsoft — JWT bearer](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0) và [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518.html#section-3). MVP hiện dùng khóa đối xứng HS256 tại [TokenService](../../services/Modules/Identity/Infrastructure/Security/TokenService.cs); chưa thay code.
-
-[D20](#v1-service-authentication) xác thực service gọi gRPC; D28 xác minh chữ ký token người dùng. Chữ ký hợp lệ chưa chứng minh phiên, tài khoản hoặc quyền hiện hành còn hiệu lực. [D30](access-revocation.md#v1-session-validation) chọn đọc trạng thái xác thực trong Redis do Identity quản lý. Hàng rào ghi tới commit và cutoff vẫn theo [D05](access-revocation.md#v1-authorization-coordination); xác minh chữ ký cục bộ không loại bỏ các phụ thuộc nghiệp vụ vào Identity.
-
-Phân phối khóa công khai ban đầu theo [D29](#v1-user-token-key-distribution); nguồn cấp khóa riêng cho phát triển/demo theo [D36](environments.md#v1-secret-provisioning). Thuật toán, đường dẫn/định dạng và bảo vệ khóa khi lưu, cách kiểm tra trust, vòng đời khóa và hợp đồng token chi tiết còn cần thiết kế. D28 chưa chọn JWKS/provider, thay issuer/audience/claims, xác thực tại Gateway hoặc khóa/token của LiveKit. Chưa đổi khóa, secrets, hợp đồng máy đọc hoặc cấu hình.
-
-<a id="v1-user-token-key-distribution"></a>
-
-## D29 — Phân phối khóa công khai ban đầu
-
-Trạng thái: đã xác nhận phương án A ngày 2026-10-12 — [DEC-147](../records/decisions/README.md#dec-147). Cấp bộ khóa công khai tin cậy qua cấu hình triển khai từng service theo môi trường. Khóa riêng vẫn chỉ thuộc Identity theo [D28](#v1-user-token-signing).
-
-| Nội dung | Yêu cầu |
-|---|---|
-| Nguồn khóa công khai | Cấu hình triển khai được kiểm soát theo môi trường; không gắn cố định một khóa trong source |
-| Cập nhật | Phối hợp cập nhật các service xác minh khi thay/thu hồi khóa; hỗ trợ bộ khóa cũ/mới cùng tồn tại khi cần |
-| Phạm vi ban đầu | Bốn service trên [máy phát triển/demo hiện có](environments.md#v1-available-infrastructure); môi trường công khai cần đánh giá riêng |
-
-Lựa chọn giảm công việc tích hợp ban đầu, chưa xây cơ chế tự lấy/cập nhật khóa từ Identity khi chạy. Đánh đổi là phải có quy trình cập nhật phối hợp; phương án tự cập nhật từ Identity đã được so sánh nhưng không được chọn cho cấu hình ban đầu. Thư viện .NET hỗ trợ cấu hình nhiều khóa xác minh qua [IssuerSigningKeys](https://learn.microsoft.com/en-us/dotnet/api/microsoft.identitymodel.tokens.tokenvalidationparameters.issuersigningkeys?view=msal-web-dotnet-latest).
-
-Có khóa công khai tại service không loại bỏ phụ thuộc nghiệp vụ vào Identity; kiểm tra phiên/quyền và D05 giữ nguyên. Định dạng/file và nguồn cấu hình cụ thể cho khóa công khai, reload/restart, thuật toán, thời hạn chuyển tiếp và cách thu hồi chưa chốt. Nguồn cấp khóa riêng cho phát triển/demo đã chọn tại [D36](environments.md#v1-secret-provisioning); đường dẫn, quyền và bảo vệ file còn mở. Chưa chọn JWKS/HTTP/provider, thay D04 hoặc đổi code, khóa hay cấu hình.
+## Thiết kế v1: trình duyệt gọi service
 
 <a id="v1-public-routing"></a>
 
-## D09 — Định tuyến API công khai
+### D09 — Một cổng vào chung
 
-Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-127](../records/decisions/README.md#dec-127). WebClient truy cập REST và SignalR của ứng dụng qua một đầu vào API chung. Lớp định tuyến (Gateway) chuyển request tới service sở hữu chức năng; nghiệp vụ và kiểm tra quyền vẫn do service thực hiện.
+**Quyết định:** WebClient gọi REST và SignalR qua một cổng vào chung (Gateway). Gateway chuyển request tới service sở hữu chức năng; nghiệp vụ và kiểm tra quyền vẫn ở service.
 
 ```mermaid
 flowchart LR
@@ -189,20 +72,143 @@ flowchart LR
     Gateway -->|REST / SignalR| Media[Media control]
 ```
 
-Sơ đồ thể hiện đường vào API mục tiêu, chưa là topology triển khai. Gateway là thành phần định tuyến, không thêm service nghiệp vụ vào bốn service đã chọn tại D01. Media control đã chọn Hub riêng tại [D11](../features/media/participation-lifecycle.md#v1-media-realtime); route cụ thể tới từng service cần thiết kế trước chuyển đổi.
+**Lý do:** frontend gọi cùng một địa chỉ dù service đổi chỗ. **Đổi lại:** thêm cấu hình và phụ thuộc vào Gateway. Tham khảo [mẫu API Gateway](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/gateway).
 
-Địa chỉ API chung giúp frontend giữ cách gọi ổn định khi bố trí service thay đổi; đánh đổi là thêm cấu hình và phụ thuộc vào lớp định tuyến. WebClient hiện dùng `/api/v1` tương đối và proxy `/api`/`/hubs` theo [môi trường hiện tại](environments.md). Vai trò reverse proxy được mô tả tại [Microsoft — API Gateway](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/gateway).
-
-D09 chỉ chốt mô hình định tuyến REST/SignalR; công nghệ Nginx được chọn riêng tại [D10](#v1-gateway-technology). Một đầu vào chung là ranh giới logic, chưa chọn số instance hoặc HA. Host/domain, TLS, xác thực tại gateway, tổng hợp dữ liệu/BFF và topology cần thiết kế riêng. gRPC nội bộ giữ D04/D07; signaling riêng của LiveKit và đường WebRTC/RTP/TURN không thuộc quyết định này. Chưa thay cấu hình hoặc code.
+- Gateway chỉ định tuyến, không phải service nghiệp vụ thứ năm.
+- Media control có Hub riêng ([D11](../features/media/participation-lifecycle.md#v1-media-realtime)).
+- Không áp dụng cho gRPC nội bộ, signaling của LiveKit và luồng WebRTC, TURN.
+- Hiện WebClient gọi `/api/v1` tương đối, proxy `/api` và `/hubs` ([môi trường](environments.md)).
 
 <a id="v1-gateway-technology"></a>
 
-## D10 — Công nghệ Gateway
+### D10 — Dùng Nginx OSS làm Gateway
 
-Trạng thái: đã xác nhận phương án B ngày 2026-10-11 — [DEC-128](../records/decisions/README.md#dec-128). Nginx OSS thực hiện lớp định tuyến API công khai của D09, chuyển tiếp REST/SignalR tới service sở hữu. Nghiệp vụ và kiểm tra quyền vẫn tại service.
+**Quyết định:** Nginx OSS chuyển tiếp REST và SignalR tới service sở hữu.
 
-Lựa chọn tận dụng nền cấu hình Nginx hiện có cho phạm vi định tuyến, không cần thêm ứng dụng .NET chỉ để chuyển tiếp. Đánh đổi là quản lý cấu hình proxy và quy trình kiểm tra/reload riêng; chưa có phép đo so sánh hiệu năng với YARP. [Nginx hiện tại](../../clients/WebClient/nginx.conf) phục vụ SPA và proxy `/api`/`/hubs` tới API monolith, chưa chứng minh định tuyến v1 tới bốn service.
+**Lý do:** đã có cấu hình Nginx; không cần thêm ứng dụng .NET (như YARP) chỉ để chuyển tiếp. **Đổi lại:** phải tự quản lý cấu hình proxy, kiểm tra và reload. Chưa so sánh hiệu năng với YARP.
 
-WebSocket cần cấu hình chuyển tiếp theo [tài liệu Nginx](https://nginx.org/en/docs/http/websocket.html). Trước bàn giao phải kiểm chứng negotiate và các transport SignalR được sử dụng qua Gateway; lựa chọn công nghệ chưa là bằng chứng chúng hoạt động trên topology v1.
+- [Nginx hiện tại](../../clients/WebClient/nginx.conf) phục vụ SPA và proxy tới API monolith; chưa chứng minh định tuyến tới bốn service.
+- WebSocket cần cấu hình chuyển tiếp ([Nginx](https://nginx.org/en/docs/http/websocket.html)). Trước bàn giao phải thử negotiate và các transport SignalR qua Gateway.
+- Nginx vừa phục vụ file WebClient vừa làm Gateway trong cùng container ([D22](environments.md#v1-gateway-webclient-hosting)).
 
-D10 chỉ chốt công nghệ. Nginx phục vụ static WebClient và làm Gateway trong cùng container theo [D22](environments.md#v1-gateway-webclient-hosting)/DEC-140; số replica/HA, domain/TLS, xác thực gateway và BFF cần thiết kế riêng. gRPC nội bộ và đường LiveKit giữ phạm vi D09. Chưa pin phiên bản/image, thay cấu hình hoặc triển khai Gateway v1.
+## Thiết kế v1: service gọi service
+
+<a id="v1-internal-protocol"></a>
+
+### D04 — gRPC cho lời gọi chờ kết quả
+
+**Quyết định:** khi một service gọi service khác và chờ kết quả, dùng gRPC trên HTTP/2 với hợp đồng `.proto` (Protobuf). Mã client được sinh từ `.proto`.
+
+**Lý do:** hợp đồng có kiểu, mã client tự sinh, dữ liệu nhị phân gọn. **Đổi lại:** thêm công cụ `.proto`, mã sinh và cấu hình HTTP/2. Chưa đo hiệu năng. Tham khảo [gRPC và HTTP API](https://learn.microsoft.com/en-us/aspnet/core/grpc/comparison?view=aspnetcore-10.0), [giao tiếp microservice](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/interservice-communication).
+
+- WebClient vẫn dùng REST và SignalR (DEC-081).
+- Nhà cung cấp bên ngoài và webhook dùng hợp đồng của họ.
+- ProblemDetails ở trên là cho HTTP; cách ánh xạ lỗi gRPC chưa chốt.
+- gRPC không thay được transaction và guard dùng chung của MVP. Quyền tới commit, lỗi mạng và thời hạn thu hồi cần thiết kế riêng ([thu hồi truy cập](access-revocation.md)).
+- Ví dụ đã chốt: lệnh cài hàng rào thu hồi ([D07](access-revocation.md#v1-revocation-transport)).
+
+<a id="v1-integration-event-transport"></a>
+
+### D27 — Sự kiện sau commit: outbox, worker, gRPC
+
+**Quyết định:** sự kiện sau commit được lưu trong outbox của service sở hữu, worker của service đó gửi bằng gRPC tới service nhận. Chưa dùng broker.
+
+**Ví dụ:** Community sở hữu thay đổi về cộng đồng, thành viên, yêu cầu, lời mời; Messaging phát thông báo qua ChatHub ([tin phòng](../features/messaging/channel-messaging.md#channel-messaging)). Khi tách service, cần đường chuyển Community → Messaging. Các thông báo gửi trình duyệt (`CommunityChanged`, `MembershipChanged`, `JoinRequestChanged`, `MemberInvitationChanged`) giữ nguyên; sự kiện nội bộ chưa đặt tên và schema.
+
+| Bước | Yêu cầu |
+|---|---|
+| Lưu | Dữ liệu nghiệp vụ và outbox cùng commit trong DB của service sở hữu |
+| Gửi | Worker đọc outbox, lưu tiến độ theo từng bên nhận, gọi gRPC; chạy cùng API (D12) |
+| Xác nhận | Bên nhận kiểm tra danh tính và quyền gọi; chỉ xác nhận sau khi đã lưu bền sự kiện hoặc việc cần làm vào DB của mình |
+| Mất xác nhận | Worker gửi lại với cùng ID sự kiện; bên nhận chống xử lý trùng; tiến độ không phụ thuộc bộ nhớ |
+| Xử lý | Bên nhận xử lý từ dữ liệu đã lưu; Messaging kiểm tra quyền hiện tại trước khi gửi tới kết nối |
+
+**Lý do:** ít thành phần phải vận hành trên một máy; dùng lại gRPC và mTLS đã chọn. **Đổi lại:** nhóm tự quản lý danh sách bên nhận, giao nhận bền, gửi lại và lỗi một phần. Tách lớp truyền khỏi lớp xử lý để có thể chuyển sang broker sau.
+
+- Request HTTP nghiệp vụ không chờ việc gửi sự kiện.
+- Xác nhận nhận bền không có nghĩa bên nhận đã xử lý xong, hay trình duyệt đã nhận.
+- Timeout hay mất xác nhận không chứng minh bên nhận chưa lưu.
+- D27 không thay [D07](access-revocation.md#v1-revocation-transport) (hàng rào), [D16](../features/community/channels.md#v1-channel-preparation-transport) (chuẩn bị phòng) hay [D08](../features/messaging/message-lifecycle.md#v1-message-intake) (ghi tin). Sự kiện không giữ quyền tới commit và không chứng minh ngắt trong 5 giây.
+- Job email và outbox → Hub trong cùng một service không thuộc phạm vi này.
+
+<a id="v1-grpc-contract-sources"></a>
+
+### D46 — Đặt file `.proto` ở `docs/contracts/grpc/`
+
+**Quyết định:** file `.proto` cho gRPC giữa bốn service đặt tập trung, chia theo service cài đặt RPC:
+
+```text
+docs/contracts/grpc/
+├── identity/
+├── community/
+├── messaging/
+└── media/
+```
+
+**Lý do:** xem và review mọi hợp đồng liên service ở một chỗ, cùng với OpenAPI và JSON Schema trong [thư mục hợp đồng](../contracts/README.md). **Đổi lại:** khi build, service phải lấy file ngoài thư mục code của mình. Phương án đặt `.proto` cạnh code mỗi service (`services/*/Protos/`) không được chọn.
+
+- Mỗi hợp đồng chỉ có một bản để sửa; bên gọi không giữ bản sao.
+- Service cài đặt RPC duy trì file; bên gọi cùng review thay đổi.
+- Thư mục chung không có nghĩa dùng chung domain model hay dữ liệu.
+- RPC nhận sự kiện Community → Messaging (D27) nằm trong nhóm `messaging/`; Community vẫn sở hữu ý nghĩa nghiệp vụ của sự kiện.
+- Kiểu Protobuf không được dùng trong Domain, hợp đồng Application hay `SCDC.Shared.Core` ([D43, D45](backend.md#v1-code-layout)).
+- Project hợp đồng C# và cách sinh mã xem [D47](backend.md#v1-grpc-code-generation).
+
+Tham khảo [gRPC services](https://learn.microsoft.com/en-us/aspnet/core/grpc/basics?view=aspnetcore-10.0).
+
+## Thiết kế v1: xác thực
+
+<a id="v1-service-authentication"></a>
+
+### D20 — mTLS giữa các service
+
+**Quyết định:** mọi lời gọi gRPC giữa bốn service (từ API và worker) dùng mTLS: hai bên xác thực nhau bằng chứng chỉ và mã hóa đường truyền.
+
+| Mục | Yêu cầu |
+|---|---|
+| Danh tính | Mỗi service có chứng chỉ và khóa riêng |
+| Kiểm tra kết nối | Hai bên kiểm tra chứng chỉ theo cấu hình tin cậy, ánh xạ về danh tính service |
+| Quyền gọi | Bên nhận kiểm tra service gọi có được phép gọi thao tác đó; chứng chỉ hợp lệ không cho gọi mọi RPC |
+| Bí mật | Cấp cho phát triển và demo theo [D36](environments.md#v1-secret-provisioning) |
+
+**Lý do:** xác minh danh tính bằng chứng chỉ, chưa cần bên cấp token cho service. **Đổi lại:** phải quản lý vòng đời chứng chỉ, khóa và cấu hình tin cậy. Tham khảo [gRPC auth](https://grpc.io/docs/guides/auth/), [Microsoft](https://learn.microsoft.com/en-us/aspnet/core/grpc/authn-and-authz?view=aspnetcore-10.0).
+
+- **Ví dụ:** Messaging phải nhận ra Community và kiểm tra quyền gọi trước khi chuẩn bị phòng. Quyền của người dùng, epoch và điều kiện tới commit vẫn theo [D05](access-revocation.md#v1-authorization-coordination).
+- **Worker** (thu hồi, bù, dọn) dùng danh tính service để làm tiếp việc đã được chấp nhận; không cần token người dùng còn hạn. Nhưng không được dùng điều này để tiếp tục tạo hay phát nội dung bằng quyền người dùng đã mất.
+- Nếu có proxy kết thúc TLS, phải thiết kế cách giữ và kiểm tra danh tính service gọi.
+- D20 không chọn service mesh, không thay xác thực người dùng, không cấu hình Gateway hay LiveKit.
+
+<a id="v1-user-token-signing"></a>
+
+### D28 — Ký access token bằng khóa bất đối xứng
+
+**Quyết định:** Identity giữ khóa riêng để ký access token; các service khác xác minh bằng khóa công khai.
+
+**Lý do:** chỉ Identity ký được token. **Đổi lại:** phải phân phối khóa công khai và thay khóa. Phương án dùng chung một khóa bí mật cho mọi service không được chọn. Tham khảo [JWT bearer](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0), [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518.html#section-3).
+
+- Khóa riêng không bao giờ gửi cho service khác hay WebClient.
+- MVP hiện dùng khóa đối xứng HS256 trong [TokenService](../../services/Modules/Identity/Infrastructure/Security/TokenService.cs); chưa đổi code.
+- Chữ ký hợp lệ chưa chứng minh phiên, tài khoản hay quyền còn hiệu lực; phiên kiểm tra qua Redis ([D30](access-revocation.md#v1-session-validation)), quyền ghi theo [D05](access-revocation.md#v1-authorization-coordination).
+- D20 xác thực service; D28 xác thực token người dùng. Hai việc khác nhau.
+
+<a id="v1-user-token-key-distribution"></a>
+
+### D29 — Cấp khóa công khai qua cấu hình triển khai
+
+**Quyết định:** mỗi service nhận bộ khóa công khai tin cậy qua cấu hình triển khai theo môi trường. Không gắn cứng khóa trong code.
+
+**Lý do:** ít việc tích hợp ban đầu, chưa cần cơ chế tự tải khóa từ Identity. **Đổi lại:** cần quy trình cập nhật phối hợp các service khi thay hay thu hồi khóa. Thư viện .NET hỗ trợ nhiều khóa cùng lúc qua [IssuerSigningKeys](https://learn.microsoft.com/en-us/dotnet/api/microsoft.identitymodel.tokens.tokenvalidationparameters.issuersigningkeys?view=msal-web-dotnet-latest), nên khóa cũ và mới có thể cùng tồn tại khi chuyển.
+
+Phạm vi ban đầu: bốn service trên [máy phát triển và demo](environments.md#v1-available-infrastructure). Môi trường công khai đánh giá riêng.
+
+## Còn mở
+
+- **D04, D27:** endpoint, timeout, gửi lại, cơ chế nhất quán; ánh xạ lỗi gRPC; danh sách sự kiện và bên nhận; schema và `.proto`; ID, version, chống trùng, thứ tự, lỗi không xử lý được, hàng đợi tồn, thời hạn lưu; đối chiếu sau khởi động lại; cách chuyển sang broker.
+- **D46:** công cụ và phiên bản sinh mã, namespace, quản lý phiên bản hợp đồng, CI, các phương thức cụ thể.
+- **D09, D10:** route cụ thể tới từng service; host, domain, TLS; xác thực tại Gateway; BFF; số bản và HA; phiên bản image Nginx.
+- **D20:** CA, danh tính cụ thể, định dạng và quyền file khóa, cấp, gia hạn, thu hồi chứng chỉ; tin cậy theo môi trường; ma trận quyền RPC; cách truyền thông tin người thực hiện; danh tính worker.
+- **D28, D29:** thuật toán; đường dẫn, định dạng và bảo vệ khóa; vòng đời khóa; issuer, audience, claims; định dạng file khóa công khai; nạp lại hay khởi động lại khi đổi khóa; thời gian chuyển tiếp. Chưa chọn JWKS, xác thực tại Gateway, hay khóa của LiveKit.
+
+---
+
+Nguồn: DEC-061 (lỗi), DEC-081 (REST, SignalR), [DEC-122](../records/decisions/README.md#dec-122) (D04), [DEC-127](../records/decisions/README.md#dec-127) (D09), [DEC-128](../records/decisions/README.md#dec-128) (D10), [DEC-138](../records/decisions/README.md#dec-138) (D20), [DEC-145](../records/decisions/README.md#dec-145) (D27), [DEC-146](../records/decisions/README.md#dec-146) (D28), [DEC-147](../records/decisions/README.md#dec-147) (D29), [DEC-164](../records/decisions/README.md#dec-164) (D46).

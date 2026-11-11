@@ -1,56 +1,66 @@
-# Community
+# SCDC — Cộng đồng
 
-Community sở hữu cộng đồng, membership, lời mời, metadata/vòng đời phòng và quyền. Messaging sở hữu tin phòng, lịch sử và Hub chat; Identity cung cấp trạng thái tài khoản/phiên. Vị trí tài liệu và prefix route không đổi ranh giới module.
+Người dùng tạo hoặc tham gia cộng đồng (server), mời thành viên, tạo phòng và phân quyền. Module Community sở hữu cộng đồng, thành viên, lời mời, phòng và quyền. Tin nhắn trong phòng thuộc Messaging; trạng thái tài khoản và phiên thuộc Identity.
 
-Phạm vi: REQ-002/004, SCP-003/004 và phần tin phòng của SCP-005. Mã UC-COM truy vết hành trình người dùng; module thực hiện được ghi trong từng use case.
+**Trạng thái:** trong nền `900e226`, Community và DM đã chạy chung một ứng dụng API. Còn chuyển sang v1: tin phòng, nhận realtime theo quyền phòng và ngắt kết nối khi đổi vai trò hoặc ACL.
 
-## Mục lục
+**Người phụ trách:** Vg; Sáng làm phần tin phòng, Thái làm Media và file (xem [phân công](../../project/planning.md#team)).
 
-| Chủ đề | Nội dung |
+<a id="mục-lục"></a>
+
+## Các trang
+
+| Trang | Nội dung |
 |---|---|
-| [Cộng đồng và chủ sở hữu](servers.md) | Tạo, discovery, metadata/visibility/join mode, ownership và phần đọc tư cách |
-| [Thành viên](memberships.md) | Join/request/approval/leave/rejoin, membership epoch |
-| [Lời mời](invitations.md) | Link, token/lượt/hạn, mời đích danh và transition |
-| [Phòng](channels.md) | Create/list/detail/edit/delete, kind và lifecycle phối hợp Messaging/Media |
-| [Vai trò và quyền truy cập](access-control.md) | Role/assignment, policy view, ACL snapshot, quyền quản lý và guard |
-| [Tin phòng](../messaging/channel-messaging.md) | History/send/edit/delete, realtime, reconnect và mất quyền; Messaging thực hiện |
+| [Cộng đồng và chủ sở hữu](servers.md) | Tạo, tìm kiếm, thông tin cộng đồng, công khai hay riêng tư, cách tham gia, chuyển chủ sở hữu |
+| [Thành viên](memberships.md) | Tham gia, xin duyệt, duyệt, rời, tham gia lại |
+| [Lời mời](invitations.md) | Link mời, giới hạn lượt và hạn dùng, mời đích danh |
+| [Phòng](channels.md) | Tạo, xem, sửa, xóa phòng; loại phòng; phối hợp với Messaging và Media |
+| [Vai trò và quyền](access-control.md) | Vai trò, gán vai trò, quyền xem, ACL, quyền quản lý |
+| [Tin phòng](../messaging/channel-messaging.md) | Lịch sử, gửi, sửa, xóa tin; realtime; mất quyền (Messaging thực hiện) |
 
-Mỗi chủ đề giữ quy tắc, use case, UX, thiết kế dữ liệu/API, tiêu chí kiểm chứng và trạng thái theo khả năng. Bảng trạng thái phân biệt phần hiện có, mục tiêu và phần chưa chứng minh; không tính tiến độ từ số UC/test.
+Mỗi trang có quy tắc, ca sử dụng, giao diện, dữ liệu, API, tiêu chí chấp nhận và bảng trạng thái. Bảng trạng thái phân biệt phần đã có, phần mục tiêu và phần chưa có bằng chứng; tiến độ không tính theo số ca sử dụng hay số test.
 
-Hiện trạng kế thừa ngày 2026-10-13 theo [nền MVP `900e226`](../../releases/mvp.md): Community và DM đã hợp nhất trong một API host. [Hồ sơ tích hợp](../../records/verification/messaging/merge-2026-10-13.md) ghi kết quả backend/frontend và luồng DM realtime; bằng chứng Community ngày 2026-10-08 giữ phạm vi/revision lịch sử. Nền DM đã có Hub/outbox/đối soát phiên; tin phòng, subscription theo quyền Community và cutoff role/ACL còn chuyển tiếp sang v1. Lần cập nhật này không chạy lại test hoặc xác nhận nghiệm thu sản phẩm.
+## Tài liệu liên quan
 
-| Tài liệu liên quan | Nội dung |
+| Tài liệu | Nội dung |
 |---|---|
-| [Cấu trúc và cơ chế Community](../../system/community.md) | Tổ chức backend, điều kiện chung, transaction/guard, operation, version/epoch, cursor và migration |
-| [Hướng dẫn Community](../../guides/community-development.md) | Cấu hình, local database/API/UI, runner và kiểm thử |
-| [Truy vết mã](traceability.md) | Liên kết COM/UC/API/AC/TC đến nguồn định nghĩa |
-| [Hồ sơ kiểm chứng](../../records/verification/community/README.md) | Bằng chứng theo commit, main-merge và phần chưa chứng minh |
-| [Phạm vi MVP](../../releases/mvp.md#community-scope) | Khả năng được chọn và gate hoàn tất Community |
-| [Kế hoạch công việc](../../project/planning.md#community-work-items) | COM-W01–13, ưu tiên/phụ thuộc và đầu mối kế hoạch |
+| [Cơ chế Community](mechanics.md) | Tổ chức backend, transaction, guard, chống trùng, phiên bản, cursor và migration |
+| [Hướng dẫn Community](../../guides/development.md#community) | Cấu hình, chạy DB, API, giao diện và kiểm thử trên máy |
+| [Bảng truy vết](traceability.md) | Liên kết mã COM, UC, API, AC, TC tới nơi định nghĩa |
+| [Hồ sơ kiểm thử](../../records/verification/community/README.md) | Bằng chứng theo commit và phần chưa chứng minh |
+| [Phạm vi MVP](../../releases/mvp.md#community-scope) | Chức năng đã chọn cho MVP và điều kiện hoàn tất |
+| [Kế hoạch](../../project/planning.md#community-work-items) | Công việc COM-W01 đến 13, ưu tiên và phụ thuộc |
+
+Bằng chứng Community ngày 2026-10-08 chỉ đúng với phiên bản code lúc đó. [Hồ sơ tích hợp 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md) ghi kết quả khi ghép với DM.
 
 <a id="requirements"></a>
 
-## Phạm vi và hành trình
+## Hành trình chính
 
-Đặc tả đầy đủ cho [v1](../../releases/v1.md). [Hồ sơ MVP nội bộ](../../releases/mvp.md#community-scope) đối chiếu luồng từng được chọn: tạo/tìm/tham gia → phòng text → lịch sử/gửi/nhận → xử lý mất quyền trong một API host; phần chưa hoàn thành tiếp tục trong v1, không chờ một vòng nghiệm thu toàn MVP trước gói v1 độc lập. Gửi file trong phòng để đợt sau theo DEC-023; thoại/video và chia sẻ màn hình theo [Media](../media/README.md).
+1. Tìm cộng đồng công khai hoặc mở link mời.
+2. Tham gia ngay, gửi yêu cầu chờ duyệt, hoặc dùng lời mời hợp lệ, tùy cấu hình cộng đồng.
+3. Xem các phòng và lịch sử được phép xem.
+4. Gửi, sửa, xóa tin theo quyền và nhận cập nhật.
+5. Rời cộng đồng, theo điều kiện về tư cách thành viên và quyền chủ sở hữu ([thành viên](memberships.md)).
 
-1. Tìm cộng đồng công khai hoặc mở liên kết mời.
-2. Tham gia ngay, gửi yêu cầu chờ duyệt hoặc dùng lời mời hợp lệ theo cấu hình.
-3. Xem phòng và lịch sử được cấp quyền.
-4. Gửi/sửa/xóa tin theo quyền và nhận cập nhật.
-5. Rời theo điều kiện tư cách/ownership.
+Đây là đặc tả đầy đủ cho [v1](../../releases/v1.md). MVP đã chọn luồng: tạo, tìm, tham gia, vào phòng chữ, xem lịch sử, gửi nhận tin và xử lý mất quyền. Phần chưa xong làm tiếp trong v1. Gửi file xem [gửi file](../files/README.md); thoại và video xem [Media](../media/README.md).
 
 <a id="use-cases"></a>
 
-## Use case và module thực hiện
+## Ca sử dụng
 
-Danh mục UC-COM, module thực hiện, API và AC/TC nằm tại [bảng truy vết](traceability.md#use-case-coverage). Quy tắc và luồng chi tiết nằm trong chủ đề được liên kết từ bảng.
+Danh sách UC-COM, module thực hiện, API và tiêu chí chấp nhận nằm trong [bảng truy vết](traceability.md#use-case-coverage).
 
 <a id="quy-ước-duy-trì"></a>
 
-## Quy ước duy trì
+## Quy ước khi sửa tài liệu
 
-- Mỗi quy tắc/use case/AC/TC có một nguồn tại chủ đề; giữ nguyên mã khi thay vị trí.
-- OpenAPI/schema giữ contract máy đọc; SQL giữ DDL thực thi; fixture giữ dữ liệu kiểm chứng. Chủ đề giải thích quyết định và dẫn đến các artefact này.
-- Hồ sơ kiểm chứng giữ nguyên kết quả lịch sử theo revision. Thay đổi hiện trạng cập nhật tại chủ đề, không sửa kết luận cũ thành kết quả mới.
-- Quyết định dự án giữ mã tại [decision records](../../records/decisions/README.md); release chỉ chọn phạm vi và gate, không chép lại quy tắc.
+- Mỗi quy tắc, ca sử dụng, tiêu chí chấp nhận và ca kiểm thử chỉ định nghĩa ở một trang. Giữ nguyên mã khi chuyển vị trí.
+- OpenAPI và schema là hợp đồng máy đọc; SQL là cấu trúc DB thật; fixture là dữ liệu kiểm thử. Trang tính năng giải thích và dẫn tới các file này.
+- Hồ sơ kiểm thử giữ nguyên kết quả cũ. Hiện trạng mới cập nhật ở trang tính năng, không sửa kết luận cũ.
+- Quyết định ghi tại [hồ sơ quyết định](../../records/decisions/README.md).
+
+---
+
+Nguồn: REQ-002, REQ-004, SCP-003, SCP-004, phần tin phòng của SCP-005, [DEC-171](../../records/decisions/README.md#dec-171), DEC-173.

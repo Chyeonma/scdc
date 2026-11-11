@@ -1,42 +1,79 @@
-# SCDC — Chất lượng và phương pháp đo
+# SCDC — Chất lượng và cách đo
 
-Các ngưỡng áp dụng cho v1, trừ mục tiêu backup/khôi phục DB được hoãn theo [phạm vi backup](../project/overview.md#backup-scope), DEC-156. MVP chọn tiêu chí theo phạm vi tại [hồ sơ MVP](../releases/mvp.md); chưa có kết quả đo hệ thống trong lần cấu trúc lại tài liệu.
+Trang này ghi các mục tiêu chất lượng của v1 (tốc độ, độ tin cậy, chất lượng media) và cách đo để kết luận đạt hay chưa.
+
+**Trạng thái:** mục tiêu đã chốt; chưa có kết quả đo nào. Mục tiêu backup và khôi phục được hoãn sang sau v1 ([phạm vi backup](../project/overview.md#backup-scope)). Tiêu chí của MVP xem [hồ sơ MVP](../releases/mvp.md).
 
 <a id="quality-targets"></a>
 
 <a id="ma-trận-hỗ-trợ-và-mục-tiêu-đo-đã-xác-nhận"></a>
 
-### Ma trận hỗ trợ và mục tiêu đo đã xác nhận
+## Trình duyệt và thiết bị hỗ trợ
 
-DEC-082: desktop Chrome/Edge/Firefox/Safari, hai phiên bản ổn định gần nhất tại lúc khóa build nghiệm thu; điện thoại Chrome Android/Safari iOS cho Accounts/DM/Community; media v1 chỉ cam kết desktop. Thái ghi OS, thiết bị, kích thước viewport, phiên bản browser, build và ngày khóa ma trận. Kiểm tra bàn phím/IME, focus, thông báo lỗi, cuộn và trạng thái thiết bị; hai kích thước wireframe không thay thế ca trên thiết bị thật.
+- **Máy tính:** Chrome, Edge, Firefox, Safari; hai phiên bản ổn định mới nhất tại thời điểm khóa bản build nghiệm thu.
+- **Điện thoại:** Chrome trên Android và Safari trên iOS, cho tài khoản, DM và Community.
+- **Media (thoại, video):** v1 chỉ cam kết trên máy tính.
 
-| Chỉ số | Mục tiêu | Điều kiện/cách ghi nhận |
+Vg thống nhất danh sách. Mỗi người ghi lại cho phần của mình: hệ điều hành, thiết bị, kích thước màn hình, phiên bản trình duyệt, bản build và ngày khóa. Cần kiểm tra bàn phím, bộ gõ, focus, thông báo lỗi, cuộn trang và trạng thái thiết bị trên máy thật; hai kích thước wireframe không thay được.
+
+## Mục tiêu
+
+| Chỉ số | Mục tiêu | Cách đo |
 |---|---|---|
-| API / gửi→lưu | p95 ≤500 ms | DEC-083; đo API client request→response; gửi→lưu từ thao tác gửi đến commit theo trace được hiệu chỉnh đồng hồ, không dùng createdAt làm commit time |
-| Lưu→hiển thị online | p95 ≤1 giây | Commit timestamp→UI merge/render; người nhận online và subscribe hợp lệ; tin nhận offline đo riêng hành vi lịch sử |
-| Lỗi dịch vụ chat | <1% | Unexpected 5xx/timeout trên request hợp lệ; 4xx của ca cố ý sai tách riêng, không che bằng loại mọi request lỗi |
-| Thu hồi chat đang mở | ≤5 giây | Từ commit thu hồi phiên/quyền đến lúc connection không nhận nội dung mới; request HTTP mới kiểm tra trạng thái hiện hành |
-| Thu hồi media đang mở | ≤5 giây; không xác nhận quyền thì dừng | DEC-099; từ commit tới cả phát/nhận RTP ngừng và token cũ/SFU refresh không vào lại; đo khi authority/outbox/RoomService lỗi, không lấy websocket đóng làm bằng chứng |
-| Tính đúng | Không mất/trùng tin, không truy cập trái quyền | Lost response, concurrent commit, replay, worker dừng, sửa/xóa/reconnect và third-party access; một lỗi làm ca không đạt |
-| Vào cuộc gọi | p95 ≤5 giây; thành công ≥99% | DEC-085/101; từ bấm join/accept tới connected/khả năng nhận luồng, không bắt cấp mic/camera ban đầu; ≥100 lần hợp lệ, busy/full đo riêng; bật nguồn và cấp quyền capture đo riêng |
-| Độ trễ media | Audio p95 ≤300 ms; video/share p95 ≤500 ms | Dùng tín hiệu âm thanh và frame timestamp thử, không nội dung người dùng; ghi độ lệch đồng hồ/phương pháp đo |
-| Hình ảnh | Camera mục tiêu 720p/30fps; share 720p/15fps | Mạng mỗi máy upload ≥10/download ≥20 Mbps, RTT ≤100 ms, loss ≤1%; ghi resolution/FPS thực tế và tỷ lệ thời gian đạt, không suy từ cấu hình capture |
-| Khôi phục DB — sau v1 | RPO ≤15 phút; RTO ≤4 giờ; tuổi artefact backup/WAL ≤30 ngày | Mục tiêu DEC-086/109 giữ cho đợt triển khai backup sau v1 theo DEC-156; chưa có bằng chứng đo. Khi triển khai, đo cửa sổ khôi phục thực tế và áp lại bảo vệ DEC-108, không hứa PITR mọi mốc tròn 30 ngày |
+| Thời gian API, gửi đến lưu | p95 ≤ 500 ms | Đo từ lúc client gửi request đến lúc nhận phản hồi. Với gửi tin: từ thao tác gửi đến lúc commit, dùng trace có hiệu chỉnh đồng hồ; không dùng `createdAt` làm thời điểm commit. |
+| Lưu đến hiển thị | p95 ≤ 1 giây | Từ lúc commit đến lúc giao diện người nhận hiển thị. Chỉ tính người nhận đang online và đã đăng ký nhận hợp lệ; nhận khi offline đo riêng qua lịch sử. |
+| Lỗi dịch vụ chat | < 1% | Tỷ lệ lỗi 5xx hoặc timeout trên request hợp lệ. Lỗi 4xx của ca cố ý sai tính riêng. |
+| Thu hồi chat | ≤ 5 giây | Từ lúc commit thu hồi phiên hoặc quyền đến lúc kết nối ngừng nhận nội dung mới. Request HTTP mới luôn kiểm tra trạng thái hiện tại. |
+| Thu hồi media | ≤ 5 giây; không xác nhận được quyền thì dừng | Từ lúc commit đến khi cả gửi và nhận luồng media dừng, và token cũ không vào lại được. Đo cả khi các thành phần điều phối bị lỗi. Websocket đóng không phải là bằng chứng. |
+| Tính đúng | Không mất tin, không trùng tin, không truy cập trái quyền | Thử mất phản hồi, ghi đồng thời, gửi lại, worker dừng, sửa, xóa, kết nối lại và người thứ ba truy cập. Một lỗi là ca không đạt. |
+| Vào cuộc gọi | p95 ≤ 5 giây; thành công ≥ 99% | Từ lúc bấm vào hoặc nhận cuộc gọi đến lúc kết nối và nhận được luồng. Không bắt buộc cấp quyền micro, camera ngay. Cần ít nhất 100 lần hợp lệ; trường hợp bận hoặc đầy đo riêng. |
+| Độ trễ media | Âm thanh p95 ≤ 300 ms; video và chia sẻ p95 ≤ 500 ms | Dùng tín hiệu âm thanh và khung hình thử có dấu thời gian, không dùng nội dung thật. Ghi độ lệch đồng hồ và phương pháp đo. |
+| Chất lượng hình | Camera 720p/30fps; chia sẻ màn hình 720p/15fps | Điều kiện mạng mỗi máy: tải lên ≥ 10 Mbps, tải xuống ≥ 20 Mbps, RTT ≤ 100 ms, mất gói ≤ 1%. Ghi độ phân giải và FPS thực tế, không suy từ cấu hình. |
+| Khôi phục DB (sau v1) | RPO ≤ 15 phút; RTO ≤ 4 giờ; bản backup giữ ≤ 30 ngày | Giữ làm mục tiêu cho đợt backup sau v1. Khi làm, đo thời gian khôi phục thực tế và áp lại cơ chế bảo vệ của DEC-108. |
+
+## Mobile, thông báo và gửi file
+
+Ba phần này chưa có tiêu chí riêng. Khi chốt gói, người phụ trách đề xuất hành trình, thiết bị, tính đúng, quyền, lỗi và cách đo để Vg duyệt. Không tự áp tiêu chí của trình duyệt hay media trên máy tính cho app mobile, và không coi kết quả MVP là bằng chứng cho phần bổ sung.
 
 <a id="measurement-readiness"></a>
 
-### Chuẩn bị phép đo và bằng chứng
+## Chuẩn bị đo
 
-Ma trận hỗ trợ và các mục tiêu trên đã chốt; chưa có kết quả xác nhận hệ thống đáp ứng. Còn cần khóa build, phiên bản browser/thiết bị, môi trường, dataset/workload chi tiết và bộ đo; hiệu chỉnh đồng hồ, thực thi và lưu bằng chứng theo từng hành trình. Các workload đề xuất dưới đây là đầu vào để rà soát trước lần chạy.
+Trước khi đo cần chốt: bản build, phiên bản trình duyệt và thiết bị, môi trường, dữ liệu thử, tải thử và công cụ đo. Đồng hồ các máy phải được hiệu chỉnh. Các kịch bản dưới đây là đề xuất để nhóm rà soát trước khi chạy.
 
-Riêng hình ảnh, DEC-085 đã chốt mục tiêu camera 720p/30fps và share 720p/15fps trong điều kiện mạng đã nêu. Tỷ lệ thời gian tối thiểu phải đạt resolution/FPS, cách lấy mẫu và tổng hợp để kết luận đạt/chưa đạt còn cần chốt tại [OQ-007](../project/open-questions.md#oq-007) trước nghiệm thu. Ghi resolution/FPS thực tế chưa đủ để kết luận đạt khi thiếu quy tắc này; không tự coi tiêu chí là không áp dụng.
+### Chat
 
-Kịch bản chat theo DEC-083: 100 người online liên tục 60 phút sau warm-up 5 phút; riêng các ca chức năng âm tính/fault injection có nhãn. Workload kỹ thuật đề xuất: 1.000 tài khoản, 500 DM, 20 cộng đồng/50 phòng text và 100.000 tin preload, trong đó hai hội thoại/phòng có ít nhất 10.000 tin để thử nhiều trang. Trong 100 người online, 80 người ở 40 DM và 20 người ở các phòng có đúng quyền; mỗi người gửi một tin/10 giây, khoảng 10 tin/giây và 36.000 tin mới trong 60 phút. Mỗi client tải trang lịch sử/30 giây; chèn sửa/xóa một tin của chính mình/5 phút. Ghi độ dài nội dung/thời điểm, không dùng tài khoản/DM thật.
+- 100 người online liên tục 60 phút, sau 5 phút khởi động.
+- Dữ liệu sẵn: 1.000 tài khoản, 500 DM, 20 cộng đồng với 50 phòng chữ, 100.000 tin. Hai cuộc trò chuyện có ít nhất 10.000 tin để thử tải nhiều trang.
+- 80 người ở 40 DM, 20 người ở các phòng có đúng quyền.
+- Mỗi người gửi 1 tin mỗi 10 giây (khoảng 10 tin/giây, 36.000 tin trong 60 phút), tải một trang lịch sử mỗi 30 giây, sửa hoặc xóa một tin của mình mỗi 5 phút.
+- Không dùng tài khoản hoặc DM thật.
 
-Test correctness/fault tách các mốc mất response, transaction rollback, worker dừng 30 giây, reconnect, concurrent send/edit/delete và revoke trong khi stream; không loại lỗi bất thường do hệ thống gây ra khỏi báo cáo. Đối soát toàn bộ operation ID/message ID, nội dung hiện hành, tombstone và quyền với số thao tác hợp lệ đã commit. Ghi CPU/RAM/DB/NIC, region, số connection và concurrency từng bước; báo p50/p95/p99/số mẫu/tỷ lệ lỗi/backlog. Đồng hồ test phải được hiệu chỉnh và độ lệch ghi trong báo cáo. Workload này là baseline để nhóm rà soát, không suy 100 online là mọi hình thức tải đều đã thử.
+Các ca lỗi chạy riêng: mất phản hồi, rollback transaction, worker dừng 30 giây, kết nối lại, gửi, sửa, xóa đồng thời, và thu hồi quyền khi đang nhận tin. Sau đó đối chiếu toàn bộ mã thao tác, mã tin, nội dung, tin đã xóa và quyền với số thao tác đã commit.
 
-Kịch bản media đề xuất: phòng A 10, phòng B 8 và một DM hai người, tổng 20; thử mic/camera toàn bộ, hai màn hình/phòng và hai màn hình cuộc gọi riêng. Chạy 60 phút và thử join đầy/reconnect riêng. Mạng yếu ngoài điều kiện DEC-085 vẫn phải có trạng thái giảm chất lượng/lỗi/reconnect rõ, không suy ngưỡng good-network thành cam kết mọi mạng. Chưa có kết quả đo cho các mục tiêu này.
+Ghi CPU, RAM, DB, mạng, số kết nối; báo p50, p95, p99, số mẫu, tỷ lệ lỗi và hàng đợi tồn. Kịch bản này là mức cơ sở, không có nghĩa mọi dạng tải đã được thử.
 
-Mỗi phép đo ghi điểm bắt đầu/kết thúc, số mẫu thành công/thất bại, mẫu số tỷ lệ, thời gian warm-up và phần loại trừ có lý do. Báo kết quả theo hành trình và nhóm browser/thiết bị bên cạnh tổng thể; không trộn offline hoặc máy ngoài điều kiện mạng để che kết quả người nhận online/good-network. Timeout và 4xx bất thường của request hợp lệ vẫn phải được giải thích/ghi lỗi, không tự loại vì không phải 5xx. Độ lệch clock hoặc instrumentation chưa đủ tin cậy thì kết quả chưa được xác nhận; không lấy createdAt hoặc cấu hình capture làm phép đo thay thế.
+### Media
 
-Proof quyền media tách khỏi tải good-network: phát tín hiệu thử có timestamp, thu hồi giữa lúc RTP chạy; ghi commit/cutoff ở cả sender và receiver, thử SFU refresh token/direct route/clone epoch. Cắt kết nối authority/worker/RoomService nhưng giữ WebRTC, đo lease TTL/clock skew/watchdog theo [thiết kế media](../features/media/participation-lifecycle.md). Thử publish dư camera/screen hoặc screen_audio từ client đã sửa; không được truyền trước lúc hậu kiểm. Giữ reservation/reconnect/draining trong phép đếm; không coi remove request thành ack dừng. Tất cả ca chưa chạy.
+- Phòng A 10 người, phòng B 8 người và một cuộc gọi riêng 2 người, tổng 20.
+- Bật micro và camera cho tất cả; mỗi phòng hai người chia sẻ màn hình, cuộc gọi riêng cả hai chia sẻ.
+- Chạy 60 phút. Thử phòng đầy và kết nối lại riêng.
+- Khi mạng yếu hơn điều kiện trên, giao diện vẫn phải báo rõ chất lượng giảm, lỗi hoặc đang kết nối lại.
+
+Kiểm tra thu hồi quyền media tách riêng khỏi đo tải: thu hồi giữa lúc đang truyền, ghi thời điểm ở cả bên gửi và bên nhận, thử dùng lại token cũ, cắt kết nối tới các thành phần điều phối nhưng giữ WebRTC, và thử client bị sửa để phát thêm nguồn. Chi tiết xem [thiết kế media](../features/media/participation-lifecycle.md).
+
+### Quy tắc báo cáo
+
+- Mỗi phép đo ghi điểm bắt đầu và kết thúc, số mẫu thành công và thất bại, thời gian khởi động và các mẫu bị loại kèm lý do.
+- Báo theo từng hành trình và nhóm thiết bị, bên cạnh số tổng. Không trộn người nhận offline hoặc máy ngoài điều kiện mạng vào số liệu chính.
+- Timeout và lỗi 4xx bất thường trên request hợp lệ vẫn phải ghi và giải thích.
+- Nếu độ lệch đồng hồ hoặc công cụ đo chưa đủ tin cậy, kết quả chưa được xác nhận.
+
+## Còn mở
+
+- Quy tắc kết luận chất lượng hình: tỷ lệ thời gian tối thiểu phải đạt độ phân giải và FPS, cách lấy mẫu và tổng hợp ([OQ-007](../project/open-questions.md#oq-007)). Phải chốt trước nghiệm thu; chưa chốt thì chưa kết luận được.
+- Tất cả các ca đo chưa chạy.
+
+---
+
+Nguồn: DEC-082 (thiết bị), DEC-083 (chat), DEC-085 và DEC-101 (media), DEC-099 (thu hồi media), DEC-086 và DEC-109 (khôi phục), DEC-156 (hoãn backup), [DEC-171](../records/decisions/README.md#dec-171), [DEC-173](../records/decisions/README.md#dec-173).

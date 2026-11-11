@@ -28,6 +28,12 @@ Phạm vi v1 gồm:
 | [Nhắn tin](docs/features/messaging/README.md) | Nhắn riêng giữa hai người hoặc trao đổi trong phòng. Xem lịch sử, sửa và xóa tin nhắn. |
 | [Thoại và video](docs/features/media/README.md) | Gọi riêng hoặc tham gia phòng thoại. Sử dụng micro, camera và chia sẻ màn hình. |
 
+## Phân công và phần bổ sung
+
+Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#team). Mỗi người làm xuyên suốt phần mình, gồm UI/UX, tự quản lý nhiệm vụ Trello; nhóm họp hằng tuần theo [quy trình](docs/project/workflow.md#weekly-meeting).
+
+[Mobile](docs/experience/mobile.md), [thông báo](docs/features/notifications/README.md) và [gửi file](docs/features/files/README.md) đã được bổ sung vào kế hoạch dự án; chi tiết và đợt bàn giao còn đang xác định theo [phạm vi](docs/project/overview.md#extensions).
+
 ## Thành phần chính
 
 | Thành phần | Vai trò |

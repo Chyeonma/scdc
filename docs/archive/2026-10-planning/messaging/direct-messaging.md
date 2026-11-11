@@ -1,10 +1,10 @@
 # Kế hoạch triển khai nhắn tin riêng SCDC
 
-Cập nhật: **09/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../../verification/messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
+Cập nhật: **09/10/2026**. Baseline đã đọc: `main` tại `fe3c54a` trong repository `scdc/`. **DM chưa có backend nghiệp vụ hoặc Hub runtime trên main**; giao diện hiện dùng dữ liệu mẫu và local state. Các nhánh Messaging cũ có code để tham khảo, nhưng phải đối chiếu đặc tả hiện hành trước tái sử dụng. P0 đã chuẩn bị bản chạy và dữ liệu Identity riêng, được người dùng PASS FE/BE và đồng ý baseline theo [biên bản P0](../../../records/verification/messaging/DM-P0-T01.md). Ngày 07/10/2026, đã tạo và push nhánh tích hợp `message` từ `origin/main` tại `2096e0b`; phần tăng từ baseline `fe3c54a` là tài liệu/README. P0 đã được người dùng PASS FE/BE và đồng ý baseline trong phiên, merge/push vào `message` tại `170d959` trước khi tạo P1-T01.
 
 Ngày12/10/2026 người dùng đổi cách thực hiện: **“Làm liên tục toàn bộ phần MVP còn lại; tôi test FE/BE một lần cuối.”** Quy trình hiện hành là một branch `feat/dm-mvp-completion`, một PR hướng `message`, ba phase nội bộ A(P4/P5), B(P6), C(P7). Agent triển khai/test/sửa liên tục; bàn giao cuối ở Chờ người dùng test FE/BE toàn MVP, không dừng xin nghiệm thu từng task. `message` chưa nhận gói mới trước PASS cuối. Các gate riêng từng task bên dưới giữ để đối chiếu nguồn/lịch sử, được thay bằng quyền mới trong gói này. P8/v1 vẫn riêng; không publish/main từ nghiệm thu MVP.
 
-[Prompt hiện hành](direct-messaging-prompts.md) rút gọn còn một khối tự đầy đủ và10 case MVP cuối. [Bản lưu20 prompt](direct-messaging-prompts-by-task.md) giữ80 ví dụ và mapping task/AC/TC. [Catalogue máy đọc](../../../fixtures/dm-acceptance-cases.json) giữ nguồn testcase; khi thực thi vẫn cần lệnh/request/SQL/ID thật và actual evidence theo [mẫu biên bản](../../templates/dm-task-acceptance.md).
+[Prompt hiện hành](direct-messaging-prompts.md) rút gọn còn một khối tự đầy đủ và10 case MVP cuối. [Bản lưu20 prompt](direct-messaging-prompts-by-task.md) giữ80 ví dụ và mapping task/AC/TC. [Catalogue máy đọc](../../../fixtures/dm-acceptance-cases.json) giữ nguồn testcase; khi thực thi vẫn cần lệnh/request/SQL/ID thật và actual evidence theo [mẫu biên bản](../../../records/templates/dm-task-acceptance.md).
 
 ## Phạm vi và nguồn chuẩn
 
@@ -36,7 +36,7 @@ Nếu người dùng giao thực hiện toàn kế hoạch theo chế độ dừ
 2. Tạo nhánh đúng tên; triển khai subtask, migration và UI phù hợp. Các lỗi UI phải có phản hồi thật; không thay backend thiếu bằng mock để ghi đạt.
 3. Agent chạy test đúng phạm vi: backend với PostgreSQL riêng, frontend/unit, build và E2E các luồng liên quan. Đối soát DB cho transaction/quyền/chống trùng.
 4. Chuẩn bị bản chạy được, dữ liệu mẫu và hướng dẫn cụ thể: URL, tài khoản, ID trả về, request, từng thao tác UI, kết quả mong đợi, cách thử lỗi và câu lệnh kiểm tra DB chỉ đọc.
-5. Ghi biên bản theo [mẫu nghiệm thu task](../../templates/dm-task-acceptance.md), trạng thái **Chờ người dùng test**. Chỉ ghi ca agent đã chạy; phần người dùng còn trống.
+5. Ghi biên bản theo [mẫu nghiệm thu task](../../../records/templates/dm-task-acceptance.md), trạng thái **Chờ người dùng test**. Chỉ ghi ca agent đã chạy; phần người dùng còn trống.
 6. **Dừng task và chờ phản hồi.** Không tự merge, tạo task kế hoặc tiếp tục phase. Không xem im lặng, câu hỏi hoặc “đang test” là PASS.
 7. Quyền push nhánh task và merge vào `message` đã được cấp trong phiên. Sau PASS FE/BE, kiểm tra nhánh task đã push thành công và remote SHA đúng build được duyệt, merge vào `message`, chạy smoke rồi push và kiểm tra remote. Trước task kế, baseline phải chứa task trước; thay đổi build ảnh hưởng bằng chứng phải ghi và kiểm tra lại phần liên quan.
 
@@ -192,7 +192,7 @@ Chi tiết lệnh chạy, setup và response phải được agent kiểm chứn
 
 ### DM-P0-T01 môi trường dữ liệu và contract gói
 
-Bản P0 đã được agent dựng/test và có [biên bản cùng hướng dẫn FE/BE](../../verification/messaging/DM-P0-T01.md), [baseline thiết kế](dm-p0-baseline-design.md). Trạng thái **Người dùng PASS FE/BE và baseline P0**; đã tích hợp vào `message` tại `170d959` ngày07/10/2026.
+Bản P0 đã được agent dựng/test và có [biên bản cùng hướng dẫn FE/BE](../../../records/verification/messaging/DM-P0-T01.md), [baseline thiết kế](dm-p0-baseline-design.md). Trạng thái **Người dùng PASS FE/BE và baseline P0**; đã tích hợp vào `message` tại `170d959` ngày07/10/2026.
 
 Branch `chore/dm-p0-t01-acceptance-baseline`. Nguồn: contract-4–10, DM-SQL-01–06, hồ sơ MVP. Phụ thuộc: không có task DM trước; Identity hiện có và công cụ local.
 
@@ -240,7 +240,7 @@ Branch `feat/dm-p1-t02-open-conversation`. AC-DM-01/12/13; TC-DM-02/12/24; DM-SQ
 
 **Bạn test BE:** Hai POST song song nhận cùng ID; đúng hai membership, một pair, không space mồ côi; self/peer pending bị từ chối. Disabled peer được test bằng integration fixture, lượt người dùng E2E ở P6-T02. C không được lấy D-AB từ inbox sau task kế. Task này test outsider với các API đã có, không giả endpoint detail chưa có.
 
-**Gate:** Người dùng PASS FE/BE build ea0c311 ngày09/10/2026; [biên bản và lệnh C01–C04](../../verification/messaging/DM-P1-T02.md). Đã đủ điều kiện tích hợp vào message và triển khai inbox P1-T03 theo yêu cầu người dùng. Checkbox trên chỉ xác nhận implementation/test của agent. Theo yêu cầu09/10/2026, tạm chỉ chọn một người; chọn người khác thay lựa chọn trước, chọn nhiều người chưa hoạt động.
+**Gate:** Người dùng PASS FE/BE build ea0c311 ngày09/10/2026; [biên bản và lệnh C01–C04](../../../records/verification/messaging/DM-P1-T02.md). Đã đủ điều kiện tích hợp vào message và triển khai inbox P1-T03 theo yêu cầu người dùng. Checkbox trên chỉ xác nhận implementation/test của agent. Theo yêu cầu09/10/2026, tạm chỉ chọn một người; chọn người khác thay lựa chọn trước, chọn nhiều người chưa hoạt động.
 
 ### DM-P1-T03 inbox dữ liệu thật
 
@@ -258,13 +258,13 @@ Branch `feat/dm-p1-t03-conversation-inbox`. AC-DM-01/12, contract danh sách; c�
 
 Yêu cầu bổ sung ngày 08/10/2026: “người bạn gần nhất” là **người vừa nhắn tin**, không phải người vừa chọn. P1-T03 dựng UI/loader theo `lastActivityAt`; khi chưa có writer thì test empty state và phân quyền, ghi rõ thứ tự có tin còn chờ P2-T01. Không seed tin trực tiếp vào DB để tuyên bố nghiệm thu. P2-T01 chạy lại mục gần đây bằng writer thật và bàn giao người dùng test; chưa chạy task đó trong lần sửa P1-T01.
 
-**Gate:** Người dùng đã nghiệm thu build9e47033 ngày09/10/2026; [biên bản và recipe C01–C04](../../verification/messaging/DM-P1-T03.md). Đã merge --no-ff vào message tại acce838; source giống build đã nghiệm thu, smoke API/DB PASS. P2/P3 chưa được triển khai; người dùng giao P4-T01 nhưng cần xác định phạm vi các tiền đề còn thiếu trước khi làm phần phụ thuộc.
+**Gate:** Người dùng đã nghiệm thu build9e47033 ngày09/10/2026; [biên bản và recipe C01–C04](../../../records/verification/messaging/DM-P1-T03.md). Đã merge --no-ff vào message tại acce838; source giống build đã nghiệm thu, smoke API/DB PASS. P2/P3 chưa được triển khai; người dùng giao P4-T01 nhưng cần xác định phạm vi các tiền đề còn thiếu trước khi làm phần phụ thuộc.
 
 ## Phase P2 gửi lưu bền và lịch sử
 
 ### DM-P2-T01 gửi văn bản và validation
 
-**Đã triển khai và agent test; chờ người dùng nghiệm thu FE/BE.** [Biên bản P2-T01](../../verification/messaging/DM-P2-T01.md) có lệnh/sample và C01–C04/RECENT. Checkbox dưới đây chỉ trạng thái triển khai; chưa merge message hoặc giao P2-T02.
+**Đã triển khai và agent test; chờ người dùng nghiệm thu FE/BE.** [Biên bản P2-T01](../../../records/verification/messaging/DM-P2-T01.md) có lệnh/sample và C01–C04/RECENT. Checkbox dưới đây chỉ trạng thái triển khai; chưa merge message hoặc giao P2-T02.
 
 Branch `feat/dm-p2-t01-persist-text-message`. AC-DM-02/09/11/19/21; TC-TEXT-01–05, TC-DM-03/14/21/23; DM-SQL-02–06.
 
@@ -308,7 +308,7 @@ Branch `feat/dm-p3-t01-manual-retry`. AC-DM-06/08/21; TC-DM-05–08/23.
 - [x] P3-T01.4 Correlate tin tạm/response theo actor+clientMessageId; retry cùng khóa trả ID hiện hành, không duplicate dòng.
 - [x] P3-T01.5 E2E/network fault và DB count, recipes để người dùng lặp lỗi; tắt fault xác nhận recovery.
 
-Triển khai P3-T01 và kiểm chứng agent tại [biên bản P3-T01](../../verification/messaging/DM-P3-T01.md); checkbox ghi phần implementation, **chưa là người dùng PASS**. P2-T02 được người dùng PASS FE/BE ngày10/10/2026, đã merge/push vào `message` tại `b4d814d`. P3-T01 đã được người dùng PASS FE/BE build `156cb32` ngày10/10/2026, merge/push vào `message` tại `a3fea4e`. P3-T02 được giao riêng; P4 chưa thực hiện. Actual Hub event/reconnect trong AC-DM-21/TC-DM-23 chờ P4; hiện chứng minh merge bằng GET thật và response retry.
+Triển khai P3-T01 và kiểm chứng agent tại [biên bản P3-T01](../../../records/verification/messaging/DM-P3-T01.md); checkbox ghi phần implementation, **chưa là người dùng PASS**. P2-T02 được người dùng PASS FE/BE ngày10/10/2026, đã merge/push vào `message` tại `b4d814d`. P3-T01 đã được người dùng PASS FE/BE build `156cb32` ngày10/10/2026, merge/push vào `message` tại `a3fea4e`. P3-T02 được giao riêng; P4 chưa thực hiện. Actual Hub event/reconnect trong AC-DM-21/TC-DM-23 chờ P4; hiện chứng minh merge bằng GET thật và response retry.
 
 **Bạn test FE:** Fault trước commit → failed; bật mạng không tự gửi; bấm Retry mới sent. Drop response sau commit → failed/unknown; Retry đúng một dòng. Nhập cùng nội dung lần mới vẫn tạo tin thứ hai với khóa mới.
 
@@ -332,7 +332,7 @@ Branch `test/dm-p3-t02-concurrency-and-keys`. TC-DM-02/15/24/25; fixtures finger
 
 **Gate:** Đồng thời/keys/migration có proof API/DB và UI tương ứng; bạn PASS rồi mới realtime.
 
-P3-T02 đã triển khai5subtask và agent kiểm chứng backend76/76, Node53/53, build và Edge5/5; [biên bản P3-T02](../../verification/messaging/DM-P3-T02.md) có run FE/BE riêng, UUID/ID và từng recipe. Người dùng đã xác nhận PASS FE/BE build `d4f1669` (code `4102955`), đồng ý nghiệm thu và làm P4-T01. P3-T02 được merge/push vào `message` tại `9de920a`; smoke Node53/53 và history H121 PASS. TC-DM-25 phần reconnect/catchup tự động còn chờ P4-T02; không coi toànTC/UC đã PASS.
+P3-T02 đã triển khai5subtask và agent kiểm chứng backend76/76, Node53/53, build và Edge5/5; [biên bản P3-T02](../../../records/verification/messaging/DM-P3-T02.md) có run FE/BE riêng, UUID/ID và từng recipe. Người dùng đã xác nhận PASS FE/BE build `d4f1669` (code `4102955`), đồng ý nghiệm thu và làm P4-T01. P3-T02 được merge/push vào `message` tại `9de920a`; smoke Node53/53 và history H121 PASS. TC-DM-25 phần reconnect/catchup tự động còn chờ P4-T02; không coi toànTC/UC đã PASS.
 
 ## Phase P4 realtime và reconnect
 
@@ -352,7 +352,7 @@ Branch `feat/dm-p4-t01-realtime-outbox`. AC-DM-02/12/21; TC-DM-03/12/16/23.
 
 **Gate:** Hai browser nhận tin thật và quyền subscribe/dispatch đạt. Thu hồi đầy đủ vẫn phải qua P6; bạn PASS rồi reconnect.
 
-Checkbox ghi implementation P4-T01; **Chờ người dùng test FE/BE**, chưa merge task và chưa làm P4-T02. [Biên bản P4-T01](../../verification/messaging/DM-P4-T01.md) có dữ liệu FE/BE riêng, recipe C01–C04, rollback, current/tombstone, session cũ và kill/restart sau claim. Reconnect hiện dùng nút thủ công và GET latest; chưa có bù nhiều trang/cửa sổ cache. AC-DM-12 phần edit/delete và thu hồi đầy đủ P6, AC-DM-21/TC-DM-23 phần reconnect vẫn mở.
+Checkbox ghi implementation P4-T01; **Chờ người dùng test FE/BE**, chưa merge task và chưa làm P4-T02. [Biên bản P4-T01](../../../records/verification/messaging/DM-P4-T01.md) có dữ liệu FE/BE riêng, recipe C01–C04, rollback, current/tombstone, session cũ và kill/restart sau claim. Reconnect hiện dùng nút thủ công và GET latest; chưa có bù nhiều trang/cửa sổ cache. AC-DM-12 phần edit/delete và thu hồi đầy đủ P6, AC-DM-21/TC-DM-23 phần reconnect vẫn mở.
 
 ### DM-P4-T02 reconnect nhiều trang và sửa xóa tin cũ
 
@@ -540,14 +540,14 @@ Branch `chore/dm-p8-t03-release-handoff`. Phụ thuộc: gói Identity/email, c�
 
 ## Prompt và hồ sơ cho lần thực hiện
 
-[Prompt hiện hành](direct-messaging-prompts.md) là một khối đầy đủ cho toàn MVP còn lại, ba phase nội bộ và một lần user test cuối theo quyền mới12/10/2026. [20 prompt từng task đã lưu](direct-messaging-prompts-by-task.md) giữ traceability. [Biên bản MVP](../../verification/messaging/DM-MVP.md) và [mẫu](../../templates/dm-task-acceptance.md) tách kết quả agent/người dùng, build/actor/dataset/UI/request/DB evidence.
+[Prompt hiện hành](direct-messaging-prompts.md) là một khối đầy đủ cho toàn MVP còn lại, ba phase nội bộ và một lần user test cuối theo quyền mới12/10/2026. [20 prompt từng task đã lưu](direct-messaging-prompts-by-task.md) giữ traceability. [Biên bản MVP](../../../records/verification/messaging/DM-MVP.md) và [mẫu](../../../records/templates/dm-task-acceptance.md) tách kết quả agent/người dùng, build/actor/dataset/UI/request/DB evidence.
 
 P0–P3 đã được người dùng nghiệm thu; không bắt đầu lại. P4/P5/P6/P7 được gộp trên `feat/dm-mvp-completion`, checkbox ghi implementation, **chưa là user PASS**. Physical mobile và P8/v1 vẫn ghi phạm vi chưa kiểm chứng. Bản bàn giao cuối chờ user PASS FE/BE trước merge gói vào message; không publish/main từ bước này.
 
 ### Xác nhận chuyển P2 ngày10/10/2026
 
-P2-T01 được người dùng nghiệm thu có điều kiện C02 PASS. Agent đã tái kiểm thử C02 PASS FE/BE; người dùng trả lời “Đồng ý; C02 PASS thì làm P2-T02”. Tích hợp P2-T01 vào `message`, chỉ thực hiện P2-T02 và bàn giao FE/BE trước task kế. Xem [biên bản P2-T01](../../verification/messaging/DM-P2-T01.md).
+P2-T01 được người dùng nghiệm thu có điều kiện C02 PASS. Agent đã tái kiểm thử C02 PASS FE/BE; người dùng trả lời “Đồng ý; C02 PASS thì làm P2-T02”. Tích hợp P2-T01 vào `message`, chỉ thực hiện P2-T02 và bàn giao FE/BE trước task kế. Xem [biên bản P2-T01](../../../records/verification/messaging/DM-P2-T01.md).
 
 ### Bàn giao lịch sử P2-T02 ngày10/10/2026
 
-Base `message` đã tích hợp P2-T01 tại `ea941a7`. P2-T02 đã có API history, UI loader, H121 qua writer và kiểm thử kỹ thuật; [biên bản P2-T02](../../verification/messaging/DM-P2-T02.md) ghi kết quả và cách người dùng test. Các checkbox P2-T02 là việc triển khai đã làm; gate người dùng FE/BE vẫn **Chờ xác nhận**, chưa merge và không tự làm P3/P4.
+Base `message` đã tích hợp P2-T01 tại `ea941a7`. P2-T02 đã có API history, UI loader, H121 qua writer và kiểm thử kỹ thuật; [biên bản P2-T02](../../../records/verification/messaging/DM-P2-T02.md) ghi kết quả và cách người dùng test. Các checkbox P2-T02 là việc triển khai đã làm; gate người dùng FE/BE vẫn **Chờ xác nhận**, chưa merge và không tự làm P3/P4.

@@ -16,7 +16,7 @@ Trạng thái: **Chờ người dùng test FE và BE**. Kết quả tự động
 | Migration | `database/postgres/migrations/20261009_dm_p2_text_message.sql`; additive và chạy lặp được |
 | Git-flow | Push task; chưa merge `message`. Sau người dùng PASS FE/BE mới merge `--no-ff` và smoke. P2-T02 và P4 chưa thực hiện |
 
-Đọc cùng [kế hoạch](../../planning/messaging/direct-messaging.md#dm-p2-t01-gửi-văn-bản-và-validation), [prompt nguyên task](../../planning/messaging/direct-messaging-prompts.md#dm-p2-t01), [AC/TC](../../../features/messaging/direct-messaging.md) và [contract](../../../contracts/direct-messaging.openapi.json).
+Đọc cùng [kế hoạch](../../../archive/2026-10-planning/messaging/direct-messaging.md#dm-p2-t01-gửi-văn-bản-và-validation), [prompt nguyên task](../../../archive/2026-10-planning/messaging/direct-messaging-prompts.md#dm-p2-t01), [AC/TC](../../../features/messaging/direct-messaging.md) và [contract](../../../contracts/direct-messaging.openapi.json).
 
 ## Thay đổi và giới hạn
 

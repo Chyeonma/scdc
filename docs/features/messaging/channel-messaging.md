@@ -1,65 +1,70 @@
-# Nhắn tin trong phòng
+# SCDC — Nhắn tin trong phòng
 
-Phần tin phòng của SCP-005; UC-COM-23/24 và phần chat của UC-COM-25. Messaging sở hữu tin/Hub/dispatcher; Community sở hữu channel, membership và quyền; Identity cung cấp phiên. Vg giữ UI Community và quyền/lifecycle phòng, Sáng cung cấp nền Messaging; Thái cung cấp dataset/bộ chạy.
+Thành viên có quyền xem một phòng chữ có thể đọc lịch sử, gửi tin, sửa và xóa tin của mình, và nhận tin mới theo thời gian thực. Khi mất quyền, họ ngừng nhận tin của phòng đó.
 
-Backup/restore và placeholder sau restore thuộc [giai đoạn sau v1](../../project/overview.md#backup-scope) theo DEC-156. Retention online, sửa/xóa, chống trùng và thu hồi quyền vẫn thuộc v1.
+**Trạng thái:** chưa có. Nền `900e226` đã có ChatHub và outbox cho DM, và Community đã có tạo phòng, ACL, guard. Nhưng chưa có: ghi tin phòng, `SubscribeChannel`, `UnsubscribeChannel`, sự kiện `ChannelMessageChanged`. MVP chuyển phần lịch sử, gửi, nhận và mất quyền sang v1 ([MVP](../../releases/mvp.md#community-scope)); sửa và xóa (UC-COM-24) cũng thuộc v1.
 
-## Trạng thái và phạm vi bàn giao
+**Người phụ trách:** Sáng (tin phòng và giao diện liên quan); Vg (Community, quyền, vòng đời phòng). Xem [phân công](../../project/planning.md#team).
 
-[MVP](../../releases/mvp.md#community-scope) ghi phần lịch sử/gửi/nhận tin và xử lý mất quyền được bàn giao tiếp sang v1; sửa/xóa tin UC-COM-24 thuộc phạm vi v1. Nền `900e226` đã có ChatHub/outbox cho DM theo [Messaging](README.md), nhưng writer tin phòng, SubscribeChannel/UnsubscribeChannel và phát ChannelMessageChanged chưa được triển khai/kiểm chứng. Nền tạo phòng/ACL và guard đã có bằng chứng riêng tại [Community](../community/channels.md), không chứng minh chat/realtime tin phòng đã đạt.
+**Ai sở hữu gì:** Messaging sở hữu tin, Hub và worker gửi sự kiện. Community sở hữu phòng, thành viên và quyền. Identity cung cấp phiên.
 
-Nguồn điều kiện nền/version/epoch/lỗi và ranh giới module tại [Community](../../system/community.md). Quyền xem và management tại [phân quyền](../community/access-control.md); model/gửi/retry/sửa/xóa tại [vòng đời tin](message-lifecycle.md), validation tại [nội dung văn bản](text-policy.md), history/Hub tại [đồng bộ](synchronization.md).
+Tài liệu liên quan: điều kiện chung, version, epoch, lỗi ở [cơ chế Community](../community/mechanics.md); quyền ở [vai trò và quyền](../community/access-control.md); lưu, gửi, gửi lại, sửa, xóa ở [vòng đời tin](message-lifecycle.md); nội dung ở [text-policy](text-policy.md); lịch sử và Hub ở [đồng bộ](synchronization.md).
+
+Backup và placeholder sau khôi phục để [sau v1](../../project/overview.md#backup-scope). Thời hạn lưu, sửa, xóa, chống trùng và thu hồi quyền vẫn thuộc v1.
 
 <a id="requirements"></a>
 
 <a id="phạm-vi-và-quy-tắc"></a>
 
-## Phạm vi và quy tắc
+## Quy tắc
 
-| Mã | Quy tắc | Căn cứ |
-|---|---|---|
-| <a id="com-009"></a> COM-009 | Gửi file tài liệu trong phòng được xếp vào đợt sau. | DEC-023 |
-| <a id="com-013"></a> COM-013 | Tin văn bản trong phòng được người gửi sửa và xóa như tin riêng: sửa bất cứ lúc nào với dấu “Đã sửa”, xóa cho mọi người với dòng thay thế; trạng thái gửi và thử lại áp dụng tương tự. | DEC-034 |
-| <a id="com-014"></a> COM-014 | Tin đã được lưu trong phòng vẫn xem lại được khi thành viên có quyền mở phòng sau lúc vắng mặt. | DEC-035, SCP-005 |
-| <a id="com-017"></a> COM-017 | Trong đợt đầu, mọi thành viên có quyền xem phòng đều được gửi tin văn bản trong phòng đó. | DEC-040 |
-| <a id="com-018"></a> COM-018 | Thử lại cùng thao tác gửi trong phòng không tạo tin trùng. | DEC-037 |
-| <a id="com-022"></a> COM-022 | Người gửi phải xác minh email trước khi gửi tin trong phòng. | DEC-041, SCDC-FR-ACC-001 |
-| <a id="com-023"></a> COM-023 | Tin đã sửa chỉ giữ nội dung mới nhất; không cung cấp lịch sử bản cũ. | DEC-052, nguyên tắc tương tự DM tại DEC-034 |
-| <a id="com-024"></a> COM-024 | Tin văn bản tối đa 2.000 đơn vị UTF-16 sau CRLF/CR → LF; cho xuống dòng/emoji; từ chối UTF-16 lỗi và tin rỗng/chỉ trắng hoặc vô hình. Dùng chung [quy tắc nội dung Messaging](text-policy.md#contract-6). | DEC-053, DEC-068, DEC-090 |
+| Mã | Quy tắc |
+|---|---|
+| <a id="com-009"></a> COM-009 | Gửi file trong phòng đã có trong kế hoạch, chi tiết đang thiết kế ([gửi file](../files/README.md)). Hiện chỉ có tin văn bản. |
+| <a id="com-013"></a> COM-013 | Người gửi sửa và xóa tin phòng giống tin riêng: sửa lúc nào cũng được, có dấu "Đã sửa"; xóa thì mọi người thấy dòng thay thế. Trạng thái gửi và gửi lại cũng giống DM. |
+| <a id="com-014"></a> COM-014 | Thành viên có quyền mở phòng vẫn xem được các tin đã lưu khi họ vắng mặt. |
+| <a id="com-017"></a> COM-017 | Đợt đầu: ai có quyền xem phòng thì được gửi tin văn bản trong phòng đó. |
+| <a id="com-018"></a> COM-018 | Gửi lại cùng một thao tác không tạo tin trùng. |
+| <a id="com-022"></a> COM-022 | Phải xác minh email mới được gửi tin. |
+| <a id="com-023"></a> COM-023 | Tin đã sửa chỉ giữ nội dung mới nhất; không có lịch sử bản cũ. |
+| <a id="com-024"></a> COM-024 | Tối đa 2.000 đơn vị UTF-16 sau khi chuẩn hóa xuống dòng; cho xuống dòng và emoji; từ chối Unicode lỗi và tin trống. Dùng chung [quy tắc nội dung](text-policy.md#contract-6). |
 
 <a id="use-cases"></a>
 
 <a id="use-case-tích-hợp-tin-phòng-và-realtime"></a>
 
-## Use case tích hợp tin phòng và realtime
+## Ca sử dụng
 
-Điều kiện, version/epoch, retry và lỗi dùng chung theo [quy ước tích hợp](../../system/community.md#use-case-conditions). Quy tắc/AC/TC áp dụng cho từng UC ở [bảng truy vết](../community/traceability.md#use-case-coverage).
+Điều kiện, version, epoch, gửi lại và lỗi dùng chung theo [quy ước tích hợp](../community/mechanics.md#use-case-conditions). Quy tắc, AC và TC của từng ca xem [bảng truy vết](../community/traceability.md#use-case-coverage).
 
 <a id="uc-com-23"></a>
 
 <a id="uc-com-23--gửi-và-chủ-động-thử-lại-tin-văn-bản"></a>
 
-### UC-COM-23 — Gửi và chủ động thử lại tin văn bản
+### UC-COM-23 — Gửi tin và gửi lại
 
-**Module phụ trách:** Messaging.
+**Thực hiện:** Messaging. **Phối hợp:** Community (thành viên, quyền phòng), Identity (tài khoản, phiên), WebClient.
 
-**Phối hợp:** Community (membership/quyền phòng), Identity (tài khoản/phiên), WebClient (gửi/thử lại).
+**Ai làm:** thành viên đang hoạt động, có quyền xem phòng chữ, tài khoản đã xác minh, phiên hợp lệ.
 
-**Tác nhân:** Thành viên active có view phòng text, tài khoản đã xác minh và phiên hợp lệ.
+**Điều kiện trước:** phòng chữ đang hoạt động. Điều kiện Identity và Community được giữ tới khi Messaging commit.
 
-**Điều kiện trước:** Phòng text active; điều kiện Identity/Community được giữ tới commit Messaging theo thiết kế guard.
+**Khi nào:** người dùng bấm Gửi, hoặc bấm Thử lại cho tin chưa rõ kết quả.
 
-**Kích hoạt:** Người dùng bấm gửi từ composer hoặc chủ động thử lại thao tác gửi chưa rõ kết quả.
+**Các bước:**
 
-**Luồng chính:**
+1. Client giữ nội dung và `clientMessageId`. Messaging chuẩn hóa và kiểm tra nội dung ([COM-024](#com-024)).
+2. Messaging kiểm tra quyền, kiểm tra chống trùng, rồi lưu tin, sequence và outbox trong một transaction.
+3. Sau commit, trả tin và hiện "đã gửi". Gửi lại cùng khóa và nội dung thì trả lại đúng tin đó, không tạo tin hay outbox mới.
 
-1. Client giữ payload và clientMessageId của thao tác; Messaging chuẩn hóa/kiểm tra nội dung theo [COM-024](#com-024) và thiết kế DM.
-2. Messaging kiểm tra quyền, xử lý operation chống trùng rồi lưu tin, sequence theo space và outbox trong cùng transaction.
-3. Sau commit, trả tin hiện hành và hiển thị đã gửi. Khi người dùng thử lại cùng khóa/payload, trả cùng tin hiện hành, không tạo tin/outbox mới.
+**Ngoại lệ:**
 
-**Ngoại lệ:** Chưa xác minh/mất phiên/mất view/deleted/voice channel bị chặn. Cùng clientMessageId khác payload trả xung đột; thiếu fingerprint key dừng thao tác. Response mất giữ trạng thái chưa rõ/lỗi để người dùng đối soát hoặc thử lại chủ động. Revoke tranh send không chen giữa kiểm tra quyền và commit.
+- Chưa xác minh, mất phiên, mất quyền xem, phòng đã xóa, hoặc là phòng thoại: bị chặn.
+- Cùng `clientMessageId` nhưng khác nội dung: lỗi xung đột. Thiếu khóa fingerprint: dừng thao tác.
+- Mất phản hồi: giữ trạng thái chưa rõ hoặc lỗi để người dùng tự gửi lại.
+- Thu hồi quyền xảy ra cùng lúc không chen được vào giữa bước kiểm tra quyền và commit.
 
-**Kết quả sau cùng:** Một tin cho mỗi thao tác hợp lệ, lưu bền trước trạng thái đã gửi. Nội dung và retry dùng cùng cơ chế DM; file và quyền chỉ đọc độc lập chưa thuộc tin phòng v1.
+**Kết quả:** mỗi thao tác hợp lệ tạo đúng một tin, đã lưu trước khi hiện "đã gửi". File và quyền chỉ đọc chưa thuộc tin phòng v1.
 
 <a id="uc-com-24"></a>
 
@@ -67,84 +72,105 @@ Nguồn điều kiện nền/version/epoch/lỗi và ranh giới module tại [C
 
 ### UC-COM-24 — Sửa hoặc xóa tin của mình
 
-**Module phụ trách:** Messaging.
+**Thực hiện:** Messaging. **Phối hợp:** Community, Identity, WebClient.
 
-**Phối hợp:** Community (membership/quyền phòng), Identity (tài khoản/phiên), WebClient (sửa/xóa).
+**Ai làm:** tác giả tin, còn quyền xem phòng và đủ điều kiện dùng ứng dụng.
 
-**Tác nhân:** Tác giả tin, còn view phòng text và đủ điều kiện ứng dụng.
+**Điều kiện trước:** phòng đang hoạt động, tin thuộc phòng, client đã có version của tin. Quyền tác giả và quyền xem được kiểm tra lại khi thao tác.
 
-**Điều kiện trước:** Phòng active, tin thuộc phòng; tác giả đã tải message version. Quyền tác giả và view kiểm tra lại khi thực hiện.
+**Khi nào:** tác giả chọn Sửa hoặc Xóa trong menu của tin (màn hình COM-S03).
 
-**Kích hoạt:** Tác giả chọn sửa hoặc xóa từ menu tin tại COM-S03.
+**Các bước:**
 
-**Luồng chính:**
+1. **Sửa:** gửi nội dung mới và `expectedVersion`; Messaging kiểm tra nội dung và quyền tác giả.
+2. **Xóa:** gửi `expectedVersion`; Messaging bỏ nội dung, giữ lại ID, sequence và khóa chống trùng (tombstone).
+3. Tin, version và outbox commit cùng lúc. Người có quyền thấy nội dung mới với dấu "Đã sửa", hoặc dòng "Tin nhắn đã bị xóa".
 
-1. Khi sửa, tác giả gửi nội dung mới và expectedVersion; Messaging kiểm tra validation dùng chung DM và quyền tác giả.
-2. Khi xóa, tác giả gửi expectedVersion; Messaging bỏ content và giữ tombstone/ID/sequence cùng operation chống trùng.
-3. Thay đổi tin/version/outbox commit nguyên tử; client đủ quyền nhận nội dung hiện hành cùng dấu đã sửa hoặc dòng thay thế tin đã xóa.
+**Ngoại lệ:**
 
-**Ngoại lệ:** Owner/manager không sửa/xóa tin người khác. Tin đã xóa không được sửa, stale version hoặc mất view yêu cầu đọc lại/chặn thao tác. Sửa không hợp lệ giữ form; response không rõ không tự replay mutation. Nội dung cũ không được trả lại từ receipt của thao tác gửi.
+- Chủ server hay người quản lý không sửa, xóa được tin người khác.
+- Không sửa được tin đã xóa. Sai version hoặc mất quyền xem: phải tải lại hoặc bị chặn.
+- Nội dung sửa không hợp lệ: giữ form. Phản hồi không rõ: không tự gửi lại.
+- Không trả nội dung cũ qua kết quả của thao tác gửi.
 
-**Kết quả sau cùng:** Sửa chỉ giữ nội dung mới nhất; xóa không làm mất khóa chống trùng hoặc phục hồi tin khi retry send. Lịch sử bản sửa cũ không được cung cấp.
+**Kết quả:** sửa chỉ giữ nội dung mới nhất. Xóa không làm mất khóa chống trùng; gửi lại không hồi sinh tin đã xóa.
 
 <a id="uc-com-25"></a>
 
 <a id="uc-com-25--nhận-cập-nhật-kết-nối-lại-và-xử-lý-mất-quyền"></a>
 
-### UC-COM-25 — Nhận cập nhật, kết nối lại và xử lý mất quyền
+### UC-COM-25 — Nhận cập nhật, kết nối lại, mất quyền
 
-**Module phụ trách:** Luồng tích hợp; Messaging phụ trách Hub/dispatcher.
+**Thực hiện:** luồng tích hợp; Messaging làm Hub và worker. **Phối hợp:** Community (quyền, vòng đời phòng, yêu cầu thu hồi), Identity (phiên), WebClient (đồng bộ).
 
-**Phối hợp:** Community (quyền/lifecycle và yêu cầu thu hồi), Identity (phiên), WebClient (đồng bộ).
+**Ai làm:** người dùng đang dùng Community; client và hệ thống realtime.
 
-**Tác nhân:** Người dùng đang sử dụng Community; client và hệ thống realtime hỗ trợ đồng bộ/thu hồi.
+**Điều kiện trước:** đăng ký nhận tin phòng cần người dùng, tư cách thành viên và quyền xem hiện tại. Thông báo về yêu cầu tham gia hay lời mời được gửi đúng người dùng và người quản lý còn quyền, không bắt người ngoài đăng ký theo dõi server.
 
-**Điều kiện trước:** Subscribe phòng cần actor/membership/view hiện hành. Thông báo request/invitation định tuyến theo đúng user/session và manager còn quyền, không đòi người ngoài subscribe server.
+**Khi nào:** mở phòng; có sự kiện đã commit; kết nối lại; quyền, phiên, tư cách thành viên hay phòng thay đổi.
 
-**Kích hoạt:** Mở phòng, có sự kiện đã commit, kết nối lại hoặc thay đổi quyền/phiên/membership/phòng.
+**Các bước:**
 
-**Luồng chính:**
+1. Client đăng ký nhận tin phòng qua Hub chat. Server kiểm tra điều kiện, gắn đăng ký với phiên, server, phòng, `membershipId` và `accessVersion`.
+2. Worker gửi trạng thái hiện tại của tin cho các kết nối còn quyền. `CommunityChanged` chỉ báo client tải lại thông tin và quyền. Thông báo về yêu cầu, lời mời, tư cách thành viên chỉ gửi cho đúng người được biết.
+3. Khi kết nối lại: kiểm tra quyền, đăng ký lại, bù tin qua REST, tải lại các trang cũ để thấy tin đã sửa hoặc xóa. Gộp theo ID và version; chỉ tiến cursor sau khi gộp đủ trang.
+4. Khi bị thu hồi quyền: server tự gỡ đăng ký và chặn nội dung mới; client đóng nội dung và ô soạn tin, xóa dữ liệu đệm và bản nháp của phòng đó. Thời hạn: 5 giây từ commit.
 
-1. Client subscribe phòng text qua Hub chat; server kiểm tra điều kiện và gắn subscription với session, server/channel, membershipId và accessVersion.
-2. Dispatcher phát bản tin hiện hành cho connection còn quyền; thông báo CommunityChanged chỉ yêu cầu tải lại metadata/quyền. Request/invitation/membership gửi đúng đối tượng được biết.
-3. Khi reconnect, kiểm tra quyền và subscribe lại rồi REST bù tin, tải lại trang cũ để nhận edit/delete; merge theo ID/version và chỉ tiến resume cursor sau khi merge đủ trang.
-4. Khi quyền bị thu hồi, server tự gỡ subscription/chặn nội dung mới; client đóng nội dung/composer và dọn cache/draft của scope. Thu hồi chat được kiểm chứng trong ≤5 giây từ commit.
+**Ngoại lệ:**
 
-**Ngoại lệ:** Mất quyền/phiên không được reconnect vào scope cũ; kiểm tra quyền lỗi thì dừng phát. Sự kiện trùng/đảo thứ tự không nhân tin hoặc hạ version. Revoke membershipId cũ không xóa cache epoch rejoin mới. Client không hợp tác vẫn bị server ngừng phát; không broadcast roster/ACL/request/invitation cho toàn server.
+- Mất quyền hoặc phiên thì không kết nối lại vào phòng cũ được. Kiểm tra quyền lỗi thì dừng gửi.
+- Sự kiện trùng hoặc đến sai thứ tự không tạo tin lặp, không hiện version cũ hơn.
+- Thu hồi `membershipId` cũ không xóa dữ liệu của lần tham gia lại (epoch mới).
+- Client không hợp tác vẫn bị server ngừng gửi. Không phát danh sách thành viên, ACL, yêu cầu hay lời mời cho cả server.
 
-**Kết quả sau cùng:** Client đủ quyền hội tụ về trạng thái đã lưu, scope mất quyền không tiếp tục nhận nội dung; DM và phòng khác vẫn theo quyền riêng. Cutoff media được kiểm chứng riêng theo đặc tả Media.
+**Kết quả:** client có quyền đồng bộ với dữ liệu đã lưu; phòng bị mất quyền không nhận thêm nội dung. DM và các phòng khác theo quyền riêng. Cắt media kiểm thử riêng theo Media.
 
 <a id="ux"></a>
 
-## Giao diện và mất quyền
+## Giao diện
 
-Mở phòng kết hợp metadata theo view với lịch sử Messaging, theo [UC-COM-17](../community/channels.md#uc-com-17). Vùng chat dùng trạng thái đang gửi/đã lưu/lỗi và thử lại chủ động của [vòng đời tin](message-lifecycle.md#client-state); menu chỉ cho tác giả sửa/xóa. Sửa/xóa vẫn theo scope được chọn trong hồ sơ release.
-
-Mất quyền/rời/xóa phòng xóa cache/tin tạm của scope tương ứng và đóng composer; không ảnh hưởng DM. Draft tin phòng đề xuất dùng RAM tab cùng cơ chế DM, không lưu nội dung xuống browser storage; chưa có quyết định riêng nếu muốn lưu bền. Media nhận revocation từ cùng commit, thu hồi ≤5 giây/fail-close theo DEC-099; admission/lease/quota gate nằm trong [thiết kế media](../media/participation-lifecycle.md), không tự coi chat proof là media proof.
+- Mở phòng: hiện thông tin phòng (theo quyền xem) và lịch sử tin ([UC-COM-17](../community/channels.md#uc-com-17)).
+- Khung chat có trạng thái đang gửi, đã lưu, lỗi và nút Thử lại ([vòng đời tin](message-lifecycle.md#client-state)). Menu Sửa và Xóa chỉ hiện cho tác giả.
+- Mất quyền, rời server, phòng bị xóa: xóa dữ liệu đệm và tin tạm của phòng, đóng ô soạn tin. DM không bị ảnh hưởng.
+- Bản nháp tin phòng (đề xuất): giữ trong bộ nhớ tab như DM, không lưu xuống trình duyệt.
+- Media nhận thu hồi từ cùng commit, ngắt trong 5 giây hoặc dừng nếu không xác nhận được ([thiết kế media](../media/participation-lifecycle.md)). Bằng chứng của chat không áp cho media.
 
 <a id="contracts"></a>
 
-## API và điều kiện admission
+## API
 
-[OpenAPI Community](../../contracts/community.openapi.json) và [schema realtime](../../contracts/community-realtime.schema.json) giữ contract tin phòng mục tiêu; các route tin phòng và phương thức/sự kiện channel trên Hub chưa triển khai. Hub DM đã có không thay phần tích hợp này. Ví dụ/schema/fixture không ghi nhận kết quả runtime.
+Hợp đồng mục tiêu: [OpenAPI Community](../../contracts/community.openapi.json) và [schema realtime](../../contracts/community-realtime.schema.json). Các route tin phòng và lệnh, sự kiện phòng trên Hub chưa có.
 
 <a id="channel-admission"></a>
 
-`IChannelAccessGuard` giữ kiểm tra Identity/server/channel trong transaction của caller tới commit; lease gồm membership epoch, access versions và hạn phiên. Messaging kiểm tra lease ngay trước commit, đồng thời kiểm tra space/tác giả thuộc dữ liệu mình sở hữu; không đọc/JOIN bảng Community hoặc thay admission bằng một boolean. Thứ tự khóa và bằng chứng guard tại [cơ chế Community](../../system/community.md#transactions); writer/history/Hub cần proof riêng khi tiêu thụ guard.
+### Kiểm tra quyền khi ghi
+
+`IChannelAccessGuard` kiểm tra Identity, server và phòng trong transaction của bên gọi và giữ tới commit. Lease gồm epoch thành viên, các phiên bản quyền và hạn phiên. Messaging kiểm tra lease ngay trước commit, và tự kiểm tra không gian và tác giả trong dữ liệu của mình. Messaging không đọc hay JOIN bảng Community, và không thay việc kiểm tra bằng một giá trị đúng/sai. Thứ tự khóa xem [cơ chế Community](../community/mechanics.md#transactions).
 
 <a id="channel-messaging"></a>
 
 <a id="tin-phòng-và-realtime"></a>
 
-### REST và Hub
+### REST
 
-REST tin text dùng `/servers/{id}/channels/{channelId}/messages` với GET/POST/PATCH/DELETE tương tự DM. Message wire dùng `channelId` thay `conversationId`; `sequence` theo Messaging space, fingerprint/send operation/tombstone/version và cursor/resume dùng chung thiết kế DM. Voice channel chỉ có media, chưa mở luồng text bên trong voice; kind không đổi bằng PATCH trong v1. Quyền quản lý/owner không thay kiểm tra tác giả khi sửa/xóa.
+`/servers/{id}/channels/{channelId}/messages` với GET, POST, PATCH, DELETE, giống DM.
 
-Hub vẫn `/hubs/chat`; schema riêng [community-realtime.schema.json](../../contracts/community-realtime.schema.json) bổ sung SubscribeChannel/UnsubscribeChannel và ChannelMessageChanged. Subscribe kiểm tra phiên/membership/quyền hiện hành; registry gắn user/session/server/channel/membershipId/accessVersion. Dispatcher chỉ phát nội dung cho connection còn đủ điều kiện, reconciliation ≤1 giây và deadline chat ≤5 giây từ commit thu hồi theo DEC-083. Lỗi kiểm tra quyền dừng phát.
+- Tin dùng `channelId` thay `conversationId`. Sequence theo không gian Messaging. Fingerprint, chống trùng, tombstone, version, cursor dùng chung thiết kế DM.
+- Phòng thoại chỉ có media, chưa có chat chữ bên trong. Không đổi loại phòng bằng PATCH trong v1.
+- Quyền quản lý hay chủ server không thay cho kiểm tra tác giả khi sửa, xóa.
 
-Thông báo `CommunityChanged` chỉ chứa eventId/serverId/accessVersion và yêu cầu UI tải lại metadata/quyền; không mang tên phòng bị ẩn, danh sách thành viên/role hay nội dung tin. `MembershipChanged`, `JoinRequestChanged`, `MemberInvitationChanged` định tuyến đến đúng người và manager còn quyền theo user/session, không cần người ngoài subscribe server. Server tự gỡ subscription khi mất quyền, không trông chờ client xử lý thông báo. Client merge version theo từng resource; sự kiện thu hồi có membershipId cũ không được xóa cache của epoch rejoin mới. Reconnect subscribe lại rồi REST bù trang/tải lại tin cũ để nhận edit/delete.
+### Hub
 
-Khi tách service v1, sự kiện phục vụ thông báo Community → Messaging chuyển qua outbox/worker/gRPC theo [D27](../../system/api-conventions.md#v1-integration-event-transport). Hợp đồng giao nhận nội bộ cần thiết kế riêng; không đồng nhất với schema thông báo browser hoặc thay kiểm tra quyền trước phát.
+Vẫn là `/hubs/chat`. Schema riêng [community-realtime.schema.json](../../contracts/community-realtime.schema.json) thêm `SubscribeChannel`, `UnsubscribeChannel` và `ChannelMessageChanged`.
+
+- Đăng ký kiểm tra phiên, tư cách thành viên và quyền hiện tại. Registry gắn người dùng, phiên, server, phòng, `membershipId`, `accessVersion`.
+- Worker chỉ gửi cho kết nối còn đủ điều kiện; đối chiếu lại mỗi tối đa 1 giây; ngắt trong 5 giây từ commit thu hồi (DEC-083). Lỗi kiểm tra quyền thì dừng gửi.
+- `CommunityChanged` chỉ chứa `eventId`, `serverId`, `accessVersion`; không chứa tên phòng bị ẩn, danh sách thành viên, vai trò hay nội dung tin.
+- `MembershipChanged`, `JoinRequestChanged`, `MemberInvitationChanged` gửi đúng người và người quản lý còn quyền.
+- Server tự gỡ đăng ký khi mất quyền, không chờ client.
+- Client gộp version theo từng tài nguyên. Sự kiện thu hồi của `membershipId` cũ không xóa dữ liệu của lần tham gia lại.
+
+**v1:** sự kiện Community → Messaging đi qua outbox, worker và gRPC ([D27](../../system/api-conventions.md#v1-integration-event-transport)). Hợp đồng nội bộ thiết kế riêng, khác với schema gửi trình duyệt, và không thay việc kiểm tra quyền trước khi gửi.
 
 <a id="acceptance"></a>
 
@@ -152,17 +178,16 @@ Khi tách service v1, sự kiện phục vụ thông báo Community → Messagin
 
 ## Tiêu chí chấp nhận
 
-| Mã | Tình huống kiểm tra | Kết quả mong đợi |
+| Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
-| <a id="ac-com-12"></a> AC-COM-12 | Thành viên được phép nhắn gửi tin văn bản trong phòng, rồi sửa và xóa tin của mình. | Tin được lưu và thấy lại; sửa có dấu “Đã sửa”; xóa hiện “Tin nhắn đã bị xóa” cho các thành viên có quyền xem phòng. |
-| <a id="ac-com-13"></a> AC-COM-13 | Thành viên cố sửa/xóa tin của người khác hoặc đọc/gửi tin ở phòng không có quyền. | Hệ thống từ chối, kể cả khi gọi trực tiếp API. |
-| <a id="ac-com-18"></a> AC-COM-18 | Kết quả gửi tin phòng lần đầu không rõ, người gửi bấm thử lại cho chính tin đó. | Phòng chỉ có một tin tương ứng với thao tác gửi. |
-| <a id="ac-com-22"></a> AC-COM-22 | Thành viên chưa xác minh email nhưng có quyền xem phòng thử gửi tin. | Hệ thống từ chối gửi và chỉ dẫn bước xác minh email. |
-| <a id="ac-com-23"></a> AC-COM-23 | Thành viên sửa tin nhiều lần; người khác tải lại. | Chỉ nội dung hiện hành cùng dấu “Đã sửa”, không có lịch sử nội dung cũ. |
-| <a id="ac-com-24"></a> AC-COM-24 | Thành viên gửi/sửa tin tại biên 2.000/2.001 UTF-16 sau chuẩn hóa xuống dòng; gửi tin chỉ trắng/vô hình hoặc Unicode lỗi. | Nhận đến 2.000 UTF-16, từ chối vượt giới hạn/tin trống/Unicode lỗi; giữ tiếng Việt, emoji và ZWJ trong tin có nội dung theo DEC-090. |
+| <a id="ac-com-12"></a> AC-COM-12 | Thành viên gửi tin trong phòng, rồi sửa và xóa tin của mình | Tin được lưu và xem lại được; sửa có "Đã sửa"; xóa hiện "Tin nhắn đã bị xóa" cho người có quyền xem |
+| <a id="ac-com-13"></a> AC-COM-13 | Sửa hoặc xóa tin người khác; đọc hoặc gửi ở phòng không có quyền | Bị từ chối, kể cả khi gọi API trực tiếp |
+| <a id="ac-com-18"></a> AC-COM-18 | Gửi tin lần đầu không rõ kết quả; người gửi bấm Thử lại | Phòng chỉ có một tin |
+| <a id="ac-com-22"></a> AC-COM-22 | Thành viên chưa xác minh email thử gửi tin | Bị từ chối, kèm hướng dẫn xác minh |
+| <a id="ac-com-23"></a> AC-COM-23 | Sửa tin nhiều lần; người khác tải lại | Chỉ thấy nội dung mới nhất và "Đã sửa"; không có lịch sử |
+| <a id="ac-com-24"></a> AC-COM-24 | Gửi hoặc sửa tin dài 2.000 và 2.001 đơn vị UTF-16; tin chỉ có khoảng trắng hoặc ký tự vô hình; Unicode lỗi | Nhận tới 2.000; từ chối quá dài, tin trống, Unicode lỗi; giữ tiếng Việt, emoji, ZWJ |
 
-
-Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành phần chủ trì; [ma trận UC/AC/TC](../community/traceability.md#use-case-coverage) dẫn tới tất cả tiêu chí cần kiểm chứng. Kết quả thực thi được quản lý trong hồ sơ nghiệm thu, dẫn chiếu từ [tiến độ](../community/README.md).
+Tiêu chí liên quan nhiều phần được định nghĩa ở trang chính; [bảng truy vết](../community/traceability.md#use-case-coverage) liệt kê đầy đủ. Kết quả chạy xem [Community](../community/README.md).
 
 <a id="tests"></a>
 
@@ -170,32 +195,42 @@ Các tiêu chí liên quan nhiều phần có một nguồn chuẩn ở thành p
 
 ## Ca kiểm thử
 
-Dùng [dữ liệu và cách ghi bằng chứng chung](#evidence). Các ca bên dưới là đặc tả kiểm chứng; cần bổ sung assertion cho từng endpoint/nhánh và kiểm tra quyền bằng API.
+Mỗi ca cần test cho từng endpoint và nhánh, và kiểm tra quyền qua API.
 
-| Mã ca | Thao tác và dữ liệu | Kết quả cần quan sát | Dẫn chiếu |
+| Mã ca | Thao tác | Cần quan sát | Cho |
 |---|---|---|---|
-| <a id="tc-com-10"></a> TC-COM-10 | Gửi/sửa/xóa tin phòng; N sửa tin O bằng API; gửi lại khi mất response | Kiểm tra tác giả, tombstone, một tin mỗi thao tác; dữ liệu UTF-16 dùng chung DM | [AC-COM-12](#ac-com-12), [AC-COM-13](#ac-com-13), [AC-COM-18](#ac-com-18), [AC-COM-23](#ac-com-23), [AC-COM-24](#ac-com-24) |
-| <a id="tc-com-12"></a> TC-COM-12 | U chưa xác minh giả membership và gọi API đọc/gửi | Chặn truy cập ứng dụng phía server, không suy U được đọc phòng | [AC-COM-22](#ac-com-22), DEC-051 |
-| <a id="tc-com-25"></a> TC-COM-25 | Channel guard tranh role/ACL/leave/delete và send/subscribe/dispatch | Guard giữ tới commit; thu hồi chat ≤5 giây, không mất/trùng/trái quyền | [AC-COM-11](../community/access-control.md#ac-com-11), [AC-COM-18](#ac-com-18), [AC-COM-34](../community/channels.md#ac-com-34), [AC-COM-42](../community/access-control.md#ac-com-42), DEC-083 |
+| <a id="tc-com-10"></a> TC-COM-10 | Gửi, sửa, xóa tin phòng; N sửa tin của O qua API; gửi lại khi mất phản hồi | Kiểm tra tác giả, tombstone, một tin mỗi thao tác; dữ liệu UTF-16 như DM | [AC-COM-12](#ac-com-12), [13](#ac-com-13), [18](#ac-com-18), [23](#ac-com-23), [24](#ac-com-24) |
+| <a id="tc-com-12"></a> TC-COM-12 | U chưa xác minh giả làm thành viên, gọi API đọc và gửi | Server chặn; U không đọc được phòng | [AC-COM-22](#ac-com-22) |
+| <a id="tc-com-25"></a> TC-COM-25 | Đổi vai trò, ACL, rời server, xóa phòng cùng lúc với gửi, đăng ký, gửi sự kiện | Guard giữ tới commit; ngắt chat trong 5 giây; không mất, không trùng, không trái quyền | [AC-COM-11](../community/access-control.md#ac-com-11), [AC-COM-18](#ac-com-18), [AC-COM-34](../community/channels.md#ac-com-34), [AC-COM-42](../community/access-control.md#ac-com-42) |
 
 <a id="evidence"></a>
 
-## Dữ liệu và bằng chứng
+## Dữ liệu thử và bằng chứng
 
-O là owner, M có một management permission, N là thành viên thường; chuẩn bị outsider, tài khoản U chưa xác minh, phòng mở/giới hạn và role allow/deny. Kiểm soát phiên, membership epoch và thời điểm commit đổi quyền. Chạy trực tiếp API/Hub, gồm client không hợp tác; không dùng trạng thái nút UI làm proof quyền.
+**Tài khoản:** O là chủ server; M có một quyền quản lý; N là thành viên thường; một người ngoài; U chưa xác minh. Chuẩn bị phòng mở, phòng giới hạn, vai trò allow và deny. Kiểm soát được phiên, epoch thành viên và thời điểm commit khi đổi quyền.
 
-TC-COM-10/12/25 ở trên là ca thiết kế, chưa có actual result chat được ghi nhận. AC-COM-22 không cho phép người chưa xác minh đọc phòng: DEC-051 chặn truy cập ứng dụng trước đó. Validation dùng [TC-TEXT](text-policy.md#tests); lost response/đồng thời/reconnect phải chạy lại trong ngữ cảnh tin phòng. Thu hồi chat đo ≤5 giây từ commit theo DEC-083; proof media riêng theo DEC-099, chưa có kết quả SFU.
+- Gọi trực tiếp API và Hub, kể cả với client không hợp tác. Không dùng trạng thái nút giao diện làm bằng chứng quyền.
+- TC-COM-10, 12, 25 chưa có kết quả chạy.
+- AC-COM-22: người chưa xác minh không đọc được phòng, vì DEC-051 chặn vào ứng dụng từ trước.
+- Kiểm tra nội dung dùng [TC-TEXT](text-policy.md#tests). Mất phản hồi, đồng thời và kết nối lại phải chạy lại cho tin phòng.
+- Thu hồi chat đo trong 5 giây từ commit (DEC-083). Media đo riêng (DEC-099).
+- TC-COM-23 (chống trùng) và TC-COM-26 (migration) thuộc [Community](../community/mechanics.md).
 
-TC-COM-23 về operation và TC-COM-26 về migration thuộc [Community](../../system/community.md). Ghi kết quả theo [quy trình kiểm thử](../../releases/acceptance.md#testing) và [mẫu hồ sơ](../../records/templates/release-record.md), gắn commit/build/phạm vi UC/AC/TC, timestamp, kết quả và giới hạn.
+Ghi kết quả theo [quy trình kiểm thử](../../releases/acceptance.md#testing) và [mẫu hồ sơ](../../records/templates/release-record.md): commit, build, mã UC, AC, TC, thời điểm, kết quả và giới hạn.
 
 <a id="gaps"></a>
 
 <a id="việc-còn-lại"></a>
 
-## Việc còn lại
+## Còn mở
 
-Trạng thái phụ thuộc chung theo [kế hoạch triển khai](../../records/verification/community/README.md#history-use-case-delivery), [migration](../../system/community.md#schema-migration) và [vòng đời dữ liệu](../../system/data-lifecycle.md). Các đầu vào review/mock/proof còn mở, không đánh dấu nghiệm thu từ tài liệu/fixture.
+Phụ thuộc chung xem [kế hoạch triển khai](../../records/verification/community/README.md#history-use-case-delivery), [migration](../community/mechanics.md#schema-migration) và [vòng đời dữ liệu](../../system/data-lifecycle.md).
 
-| Nội dung | Câu hỏi còn mở | Liên quan |
-|---|---|---|
-| Nhắn tin phòng | Dùng chung text/HMAC/sequence/cursor DM; REST/realtime đã có schema, chưa có writer/mock/proof; mất quyền không xóa nội dung, room deleted giữ chưa đặt hạn theo DEC-105. Restore placeholder dùng chung schema DEC-108 và proof backup/restore áp dụng sau v1 theo DEC-156. | OQ-005, OQ-011 |
+- Dùng chung với DM: kiểm tra nội dung, HMAC, sequence, cursor. Đã có schema REST và realtime; chưa có writer, mock hay bằng chứng.
+- Mất quyền không xóa nội dung. Phòng đã xóa giữ dữ liệu, chưa đặt thời hạn (DEC-105).
+- Placeholder sau khôi phục (DEC-108) và bằng chứng backup để sau v1 (DEC-156).
+- Theo dõi tại OQ-005, OQ-011.
+
+---
+
+Nguồn: SCP-005, DEC-023 bổ sung bởi DEC-173 (COM-009), DEC-034 (COM-013), DEC-035 (COM-014), DEC-037 (COM-018), DEC-040 (COM-017), DEC-041 (COM-022), DEC-051, DEC-052 (COM-023), DEC-053, DEC-068, DEC-090 (COM-024), DEC-083 (chat ≤ 5 giây), DEC-099 (media), [DEC-171](../../records/decisions/README.md#dec-171).

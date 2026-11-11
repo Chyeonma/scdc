@@ -38,7 +38,7 @@ Lượt test tiếp: người dùng thấy2 kết quả nhưng chọn người t
 
 Mở bản mới: http://localhost:15300/?dm-ui=multi-select-20261008 . Login A và tìm `Bảo`; chọn B/C phải hiện **Đã chọn 2 người**, hai thẻ username có nút × và **Bỏ chọn tất cả**. Nếu vẫn chỉ có dòng tên một người, đang chạy giao diện cũ; ghi URL/actor thực tế và không dùng kết quả đó để nghiệm thu build mới.
 
-Người dùng chốt “người bạn gần nhất” là **người vừa nhắn tin**, cần lịch sử hội thoại thật. Phần này được đưa vào P1-T03 (inbox/modal lấy peer theo `lastActivityAt`) và kiểm thử thứ tự sau writer P2-T01. Hiện DB có0 hội thoại/0 tin; chưa hiển thị danh sách gần đây từ mock hoặc lượt chọn. [Kế hoạch](../../planning/messaging/direct-messaging.md) và [prompt đầy đủ](../../planning/messaging/direct-messaging-prompts.md) đã cập nhật phụ thuộc/test. Chọn nhiều người hiện là lựa chọn UI; contract một DM/hai participant giữ nguyên, group chat chưa được triển khai.
+Người dùng chốt “người bạn gần nhất” là **người vừa nhắn tin**, cần lịch sử hội thoại thật. Phần này được đưa vào P1-T03 (inbox/modal lấy peer theo `lastActivityAt`) và kiểm thử thứ tự sau writer P2-T01. Hiện DB có0 hội thoại/0 tin; chưa hiển thị danh sách gần đây từ mock hoặc lượt chọn. [Kế hoạch](../../../archive/2026-10-planning/messaging/direct-messaging.md) và [prompt đầy đủ](../../../archive/2026-10-planning/messaging/direct-messaging-prompts.md) đã cập nhật phụ thuộc/test. Chọn nhiều người hiện là lựa chọn UI; contract một DM/hai participant giữ nguyên, group chat chưa được triển khai.
 
 ## Chuẩn bị, start/stop và tài khoản
 

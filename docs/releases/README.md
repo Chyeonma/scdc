@@ -1,12 +1,25 @@
-# SCDC — Mốc nội bộ và bàn giao sản phẩm
+# SCDC — Các mốc bàn giao
 
-**v1 là sản phẩm hoàn thiện đầu tiên và là mục tiêu của bộ tài liệu dự án hiện hành.** MVP là mốc nội bộ ghi nhận nền phát triển để tiếp tục v1.
+SCDC có hai mốc. **MVP** là mốc nội bộ, ghi lại phần nền đã làm xong. **v1** là sản phẩm hoàn thiện đầu tiên và là mục tiêu của toàn bộ tài liệu hiện hành.
 
-| Mốc | Vai trò và phạm vi | Hồ sơ |
+| Mốc | Nội dung | Hồ sơ |
 |---|---|---|
-| MVP — nội bộ | Snapshot Identity, Community và DM trong một API host Modular Monolith; bằng chứng đã có và phần việc chuyển tiếp | [Nền MVP và bàn giao sang v1](mvp.md) |
-| v1 — sản phẩm hoàn thiện đầu tiên | Microservice, hoàn thiện tài khoản/cộng đồng/nhắn tin, thoại/video/chia sẻ màn hình và điều kiện phát hành công khai | [Hồ sơ bàn giao v1](v1.md) |
+| MVP (nội bộ) | Tài khoản, Community và nhắn tin riêng chạy trong một ứng dụng API duy nhất (modular monolith). Ghi lại bằng chứng đã có và việc còn chuyển sang v1. | [Nền MVP](mvp.md) |
+| v1 (sản phẩm) | Tách thành các service, hoàn thiện tài khoản, cộng đồng, nhắn tin, thêm thoại, video, chia sẻ màn hình và điều kiện phát hành công khai. | [Hồ sơ v1](v1.md) |
 
-DEC-114/116 xác định nền MVP một host và kiến trúc microservice của v1. Phần việc MVP chưa hoàn thành được tiếp tục trong các gói v1; bắt đầu gói theo phụ thuộc trực tiếp, không chờ nghiệm thu toàn MVP riêng. `v1` sản phẩm và prefix API `/api/v1` là các định danh khác nhau.
+Việc MVP còn dở được làm tiếp trong các gói v1. Mỗi gói bắt đầu khi phần nó phụ thuộc đã sẵn sàng, không cần chờ nghiệm thu toàn bộ MVP.
 
-Hồ sơ bàn giao v1 dẫn tới UC/AC và điều kiện nghiệm thu; hành vi/UX/dữ liệu/API được định nghĩa tại chủ đề. Công suất/lịch tại [kế hoạch](../project/planning.md), điều kiện nghiệm thu/phát hành tại [acceptance](acceptance.md), thay đổi phạm vi tại [quyết định](../records/decisions/README.md). Bằng chứng nền MVP áp dụng theo revision và phạm vi ghi nhận; nghiệm thu sản phẩm v1 cần kết quả tương ứng với bản bàn giao.
+Lưu ý: "v1" ở đây là phiên bản sản phẩm, khác với tiền tố API `/api/v1`.
+
+Mỗi tài liệu có vai trò riêng:
+
+- Hành vi, giao diện, dữ liệu và API: trong tài liệu từng tính năng.
+- Công suất và lịch: [kế hoạch](../project/planning.md).
+- Điều kiện nghiệm thu và phát hành: [nghiệm thu](acceptance.md).
+- Thay đổi phạm vi: [hồ sơ quyết định](../records/decisions/README.md).
+
+Bằng chứng của MVP chỉ đúng với phiên bản code và phạm vi lúc ghi nhận. Nghiệm thu v1 cần kết quả chạy trên chính bản bàn giao v1.
+
+---
+
+Nguồn: DEC-114, DEC-116.

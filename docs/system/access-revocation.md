@@ -1,143 +1,186 @@
 # SCDC — Thu hồi phiên và quyền truy cập
 
-## Phạm vi
+Khi một người bị đăng xuất, bị khóa tài khoản, rời server hay mất quyền xem phòng, hệ thống phải cắt mọi đường truy cập của họ: request HTTP mới, thao tác ghi, kết nối chat và media đang mở. Trang này mô tả yêu cầu thời gian, trách nhiệm của từng service, và thiết kế v1 khi các service tách rời nhau.
 
-Hợp đồng xuyên Identity, Community, Messaging và Media. Chính sách tính quyền nằm tại [Community access control](../features/community/access-control.md); lifecycle phiên tại [Accounts](../features/accounts/README.md). File này giữ thời hạn hiệu lực và nghĩa vụ phối hợp.
+**Trạng thái:** MVP đã có thu hồi cho DM (một ứng dụng duy nhất). Thiết kế v1 đã chốt (D05, D06, D07, D30, D31) nhưng chưa có code.
 
-Restore từ backup và proof tương ứng thuộc [giai đoạn sau v1](../project/overview.md#backup-scope) theo DEC-156. Restart, tiếp tục tiến trình bền, rebuild Redis từ PostgreSQL hiện hành và kiểm chứng hàng rào/quyền tới commit vẫn thuộc v1; sổ riêng phục vụ restore không là phụ thuộc mới của v1.
+Cách tính quyền xem [quyền truy cập Community](../features/community/access-control.md); vòng đời phiên xem [tài khoản](../features/accounts/README.md).
 
-## Quy tắc
+## Yêu cầu
 
-| Đường truy cập | Điều kiện |
+| Đường truy cập | Yêu cầu |
 |---|---|
-| HTTP mới | Kiểm tra session/account và quyền scope hiện hành |
-| Mutation | Giữ quyền tới commit theo hợp đồng transaction; thay đổi quyền tranh mutation phải có thứ tự xác định |
-| Subscribe/resume | Admission theo phiên, actor, scope và epoch hiện hành; cursor không cấp quyền |
-| Chat đang kết nối | Ngừng định tuyến nội dung mới trong ≤5 giây từ commit thu hồi — DEC-083 |
-| Media đang chạy | Ngừng cả phát/nhận RTP trong ≤5 giây từ commit; không xác nhận quyền thì dừng — DEC-099 |
+| Request HTTP mới | Kiểm tra phiên, tài khoản và quyền hiện tại |
+| Thao tác ghi | Quyền phải còn hiệu lực tới lúc commit. Nếu đổi quyền và thao tác ghi xảy ra cùng lúc, phải có thứ tự rõ ràng |
+| Đăng ký nhận, bù tin | Kiểm tra phiên, người dùng, phạm vi và epoch hiện tại. Cursor không cấp quyền |
+| Chat đang kết nối | Ngừng gửi nội dung mới trong **5 giây** kể từ commit thu hồi (DEC-083) |
+| Media đang chạy | Ngừng cả gửi và nhận luồng media trong **5 giây** kể từ commit; không xác nhận được quyền thì dừng (DEC-099) |
 
-Khóa tài khoản, revoke session, đổi mật khẩu, mất membership/View, xóa phòng hoặc thay role/ACL có thể kích hoạt thu hồi theo quy tắc của chủ đề. Thu hồi không xóa byte mà client đã tự sao chép.
+Các sự kiện có thể gây thu hồi: khóa tài khoản, thu hồi phiên, đổi mật khẩu, mất tư cách thành viên hay quyền xem, xóa phòng, đổi vai trò hay ACL. Thu hồi không xóa được dữ liệu mà client đã tự sao chép.
 
 ## Trách nhiệm
 
-- Identity là nguồn session/account/security stamp.
-- Community là nguồn membership, ownership, role/ACL và access epoch/version.
-- Messaging kiểm tra admission, guard writer/reader, registry/dispatch/reconnect và ngừng gửi tới connection không còn quyền.
-- Media kiểm tra join/resume và thực thi lease/fencing ở đường truyền SFU. Đóng websocket không đủ chứng minh WebRTC đã ngừng.
-- WebClient dọn state/draft/cache của scope mất quyền; server thực thi độc lập với client.
-
-Guard trong một host dùng lock order Identity → Community → Messaging khi hợp đồng yêu cầu. Thiết kế writer/Hub tại [Messaging](../features/messaging/README.md), guard transaction tại [Community](community.md), coordinator/SFU tại [Media](../features/media/README.md). Shared lock không tự có hiệu lực xuyên service ở v1.
-
-## Hiện trạng và kiểm chứng
-
-Nền `900e226` đã có HTTP/transaction guard Identity/Community; DM tích hợp `IAccountPairAccessGuard`, ChatHub, outbox dispatcher và `SubscriptionReconciler`. [Hồ sơ DM-MVP](../records/verification/messaging/DM-MVP.md) có bằng chứng thu hồi phiên DM trên build ghi nhận; [hồ sơ hợp nhất](../records/verification/messaging/merge-2026-10-13.md) xác nhận luồng DM realtime/lịch sử tích hợp.
-
-Writer/subscription tin phòng và cutoff khi thay membership/role/ACL Community còn chưa được tích hợp/kiểm chứng. Media và phối hợp thu hồi xuyên service v1 chưa có runtime; các bằng chứng DM một host không thay proof toàn bộ hợp đồng v1.
-
-Ca kiểm chứng phải ghi commit thu hồi, thời điểm cutoff, clock/trace, actor/scope/epoch và kết quả khi authority/worker/provider lỗi hoặc restart. Thử token/cursor/epoch cũ, tranh mutation/subscribe và reconnect. Tiêu chí chi tiết tại [tin phòng](../features/messaging/channel-messaging.md), [đồng bộ tin](../features/messaging/synchronization.md) và [Media](../features/media/README.md).
-
-Thiết kế restore backup sau v1 phải giữ dấu thu hồi/floor và vô hiệu phiên/generation cũ trước mở truy cập theo [vòng đời dữ liệu](data-lifecycle.md#restore).
-
-<a id="v1-session-validation"></a>
-
-## D30 — Kiểm tra phiên tại service nghiệp vụ
-
-Trạng thái: đã xác nhận phương án C ngày 2026-10-12 — [DEC-148](../records/decisions/README.md#dec-148). Các service xác minh JWT cục bộ rồi đọc trạng thái phiên/tài khoản tối thiểu từ Redis do Identity quản lý. Áp dụng cho HTTP cần phiên và admission kết nối/subscribe/resume.
-
-| Nội dung | Yêu cầu |
+| Thành phần | Trách nhiệm |
 |---|---|
-| Chủ sở hữu | Identity quyết định/cập nhật trạng thái; PostgreSQL Identity giữ dữ liệu bền |
-| Dữ liệu công bố | Trạng thái phiên/tài khoản cần cho xác thực, kèm hạn và phiên bản; schema cụ thể chưa chốt |
-| Bên đọc | Community, Messaging và Media chỉ đọc view đã công bố bằng quyền giới hạn theo hợp đồng |
-| Trạng thái chưa rõ | Thiếu bản ghi, lỗi kho hoặc phục hồi chưa đủ không chứng minh phiên hợp lệ; chưa cấp truy cập khi chưa xác minh được |
-| Thu hồi | Đường đọc phải chặn phiên trước khi xác nhận thu hồi có hiệu lực; giữ hàng rào ghi và điều kiện commit tại D05 |
+| Identity | Nguồn dữ liệu về phiên, tài khoản, security stamp |
+| Community | Nguồn dữ liệu về thành viên, chủ sở hữu, vai trò, ACL, epoch và phiên bản quyền |
+| Messaging | Kiểm tra khi đăng ký nhận; guard khi đọc và ghi; registry, gửi sự kiện, kết nối lại; ngừng gửi tới kết nối mất quyền |
+| Media | Kiểm tra khi vào và vào lại; dùng lease và fencing trên LiveKit. Đóng websocket không chứng minh WebRTC đã ngừng |
+| WebClient | Xóa trạng thái, bản nháp, dữ liệu đệm của phạm vi bị mất quyền. Server vẫn tự thực thi, không phụ thuộc client |
 
-Lựa chọn giảm lời gọi kiểm tra phiên tới Identity API và tránh đồng bộ bản trạng thái riêng tại mỗi service. Đánh đổi là thêm Redis, lời gọi mạng và giao thức nhất quán/phục hồi; chưa có phép đo hiệu năng. Hỏi Identity cho mỗi lần kiểm tra và giữ bản trạng thái riêng đã được so sánh nhưng không được chọn cho đường kiểm tra thông thường. [D31](#v1-session-validation-fallback) chọn tạm từ chối khi chưa xác minh được qua Redis, không gọi Identity dự phòng.
+Trong MVP (một ứng dụng), guard khóa theo thứ tự Identity → Community → Messaging khi cần. Ở v1, khóa này không còn tác dụng giữa các service, nên cần thiết kế D05 bên dưới.
 
-[D02](database.md#v1-database-layout) được bổ sung phạm vi đọc view xác thực này; các DB PostgreSQL nghiệp vụ vẫn riêng, service khác không đọc/ghi PostgreSQL Identity hoặc ghi view Redis. Redis này chưa được chọn làm SignalR backplane, broker hoặc thành phần của LiveKit. Client Redis là truy cập hạ tầng, không đổi gRPC/mTLS giữa các service nghiệp vụ theo D04/D20; bảo vệ kết nối Redis, quyền và credentials cần thiết kế riêng.
+Chi tiết: ghi tin và Hub xem [Messaging](../features/messaging/README.md); guard trong transaction xem [Community](../features/community/mechanics.md); điều phối và LiveKit xem [Media](../features/media/README.md).
 
-Không suy luận phiên hợp lệ chỉ từ việc không có mục trong blacklist. Phải xác định điều kiện tin cậy/đầy đủ của trạng thái đọc; restart, nạp lại trạng thái Redis, rebuild từ PostgreSQL hiện hành, dữ liệu cũ hoặc eviction không được khôi phục quyền đã thu hồi. Restore từ backup áp dụng sau v1 và phải giữ cùng nguyên tắc. Nguồn cơ chế: [Redis — persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/), [Redis — eviction](https://redis.io/docs/latest/develop/reference/eviction/).
+## Hiện trạng
 
-PostgreSQL và Redis không tự có transaction chung. DB commit rồi chờ sự kiện nền D27 cập nhật Redis không tự đáp ứng HTTP hiện hành. Giao thức phối hợp thu hồi/cấp phiên/refresh, readiness/generation, chống trạng thái cũ và phục hồi cần thiết kế/kiểm chứng trước triển khai.
+- Nền `900e226` đã có guard HTTP và transaction cho Identity và Community. DM dùng `IAccountPairAccessGuard`, ChatHub, worker outbox và `SubscriptionReconciler`.
+- Bằng chứng thu hồi phiên DM: [DM-MVP](../records/verification/messaging/DM-MVP.md). Luồng DM realtime và lịch sử: [hồ sơ hợp nhất](../records/verification/messaging/merge-2026-10-13.md).
+- Chưa có: ghi và nhận tin phòng, cắt kết nối khi đổi thành viên, vai trò hay ACL; Media; thu hồi giữa các service v1. Bằng chứng DM trên một ứng dụng không thay cho bằng chứng v1.
 
-[D28/D29 — chữ ký và khóa công khai](api-conventions.md#v1-user-token-signing), quyền scope của Community và [D05 — quyền tới commit](#v1-authorization-coordination) giữ nguyên. Kết quả đọc Redis không tự cấp permit ghi hoặc chứng minh cutoff chat/media; không gọi Redis cho từng frame RTP. Worker thu hồi/bù/dọn tiếp tục dùng danh tính service theo D20.
+### Cách kiểm thử
 
-Schema, blacklist/allowlist cụ thể, TTL, xử lý phiên hết hạn tự nhiên, lỗi/deadline, quyền RPC/context actor và reader/dispatcher/SFU còn mở; không thay thời hạn phiên DEC-065. Redis tự host cùng máy phát triển/demo trong container riêng do Compose quản lý theo [D32](environments.md#v1-auth-redis-deployment). Version, persistence, eviction, tài nguyên và HA chưa chọn. Chưa đổi code, SQL, khóa hoặc cấu hình.
+Mỗi ca ghi: thời điểm commit thu hồi, thời điểm ngắt, cách đồng bộ đồng hồ và trace, người dùng, phạm vi, epoch, và kết quả khi thành phần kiểm tra quyền, worker hay LiveKit bị lỗi hoặc khởi động lại. Thử dùng lại token, cursor, epoch cũ; thử đổi quyền cùng lúc với ghi hoặc đăng ký; thử kết nối lại. Tiêu chí chi tiết xem [tin phòng](../features/messaging/channel-messaging.md), [đồng bộ tin](../features/messaging/synchronization.md) và [Media](../features/media/README.md).
 
-<a id="v1-session-validation-fallback"></a>
+### Backup và khởi động lại
 
-## D31 — Xác minh phiên dự phòng
+- **Thuộc v1:** khởi động lại, tiếp tục tiến trình đang dở, dựng lại Redis từ PostgreSQL hiện tại; không được làm sống lại quyền đã thu hồi.
+- **Sau v1:** khôi phục từ backup phải giữ dấu thu hồi và vô hiệu phiên cũ trước khi mở truy cập ([vòng đời dữ liệu](data-lifecycle.md#restore), DEC-156).
 
-Trạng thái: đã xác nhận phương án A ngày 2026-10-12 — [DEC-149](../records/decisions/README.md#dec-149). Khi lỗi kết nối, thiếu trạng thái hoặc Redis chưa đủ tin cậy để xác minh phiên, tạm từ chối yêu cầu cần xác thực; không gọi Identity dự phòng.
+---
 
-| Tình huống | Cách xử lý |
-|---|---|
-| Chưa xác minh được qua Redis | Phản hồi tạm thời không thể xử lý yêu cầu; chờ kho phục vụ lại đúng hợp đồng |
-| Đã xác định phiên không hợp lệ | Từ chối theo hợp đồng phiên; không tìm nguồn khác để ghi đè kết quả |
-| Redis phục vụ lại | Yêu cầu tiếp theo kiểm tra lại JWT, phiên và quyền hiện hành; không dùng kết quả hợp lệ cũ để bỏ qua kiểm tra |
+## Thiết kế v1: thu hồi khi ghi dữ liệu
 
-Lựa chọn giảm nhánh xử lý và tránh dồn lượt kiểm tra sang Identity khi Redis lỗi. Đánh đổi là lỗi riêng Redis có thể gián đoạn truy cập cần xác thực. Phương án B gọi Identity dự phòng đã được so sánh nhưng không được chọn. Nguyên tắc hạn chế lời gọi tới phụ thuộc đang lỗi được mô tả tại [Microsoft — Circuit Breaker](https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker); chưa chọn thư viện/cấu hình cụ thể.
+Khi tách service, mỗi service có database riêng, nên không thể dùng một khóa chung để giữ quyền tới commit. Ba quyết định D05, D06, D07 giải quyết việc này.
 
-Lỗi phụ thuộc chưa chứng minh phiên không hợp lệ và không tự thu hồi phiên. Cần phân biệt lỗi tạm thời này với kết quả xác thực bị từ chối; mã lỗi và hành vi UI cụ thể chưa chốt. Không cho truy cập khi chưa xác minh được, không tự chuyển sang JWT đơn thuần hoặc bỏ qua Redis. Việc phục hồi phải đáp ứng [D30](#v1-session-validation); kết quả xác minh vẫn phải phối hợp D05 và quyền Community.
+**Thuật ngữ:**
 
-D31 áp dụng cho kiểm tra phiên khi tiếp nhận truy cập theo D30, gồm HTTP cần phiên và admission kết nối/subscribe/resume. Không thay cutoff kết nối đang mở, hợp đồng xử lý mutation đã được nhận hoặc tự chọn cách thử lại. Ánh xạ lỗi/UI, timeout, giới hạn lời gọi Redis, điều kiện phục hồi và proof còn cần thiết kế. Chưa đổi code, hợp đồng máy đọc hoặc cấu hình.
+- **Authority:** service sở hữu phiên hoặc quyền (Identity hoặc Community).
+- **Owner:** service có database chứa thao tác ghi cần bảo vệ (ví dụ Messaging cho tin nhắn).
+- **Hàng rào (gate):** bản ghi trong DB của owner, dùng để chặn thao tác mang quyền cũ.
+- **Epoch:** số phiên bản quyền; thao tác mang epoch cũ bị từ chối.
 
 <a id="v1-authorization-coordination"></a>
 
-## D05 — Phối hợp quyền khi ghi dữ liệu
+### D05 — Hàng rào ghi tại database từng service
 
-Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-123](../records/decisions/README.md#dec-123). Chọn hàng rào ghi bền tại database từng service để phối hợp mutation và thu hồi quyền khi tách khỏi MVP. gRPC/Protobuf đã chọn tại [D04](api-conventions.md#v1-internal-protocol) là giao thức giao tiếp; cơ chế phối hợp được mô tả dưới đây.
+**Quyết định:** mỗi owner có hàng rào bền trong DB của mình. Thu hồi chỉ được coi là có hiệu lực khi mọi owner liên quan đã cài hàng rào.
 
-Yêu cầu giữ nguyên: quyền hợp lệ tới commit; mutation và thu hồi có thứ tự xác định. Hạn ngừng chat/media ≤5 giây vẫn tính từ commit thu hồi có hiệu lực. Việc ghi nhận ý định thu hồi chưa được coi là thu hồi đã hoàn tất; không đổi tên một commit đã thay quyền thành “đang chờ” để dời mốc đo.
+**Các bước:**
 
-### Cơ chế đã chọn
+1. Authority lưu ý định thu hồi và chặn cấp quyền mới cho phạm vi đó. Việc cấp quyền và bắt đầu thu hồi được xếp hàng tuần tự. Ở bước này quyền chưa bị coi là đã thu hồi.
+2. Mọi thao tác ghi ở owner kiểm tra hàng rào và giữ khóa trong cùng transaction tới khi commit. Lệnh cài hàng rào dùng khóa xung đột với thao tác ghi: thao tác đang giữ khóa xong trước; thao tác mang quyền cũ đến sau bị từ chối.
+3. Owner chỉ xác nhận sau khi transaction cài hàng rào đã commit (nhận được RPC hay sự kiện chưa đủ). Authority chỉ commit thu hồi khi đã có xác nhận của **tất cả** owner có thể ghi trong phạm vi đó.
+4. Mất liên lạc hoặc chưa rõ kết quả: giữ ý định ở trạng thái chưa xong và tiếp tục chặn cấp quyền mới. Hết thời gian chờ không chứng minh thao tác ghi đã rollback. Phục hồi phải chạy lặp lại an toàn và không bao giờ làm lùi epoch hay hàng rào.
 
-Authority là service sở hữu trạng thái phiên/quyền: Identity hoặc Community. Owner là service có database chứa thao tác ghi cần được bảo vệ. Gate là bản ghi kiểm soát quyền ghi; epoch là phiên bản quyền dùng để từ chối quyền cũ.
+**Giữ nguyên:** quyền có hiệu lực tới commit; thời hạn 5 giây cho chat và media vẫn tính từ commit thu hồi. Không được gọi một commit đã đổi quyền là "đang chờ" để lùi mốc đo.
 
-1. Identity/Community lưu ý định thu hồi riêng và chặn cấp quyền mới cho scope bị ảnh hưởng. Cấp quyền và bắt đầu thu hồi phải được tuần tự hóa; policy hiện hành chưa được chốt thành policy đã thu hồi ở bước này.
-2. Mỗi DB owner có gate/epoch bền. Mọi mutation liên quan kiểm tra gate và giữ khóa trong cùng transaction ghi tới commit. Lệnh cài hàng rào dùng khóa xung đột: mutation đã giữ khóa kết thúc trước hàng rào; mutation mang quyền cũ đến sau hàng rào bị từ chối.
-3. Owner chỉ xác nhận sau khi transaction cài hàng rào đã commit. Authority chỉ commit thu hồi có hiệu lực sau xác nhận của tất cả owner có thể ghi trong scope đó. Xác nhận đã nhận RPC hoặc sự kiện chưa đủ.
-4. Mất liên lạc hoặc chưa rõ kết quả thì giữ ý định ở trạng thái chưa hoàn tất và chặn cấp quyền mới cho scope liên quan. Timeout/TTL không chứng minh writer đã rollback. Recovery phải lặp an toàn và không làm lùi epoch/hàng rào đã bền.
+**Đánh đổi:** chỉ dùng transaction cục bộ, không cần transaction phân tán. Đổi lại ứng dụng phải tự quản lý epoch, hàng rào, xác nhận và phục hồi; thu hồi có thể phải chờ khi một owner mất liên lạc. RPC bị hủy không chứng minh công việc phía server đã dừng ([gRPC deadlines](https://grpc.io/docs/guides/deadlines/)).
 
-Đây là thiết kế suy luận dựa trên cơ chế khóa cục bộ của [PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS), chưa có implementation hoặc proof xuyên service. Các owner phải thực thi gate ở đường ghi thực tế; một token hoặc kiểm tra trong bộ nhớ không thay được gate trong transaction.
-
-Đánh đổi: cơ chế này dùng transaction cục bộ, không phụ thuộc prepared transactions xuyên DB để giữ quyền. Ứng dụng phải quản lý epoch, hàng rào, xác nhận và phục hồi; thu hồi có thể chờ khi owner không liên lạc được. RPC bị hủy không tự chứng minh công việc hoặc transaction đã dừng; trách nhiệm phía ứng dụng được nêu tại [gRPC deadlines](https://grpc.io/docs/guides/deadlines/).
-
-[D06](#v1-revocation-coordinator) xác định service chịu trách nhiệm điều phối. Schema/gate/permit, danh sách owner, thứ tự nhiều authority, endpoint `.proto`, retry/deadline, phản hồi API/UI khi chưa hoàn tất và cơ chế atomicity cho nghiệp vụ ghi nhiều DB còn mở. Quyền của người yêu cầu khi tiến trình thu hồi còn chạy, hạn phiên tự nhiên, reader/dispatcher và cutoff tại SFU tiếp tục cần thiết kế/kiểm chứng theo hợp đồng riêng.
-
-Trước triển khai v1 cần proof writer bị dừng rồi chạy lại, mất ACK sau commit, authority/owner restart, lỗi mạng từng phần và quyền cũ sau fencing; restart phải đọc đúng gate/epoch bền tại owner DB, không làm lùi hàng rào. Proof restore từ backup không làm lùi hàng rào áp dụng sau v1. Chọn D05 chưa thay các tiêu chí nghiệm thu hoặc chứng minh cutoff realtime/media.
+Thiết kế dựa trên cơ chế khóa dòng của [PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS); chưa có code hay bằng chứng giữa các service. Hàng rào phải nằm trên đường ghi thật; token hay kiểm tra trong bộ nhớ không thay được.
 
 <a id="v1-revocation-coordinator"></a>
 
-## D06 — Chủ thể điều phối thu hồi
+### D06 — Ai điều phối
 
-Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-124](../records/decisions/README.md#dec-124). Mỗi service sở hữu phiên/quyền chịu trách nhiệm theo dõi tiến trình, gửi yêu cầu cài hàng rào, thu thập xác nhận, thử lại và phục hồi theo D05.
+**Quyết định:** service sở hữu phiên hoặc quyền tự điều phối thu hồi của mình: theo dõi tiến trình, gửi lệnh cài hàng rào, thu thập xác nhận, thử lại và phục hồi.
 
-| Service | Phạm vi điều phối | Trạng thái bền |
+| Service | Điều phối | Lưu tiến trình |
 |---|---|---|
-| Identity | Thu hồi phiên/tài khoản; ví dụ đăng xuất mọi thiết bị | Ý định, tiến độ xác nhận và phục hồi trong DB Identity |
-| Community | Thu hồi quyền cộng đồng theo membership/role/ACL/kênh; ví dụ xóa role làm mất quyền phòng | Ý định, tiến độ xác nhận và phục hồi trong DB Community |
+| Identity | Thu hồi phiên và tài khoản, ví dụ đăng xuất mọi thiết bị | DB Identity |
+| Community | Thu hồi quyền theo thành viên, vai trò, ACL, phòng, ví dụ xóa vai trò làm mất quyền phòng | DB Community |
 
-Mỗi authority tự ghi ý định thu hồi, chặn cấp quyền mới và commit thay đổi phiên/quyền trong database của mình. Từng owner vẫn tự cài hàng rào trong transaction cục bộ; điều phối không cấp quyền truy cập database service khác.
+Mỗi owner vẫn tự cài hàng rào trong transaction của mình; điều phối không cho quyền truy cập DB của service khác.
 
-Lợi ích là tiến trình và trạng thái quyền thuộc cùng service, giảm bước bàn giao giữa các chủ sở hữu. Đánh đổi là cần triển khai và kiểm chứng phục hồi ở cả Identity và Community. Hai service có thể dùng chung quy tắc hoặc thư viện; cấu trúc code sẽ được thiết kế riêng. Tham khảo trách nhiệm lưu trạng thái và phục hồi của bộ điều phối tại [Microsoft — orchestration](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga#orchestration); D05 vẫn cần giao thức hàng rào riêng.
+**Đánh đổi:** tiến trình nằm cùng chỗ với dữ liệu quyền, ít bước bàn giao. Đổi lại phải làm và kiểm thử phục hồi ở cả Identity và Community (có thể dùng chung thư viện). Tham khảo [mẫu orchestration](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga#orchestration).
 
-Thu hồi Identity/Community đồng thời phải được xử lý mà không chờ vòng. Lệnh điều phối xác thực danh tính service bằng mTLS theo [D20](api-conventions.md#v1-service-authentication), độc lập với quyền của người dùng đang bị thu hồi; quyền gọi RPC và context actor cần thiết kế chi tiết. Công việc tiếp tục/đối soát tiến trình chạy cùng API của authority theo [D12](backend.md#v1-application-workers); mỗi service ban đầu có một tiến trình API hoạt động theo [D21](environments.md#v1-service-replicas). Số luồng xử lý công việc, claim/retry, mở rộng sau, schema, thư viện và hợp đồng `.proto` cần thiết kế chi tiết. [D27](api-conventions.md#v1-integration-event-transport) chọn outbox/worker/gRPC cho sự kiện sau commit, chưa thêm broker ban đầu. Giao thức và proof phục hồi còn mở; source chưa triển khai cơ chế này.
+Ghi chú:
+
+- Thu hồi đồng thời ở Identity và Community không được chờ vòng lẫn nhau.
+- Lệnh điều phối xác thực bằng danh tính service qua mTLS ([D20](api-conventions.md#v1-service-authentication)), không dùng quyền của người đang bị thu hồi.
+- Worker tiếp tục tiến trình chạy cùng API của authority ([D12](backend.md#v1-application-workers)), mỗi service một bản ([D21](environments.md#v1-service-replicas)).
+- Sự kiện sau commit dùng outbox, worker và gRPC, chưa có broker ([D27](api-conventions.md#v1-integration-event-transport)).
 
 <a id="v1-revocation-transport"></a>
 
-## D07 — Truyền lệnh và xác nhận thu hồi
+### D07 — Truyền lệnh và xác nhận
 
-Trạng thái: đã xác nhận phương án A ngày 2026-10-11 — [DEC-126](../records/decisions/README.md#dec-126). Identity/Community gọi trực tiếp owner bằng gRPC + Protobuf theo [D04](api-conventions.md#v1-internal-protocol) để cài hàng rào và nhận kết quả. Tiến trình vẫn được lưu bền tại authority theo D06; điều kiện commit thu hồi theo D05 giữ nguyên.
+**Quyết định:** authority gọi trực tiếp từng owner bằng gRPC ([D04](api-conventions.md#v1-internal-protocol)) để cài hàng rào và nhận kết quả. Tiến trình lưu bền tại authority.
 
-- Authority lưu ý định và tiến độ trong DB của mình, gửi yêu cầu tới từng owner liên quan.
-- Owner trả xác nhận sau khi transaction cài hàng rào đã commit. Authority lưu xác nhận gắn với đúng đợt thu hồi; chỉ chốt thu hồi khi đủ xác nhận theo D05.
-- Mất phản hồi, timeout hoặc owner tạm ngừng: authority giữ tiến trình chưa hoàn tất, tiếp tục đối soát/thử lại an toàn từ trạng thái bền. Không coi lỗi mạng là bằng chứng owner chưa commit; không làm lùi hàng rào đã cài.
+- Authority lưu ý định và tiến độ, gửi lệnh tới từng owner.
+- Owner trả xác nhận sau khi đã commit hàng rào. Authority lưu xác nhận gắn với đúng lần thu hồi.
+- Mất phản hồi, hết thời gian hoặc owner tạm ngừng: giữ tiến trình chưa xong, tiếp tục đối chiếu và thử lại từ trạng thái đã lưu. Lỗi mạng không chứng minh owner chưa commit.
 
-Ví dụ: Community cần cài hàng rào tại Messaging và Media. Community gọi hai owner và lưu kết quả. Nếu chỉ Messaging xác nhận, tiến trình vẫn chưa hoàn tất cho tới khi có xác nhận hợp lệ của Media; authority restart phải tiếp tục được tiến trình đó.
+**Ví dụ:** Community cần cài hàng rào ở Messaging và Media. Nếu chỉ Messaging xác nhận, tiến trình vẫn chưa xong cho tới khi Media xác nhận. Nếu Community khởi động lại, nó phải tiếp tục được tiến trình đó.
 
-Lựa chọn tận dụng gRPC và tiến trình bền đã có trong thiết kế, không cần hàng đợi riêng cho lệnh hàng rào. Đánh đổi là từng lần gọi cần owner đáp ứng; thu hồi có thể chờ khi mất liên lạc. Deadline/hủy RPC không tự chứng minh transaction đã rollback; ứng dụng phải quản lý công việc phía server theo [gRPC deadlines](https://grpc.io/docs/guides/deadlines/).
+**Đánh đổi:** không cần hàng đợi riêng cho lệnh hàng rào. Đổi lại mỗi lần gọi cần owner trả lời; thu hồi có thể phải chờ khi mất liên lạc. Request HTTP ban đầu không cần giữ mở suốt tiến trình.
 
-D07 chỉ chốt đường truyền lệnh hàng rào và kết quả. Danh tính service dùng mTLS theo [D20](api-conventions.md#v1-service-authentication). Schema `.proto`, cấu hình xác thực và quyền RPC, thời hạn/lịch thử lại và phản hồi API/UI khi chưa hoàn tất cần thiết kế riêng; cách host công việc nền theo [D12](backend.md#v1-application-workers). Gọi gRPC không yêu cầu giữ request HTTP ban đầu mở suốt tiến trình. Sự kiện sau commit theo [D27](api-conventions.md#v1-integration-event-transport) không thay xác nhận cài hàng rào của D07; proof thu hồi/restart/cutoff vẫn còn mở.
+Sự kiện sau commit (D27) không thay cho xác nhận cài hàng rào. Việc nhận tin dùng quyết định riêng: [D08](../features/messaging/message-lifecycle.md#v1-message-intake).
 
-[D08 — tiếp nhận tin](../features/messaging/message-lifecycle.md#v1-message-intake) chọn ghi trực tiếp và giữ khả năng chuyển sang hàng đợi cho luồng gửi tin; đây là quyết định riêng với D07.
+## Thiết kế v1: kiểm tra phiên
+
+<a id="v1-session-validation"></a>
+
+### D30 — Xác minh JWT tại chỗ, kiểm tra phiên qua Redis
+
+**Quyết định:** mỗi service tự xác minh chữ ký JWT, rồi đọc trạng thái phiên và tài khoản tối thiểu từ một Redis do Identity quản lý. Áp dụng cho request HTTP cần phiên và khi mở kết nối, đăng ký nhận, bù tin.
+
+| Mục | Yêu cầu |
+|---|---|
+| Chủ sở hữu | Identity quyết định và cập nhật; PostgreSQL của Identity giữ dữ liệu bền |
+| Dữ liệu trong Redis | Trạng thái phiên và tài khoản cần cho xác thực, kèm hạn và phiên bản (schema chưa chốt) |
+| Bên đọc | Community, Messaging, Media chỉ đọc, với quyền giới hạn |
+| Không chắc chắn | Thiếu bản ghi, Redis lỗi hoặc đang phục hồi không chứng minh phiên hợp lệ; chưa xác minh được thì không cho truy cập |
+| Thu hồi | Redis phải chặn phiên trước khi thu hồi được xác nhận là có hiệu lực; vẫn giữ hàng rào ghi của D05 |
+
+**Lý do:** giảm số lần gọi Identity API và tránh mỗi service giữ một bản trạng thái riêng. **Đổi lại:** thêm Redis, lời gọi mạng, và cần giao thức nhất quán và phục hồi. Chưa đo hiệu năng.
+
+**Nguyên tắc:**
+
+- Không coi phiên hợp lệ chỉ vì không có trong danh sách đen.
+- Khởi động lại, nạp lại Redis, dựng lại từ PostgreSQL, dữ liệu cũ hay bị đẩy ra khỏi bộ nhớ (eviction) không được làm sống lại quyền đã thu hồi. Tham khảo: [persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/), [eviction](https://redis.io/docs/latest/develop/reference/eviction/).
+- PostgreSQL và Redis không có transaction chung. Commit DB rồi chờ sự kiện nền cập nhật Redis không đủ cho request HTTP ngay sau đó; cần giao thức phối hợp riêng cho cấp phiên, làm mới token và thu hồi.
+- Kết quả đọc Redis không cấp quyền ghi và không chứng minh đã cắt chat hay media. Không gọi Redis cho từng gói media.
+
+**Ranh giới:** đây là phần bổ sung cho [D02](database.md#v1-database-layout): service khác chỉ đọc Redis, không đọc hay ghi PostgreSQL của Identity. Redis này không dùng làm backplane SignalR, broker hay Redis của LiveKit. Kết nối Redis là truy cập hạ tầng, không thay gRPC và mTLS giữa các service. Chữ ký và khóa công khai theo [D28, D29](api-conventions.md#v1-user-token-signing); thời hạn phiên vẫn theo DEC-065. Redis tự host trong container riêng ([D32](environments.md#v1-auth-redis-deployment)).
+
+<a id="v1-session-validation-fallback"></a>
+
+### D31 — Khi Redis không trả lời được
+
+**Quyết định:** nếu không xác minh được phiên qua Redis (lỗi kết nối, thiếu dữ liệu, chưa đủ tin cậy) thì tạm từ chối request. Không gọi Identity để dự phòng.
+
+| Tình huống | Xử lý |
+|---|---|
+| Chưa xác minh được qua Redis | Trả lỗi tạm thời; chờ Redis phục vụ lại |
+| Đã xác định phiên không hợp lệ | Từ chối theo hợp đồng phiên; không tìm nguồn khác để ghi đè |
+| Redis hoạt động lại | Request tiếp theo kiểm tra lại JWT, phiên và quyền từ đầu; không dùng kết quả cũ |
+
+**Lý do:** ít nhánh xử lý hơn, và không dồn tải sang Identity khi Redis lỗi. **Đổi lại:** Redis lỗi sẽ làm gián đoạn mọi truy cập cần đăng nhập. Tham khảo [mẫu Circuit Breaker](https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker).
+
+- Lỗi tạm thời này khác với "phiên bị từ chối", và không tự thu hồi phiên.
+- Không chuyển sang chỉ kiểm tra JWT hay bỏ qua Redis.
+- D31 chỉ áp dụng khi tiếp nhận truy cập; không thay cho việc cắt kết nối đang mở hay xử lý thao tác ghi đã nhận.
+
+## Còn mở
+
+**D05, D06, D07:**
+
+- Schema hàng rào và giấy phép ghi; danh sách owner cho từng loại thu hồi; thứ tự khi có nhiều authority.
+- File `.proto`, thời hạn và lịch thử lại, quyền gọi RPC, thông tin người thực hiện truyền theo lệnh.
+- Phản hồi API và giao diện khi thu hồi chưa xong.
+- Cách ghi nhiều DB một cách nguyên tử cho các nghiệp vụ cần.
+- Quyền của người yêu cầu khi tiến trình thu hồi đang chạy; phiên hết hạn tự nhiên; bên đọc, worker gửi sự kiện và LiveKit.
+- Số luồng xử lý, cách giành việc và thử lại của worker.
+- Bằng chứng trước khi làm v1: owner dừng rồi chạy lại, mất xác nhận sau commit, authority hoặc owner khởi động lại, lỗi mạng một phần, quyền cũ sau khi đã cài hàng rào.
+
+**D30, D31:**
+
+- Schema; danh sách đen hay danh sách trắng; TTL; xử lý phiên hết hạn tự nhiên.
+- Giao thức phối hợp DB với Redis khi cấp phiên, làm mới token, thu hồi; trạng thái sẵn sàng sau khởi động.
+- Mã lỗi và giao diện cho lỗi tạm thời; thời gian chờ; giới hạn lời gọi Redis; điều kiện phục hồi.
+- Phiên bản Redis, persistence, eviction, tài nguyên, HA; bảo vệ kết nối, quyền và thông tin đăng nhập Redis.
+
+---
+
+Nguồn: DEC-083, DEC-099 (thời hạn 5 giây), [DEC-123](../records/decisions/README.md#dec-123) (D05), [DEC-124](../records/decisions/README.md#dec-124) (D06), [DEC-126](../records/decisions/README.md#dec-126) (D07), [DEC-148](../records/decisions/README.md#dec-148) (D30), [DEC-149](../records/decisions/README.md#dec-149) (D31), DEC-156 (backup sau v1). Các phương án đã cân nhắc ghi trong hồ sơ quyết định.

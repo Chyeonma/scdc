@@ -2,15 +2,17 @@
 
 # SCDC — Truy vết Community
 
-Ma trận COM/UC/API/AC/TC dẫn tới nguồn định nghĩa ở từng thành phần. Danh mục hành trình tại [đặc tả](README.md#use-cases); kết quả thực thi dẫn từ [status](README.md).
+Trang này là bảng tra cứu: mỗi quy tắc (COM), ca sử dụng (UC), API, tiêu chí chấp nhận (AC) và ca kiểm thử (TC) của Community được định nghĩa ở trang nào. Trang này không định nghĩa nội dung mới.
+
+Hành trình chính xem [Community](README.md#use-cases). Kết quả kiểm thử xem [hồ sơ kiểm thử](../../records/verification/community/README.md).
 
 <a id="use-case-rules"></a>
 
 <a id="truy-vết-quy-tắc-cộng-đồng"></a>
 
-## Truy vết quy tắc cộng đồng
+## Quy tắc và ca sử dụng
 
-Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này chỉ xác định UC áp dụng. [COM-009](../messaging/channel-messaging.md#com-009) và phần scope của [COM-039](servers.md#com-039) được ghi thành giới hạn, không tạo UC chức năng ngoài v1.
+Bảng dưới cho biết mỗi quy tắc áp dụng cho ca sử dụng nào. Nội dung quy tắc nằm ở trang được link. [COM-009](../messaging/channel-messaging.md#com-009) và một phần [COM-039](servers.md#com-039) chỉ ghi giới hạn phạm vi, không tạo ca sử dụng ngoài v1.
 
 | Quy tắc | Use case áp dụng | Điểm cần đối chiếu |
 |---|---|---|
@@ -22,7 +24,7 @@ Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này ch�
 | [COM-006](servers.md#com-006) | [UC-COM-05](servers.md#uc-com-05) | Đúng quyền đổi join mode |
 | [COM-007](channels.md#com-007) | [UC-COM-16](channels.md#uc-com-16) | Đúng quyền tạo phòng |
 | [COM-008](channels.md#com-008) | [UC-COM-17](channels.md#uc-com-17), [UC-COM-25](../messaging/channel-messaging.md#uc-com-25) | Danh sách, nội dung và cập nhật đều theo view |
-| [COM-009](../messaging/channel-messaging.md#com-009) | [UC-COM-23](../messaging/channel-messaging.md#uc-com-23) | Composer chỉ gửi văn bản; file trong phòng ở đợt sau |
+| [COM-009](../messaging/channel-messaging.md#com-009) | [UC-COM-23](../messaging/channel-messaging.md#uc-com-23) | Nền composer văn bản; file bổ sung theo DEC-173, phạm vi/đợt bàn giao đang xác định |
 | [COM-010](invitations.md#com-010) | [UC-COM-09](invitations.md#uc-com-09) | Đúng quyền tạo lời mời |
 | [COM-011](memberships.md#com-011) | [UC-COM-08](memberships.md#uc-com-08) | Đúng quyền duyệt |
 | [COM-012](channels.md#com-012) | [UC-COM-16](channels.md#uc-com-16), [UC-COM-22](access-control.md#uc-com-22) | Phòng mới mặc định cho mọi thành viên xem |
@@ -61,13 +63,15 @@ Giới hạn và thứ tự ưu tiên giữ ở bảng COM/ACL; bảng này ch�
 
 <a id="đối-chiếu-use-case-với-api-và-kiểm-thử"></a>
 
-## Đối chiếu use case với API và kiểm thử
+## Ca sử dụng, API và kiểm thử
 
-API trong bảng là hợp đồng mục tiêu tại [community.openapi.json](../../contracts/community.openapi.json); metadata từng operation ghi phần đã triển khai/partial và nhánh tương ứng. Không suy toàn bộ contract đã chạy hoặc chưa chạy. Các đường dẫn dùng prefix `/api/v1`; `{id}` là serverId, `{channelId}` là phòng đích. AC và TC dẫn tới [tiêu chí chấp nhận](#acceptance) và [ca kiểm thử](#tests) hiện có. Bảng này giữ phạm vi đầy đủ; test thực tế/kết quả/phần chưa chứng minh ở [verification](../../records/verification/community/README.md), tiến độ tại [các chủ đề Community](README.md).
+- API trong bảng là hợp đồng mục tiêu trong [community.openapi.json](../../contracts/community.openapi.json). Mỗi operation trong file ghi rõ đã làm, làm một phần hay chưa làm.
+- Tiền tố `/api/v1`; `{id}` là ID server, `{channelId}` là ID phòng.
+- Bảng giữ toàn bộ phạm vi v1. Kết quả thực tế và phần chưa chứng minh xem [hồ sơ kiểm thử](../../records/verification/community/README.md); tiến độ xem [Community](README.md).
 
 | Use case | API/thành phần mục tiêu | AC-COM | TC hiện có và phụ thuộc |
 |---|---|---|---|
-| [UC-COM-01](servers.md#uc-com-01) | POST /servers | [AC-COM-29](servers.md#ac-com-29), [AC-COM-36](access-control.md#ac-com-36), [AC-COM-38](servers.md#ac-com-38) | [TC-COM-02](servers.md#tc-com-02), [TC-COM-19](servers.md#tc-com-19), [TC-COM-23](../../system/community.md#tc-com-23), [TC-COM-26](../../system/community.md#tc-com-26); account guard, server/owner/@everyone/operation nguyên tử |
+| [UC-COM-01](servers.md#uc-com-01) | POST /servers | [AC-COM-29](servers.md#ac-com-29), [AC-COM-36](access-control.md#ac-com-36), [AC-COM-38](servers.md#ac-com-38) | [TC-COM-02](servers.md#tc-com-02), [TC-COM-19](servers.md#tc-com-19), [TC-COM-23](mechanics.md#tc-com-23), [TC-COM-26](mechanics.md#tc-com-26); account guard, server/owner/@everyone/operation nguyên tử |
 | [UC-COM-02](servers.md#uc-com-02) | GET /servers/search; GET /servers/{id} | [AC-COM-01](servers.md#ac-com-01), [AC-COM-19](invitations.md#ac-com-19), [AC-COM-37](servers.md#ac-com-37) | [TC-COM-01](servers.md#tc-com-01), [TC-COM-18](servers.md#tc-com-18); search key/cursor/visibility |
 | [UC-COM-03](servers.md#uc-com-03) | GET /servers; GET /servers/{id}; GET /servers/{id}/membership/me | [AC-COM-06](access-control.md#ac-com-06), [AC-COM-19](invitations.md#ac-com-19), [AC-COM-21](memberships.md#ac-com-21), [AC-COM-35](memberships.md#ac-com-35) | [TC-COM-11](memberships.md#tc-com-11), [TC-COM-16](memberships.md#tc-com-16), [TC-COM-22](memberships.md#tc-com-22); cần bổ sung assertion list/detail/own status sau left |
 | [UC-COM-04](servers.md#uc-com-04) | PATCH /servers/{id} | [AC-COM-29](servers.md#ac-com-29), [AC-COM-38](servers.md#ac-com-38), [AC-COM-39](servers.md#ac-com-39), [AC-COM-40](servers.md#ac-com-40) | [TC-COM-02](servers.md#tc-com-02), [TC-COM-19](servers.md#tc-com-19), [TC-COM-20](servers.md#tc-com-20), [TC-COM-27](servers.md#tc-com-27); private switch tranh approve/cancel |
@@ -75,25 +79,31 @@ API trong bảng là hợp đồng mục tiêu tại [community.openapi.json](..
 | [UC-COM-06](memberships.md#uc-com-06) | POST /servers/{id}/join → membership | [AC-COM-02](memberships.md#ac-com-02), [AC-COM-35](memberships.md#ac-com-35) | [TC-COM-03](memberships.md#tc-com-03), [TC-COM-16](memberships.md#tc-com-16), [TC-COM-22](memberships.md#tc-com-22); membership epoch/unique/role mặc định |
 | [UC-COM-07](memberships.md#uc-com-07) | POST /servers/{id}/join → pending; GET .../join-requests/me; DELETE .../join-requests/{requestId} | [AC-COM-03](memberships.md#ac-com-03), [AC-COM-30](memberships.md#ac-com-30), [AC-COM-40](servers.md#ac-com-40) | [TC-COM-04](memberships.md#tc-com-04), [TC-COM-05](memberships.md#tc-com-05), [TC-COM-20](servers.md#tc-com-20); pending unique/transition |
 | [UC-COM-08](memberships.md#uc-com-08) | GET .../join-requests; POST .../{requestId}/approve hoặc /reject | [AC-COM-10](memberships.md#ac-com-10), [AC-COM-30](memberships.md#ac-com-30), [AC-COM-40](servers.md#ac-com-40) | [TC-COM-04](memberships.md#tc-com-04), [TC-COM-05](memberships.md#tc-com-05), [TC-COM-20](servers.md#tc-com-20); guard actor/target và membership cùng commit |
-| [UC-COM-09](invitations.md#uc-com-09) | GET/POST .../invites; GET .../invites/{inviteId}/link | [AC-COM-09](invitations.md#ac-com-09), [AC-COM-32](invitations.md#ac-com-32), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-07](invitations.md#tc-com-07), [TC-COM-21](invitations.md#tc-com-21), [TC-COM-23](../../system/community.md#tc-com-23), [TC-COM-24](invitations.md#tc-com-24); secret/key ring/operation |
+| [UC-COM-09](invitations.md#uc-com-09) | GET/POST .../invites; GET .../invites/{inviteId}/link | [AC-COM-09](invitations.md#ac-com-09), [AC-COM-32](invitations.md#ac-com-32), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-07](invitations.md#tc-com-07), [TC-COM-21](invitations.md#tc-com-21), [TC-COM-23](mechanics.md#tc-com-23), [TC-COM-24](invitations.md#tc-com-24); secret/key ring/operation |
 | [UC-COM-10](invitations.md#uc-com-10) | DELETE .../invites/{inviteId} | [AC-COM-20](invitations.md#ac-com-20), [AC-COM-32](invitations.md#ac-com-32), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-06](invitations.md#tc-com-06), [TC-COM-07](invitations.md#tc-com-07), [TC-COM-21](invitations.md#tc-com-21), [TC-COM-24](invitations.md#tc-com-24); revoke tranh join |
 | [UC-COM-11](invitations.md#uc-com-11) | POST /invites/preview; POST /invites/join | [AC-COM-04](invitations.md#ac-com-04), [AC-COM-05](invitations.md#ac-com-05), [AC-COM-19](invitations.md#ac-com-19), [AC-COM-20](invitations.md#ac-com-20), [AC-COM-32](invitations.md#ac-com-32), [AC-COM-35](memberships.md#ac-com-35), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-06](invitations.md#tc-com-06), [TC-COM-13](invitations.md#tc-com-13), [TC-COM-16](memberships.md#tc-com-16), [TC-COM-21](invitations.md#tc-com-21), [TC-COM-24](invitations.md#tc-com-24); lượt cuối/rollback, pending joined_elsewhere |
-| [UC-COM-12](invitations.md#uc-com-12) | GET/POST .../member-invitations; DELETE .../{invitationId} | [AC-COM-19](invitations.md#ac-com-19), [AC-COM-31](invitations.md#ac-com-31), [AC-COM-35](memberships.md#ac-com-35), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-08](invitations.md#tc-com-08), [TC-COM-17](invitations.md#tc-com-17), [TC-COM-21](invitations.md#tc-com-21), [TC-COM-23](../../system/community.md#tc-com-23); unique pending/expiry/operation |
+| [UC-COM-12](invitations.md#uc-com-12) | GET/POST .../member-invitations; DELETE .../{invitationId} | [AC-COM-19](invitations.md#ac-com-19), [AC-COM-31](invitations.md#ac-com-31), [AC-COM-35](memberships.md#ac-com-35), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-08](invitations.md#tc-com-08), [TC-COM-17](invitations.md#tc-com-17), [TC-COM-21](invitations.md#tc-com-21), [TC-COM-23](mechanics.md#tc-com-23); unique pending/expiry/operation |
 | [UC-COM-13](invitations.md#uc-com-13) | GET /member-invitations; POST .../{invitationId}/accept hoặc /reject | [AC-COM-19](invitations.md#ac-com-19), [AC-COM-31](invitations.md#ac-com-31), [AC-COM-35](memberships.md#ac-com-35), [AC-COM-41](invitations.md#ac-com-41) | [TC-COM-08](invitations.md#tc-com-08), [TC-COM-17](invitations.md#tc-com-17), [TC-COM-21](invitations.md#tc-com-21); đúng recipient/terminal/epoch |
 | [UC-COM-14](servers.md#uc-com-14) | POST /servers/{id}/ownership-transfer; GET .../members | [AC-COM-33](servers.md#ac-com-33) | [TC-COM-14](servers.md#tc-com-14); Identity→server→membership lock order |
 | [UC-COM-15](memberships.md#uc-com-15) | DELETE /servers/{id}/members/me | [AC-COM-21](memberships.md#ac-com-21), [AC-COM-35](memberships.md#ac-com-35) | [TC-COM-11](memberships.md#tc-com-11), [TC-COM-14](servers.md#tc-com-14), [TC-COM-16](memberships.md#tc-com-16), [TC-COM-22](memberships.md#tc-com-22); epoch/clear role/override/revocation |
-| [UC-COM-16](channels.md#uc-com-16) | POST /servers/{id}/channels | [AC-COM-07](channels.md#ac-com-07), [AC-COM-11](access-control.md#ac-com-11), [AC-COM-38](servers.md#ac-com-38), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-01](access-control.md#tc-acl-01), [TC-ACL-06](access-control.md#tc-acl-06), [TC-ACL-08](access-control.md#tc-acl-08); [TC-COM-19](servers.md#tc-com-19), [TC-COM-23](../../system/community.md#tc-com-23), [TC-COM-26](../../system/community.md#tc-com-26), [TC-COM-27](servers.md#tc-com-27); lifecycle Messaging/Media |
+| [UC-COM-16](channels.md#uc-com-16) | POST /servers/{id}/channels | [AC-COM-07](channels.md#ac-com-07), [AC-COM-11](access-control.md#ac-com-11), [AC-COM-38](servers.md#ac-com-38), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-01](access-control.md#tc-acl-01), [TC-ACL-06](access-control.md#tc-acl-06), [TC-ACL-08](access-control.md#tc-acl-08); [TC-COM-19](servers.md#tc-com-19), [TC-COM-23](mechanics.md#tc-com-23), [TC-COM-26](mechanics.md#tc-com-26), [TC-COM-27](servers.md#tc-com-27); lifecycle Messaging/Media |
 | [UC-COM-17](channels.md#uc-com-17) | GET .../channels; GET .../channels/{channelId}; GET .../messages | [AC-COM-06](access-control.md#ac-com-06), [AC-COM-11](access-control.md#ac-com-11), [AC-COM-13](../messaging/channel-messaging.md#ac-com-13), [AC-COM-14](channels.md#ac-com-14), [AC-COM-15](channels.md#ac-com-15), [AC-COM-25](access-control.md#ac-com-25), [AC-COM-26](access-control.md#ac-com-26), [AC-COM-27](access-control.md#ac-com-27), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-01](access-control.md#tc-acl-01), [TC-ACL-02](access-control.md#tc-acl-02), [TC-ACL-03](access-control.md#tc-acl-03), [TC-ACL-04](access-control.md#tc-acl-04), [TC-ACL-05](access-control.md#tc-acl-05), [TC-ACL-08](access-control.md#tc-acl-08), [TC-ACL-12](access-control.md#tc-acl-12); [TC-COM-09](channels.md#tc-com-09), [TC-COM-12](../messaging/channel-messaging.md#tc-com-12), [TC-COM-25](../messaging/channel-messaging.md#tc-com-25), [TC-COM-27](servers.md#tc-com-27); lịch sử theo guard/projection |
 | [UC-COM-18](channels.md#uc-com-18) | PATCH .../channels/{channelId} | [AC-COM-34](channels.md#ac-com-34), [AC-COM-38](servers.md#ac-com-38), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-12](access-control.md#tc-acl-12); [TC-COM-19](servers.md#tc-com-19); cần assertion sửa tên/topic/version riêng |
 | [UC-COM-19](channels.md#uc-com-19) | DELETE .../channels/{channelId} | [AC-COM-34](channels.md#ac-com-34), [AC-COM-39](servers.md#ac-com-39), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-12](access-control.md#tc-acl-12); [TC-COM-15](channels.md#tc-com-15), [TC-COM-25](../messaging/channel-messaging.md#tc-com-25), [TC-COM-27](servers.md#tc-com-27); lifecycle/retention, cutoff media riêng |
-| [UC-COM-20](access-control.md#uc-com-20) | GET/POST .../roles; PATCH/DELETE .../roles/{roleId} | [AC-COM-28](access-control.md#ac-com-28), [AC-COM-36](access-control.md#ac-com-36), [AC-COM-38](servers.md#ac-com-38) | [TC-ACL-06](access-control.md#tc-acl-06), [TC-ACL-08](access-control.md#tc-acl-08), [TC-ACL-09](access-control.md#tc-acl-09), [TC-ACL-11](access-control.md#tc-acl-11); [TC-COM-19](servers.md#tc-com-19), [TC-COM-23](../../system/community.md#tc-com-23), [TC-COM-26](../../system/community.md#tc-com-26); limit/system role/version |
+| [UC-COM-20](access-control.md#uc-com-20) | GET/POST .../roles; PATCH/DELETE .../roles/{roleId} | [AC-COM-28](access-control.md#ac-com-28), [AC-COM-36](access-control.md#ac-com-36), [AC-COM-38](servers.md#ac-com-38) | [TC-ACL-06](access-control.md#tc-acl-06), [TC-ACL-08](access-control.md#tc-acl-08), [TC-ACL-09](access-control.md#tc-acl-09), [TC-ACL-11](access-control.md#tc-acl-11); [TC-COM-19](servers.md#tc-com-19), [TC-COM-23](mechanics.md#tc-com-23), [TC-COM-26](mechanics.md#tc-com-26); limit/system role/version |
 | [UC-COM-21](access-control.md#uc-com-21) | GET .../members; GET/PUT .../members/{userId}/roles | [AC-COM-28](access-control.md#ac-com-28), [AC-COM-35](memberships.md#ac-com-35), [AC-COM-36](access-control.md#ac-com-36) | [TC-ACL-06](access-control.md#tc-acl-06), [TC-ACL-08](access-control.md#tc-acl-08); [TC-COM-16](memberships.md#tc-com-16), [TC-COM-22](memberships.md#tc-com-22), [TC-COM-25](../messaging/channel-messaging.md#tc-com-25); đúng epoch/union quyền |
 | [UC-COM-22](access-control.md#uc-com-22) | GET/PUT .../channels/{channelId}/access; GET .../roles; GET .../members | [AC-COM-11](access-control.md#ac-com-11), [AC-COM-16](access-control.md#ac-com-16), [AC-COM-25](access-control.md#ac-com-25), [AC-COM-26](access-control.md#ac-com-26), [AC-COM-27](access-control.md#ac-com-27), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-02](access-control.md#tc-acl-02), [TC-ACL-03](access-control.md#tc-acl-03), [TC-ACL-04](access-control.md#tc-acl-04), [TC-ACL-05](access-control.md#tc-acl-05), [TC-ACL-08](access-control.md#tc-acl-08), [TC-ACL-10](access-control.md#tc-acl-10), [TC-ACL-12](access-control.md#tc-acl-12); [TC-COM-22](memberships.md#tc-com-22), [TC-COM-25](../messaging/channel-messaging.md#tc-com-25); ACL snapshot/guard |
 | [UC-COM-23](../messaging/channel-messaging.md#uc-com-23) | POST .../channels/{channelId}/messages | [AC-COM-12](../messaging/channel-messaging.md#ac-com-12), [AC-COM-17](access-control.md#ac-com-17), [AC-COM-18](../messaging/channel-messaging.md#ac-com-18), [AC-COM-22](../messaging/channel-messaging.md#ac-com-22), [AC-COM-24](../messaging/channel-messaging.md#ac-com-24) | [TC-COM-10](../messaging/channel-messaging.md#tc-com-10), [TC-COM-12](../messaging/channel-messaging.md#tc-com-12), [TC-COM-25](../messaging/channel-messaging.md#tc-com-25), [TC-COM-27](servers.md#tc-com-27); TC-TEXT ở DM, HMAC/sequence/outbox |
 | [UC-COM-24](../messaging/channel-messaging.md#uc-com-24) | PATCH/DELETE .../messages/{messageId} | [AC-COM-12](../messaging/channel-messaging.md#ac-com-12), [AC-COM-13](../messaging/channel-messaging.md#ac-com-13), [AC-COM-23](../messaging/channel-messaging.md#ac-com-23), [AC-COM-24](../messaging/channel-messaging.md#ac-com-24) | [TC-COM-10](../messaging/channel-messaging.md#tc-com-10); TC-TEXT ở DM, tác giả/version/tombstone |
 | [UC-COM-25](../messaging/channel-messaging.md#uc-com-25) | /hubs/chat; REST bù lịch sử và đọc lại resource | [AC-COM-06](access-control.md#ac-com-06), [AC-COM-11](access-control.md#ac-com-11), [AC-COM-13](../messaging/channel-messaging.md#ac-com-13), [AC-COM-14](channels.md#ac-com-14), [AC-COM-18](../messaging/channel-messaging.md#ac-com-18), [AC-COM-21](memberships.md#ac-com-21), [AC-COM-25](access-control.md#ac-com-25), [AC-COM-26](access-control.md#ac-com-26), [AC-COM-34](channels.md#ac-com-34), [AC-COM-35](memberships.md#ac-com-35), [AC-COM-42](access-control.md#ac-com-42) | [TC-ACL-07](access-control.md#tc-acl-07), [TC-ACL-11](access-control.md#tc-acl-11); [TC-COM-09](channels.md#tc-com-09), [TC-COM-11](memberships.md#tc-com-11), [TC-COM-15](channels.md#tc-com-15), [TC-COM-22](memberships.md#tc-com-22), [TC-COM-25](../messaging/channel-messaging.md#tc-com-25); cần proof dispatch/reconnect/notification routing và DEC-083 |
 
-42 AC-COM và 42 quy tắc COM đều được truy vết; [COM-009](../messaging/channel-messaging.md#com-009), [COM-039](servers.md#com-039) có phần giới hạn scope. Mỗi gói phải có assertion cho endpoint/nhánh nó thực hiện: list/detail và metadata edit đã có test thực tế; lịch sử/đối soát leave của [UC-COM-03](servers.md#uc-com-03), join mode [UC-COM-05](servers.md#uc-com-05) và định tuyến [UC-COM-25](../messaging/channel-messaging.md#uc-com-25) còn proof theo [verification](../../records/verification/community/README.md). [TC-COM-23](../../system/community.md#tc-com-23), [TC-COM-26](../../system/community.md#tc-com-26) cùng fixtures operation/quyền kiểm chứng cơ chế dùng chung; fixture khớp không chứng minh UC/API đã đạt. Phương pháp ghi kết quả và đo tải/thu hồi theo [nghiệm thu](../../releases/acceptance.md#testing).
+**Độ phủ:** cả 42 quy tắc COM và 42 tiêu chí AC-COM đều có trong bảng.
+
+- Mỗi gói phải có test cho endpoint và nhánh mà nó làm.
+- Đã có test thật: xem danh sách và chi tiết, sửa thông tin server.
+- Còn thiếu bằng chứng: lịch sử và đối chiếu khi rời của [UC-COM-03](servers.md#uc-com-03), đổi cách tham gia [UC-COM-05](servers.md#uc-com-05), định tuyến realtime [UC-COM-25](../messaging/channel-messaging.md#uc-com-25).
+- [TC-COM-23](mechanics.md#tc-com-23), [TC-COM-26](mechanics.md#tc-com-26) và fixture kiểm tra cơ chế dùng chung; fixture khớp không chứng minh ca sử dụng đã đạt.
+- Cách ghi kết quả, đo tải và đo thu hồi xem [nghiệm thu](../../releases/acceptance.md#testing).
 
 <a id="acceptance"></a>
 
@@ -101,7 +111,7 @@ API trong bảng là hợp đồng mục tiêu tại [community.openapi.json](..
 
 ## Tiêu chí chấp nhận
 
-42 AC-COM giữ nguyên nội dung, được đặt ở thành phần chủ trì và dẫn chiếu từ [ma trận UC/API/AC/TC](#use-case-coverage).
+Mỗi AC-COM được định nghĩa ở trang tính năng chính của nó; bảng [ca sử dụng, API và kiểm thử](#use-case-coverage) link tới đó.
 
 | Mã | Nguồn chuẩn |
 |---|---|
@@ -154,7 +164,7 @@ API trong bảng là hợp đồng mục tiêu tại [community.openapi.json](..
 
 ## Ca kiểm thử
 
-[TC-ACL-01–12](access-control.md#tests) thuộc Permissions. 27 TC-COM nằm ở nguồn chủ trì dưới đây; ca xuyên phần được dẫn chiếu cùng AC trong bảng UC. Kết quả từng phạm vi được dẫn chiếu từ [các chủ đề Community](README.md); danh mục ca kiểm thử không tự ghi nhận đạt. [Dữ liệu và cách ghi bằng chứng](../messaging/channel-messaging.md#evidence) áp dụng chung.
+TC-ACL-01 đến 12 nằm ở [vai trò và quyền](access-control.md#tests). 27 ca TC-COM nằm ở các trang trong bảng dưới; ca liên quan nhiều phần được link cùng AC trong bảng ca sử dụng. Danh sách ca không có nghĩa là đã đạt. Dữ liệu thử và cách ghi bằng chứng dùng chung xem [tin phòng](../messaging/channel-messaging.md#evidence).
 
 | Mã | Nguồn chuẩn |
 |---|---|
@@ -180,8 +190,8 @@ API trong bảng là hợp đồng mục tiêu tại [community.openapi.json](..
 | [TC-COM-20](servers.md#tc-com-20) | [Servers — Cộng đồng và chủ sở hữu](servers.md#tc-com-20) |
 | [TC-COM-21](invitations.md#tc-com-21) | [Invitations — Link mời và lời mời đích danh](invitations.md#tc-com-21) |
 | [TC-COM-22](memberships.md#tc-com-22) | [Memberships — Thành viên và yêu cầu tham gia](memberships.md#tc-com-22) |
-| [TC-COM-23](../../system/community.md#tc-com-23) | [Community — Giao dịch và tích hợp dùng chung](../../system/community.md#tc-com-23) |
+| [TC-COM-23](mechanics.md#tc-com-23) | [Community — Giao dịch và tích hợp dùng chung](mechanics.md#tc-com-23) |
 | [TC-COM-24](invitations.md#tc-com-24) | [Invitations — Link mời và lời mời đích danh](invitations.md#tc-com-24) |
 | [TC-COM-25](../messaging/channel-messaging.md#tc-com-25) | [Community — Giao dịch và tích hợp dùng chung](../messaging/channel-messaging.md#tc-com-25) |
-| [TC-COM-26](../../system/community.md#tc-com-26) | [Community — Giao dịch và tích hợp dùng chung](../../system/community.md#tc-com-26) |
+| [TC-COM-26](mechanics.md#tc-com-26) | [Community — Giao dịch và tích hợp dùng chung](mechanics.md#tc-com-26) |
 | [TC-COM-27](servers.md#tc-com-27) | [Servers — Cộng đồng và chủ sở hữu](servers.md#tc-com-27) |

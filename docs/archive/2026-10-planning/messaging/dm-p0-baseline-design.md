@@ -105,4 +105,4 @@ Ngưỡng text2.000UTF-16, no trim/NFC body, CRLF/CR→LF, Unicode17/invisible t
 - Provider email, independent restore journal storage/keys/worker authority, retention và release owners chưa chốt ở P0; P8/v1 vẫn Bị chặn nếu thiếu đầu vào. Restore thu hồi toàn bộ sessions/link từ backup theo lifecycle, không chỉ những session có journal revoke.
 - SDK/keyring/SQL/error changes cần cập nhật source/contract/tests/docs cùng task; không sửa policy để khớp code cũ.
 
-Bản chạy và hướng dẫn người dùng: [biên bản DM-P0-T01](../../verification/messaging/DM-P0-T01.md).
+Bản chạy và hướng dẫn người dùng: [biên bản DM-P0-T01](../../../records/verification/messaging/DM-P0-T01.md).

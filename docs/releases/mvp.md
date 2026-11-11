@@ -1,105 +1,109 @@
-# SCDC — Mốc nội bộ MVP và bàn giao sang v1
+# SCDC — Mốc MVP và bàn giao sang v1
 
-Cập nhật: 2026-10-13. Bản nguồn bàn giao: `900e226` — hợp nhất Community và Direct Messaging trong một API host Modular Monolith. Đây là snapshot nền phát triển để tiếp tục [v1](v1.md); trạng thái và bằng chứng dưới đây áp dụng theo revision được ghi nhận.
+MVP là mốc nội bộ: bản chụp phần nền đã làm, dùng làm điểm xuất phát cho [v1](v1.md). Trang này ghi những gì đã có, bằng chứng đã có, và việc còn chuyển sang v1.
 
-## Vai trò của mốc MVP
+**Bản chụp:** commit `900e226`, ngày 2026-10-13. Community và nhắn tin riêng (DM) đã được ghép vào một ứng dụng API duy nhất (modular monolith). Trạng thái và bằng chứng dưới đây chỉ đúng với bản này.
 
-MVP là mốc làm việc và tích hợp nội bộ. **v1 là sản phẩm hoàn thiện đầu tiên**, có phạm vi và điều kiện bàn giao tại [hồ sơ v1](v1.md). Nền MVP gồm Identity, Community và Direct Messaging theo DEC-114/116; phân công theo DEC-117.
+## MVP và v1 khác nhau thế nào
 
-Theo định hướng được xác nhận ngày 2026-10-13, mốc MVP ghi nhận phần đã có, giới hạn kiểm chứng và công việc chuyển tiếp. Nhóm tập trung hoàn thiện tài liệu và triển khai v1 từ bản nguồn hiện tại; không cần hoàn tất một vòng chỉnh sửa hoặc nghiệm thu toàn MVP riêng trước khi bắt đầu v1. Phần còn thiếu của các luồng đã chọn tiếp tục trong v1 với quy tắc, UC/AC/TC hiện có.
+- **MVP** gồm Identity, Community và DM, dùng để làm việc và tích hợp trong nhóm.
+- **v1** là sản phẩm hoàn thiện đầu tiên, có phạm vi và điều kiện bàn giao riêng tại [hồ sơ v1](v1.md).
 
-Thiết kế trước code thực hiện [theo từng gói việc](../project/planning.md#package-design). Gói v1 bắt đầu khi đầu ra, phụ thuộc trực tiếp, thiết kế và cách kiểm chứng đủ rõ theo [workflow](../project/workflow.md#readiness). Các phần độc lập có thể tiếp tục trong khi những quyết định còn lại được hoàn thiện.
+Nhóm quyết định (2026-10-13) không làm thêm một vòng hoàn thiện hay nghiệm thu riêng cho MVP. Phần còn thiếu được làm tiếp trong các gói v1, dùng lại quy tắc, ca sử dụng và tiêu chí đã có. Mỗi gói v1 [được thiết kế trước khi code](../project/planning.md#package-design) và bắt đầu khi đủ [điều kiện](../project/workflow.md#readiness); các gói độc lập có thể chạy song song.
 
-## Trạng thái nền bàn giao
+## Đã có và còn lại
 
-| Phần | Hiện có tại `900e226` | Phần chuyển tiếp sang v1 |
+| Phần | Đã có tại `900e226` | Chuyển sang v1 |
 |---|---|---|
-| Identity | API đăng ký/xác minh, đăng nhập, hồ sơ, đổi/reset mật khẩu và quản lý phiên; luồng local dùng token Development | Hoàn thiện UI xác minh/reset, các gap tài khoản và email thật; kiểm chứng đầy đủ vòng đời theo [Accounts](../features/accounts/README.md) |
-| Community | Tạo/xem/tìm server, join public/immediate, role/assignment; tạo/list/detail/sửa phòng text, ACL HTTP và guard transaction | Lịch sử/gửi/nhận tin phòng, Hub/reconnect và thu hồi quyền; approval/request, invitation, leave/transfer, quản lý server mở rộng, xóa phòng và voice theo [Community](../features/community/README.md) |
-| Direct Messaging | Tìm người, mở hội thoại/inbox, gửi/lịch sử, retry chủ động, sửa/xóa; ChatHub/outbox và reconnect | Hồi quy nền đã có sau khi tách service; hoàn thiện bằng chứng quyền/đồng thời, thiết bị và tải theo [DM](../features/messaging/direct-messaging.md) và [hồ sơ DM](../records/verification/messaging/README.md) |
-| Môi trường và công cụ | Compose chạy WebClient, API và PostgreSQL; SQL bootstrap, migration Community explicit, bộ test và volume khóa | Môi trường bốn service, tích hợp email worker, định tuyến/secrets/CI, migration runner, giám sát và công cụ vận hành theo [v1](v1.md) |
-| Media | Chưa có runtime trong bản bàn giao; đã có [đặc tả mục tiêu](../features/media/README.md) | Gọi riêng, phòng thoại, camera/chia sẻ màn hình và kiểm chứng provider/quyền/quota/cutoff theo các gói v1 |
+| Tài khoản | API đăng ký, xác minh, đăng nhập, hồ sơ, đổi và đặt lại mật khẩu, quản lý phiên. Chạy trên máy dùng token Development thay email | Giao diện xác minh và đặt lại mật khẩu, các phần còn thiếu, gửi email thật ([Tài khoản](../features/accounts/README.md)) |
+| Cộng đồng | Tạo, xem, tìm server; tham gia server công khai; vai trò và gán vai trò; tạo, xem, sửa phòng chữ; ACL qua HTTP; guard trong transaction | Tin phòng (lịch sử, gửi, nhận), Hub, kết nối lại, thu hồi quyền; duyệt yêu cầu, lời mời, rời, chuyển chủ; xóa phòng; phòng thoại ([Cộng đồng](../features/community/README.md)) |
+| Nhắn tin riêng | Tìm người, mở cuộc trò chuyện, hộp thư, gửi, lịch sử, gửi lại thủ công, sửa, xóa; ChatHub, outbox, kết nối lại | Chạy lại sau khi tách service; thêm bằng chứng về quyền, đồng thời, thiết bị và tải ([DM](../features/messaging/direct-messaging.md), [hồ sơ DM](../records/verification/messaging/README.md)) |
+| Môi trường | Compose chạy WebClient, API, PostgreSQL; SQL khởi tạo; migration Community; bộ test; volume lưu khóa | Môi trường bốn service, worker email, định tuyến, bí mật, CI, công cụ migration, giám sát, công cụ vận hành |
+| Media | Chưa có code; đã có [thiết kế](../features/media/README.md) | Gọi riêng, phòng thoại, camera, chia sẻ màn hình, kiểm thử với LiveKit |
 
-Email hoàn thiện được ghi nhận riêng tại `feat/identity@60f4db3`: resend/cooldown, consume có khóa, envelope Data Protection và worker Gmail SMTP. Phần này chưa tích hợp vào `900e226`; cần đối chiếu và đưa vào v1 theo [hiện trạng email](../features/accounts/email-links.md#status). Gửi email thật và nghiệm thu Accounts còn cần bằng chứng.
+**Email:** nhánh `feat/identity@60f4db3` đã có gửi lại email có thời gian chờ, dùng link có khóa, mã hóa bằng Data Protection và worker Gmail SMTP. Phần này chưa được ghép vào `900e226`; xem [hiện trạng email](../features/accounts/email-links.md#status).
 
-Các bảng trên là snapshot bàn giao nội bộ. Khi phát triển v1, cập nhật trạng thái tại tài liệu chủ đề và ghi kết quả mới trong `records/verification/` theo build; giữ nguyên phạm vi và kết quả của hồ sơ lịch sử.
+Khi làm v1, cập nhật trạng thái trong tài liệu tính năng và ghi kết quả mới vào `records/verification/`. Không sửa trang này hay hồ sơ cũ.
 
-## Bằng chứng hiện có
+## Bằng chứng
 
-[Hồ sơ tích hợp ngày 2026-10-13](../records/verification/messaging/merge-2026-10-13.md) ghi kết quả trên bản hợp nhất, với PostgreSQL và database kiểm thử riêng:
+[Hồ sơ tích hợp 2026-10-13](../records/verification/messaging/merge-2026-10-13.md), chạy trên PostgreSQL với database thử riêng:
 
-| Kiểm tra | Kết quả đã ghi nhận |
+| Kiểm tra | Kết quả |
 |---|---|
-| Build/test backend | 269 đạt, 0 lỗi, 0 bỏ qua |
-| Node tests frontend | 77 đạt, 0 lỗi |
+| Build và test backend | 269 đạt, 0 lỗi, 0 bỏ qua |
+| Test Node frontend | 77 đạt, 0 lỗi |
 | Build frontend production | Đạt |
-| Browser Community | 14 đạt |
-| Browser tích hợp Community/DM | Mở hội thoại, gửi/nhận realtime giữa hai tài khoản, chuyển Community và reload lịch sử DM đạt |
-| SQL bootstrap/seed và cấu hình Compose | Đạt trong phạm vi ghi tại hồ sơ tích hợp |
+| Test trình duyệt Community | 14 đạt |
+| Test trình duyệt Community và DM | Đạt: mở cuộc trò chuyện, gửi nhận realtime giữa hai tài khoản, chuyển sang Community, tải lại lịch sử DM |
+| SQL khởi tạo, dữ liệu mẫu, cấu hình Compose | Đạt trong phạm vi ghi ở hồ sơ |
 
-Đây là bằng chứng do agent thực thi trên môi trường ghi trong hồ sơ. Các gói Community và DM còn có [kết quả Community](../records/verification/community/README.md) và [kết quả DM](../records/verification/messaging/README.md) theo revision riêng; số test giữa các hồ sơ không cộng dồn. Kết quả DM không chứng minh tin phòng hoặc cơ chế xuyên service v1. Nghiệm thu sản phẩm thực hiện theo [điều kiện v1](v1.md#acceptance).
+Bằng chứng do agent chạy trên môi trường ghi trong hồ sơ. Hồ sơ [Community](../records/verification/community/README.md) và [DM](../records/verification/messaging/README.md) có kết quả riêng theo phiên bản của chúng; không cộng dồn số test giữa các hồ sơ. Kết quả DM không chứng minh tin phòng hay cơ chế giữa các service. Nghiệm thu sản phẩm theo [điều kiện v1](v1.md#acceptance).
 
 <a id="community-scope"></a>
 
-## Đối chiếu phạm vi Community đã chọn
+## Phạm vi Community đã chọn
 
-DEC-118 ngày 2026-10-07 chọn luồng tạo/tìm/tham gia → phòng text → lịch sử/gửi/nhận → xử lý mất quyền, giữ role/ACL đã có. Đây là căn cứ truy vết phần nền và phần chuyển tiếp:
+Ngày 2026-10-07 nhóm chọn luồng: tạo, tìm, tham gia → phòng chữ → lịch sử, gửi, nhận → xử lý mất quyền; giữ vai trò và ACL đã làm (DEC-118).
 
-| Nhóm luồng | UC liên quan | Trạng thái bàn giao |
+| Nhóm luồng | Ca sử dụng | Trạng thái |
 |---|---|---|
-| Tạo/tìm/xem và tham gia public/immediate | UC-COM-01/02; phần UC-COM-03/06 | Đã có nền API/UI và bằng chứng theo gói; các nhánh mở rộng tiếp tục trong v1 |
-| Phòng text và quyền | Phần text UC-COM-16/17; UC-COM-18/20/21/22 | Đã có metadata/phòng/role/ACL HTTP và guard; lịch sử tin và tác động trên kết nối chat còn thiếu |
-| Gửi/nhận và mất quyền | UC-COM-23; phần chat UC-COM-25 | Chuyển tiếp sang v1: writer tin phòng, lịch sử, Hub/reconnect và proof thu hồi trên kết nối thật |
+| Tạo, tìm, xem, tham gia server công khai | UC-COM-01, 02; một phần UC-COM-03, 06 | Đã có API, giao diện và bằng chứng; các nhánh mở rộng làm trong v1 |
+| Phòng chữ và quyền | Phần phòng chữ của UC-COM-16, 17; UC-COM-18, 20, 21, 22 | Đã có thông tin phòng, vai trò, ACL qua HTTP và guard; còn thiếu lịch sử tin và tác động lên kết nối chat |
+| Gửi, nhận và mất quyền | UC-COM-23; phần chat của UC-COM-25 | Chuyển sang v1: ghi tin phòng, lịch sử, Hub, kết nối lại và bằng chứng thu hồi trên kết nối thật |
 
-Chi tiết hành vi và AC/TC giữ tại [các chủ đề Community](../features/community/README.md), [tin phòng](../features/messaging/channel-messaging.md) và [bảng công việc](../project/planning.md#community-work-items). Phần chưa hoàn thành vẫn thuộc phạm vi sản phẩm v1.
+Chi tiết xem [Community](../features/community/README.md), [tin phòng](../features/messaging/channel-messaging.md) và [bảng công việc](../project/planning.md#community-work-items). Phần chưa xong vẫn thuộc v1.
 
 <a id="community-acceptance"></a>
 
-### Các tiêu chí Community chuyển tiếp
+### Tiêu chí Community chuyển sang v1
 
-Các mã COM-MVP giữ để đối chiếu tài liệu và hồ sơ cũ. Phần chưa chứng minh được chuyển sang kiểm chứng v1 theo UC/AC tương ứng; chúng không là điều kiện phải đóng toàn bộ trước khi bắt đầu một gói v1 độc lập.
+Các mã COM-MVP giữ lại để đối chiếu hồ sơ cũ. Chúng được kiểm thử trong v1 theo ca sử dụng tương ứng, và không chặn việc bắt đầu một gói v1 độc lập.
 
-| Mã tham chiếu | Nội dung cần kiểm chứng khi hoàn thiện v1 |
+| Mã | Cần kiểm thử khi hoàn thiện v1 |
 |---|---|
-| COM-MVP-01 | Toàn luồng tạo/tìm/join/phòng/lịch sử/gửi/nhận trên DB/API/Hub thật; dữ liệu đã commit còn sau reload/restart |
-| COM-MVP-02 | Tin/sequence/outbox nguyên tử; lost response, retry và đồng thời không tạo tin trùng; UI báo đã gửi sau xác nhận lưu |
-| COM-MVP-03 | Phân trang/reconnect đủ tin đã commit, dedup và cursor đúng actor/space/quyền |
-| COM-MVP-04 | Quyền/phiên/epoch hiện hành trên HTTP, ghi tin và subscribe/resume; kiểm chứng quyền tranh mutation tới commit |
-| COM-MVP-05 | Kết nối chat ngừng truy cập trong ≤5 giây từ commit thu hồi theo DEC-083, gồm lỗi/restart và fail-close |
-| COM-MVP-06 | Giao diện bỏ response/cache của actor mất quyền, retry đúng hợp đồng và hồi quy nền Community đã có |
-| COM-MVP-07 | Kết quả gắn commit/build/schema/config/dataset/UC/AC/TC; ghi giới hạn, lỗi và người thực hiện/kiểm tra |
+| COM-MVP-01 | Toàn luồng tạo, tìm, tham gia, vào phòng, xem lịch sử, gửi, nhận trên DB, API và Hub thật; dữ liệu còn sau khi tải lại hoặc khởi động lại |
+| COM-MVP-02 | Tin, sequence và outbox ghi cùng lúc; mất phản hồi, gửi lại, gửi đồng thời không tạo tin trùng; giao diện chỉ báo đã gửi khi đã lưu |
+| COM-MVP-03 | Phân trang và kết nối lại lấy đủ tin đã commit, không trùng, cursor đúng người, không gian và quyền |
+| COM-MVP-04 | Kiểm tra quyền, phiên và epoch hiện tại khi gọi HTTP, ghi tin, đăng ký và bù tin; quyền giữ ổn định tới khi commit |
+| COM-MVP-05 | Kết nối chat ngừng nhận trong 5 giây sau khi thu hồi được commit (DEC-083), kể cả khi lỗi hoặc khởi động lại; không xác nhận được quyền thì dừng |
+| COM-MVP-06 | Giao diện bỏ phản hồi và dữ liệu đệm của người mất quyền; gửi lại đúng hợp đồng; các chức năng Community cũ vẫn chạy |
+| COM-MVP-07 | Kết quả ghi rõ commit, build, schema, cấu hình, dữ liệu thử, mã UC, AC, TC; ghi giới hạn, lỗi, người chạy và người kiểm tra |
 
 <a id="packages"></a>
 
-## Bàn giao công việc sang v1
+## Các gói chuyển sang v1
 
-Mã gói MVP giữ làm đầu mối truy vết; phân công tiếp tục theo [DEC-117 và kế hoạch](../project/planning.md#team). Công việc còn lại được thiết kế và kiểm chứng trong các gói v1.
+Mã gói MVP giữ lại để truy vết. Bảng dưới là phân công lúc bàn giao (DEC-117); phân công hiện hành xem [kế hoạch](../project/planning.md#team).
 
-| Gói nền | Đầu mối | Phần tiếp tục trong v1 |
+| Gói | Người phụ trách lúc bàn giao | Làm tiếp trong v1 |
 |---|---|---|
-| MVP-ID | Vg; Thái phụ trách delivery/worker | Chuyển Identity, tích hợp email từ nhánh riêng, hoàn thiện vòng đời tài khoản và UI/AC còn thiếu |
-| MVP-COM | Vg; Sáng phụ trách nền tin phòng | Chuyển Community/quyền, tích hợp tin phòng và hoàn thiện các nhánh Community còn lại |
-| MVP-DM | Sáng | Chuyển persistence/hợp đồng/Hub/outbox của Messaging, giữ hành vi DM đã có và kiểm chứng lại các đường xuyên service |
-| MVP-SYS | Thái; Vg/Sáng cung cấp migration và kỳ vọng nghiệp vụ | Phát triển Compose nhiều service, migration runner/bộ chạy, secrets, CI, giám sát và công cụ vận hành |
+| MVP-ID | Vg; Thái làm worker gửi email | Chuyển Identity sang service, ghép email từ nhánh riêng, hoàn thiện vòng đời tài khoản và giao diện |
+| MVP-COM | Vg; Sáng làm phần nền tin phòng | Chuyển Community và quyền sang service, ghép tin phòng, hoàn thiện các nhánh còn lại |
+| MVP-DM | Sáng | Chuyển lưu trữ, hợp đồng, Hub và outbox của Messaging; giữ hành vi DM; kiểm thử lại các luồng giữa service |
+| MVP-SYS | Thái; Vg và Sáng cung cấp migration và kết quả mong đợi | Compose nhiều service, công cụ migration, bí mật, CI, giám sát, công cụ vận hành |
 
-Các gói chuyển service V1-ARCH-01–03 và gói Media được định nghĩa tại [v1](v1.md). Mỗi người tự kiểm thử phần sở hữu và có người khác kiểm tra lại theo [workflow](../project/workflow.md#review).
+Gói chuyển service (V1-ARCH-01 đến 03) và gói Media xem [v1](v1.md). Mỗi người tự kiểm thử phần mình và có người khác kiểm tra lại ([quy trình](../project/workflow.md#review)).
 
-## Source, dữ liệu và cách chạy lại
+## Chạy lại bản MVP
 
-- Dùng `900e226` làm mốc đối chiếu nền hợp nhất; giữ lịch sử migration và các hồ sơ kiểm chứng liên quan khi phát triển tiếp.
-- Stack local dùng [compose.yaml](../../compose.yaml). Đặt `COMMUNITY_OPERATION_KEY` bền trong `.env` theo [README](../../README.md#khởi-chạy), rồi chạy `make init-dm-key` và `docker compose up -d --build`; dùng cùng engine cho các thao tác container.
-- Giữ volume PostgreSQL, keyring Identity/Community và khóa fingerprint DM cùng dữ liệu. Tài khoản seed không dùng đăng nhập; tạo tài khoản thử qua API theo [Development](../guides/development.md#identity).
-- Database đã có dữ liệu cần đối chiếu migration/ledger của từng gói; hướng dẫn Community tại [migration explicit](../guides/community-development.md#migration), cấu hình và bằng chứng migration DM tại [hồ sơ DM](../records/verification/messaging/DM-MVP.md). `schema.sql` là bootstrap, không dùng để tạo lại database cần giữ dữ liệu.
-- v1 [giữ dữ liệu MVP](../system/database.md#v1-mvp-data-transition) và [chuyển offline](../system/database.md#v1-mvp-data-cutover) theo DEC-169/170; mapping và bước chuyển được hoàn thiện trong gói tương ứng. Backup/restore thuộc [giai đoạn sau v1](v1.md#backup-scope).
+- Dùng commit `900e226` làm mốc đối chiếu. Giữ lịch sử migration và hồ sơ kiểm thử khi phát triển tiếp.
+- Chạy bằng [compose.yaml](../../compose.yaml): đặt `COMMUNITY_OPERATION_KEY` cố định trong `.env` ([README](../../README.md#khởi-chạy)), chạy `make init-dm-key`, rồi `docker compose up -d --build`. Dùng cùng một engine (Docker hoặc Podman) cho mọi lệnh container.
+- Giữ volume PostgreSQL, key ring Identity và Community, khóa fingerprint DM cùng với dữ liệu.
+- Tài khoản trong dữ liệu mẫu không dùng để đăng nhập; tạo tài khoản thử qua API ([hướng dẫn](../guides/development.md#identity)).
+- `schema.sql` chỉ để khởi tạo mới, không dùng để tạo lại database đang có dữ liệu. Database đã có dữ liệu phải chạy migration theo từng gói: [Community](../guides/development.md#migration), [DM](../records/verification/messaging/DM-MVP.md).
+- v1 [giữ dữ liệu MVP](../system/database.md#v1-mvp-data-transition) và [chuyển offline](../system/database.md#v1-mvp-data-cutover) (DEC-169, 170). Backup để [sau v1](v1.md#backup-scope).
 
 <a id="acceptance"></a>
 
 ## Bắt đầu v1
 
-Từ snapshot này, MVP được dùng làm nền phát triển nội bộ. Hồ sơ ghi nhận phần đã có và phần chưa hoàn thành, không xác nhận đã đạt toàn bộ phạm vi MVP từng đề xuất hoặc nghiệm thu sản phẩm v1.
+Trang này ghi nhận phần đã có và phần chưa xong. Nó không xác nhận MVP đã đạt toàn bộ phạm vi từng đề xuất, cũng không phải nghiệm thu v1.
 
-Hoàn thiện [tài liệu tổng quan v1](v1.md) và bắt đầu các gói đủ đầu vào có thể thực hiện song song:
+1. Chọn gói v1 có phụ thuộc đã rõ; chốt đầu ra, thiết kế, cách kiểm thử rồi làm theo [quy trình](../project/workflow.md#process). Việc còn thiếu của MVP xếp vào gói v1 tương ứng.
+2. Giữ dữ liệu và ranh giới sở hữu. Xem lại transaction và guard dùng chung khi tách service, rồi chạy lại các luồng đã có.
+3. Ghi bằng chứng mới theo build. Khi bàn giao, áp dụng [điều kiện hoàn tất v1](v1.md#acceptance) và [nghiệm thu](acceptance.md).
 
-1. Chọn gói v1 có phụ thuộc trực tiếp đủ rõ, chốt đầu ra/thiết kế/cách thử và triển khai theo [quy trình](../project/workflow.md#process). Phần việc còn thiếu của MVP được xếp vào gói v1 tương ứng, không tạo thêm vòng hoàn thiện MVP riêng.
-2. Giữ dữ liệu và ranh giới sở hữu; rà soát lại shared transaction/guard khi chuyển microservice, rồi hồi quy các luồng đã có.
-3. Ghi bằng chứng mới theo build và áp dụng [điều kiện hoàn tất v1](v1.md#acceptance), [nghiệm thu/phát hành](acceptance.md) khi bàn giao sản phẩm hoàn thiện đầu tiên.
+---
+
+Nguồn: DEC-114, DEC-116 (MVP một ứng dụng, v1 microservice), DEC-117 (phân công lúc bàn giao), DEC-118 (phạm vi Community).

@@ -191,7 +191,7 @@ PASS khi HTTP/profile và PostgreSQL snapshot giữ IDs/trạng thái/bio, confi
 | FE production build | Vite build; cả host và Node24 Docker build | Đạt | Chưa xác nhận |
 | Backend full suite | Container .NET SDK10, PostgreSQL test thật | 16/16; `.dm-acceptance/backend-artifacts/test-results/dm-p0-baseline.trx` | Chưa xác nhận |
 | FE E2E4ca | Edge Chromium trên Windows, live API/proxy/DB | 4/4, Edge154.0.4258.53; `.dm-acceptance/e2e/results.json` | Chưa xác nhận |
-| DM contract/migration/guard/key/reuse design | [Baseline thiết kế](../../planning/messaging/dm-p0-baseline-design.md); contract extensions | Agent chọn; chưa implementation/proof DM | Chưa review |
+| DM contract/migration/guard/key/reuse design | [Baseline thiết kế](../../../archive/2026-10-planning/messaging/dm-p0-baseline-design.md); contract extensions | Agent chọn; chưa implementation/proof DM | Chưa review |
 | Docs links/schema/corpus/PowerShell | Kiểm tra kỹ thuật | 37files/1822links,0 lỗi; JSON7operations/error status mapping; PowerShell5.1 parse/UTF-8 BOM; JS syntax | Chưa xác nhận |
 
 Lệnh tái lập:
@@ -216,7 +216,7 @@ Host `dotnet restore` ban đầu gặp NU1301/SSL credential trong sandbox; dùn
 
 Chưa có DM REST7operations/Hub/counters/cursors/HMAC reader/guard UoW thực thi; không có send/reconnect/edit/delete/revoke-stream≤5s proof. Email thật, khóa K qua test helper, retention/restore/load/browser matrix/mobile và release owners vẫn thuộc các task tương ứng. Health Foundation và mock DM là đúng hiện trạng P0, không nghiệm thu nhắn tin.
 
-Review [baseline thiết kế](../../planning/messaging/dm-p0-baseline-design.md): bảy REST operations, Hub DTO, mã lỗi cụ thể, shared UoW/lock order, migration slices và key storage. Xác nhận task P0 có hai phần: tự test FE/BE C01–C04 và đồng ý baseline để triển khai sau. Không coi im lặng hoặc agent PASS là user PASS.
+Review [baseline thiết kế](../../../archive/2026-10-planning/messaging/dm-p0-baseline-design.md): bảy REST operations, Hub DTO, mã lỗi cụ thể, shared UoW/lock order, migration slices và key storage. Xác nhận task P0 có hai phần: tự test FE/BE C01–C04 và đồng ý baseline để triển khai sau. Không coi im lặng hoặc agent PASS là user PASS.
 
 ```text
 PASS DM-P0-T01 | Build: <commit/build đã test>
