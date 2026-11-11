@@ -14,7 +14,7 @@ Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình 
 
 - [Chuẩn bị và khởi chạy](#setup)
 - [Docker Desktop, Docker Engine và Podman](#container-engines)
-- [Lệnh ngắn và đồng bộ docs giữa các nhánh](#short-commands)
+- [Lệnh ngắn](#short-commands)
 - [Cấu hình](#configuration)
 - [Tài khoản để tích hợp](#identity)
 - [Database và dữ liệu mẫu](#database)
@@ -144,7 +144,7 @@ Vite chạy ở cổng 3000 và chuyển tiếp `/api`, `/hubs`, `/swagger` tớ
 
 <a id="lệnh-ngắn-và-đồng-bộ-docs-giữa-các-nhánh"></a>
 
-### Lệnh ngắn và đồng bộ docs giữa các nhánh
+### Lệnh ngắn
 
 [Makefile](../../Makefile) gom các lệnh hay dùng. Gõ `make` hoặc `make help` để xem danh sách. Công cụ đồng bộ tài liệu cần `make`, Python 3 và Git đủ mới (hỗ trợ `switch`, `restore`, `rev-parse --end-of-options`).
 
@@ -161,46 +161,16 @@ Vite chạy ở cổng 3000 và chuyển tiếp `/api`, `/hubs`, `/swagger` tớ
 | `make docs-check` | Kiểm tra link và anchor tài liệu |
 | `make test-tools` | Kiểm thử công cụ đồng bộ trong các repo Git tạm |
 
-Đồng bộ tài liệu từ một nhánh nguồn vào nhánh đang làm:
+<a id="docs-sync"></a>
+
+**Đồng bộ docs giữa các nhánh:** với [quy ước nhánh ngắn](../project/workflow.md#branches), chỉ cần `git pull --rebase origin main` trước khi mở PR. Công cụ `make docs-sync` chỉ còn dùng cho nhánh cũ sống lâu (ví dụ `feat/identity`): nó **chép đè toàn bộ** `docs/` từ nhánh nguồn sang nhánh đích, không trộn nội dung.
 
 ```bash
-make docs-sync-preview FROM=main
-make docs-sync FROM=main
+make docs-sync-preview FROM=main TO=feat/identity   # xem file sẽ thêm, sửa, xóa
+make docs-sync FROM=main TO=feat/identity           # chép và đưa vào staging; tự xem diff rồi commit
 ```
 
-Hoặc chỉ định nhánh đích local đã tồn tại:
-
-```bash
-make docs-sync-preview FROM=main TO=feat/identity
-make docs-sync FROM=main TO=feat/identity
-```
-
-**Cách hoạt động:**
-
-- `FROM` mặc định là `main`; `TO` mặc định là nhánh hiện tại.
-- Lệnh preview so sánh bản đã commit của hai nhánh, liệt kê file thêm, sửa, xóa.
-- Khi chạy thật: chuyển sang `TO` nếu cần, chép **toàn bộ** `docs/` (kể cả archive) từ nguồn, rồi đưa vào staging. File chỉ có ở nhánh đích sẽ bị xóa. Đây là chép đè, không trộn nội dung.
-- Chỉ chép `docs/`; README gốc và code không bị đụng.
-
-Nếu hai nhánh cố ý giữ tài liệu khác nhau, chỉ lấy đúng các file cần: `git restore --source <commit-nguồn> --worktree -- <file-1> <file-2>`, rồi xem diff, chạy docs-check và commit. Đừng chép cả `docs/` chỉ để lấy một bản sửa.
-
-**Lưu ý:**
-
-- Chỉ đồng bộ bản đã commit ở nguồn. Dùng `origin/main` thì chạy `git fetch origin` trước.
-- Công cụ dừng nếu `docs/` đang có thay đổi hay file mới, đang merge hay rebase, hoặc working tree bẩn khi cần chuyển nhánh.
-- Không chuyển nhánh thì code ngoài `docs/` giữ nguyên. Có chuyển nhánh thì code là code của nhánh đích.
-
-Sau đồng bộ, bạn đang ở nhánh đích và có thể review/lưu thay đổi:
-
-```bash
-git diff --cached -- docs/
-git commit -m "docs: sync documentation from main"
-git push
-```
-
-- Công cụ không tự stash, commit hay push. Nếu trước đó đã có code trong staging, commit sẽ gồm cả code đó.
-- Nhánh đích phải có Makefile và script thì mới dùng được `make`. Có thể gọi thẳng `python3 scripts/sync_docs.py --source main --target feat/identity --dry-run`.
-- Khi đổi cấu trúc tài liệu, sửa luôn link trong `README.md` gốc và README của module trên nhánh nhận (công cụ không chép chúng), rồi chạy `make docs-check`.
+Cần working tree sạch; công cụ không tự stash, commit hay push. Chi tiết: `python3 scripts/sync_docs.py --help`.
 
 <a id="configuration"></a>
 
