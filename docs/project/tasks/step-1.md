@@ -40,7 +40,7 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 - Phụ thuộc: S1-02, S1-03.
 
 ## S1-06 · Khung SCDC.Shared.Core và kiểm tra JWT dùng chung
-- Nhãn: tech, refractor
+- Nhãn: tech, refactor
 - Người làm: Vg · Review: Sáng
 - Đầu ra: project Shared.Core (D45) với phần cấu hình kiểm tra JWT; service mẫu dùng nó để bảo vệ một endpoint.
 - Xong khi: service mẫu chấp nhận token do API hiện tại cấp, từ chối token sai hoặc hết hạn.
