@@ -84,6 +84,48 @@ Người phụ trách tự chuẩn bị yêu cầu, giao diện, thiết kế k�
 
 Vg tổng hợp ưu tiên và mốc chung. Thay đổi phạm vi, kiến trúc hoặc hợp đồng chung phải thống nhất trước khi làm. Chi tiết trong phạm vi đã chốt do người phụ trách tự quyết.
 
+<a id="branches"></a>
+
+### Nhánh Git và pull request
+
+Nhóm làm theo kiểu **nhánh ngắn từ `main`** (trunk-based): `main` lúc nào cũng build và test qua; mỗi thẻ Trello làm trên một nhánh riêng, sống vài ngày rồi merge vào `main` qua pull request (PR).
+
+| Quy tắc | Cụ thể |
+|---|---|
+| Mỗi thẻ một nhánh | Tách từ `main` mới nhất. Thẻ quá lớn để xong trong 2–3 ngày thì chia nhỏ hoặc merge từng phần |
+| Tên nhánh | `<loại>/<mã-thẻ>-<mô-tả>`, chữ thường, gạch nối: `tech/s1-02-nginx-gateway`, `feat/com-w01-channel-history`, `docs/s2-01-coupling-plan`. Loại theo nhãn thẻ: `feat`, `refactor`, `docs`, `tech`; thẻ `issue` dùng `fix` |
+| Commit | Nhỏ, mỗi commit một ý; message theo dạng `<loại>(<phạm vi>): <nội dung>`, ví dụ `tech(gateway): định tuyến /hubs qua Nginx` |
+| Vào `main` | Chỉ qua PR. Tiêu đề PR có mã thẻ: `[S1-02] Nginx làm cổng vào`. Cần CI qua và người review ghi trên thẻ đồng ý |
+| Cách merge | **Squash merge**: mỗi thẻ thành một commit trên `main`, dễ đọc lịch sử và dễ revert |
+| Sau khi merge | Xóa nhánh (GitHub tự xóa trên remote; local tự xóa bằng `git branch -d`) |
+| Mốc phát hành | Đánh **tag** (`v0-mvp`, `v1.0.0`), không giữ nhánh riêng cho mốc |
+
+Thẻ Trello đi theo PR: mở PR thì chuyển thẻ sang **Chờ kiểm tra** và dán link PR vào thẻ; merge xong và đạt tiêu chí thì chuyển **Hoàn tất**.
+
+**Thao tác hằng ngày:**
+
+```bash
+git switch main && git pull                  # lấy main mới nhất
+git switch -c tech/s1-02-nginx-gateway       # nhánh cho thẻ
+# code, commit nhỏ
+git pull --rebase origin main                # cập nhật trước khi mở PR, giải quyết xung đột ở nhánh mình
+git push -u origin tech/s1-02-nginx-gateway  # đẩy lên rồi mở PR trên GitHub
+# sau khi PR được merge:
+git switch main && git pull && git branch -d tech/s1-02-nginx-gateway
+```
+
+Nếu `git branch -d` báo nhánh chưa merge (do squash), kiểm tra PR đã merge trên GitHub rồi dùng `git branch -D`.
+
+**Tránh xung đột:**
+
+- Migration đặt tên theo ngày và mã thẻ (`20261120_s2-04_drop-community-fk.sql`), không dùng số thứ tự chung.
+- Trước khi sửa lớn `database/postgres/schema.sql`, `compose.yaml`, `Program.cs`, báo trong nhóm; merge sớm, không giữ lâu trong nhánh.
+- Nội dung thẻ trong [tasks](tasks/README.md) cũng sửa qua PR; thẻ chỉ lên Trello khi được merge vào `main`.
+
+**Việc lớn (tách service ở STEP-3):** không mở nhánh sống nhiều tuần. Merge từng phần vào `main`; service mới chạy song song nhưng chưa nhận request, **gateway quyết định request đi đâu**. Đủ test mới chuyển định tuyến; lỗi thì chuyển lại.
+
+**Cài đặt GitHub (người quản trị repo):** Settings → Branches: bảo vệ `main` (bắt buộc PR, 1 người duyệt, bắt buộc các kiểm tra tự động qua, cấm force push). Settings → General → Pull Requests: chỉ cho phép squash merge, bật tự xóa nhánh sau khi merge.
+
 <a id="weekly-meeting"></a>
 
 ### Họp hằng tuần

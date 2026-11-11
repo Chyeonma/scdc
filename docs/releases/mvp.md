@@ -2,7 +2,7 @@
 
 MVP là mốc nội bộ: bản chụp phần nền đã làm, dùng làm điểm xuất phát cho [v1](v1.md). Trang này ghi những gì đã có, bằng chứng đã có, và việc còn chuyển sang v1.
 
-**Bản chụp:** commit `900e226`, ngày 2026-10-13. Community và nhắn tin riêng (DM) đã được ghép vào một ứng dụng API duy nhất (modular monolith). Trạng thái và bằng chứng dưới đây chỉ đúng với bản này.
+**Bản chụp:** commit `900e226` (tag `v0-mvp`), ngày 2026-10-13. Community và nhắn tin riêng (DM) đã được ghép vào một ứng dụng API duy nhất (modular monolith). Trạng thái và bằng chứng dưới đây chỉ đúng với bản này.
 
 ## MVP và v1 khác nhau thế nào
 
