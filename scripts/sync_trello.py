@@ -8,7 +8,13 @@ trữ thẻ.
 Định dạng file:
     # STEP-1 — Tên bước          <- mã đầu tiên của H1 thành nhãn (label) Trello
     ## S1-01 · Tiêu đề thẻ       <- mã thẻ; tên trên Trello là "[S1-01] Tiêu đề thẻ"
+    - Nhãn: Backend, Identity    <- (tùy chọn) nhãn đã có trên bảng; không đưa vào mô tả
     - Người làm: ...             <- mọi dòng tới thẻ tiếp theo thành mô tả
+
+Dòng "- Nhãn:" đặt trước thẻ đầu tiên thì áp cho mọi thẻ trong file. Nhãn bước
+(STEP-n) được tạo nếu chưa có; nhãn khác phải có sẵn trên bảng (so khớp không
+phân biệt hoa thường), nếu không chỉ cảnh báo. Script chỉ THÊM nhãn, không gỡ
+nhãn nào khỏi thẻ.
 
 Thẻ trên Trello được nhận ra bằng tiền tố "[mã]" trong tên, nên đổi tiêu đề
 hay chuyển cột trên Trello vẫn không tạo thẻ trùng.
@@ -45,6 +51,7 @@ API = "https://api.trello.com/1"
 CARD_HEADING = re.compile(r"^##\s+([A-Z][A-Z0-9]*-[A-Z0-9-]+)\s*[·:—-]\s*(.+?)\s*$")
 STEP_HEADING = re.compile(r"^#\s+([A-Z][A-Z0-9]*-[0-9A-Z]+)\b")
 NAME_PREFIX = re.compile(r"^\[([^\]]+)\]")
+LABEL_LINE = re.compile(r"^\s*[-*]\s*(?:Nhãn|Labels?)\s*:\s*(.*)$", re.IGNORECASE)
 FOOTER = "\n\n---\n_Nội dung thẻ đồng bộ từ `{path}`; sửa trong repo, sửa ở đây sẽ bị ghi đè. Cột, người gán, hạn và bình luận quản lý trên Trello._"
 
 
@@ -53,16 +60,22 @@ def parse(path: Path, repo_url: str | None) -> list[dict]:
     step = next((m.group(1) for l in lines if (m := STEP_HEADING.match(l))), None)
     rel = path.relative_to(ROOT).as_posix()
     source = f"[{rel}]({repo_url.rstrip('/')}/blob/main/{rel})" if repo_url else rel
-    cards, current = [], None
+    cards, current, file_labels = [], None, []
     for line in lines:
         if m := CARD_HEADING.match(line):
-            current = {"code": m.group(1), "title": m.group(2), "body": [], "label": step}
+            current = {"code": m.group(1), "title": m.group(2), "body": [], "labels": []}
             cards.append(current)
         elif line.startswith("## "):
             current = None
+        elif m := LABEL_LINE.match(line):
+            names = [n.strip() for n in m.group(1).split(",") if n.strip()]
+            (current["labels"] if current is not None else file_labels).extend(names)
         elif current is not None:
             current["body"].append(line)
     for card in cards:
+        wanted = [step, *file_labels, *card["labels"]] if step else [*file_labels, *card["labels"]]
+        card["labels"] = list(dict.fromkeys(wanted))
+        card["step"] = step
         card["name"] = f"[{card['code']}] {card['title']}"
         card["desc"] = "\n".join(card.pop("body")).strip() + FOOTER.format(path=source)
     codes = [c["code"] for c in cards]
@@ -104,7 +117,7 @@ def main() -> None:
 
     if args.dry_run:
         for c in cards:
-            print(f"{c['label'] or '-':8} {c['name']}")
+            print(f"{c['name']}  [{', '.join(c['labels'])}]")
         print(f"{len(cards)} thẻ từ {len(files)} file")
         return
 
@@ -127,24 +140,33 @@ def main() -> None:
         if m := NAME_PREFIX.match(card["name"]):
             existing.setdefault(m.group(1), card)
 
-    labels = {l["name"]: l["id"] for l in t.call("GET", f"/boards/{board}/labels", fields="name", limit="1000") if l["name"]}
+    labels: dict[str, str] = {}
+    for label in t.call("GET", f"/boards/{board}/labels", fields="name", limit="1000"):
+        if label["name"]:
+            labels.setdefault(label["name"].strip().casefold(), label["id"])
+    missing_labels: dict[str, list[str]] = {}
 
-    def label_id(name: str | None) -> str | None:
-        if not name:
-            return None
-        if name not in labels:
-            labels[name] = t.call("POST", "/labels", name=name, color="blue", idBoard=board)["id"]
-            print(f"tạo nhãn {name}")
-        return labels[name]
+    def label_ids(card: dict) -> list[str]:
+        ids = []
+        for name in card["labels"]:
+            key = name.casefold()
+            if key not in labels and name == card["step"]:
+                labels[key] = t.call("POST", "/labels", name=name, color="blue", idBoard=board)["id"]
+                print(f"tạo nhãn {name}")
+            if key in labels:
+                ids.append(labels[key])
+            else:
+                missing_labels.setdefault(name, []).append(card["code"])
+        return ids
 
     created = updated = same = 0
     for c in cards:
-        lid = label_id(c["label"])
+        lids = label_ids(c)
         old = existing.get(c["code"])
         if old is None:
             params = {"idList": env["TRELLO_LIST_ID"], "name": c["name"], "desc": c["desc"], "pos": "bottom"}
-            if lid:
-                params["idLabels"] = lid
+            if lids:
+                params["idLabels"] = ",".join(lids)
             t.call("POST", "/cards", **params)
             created += 1
             print(f"tạo   {c['name']}")
@@ -154,8 +176,9 @@ def main() -> None:
             changes["name"] = c["name"]
         if old["desc"].strip() != c["desc"].strip():
             changes["desc"] = c["desc"]
-        if lid and lid not in old["idLabels"]:
-            changes["idLabels"] = ",".join([*old["idLabels"], lid])
+        added = [lid for lid in lids if lid not in old["idLabels"]]
+        if added:
+            changes["idLabels"] = ",".join([*old["idLabels"], *added])
         if changes:
             t.call("PUT", f"/cards/{old['id']}", **changes)
             updated += 1
@@ -163,6 +186,10 @@ def main() -> None:
             print(f"sửa   {c['name']}: {', '.join(changes)}{note}")
         else:
             same += 1
+
+    for name, codes in missing_labels.items():
+        msg = f"Nhãn '{name}' không có trên bảng, bỏ qua cho {', '.join(codes)}. Tạo nhãn trên Trello hoặc sửa tên trong file."
+        print(f"::warning title=Sync Trello::{msg}" if os.environ.get("GITHUB_ACTIONS") else f"Cảnh báo: {msg}")
 
     synced = {c["code"] for c in cards}
     gone = sorted(code for code in existing if re.fullmatch(r"S\d+-\d+", code) and code not in synced)

@@ -10,7 +10,7 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 
 | Repo (file này) | Trello |
 |---|---|
-| Tiêu đề, mô tả: người làm đề xuất, đầu ra, tiêu chí xong, phụ thuộc | Cột trạng thái, người được gán, hạn, bình luận, checklist |
+| Tiêu đề, mô tả: người làm đề xuất, đầu ra, tiêu chí xong, phụ thuộc; thêm nhãn | Cột trạng thái, người được gán, hạn, bình luận, checklist; gỡ nhãn |
 
 - Đồng bộ **một chiều** từ repo lên Trello. Sửa mô tả thẻ trên Trello sẽ bị ghi đè ở lần đồng bộ sau; muốn đổi nội dung thì sửa file và push.
 - Script **không** chuyển cột, không gán người, không đổi hạn, không xóa hay lưu trữ thẻ. Thẻ bị bỏ khỏi file chỉ được liệt kê trong log để người dùng tự xử lý.
@@ -24,14 +24,20 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 
 Mô tả chung (không đồng bộ).
 
+- Nhãn: Backend
+
 ## S2-01 · Tiêu đề thẻ
+- Nhãn: Identity, Ưu tiên cao
 - Người làm: ... · Review: ...
 - Đầu ra: ...
 - Xong khi: ...
 - Phụ thuộc: ...
 ```
 
-- Mã đầu tiên của dòng `#` thành nhãn Trello.
+- Mã đầu tiên của dòng `#` thành nhãn Trello (ví dụ `STEP-2`), tự tạo nếu bảng chưa có.
+- `- Nhãn: A, B` trong một thẻ gắn nhãn cho thẻ đó; đặt trước thẻ đầu tiên thì gắn cho mọi thẻ trong file. Dòng này không đưa vào mô tả.
+- Nhãn phải **có sẵn trên bảng**; so tên không phân biệt hoa thường. Tên sai hoặc chưa có thì chỉ cảnh báo trong lần chạy, không tự tạo (tránh tạo nhãn rác vì gõ nhầm). Nhãn chỉ có màu, không có tên, thì không dùng được.
+- Script chỉ **thêm** nhãn, không gỡ. Bỏ một nhãn khỏi file thì phải tự gỡ trên Trello. Nhãn gắn tay trên Trello (ví dụ "Bị chặn") được giữ nguyên.
 - Mỗi dòng `## <mã> · <tiêu đề>` là một thẻ; mọi dòng tới thẻ tiếp theo thành mô tả. Mã không được trùng.
 - Thẻ việc phát sinh, nhỏ (sửa lỗi, việc vặt) tạo thẳng trên Trello, không cần đưa vào đây. Thư mục này chỉ giữ các thẻ thuộc lộ trình.
 
