@@ -11,6 +11,9 @@ trữ thẻ.
     - Nhãn: Backend, Identity    <- (tùy chọn) nhãn đã có trên bảng; không đưa vào mô tả
     - Người làm: ...             <- mọi dòng tới thẻ tiếp theo thành mô tả
 
+File có dòng "Trạng thái: nháp" trước thẻ đầu tiên thì KHÔNG đồng bộ (dùng để
+viết trước thẻ của bước sau); xóa dòng đó để đưa thẻ lên Trello.
+
 Dòng "- Nhãn:" đặt trước thẻ đầu tiên thì áp cho mọi thẻ trong file. Nhãn bước
 (STEP-n) được tạo nếu chưa có; nhãn khác phải có sẵn trên bảng (so khớp không
 phân biệt hoa thường), nếu không chỉ cảnh báo. Script chỉ THÊM nhãn, không gỡ
@@ -51,8 +54,18 @@ API = "https://api.trello.com/1"
 CARD_HEADING = re.compile(r"^##\s+([A-Z][A-Z0-9]*-[A-Z0-9-]+)\s*[·:—-]\s*(.+?)\s*$")
 STEP_HEADING = re.compile(r"^#\s+([A-Z][A-Z0-9]*-[0-9A-Z]+)\b")
 NAME_PREFIX = re.compile(r"^\[([^\]]+)\]")
+DRAFT_LINE = re.compile(r"^\W*Trạng thái\W*:?\W*\s*nháp\b", re.IGNORECASE)
 LABEL_LINE = re.compile(r"^\s*[-*]\s*(?:Nhãn|Labels?)\s*:\s*(.*)$", re.IGNORECASE)
 FOOTER = "\n\n---\n_Nội dung thẻ đồng bộ từ `{path}`; sửa trong repo, sửa ở đây sẽ bị ghi đè. Cột, người gán, hạn và bình luận quản lý trên Trello._"
+
+
+def is_draft(path: Path) -> bool:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if CARD_HEADING.match(line):
+            return False
+        if DRAFT_LINE.match(line):
+            return True
+    return False
 
 
 def parse(path: Path, repo_url: str | None) -> list[dict]:
@@ -113,6 +126,10 @@ def main() -> None:
 
     files = args.files or sorted(p for p in TASKS.glob("*.md") if p.name != "README.md")
     repo_url = os.environ.get("REPO_URL")
+    drafts = [f for f in files if is_draft(f)]
+    for f in drafts:
+        print(f"Bỏ qua {f.name}: đang là nháp ({len(parse(f.resolve(), repo_url))} thẻ)")
+    files = [f for f in files if f not in drafts]
     cards = [c for f in files for c in parse(f.resolve(), repo_url)]
 
     if args.dry_run:

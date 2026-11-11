@@ -5,6 +5,7 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 | File | Bước |
 |---|---|
 | [step-1.md](step-1.md) | STEP-1 — Khung chạy |
+| [step-2.md](step-2.md) | STEP-2 — Tách ranh giới trong monolith (nháp, chưa đồng bộ) |
 
 ## Ai giữ phần nào
 
@@ -39,6 +40,8 @@ Mô tả chung (không đồng bộ).
 - Nhãn phải **có sẵn trên bảng**; so tên không phân biệt hoa thường. Tên sai hoặc chưa có thì chỉ cảnh báo trong lần chạy, không tự tạo (tránh tạo nhãn rác vì gõ nhầm). Nhãn chỉ có màu, không có tên, thì không dùng được.
 - Script chỉ **thêm** nhãn, không gỡ. Bỏ một nhãn khỏi file thì phải tự gỡ trên Trello. Nhãn gắn tay trên Trello (ví dụ "Bị chặn") được giữ nguyên.
 - Mỗi dòng `## <mã> · <tiêu đề>` là một thẻ; mọi dòng tới thẻ tiếp theo thành mô tả. Mã không được trùng.
+- File có dòng `Trạng thái: nháp` trước thẻ đầu tiên thì **không đồng bộ**. Dùng để viết trước thẻ của bước sau; xóa dòng đó và push để đưa thẻ lên Trello.
+- Một dòng `## ` không theo dạng `<mã> · <tiêu đề>` (ví dụ `## Hiện trạng`) không phải thẻ; nội dung dưới nó không đồng bộ.
 - Thẻ việc phát sinh, nhỏ (sửa lỗi, việc vặt) tạo thẳng trên Trello, không cần đưa vào đây. Thư mục này chỉ giữ các thẻ thuộc lộ trình.
 
 Chạy thử trên máy, không gọi Trello:
