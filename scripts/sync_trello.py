@@ -31,6 +31,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+
+def fail(message: str) -> None:
+    """Dừng với lỗi; trên GitHub Actions hiện lỗi ở trang tóm tắt của lần chạy."""
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::error title=Sync Trello::{message}")
+    sys.exit(message)
+
+
 ROOT = Path(__file__).resolve().parents[1]
 TASKS = ROOT / "docs/project/tasks"
 API = "https://api.trello.com/1"
@@ -60,7 +68,7 @@ def parse(path: Path, repo_url: str | None) -> list[dict]:
     codes = [c["code"] for c in cards]
     dup = {c for c in codes if codes.count(c) > 1}
     if dup:
-        sys.exit(f"{rel}: mã thẻ bị trùng: {', '.join(sorted(dup))}")
+        fail(f"{rel}: mã thẻ bị trùng: {', '.join(sorted(dup))}")
     return cards
 
 
@@ -81,7 +89,7 @@ class Trello:
                 return json.load(resp)
         except urllib.error.HTTPError as err:
             detail = err.read().decode(errors="replace")[:300]
-            sys.exit(f"Trello {method} {path} lỗi {err.code}: {detail}")
+            fail(f"Trello {method} {path} lỗi {err.code}: {detail}")
 
 
 def main() -> None:
@@ -103,9 +111,16 @@ def main() -> None:
     env = {k: os.environ.get(k) for k in ("TRELLO_KEY", "TRELLO_TOKEN", "TRELLO_BOARD_ID", "TRELLO_LIST_ID")}
     missing = [k for k, v in env.items() if not v]
     if missing:
-        sys.exit("Thiếu biến môi trường: " + ", ".join(missing))
+        fail("Thiếu biến môi trường: " + ", ".join(missing))
     t = Trello(env["TRELLO_KEY"], env["TRELLO_TOKEN"])
-    board = env["TRELLO_BOARD_ID"]
+    # TRELLO_BOARD_ID có thể là mã rút gọn trong link (trello.com/b/<mã>); một số
+    # API (tạo nhãn) chỉ nhận ID đầy đủ 24 ký tự, nên đổi sang ID đầy đủ trước.
+    info = t.call("GET", f"/boards/{env['TRELLO_BOARD_ID']}", fields="id,name")
+    board = info["id"]
+    lst = t.call("GET", f"/lists/{env['TRELLO_LIST_ID']}", fields="idBoard,name")
+    if lst["idBoard"] != board:
+        fail(f"Cột TRELLO_LIST_ID ({lst['name']}) không thuộc bảng {info['name']}")
+    print(f"Bảng: {info['name']} · cột nhận thẻ mới: {lst['name']}")
 
     existing = {}
     for card in t.call("GET", f"/boards/{board}/cards/all", fields="name,desc,idLabels,closed"):

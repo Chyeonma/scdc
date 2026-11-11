@@ -28,7 +28,7 @@ jobs:
         env:
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          TRELLO_BOARD_ID: ${{ vars.TRELLO_BOARD_ID }}
-          TRELLO_LIST_ID: ${{ vars.TRELLO_LIST_ID }}
+          TRELLO_BOARD_ID: ${{ vars.TRELLO_BOARD_ID || secrets.TRELLO_BOARD_ID }}
+          TRELLO_LIST_ID: ${{ vars.TRELLO_LIST_ID || secrets.TRELLO_LIST_ID }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: python3 scripts/sync_trello.py
