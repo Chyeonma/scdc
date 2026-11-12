@@ -33,9 +33,11 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 ## S1-04 · CI build và chạy test
 - Nhãn: tech
 - Người làm: Sáng · Review: Thái
-- Đầu ra: workflow GitHub Actions build backend, chạy test backend và frontend trên mỗi pull request (hiện chỉ có docs.yml và sync-trello.yml).
+- Đầu ra: workflow GitHub Actions build backend, chạy test backend và frontend trên mỗi pull request.
 - Xong khi: một pull request cố ý làm hỏng test bị CI chặn.
 - Phụ thuộc: không.
+- Triển khai: [workflow CI](../../../.github/workflows/ci.yml) và [hướng dẫn cấu hình check bắt buộc](../../guides/continuous-integration.md). Nhánh `tech/s1-04-ci-build-test`, kế thừa commit S1-03 `eb1c300`.
+- Kết quả: xem [hồ sơ kiểm chứng ngày 2026-11-13](../../records/verification/ci/s1-04-2026-11-13.md); còn phải xác nhận PR cố ý làm hỏng test bị chặn trên GitHub trước khi đánh dấu hoàn tất.
 
 ## S1-05 · Giám sát: OpenTelemetry Collector và OpenObserve
 - Nhãn: tech

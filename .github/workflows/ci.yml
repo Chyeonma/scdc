@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "true"
+      ConnectionStrings__Database: Host=127.0.0.1;Port=5432;Database=scdc_ci_test;Username=scdc_ci;Password=ci-postgres-only
+      Modules__Identity__SigningKey: scdc-ci-test-signing-key-at-least-32-characters
+      Modules__Identity__ExposeDevelopmentTokens: "true"
+      Modules__Identity__UserSearch__ApplicationName: SCDC.CI
+      Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+      # Integration tests explicitly dispatch events; avoid a competing worker.
+      Modules__Messaging__Dispatcher__Enabled: "false"
+    services:
+      postgres:
+        image: docker.io/library/postgres:18-alpine
+        env:
+          POSTGRES_DB: scdc_ci_test
+          POSTGRES_USER: scdc_ci
+          POSTGRES_PASSWORD: ci-postgres-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U scdc_ci -d scdc_ci_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Prepare test keys
+        run: |
+          umask 077
+          fingerprint_dir="$RUNNER_TEMP/scdc-ci/messaging-keys"
+          cursor_dir="$RUNNER_TEMP/scdc-ci/user-search"
+          mkdir -p "$fingerprint_dir" "$cursor_dir"
+          head -c 32 /dev/urandom > "$fingerprint_dir/dm-local-v1.key"
+          printf 'Modules__Messaging__FingerprintKeyDirectory=%s\n' "$fingerprint_dir" >> "$GITHUB_ENV"
+          printf 'Modules__Identity__UserSearch__CursorKeyRingPath=%s\n' "$cursor_dir" >> "$GITHUB_ENV"
+      - name: Initialize test database
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker exec -i "$POSTGRES_CONTAINER" psql -X -h 127.0.0.1 -U scdc_ci -d scdc_ci_test -v ON_ERROR_STOP=1 < database/postgres/schema.sql
+      - name: Restore backend
+        run: dotnet restore SCDC.slnx
+      - name: Build backend
+        run: dotnet build SCDC.slnx --configuration Release --no-restore
+      - name: Test backend
+        run: dotnet test SCDC.slnx --configuration Release --no-build --logger "trx;LogFileName=backend.trx" --results-directory artifacts/ci/backend
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-test-results
+          path: artifacts/ci/backend/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: clients/WebClient/package-lock.json
+      - name: Install frontend dependencies
+        run: npm --prefix clients/WebClient ci
+      - name: Test frontend
+        run: npm --prefix clients/WebClient test
+      - name: Build frontend
+        run: npm --prefix clients/WebClient run build
+      - name: Upload WebClient build
+        uses: actions/upload-artifact@v6
+        with:
+          name: web-client-build
+          path: clients/WebClient/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  ci:
+    name: CI
+    if: always()
+    needs: [backend, frontend]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require successful backend and frontend
+        env:
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+        run: |
+          printf 'Backend: %s\nFrontend: %s\n' "$BACKEND_RESULT" "$FRONTEND_RESULT"
+          test "$BACKEND_RESULT" = success
+          test "$FRONTEND_RESULT" = success
