@@ -50,8 +50,8 @@ services:
       retries: 10
     volumes:
       - scdc-postgres-data:/var/lib/postgresql
-      - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
-      - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro
+      - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+      - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro,z
 
 volumes:
   scdc-postgres-data:

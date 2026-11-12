@@ -4,7 +4,7 @@
 
 Cách cài đặt, chạy, cấu hình và kiểm thử SCDC trên máy phát triển.
 
-**Cập nhật:** 2026-10-13, theo nền `900e226` ([MVP](../releases/mvp.md)). Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
+**Cập nhật:** nền `900e226` ([MVP](../releases/mvp.md)); hướng dẫn gateway S1-02 cập nhật ngày 2026-11-12. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
 
 Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình và dữ liệu mẫu chỉ dùng cho môi trường phát triển.
 
@@ -47,9 +47,11 @@ docker compose up -d --build
 | Dịch vụ | Địa chỉ |
 |---|---|
 | WebClient | `http://localhost:3000` |
-| Backend / Swagger | `http://localhost:5026/swagger` |
-| OpenAPI JSON (Development) | `http://localhost:5026/swagger/v1/swagger.json` |
-| Health | `http://localhost:5026/api/v1/health` |
+| Swagger qua gateway (Development) | `http://localhost:3000/swagger` |
+| OpenAPI JSON qua gateway (Development) | `http://localhost:3000/swagger/v1/swagger.json` |
+| Health của Nginx | `http://localhost:3000/healthz` |
+| Health của API qua gateway | `http://localhost:3000/api/v1/health` |
+| API trực tiếp để debug | `http://localhost:5026` |
 | PostgreSQL | `localhost:5432` |
 
 Compose dựng PostgreSQL, API và web.
@@ -58,6 +60,40 @@ Compose dựng PostgreSQL, API và web.
 - **Chưa có:** tin phòng, realtime Community. Worker email ở nhánh Identity riêng ([hiện trạng email](../features/accounts/email-links.md#status)).
 - Giữ key ring Community và volume khóa DM cùng với dữ liệu.
 - Database mới đã có migration Community 001 đến 004. Database đã có dữ liệu phải [nâng cấp](#migration) và đối chiếu migration DM ([hồ sơ](../records/verification/messaging/DM-MVP.md)).
+
+<a id="gateway"></a>
+
+### Nginx trước API hiện tại — S1-02
+
+Container `web-client` vừa phục vụ file build React vừa làm gateway. Trình duyệt dùng cùng địa chỉ cổng 3000 cho giao diện, REST `/api/v1` và SignalR `/hubs/chat`. Cổng 5026 phục vụ debug API trực tiếp; các kiểm chứng gateway phải đi qua WebClient.
+
+[Cấu hình Nginx](../../clients/WebClient/nginx.conf) được chép thành template trong image. Khi container bắt đầu chạy, entrypoint của image Nginx điền DNS lấy từ `/etc/resolv.conf`. Gateway phân giải lại `chat-service` với cache 5 giây để khôi phục sau khi API được tạo lại và đổi IP. Chạy `nginx -t` **trong container đã khởi động**, sau bước điền template:
+
+```bash
+podman compose exec web-client nginx -t
+curl --fail http://localhost:3000/healthz
+curl --fail http://localhost:3000/api/v1/health
+```
+
+Dùng `docker compose` nếu chọn Docker. `/healthz` chỉ kiểm tra Nginx; health API hiện chưa kiểm tra database. Khi upstream chưa sẵn sàng, API và Hub có thể trả lỗi gateway; file giao diện vẫn được phục vụ.
+
+Kiểm thử S1-02 cần Node.js 24, npm và trình duyệt Playwright. Cài Chromium bằng `npx playwright install chromium` trong `clients/WebClient`, hoặc đặt `SCDC_E2E_BROWSER_CHANNEL=chrome` nếu đã có Google Chrome.
+
+```bash
+make test-gateway ENGINE=podman
+# Hoặc Docker:
+make test-gateway
+```
+
+Lệnh cài dependency frontend, build [stack thử riêng](../../compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart và chủ động đổi IP container API, giữ nguyên container Nginx. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
+
+Đổi cổng hoặc giữ stack để điều tra lỗi sau khi đã cài dependency:
+
+```bash
+python3 scripts/test_gateway.py --engine podman --port 15311 --keep
+```
+
+Script in tên project trong kết quả. Dọn đúng stack đã giữ bằng `podman compose -p <tên-project> -f compose.gateway-test.yaml down --volumes`; dùng cùng `GATEWAY_WEB_PORT` nếu đã đổi cổng. Chi tiết phạm vi xem [S1-02](../system/api-conventions.md#s1-02-preparation).
 
 <a id="container-engines"></a>
 
@@ -158,6 +194,7 @@ Vite chạy ở cổng 3000 và chuyển tiếp `/api`, `/hubs`, `/swagger` tớ
 | `make build` | Build backend và frontend |
 | `make test` | Test backend và frontend; backend cần PostgreSQL Development |
 | `make test-api` / `make test-web` | Test riêng backend/frontend |
+| `make test-gateway` | Test gateway, các transport SignalR và DM trên stack riêng; hỗ trợ `ENGINE=podman` |
 | `make docs-check` | Kiểm tra link và anchor tài liệu |
 | `make test-tools` | Kiểm thử công cụ đồng bộ trong các repo Git tạm |
 

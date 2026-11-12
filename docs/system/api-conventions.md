@@ -2,7 +2,7 @@
 
 Trang này quy định cách viết API công khai (định dạng, mã lỗi) và các quyết định v1 về giao tiếp: giữa trình duyệt và service, giữa các service với nhau, và cách xác thực. Quyền và nghiệp vụ cụ thể nằm trong tài liệu từng tính năng.
 
-**Trạng thái:** quy ước API công khai đang dùng trong nền `900e226`. Các quyết định v1 (D04, D09, D10, D20, D27 đến D29, D46) đã chốt nhưng chưa có code.
+**Trạng thái:** quy ước API công khai đang dùng trong nền `900e226`. Các quyết định v1 (D04, D09, D10, D20, D27 đến D29, D46) đã chốt. Nginx đã phục vụ WebClient và proxy tới monolith; cơ chế và cách kiểm chứng S1-02 được ghi [bên dưới](#s1-02-preparation).
 
 <a id="contracts"></a>
 
@@ -90,6 +90,56 @@ flowchart LR
 - [Nginx hiện tại](../../clients/WebClient/nginx.conf) phục vụ SPA và proxy tới API monolith; chưa chứng minh định tuyến tới bốn service.
 - WebSocket cần cấu hình chuyển tiếp ([Nginx](https://nginx.org/en/docs/http/websocket.html)). Trước bàn giao phải thử negotiate và các transport SignalR qua Gateway.
 - Nginx vừa phục vụ file WebClient vừa làm Gateway trong cùng container ([D22](environments.md#v1-gateway-webclient-hosting)).
+
+<a id="s1-02-preparation"></a>
+
+### S1-02 — Nginx trước monolith
+
+[S1-02](../project/tasks/step-1.md) đưa WebClient, REST và SignalR qua Nginx trước ứng dụng API hiện tại. Phần này mô tả định tuyến và cách kiểm chứng theo D09, D10 và D22.
+
+**Trạng thái:** đã triển khai và kiểm thử trên nhánh `tech/s1-02-nginx-gateway`; [7 ca gateway đạt, chờ review](../records/verification/gateway/s1-02-2026-11-12.md). S1-01 đã hoàn tất theo [xác nhận của người dùng ngày 2026-11-12](../records/planning/s1-01-confirmation-2026-11-12.md).
+
+#### Định tuyến
+
+| Request | Xử lý trong container `web-client` |
+|---|---|
+| `/`, route giao diện và file build | Nginx trả HTML, CSS, JavaScript; route giao diện dùng SPA fallback |
+| `/api` và `/api/…` | Chuyển nguyên đường dẫn, query và request tới `chat-service:8080`; API xử lý xác thực, quyền và lỗi |
+| `/hubs` và `/hubs/…` | Chuyển negotiate, WebSocket, Server-Sent Events và Long Polling tới API; dùng HTTP/1.1, Upgrade và Connection, tắt buffering, timeout đọc và gửi 3.600 giây |
+| `/swagger` và `/swagger/…` | Chuyển tới Swagger của API trong Development |
+| `/healthz` | Nginx trả `healthy`; endpoint này không kiểm tra API hay database |
+
+[Cấu hình Nginx](../../clients/WebClient/nginx.conf) ưu tiên các prefix API, Hub và Swagger trước quy tắc file tĩnh. Request như `/api/not-found.js` được API xử lý thay vì rơi vào file JavaScript hoặc SPA. Trang HTML không cache; asset của bản build được cache theo tên có hash.
+
+[Dockerfile](../../clients/WebClient/Dockerfile) chép cấu hình vào template của image Nginx. Entry point lấy nameserver từ `/etc/resolv.conf` và chỉ thay biến `NGINX_LOCAL_RESOLVERS`; các biến Nginx khác được giữ lại. Cách lấy resolver theo container áp dụng cho cả Docker và Podman, không gắn cứng địa chỉ DNS của một engine. Nginx dùng resolver với cache 5 giây và upstream trong biến để phân giải lại tên API khi IP thay đổi. Tham khảo [resolver](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver), [proxy_pass](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass) và [entrypoint lấy resolver](https://github.com/nginx/docker-nginx/blob/master/entrypoint/15-local-resolvers.envsh).
+
+Nginx chuyển Host, địa chỉ client và giao thức tới API. Gateway không tự gửi lại request upstream; client và API đối chiếu thao tác gửi lại bằng khóa nghiệp vụ. Access log của `/hubs` được tắt; error log của route này chỉ giữ mức critical vì lỗi kết nối thông thường có thể chứa URL và token.
+
+[Compose phát triển](../../compose.yaml) tiếp tục dùng cổng 3000 cho gateway, 5026 cho debug API và 5432 cho database. [Hướng dẫn gateway](../guides/development.md#gateway) ghi địa chỉ và lệnh kiểm tra. S1-03 bổ sung service mẫu; S1-04 làm CI; S1-05 làm giám sát. Tách service, chat phòng, Media, gRPC và mTLS nằm ở các gói khác.
+
+#### Kiểm chứng
+
+[Stack nghiệm thu](../../compose.gateway-test.yaml) dùng database `scdc_gateway_test`, khóa và volume riêng; chỉ Nginx có cổng publish. [Script chạy](../../scripts/test_gateway.py) tạo project riêng cho mỗi lần, chạy test và dọn dữ liệu thử. Các ca đăng ký hoặc gửi tin không dùng database phát triển.
+
+```bash
+make test-gateway ENGINE=podman
+```
+
+Cần Node.js 24, npm và Chromium của Playwright, hoặc Google Chrome với `SCDC_E2E_BROWSER_CHANNEL=chrome`. Cách chọn engine, đổi cổng và giữ stack nằm trong [hướng dẫn phát triển](../guides/development.md#gateway).
+
+[Project E2E gateway](../../clients/WebClient/playwright.config.js) chạy [các ca gateway](../../clients/WebClient/e2e/gateway.spec.js) và [ca tích hợp Community với DM](../../clients/WebClient/e2e/mergeMvp.spec.js):
+
+| Ca | Điều kiện đạt |
+|---|---|
+| SPA, asset, route API và query | Giao diện và asset tải được; API giữ prefix, query, HTTP 400/401/404 và JSON; request không bị trả nhầm HTML |
+| Negotiate | Không có token bị từ chối; phiên hợp lệ nhận danh sách transport của API |
+| WebSockets | Tin DM đã lưu được nhận qua WebSocket thật đi qua Nginx |
+| Server-Sent Events | Tin DM được nhận khi ép dùng transport SSE qua Nginx |
+| Long Polling | Tin DM được nhận khi ép dùng transport Long Polling qua Nginx |
+| Restart và đổi IP API | Hai trang chat kết nối lại; tin cũ còn; gửi nhận được tin mới sau restart và sau khi API đổi IP; container Nginx giữ nguyên; log không chứa token |
+| Community và DM trên giao diện | Hai phiên trình duyệt gửi nhận DM, chuyển sang Community rồi tải lại lịch sử DM qua cùng gateway |
+
+[Hồ sơ S1-02 ngày 2026-11-12](../records/verification/gateway/s1-02-2026-11-12.md) ghi môi trường, image, 7 ca E2E và 77 test frontend đã đạt. Phạm vi này chưa chứng minh định tuyến tới bốn service hay tải và SLA thu hồi quyền của v1.
 
 ## Thiết kế v1: service gọi service
 

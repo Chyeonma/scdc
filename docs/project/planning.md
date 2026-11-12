@@ -213,7 +213,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 
 ### Lộ trình lên microservice
 
-**Trạng thái:** đề xuất ngày 2026-11-11, **chờ nhóm xác nhận** ở họp tuần. Thay cho các gói V1-ARCH-01 đến 03 và các đợt V1-0 đến 2 trước đây; bản cũ xem lịch sử Git của trang này.
+**Trạng thái:** đang thực hiện; S1-01 hoàn tất theo [xác nhận của người dùng ngày 2026-11-12](../records/planning/s1-01-confirmation-2026-11-12.md). Thay cho các gói V1-ARCH-01 đến 03 và các đợt V1-0 đến 2 trước đây; bản cũ xem lịch sử Git của trang này. Các [đề xuất hoãn công nghệ](#tech-deferral) vẫn cần xác nhận riêng.
 
 **Nguyên tắc:**
 
@@ -225,7 +225,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 
 | Bước | Mục tiêu | Phụ trách chính | Xong khi | Kết quả |
 |---|---|---|---|---|
-| [STEP-1](#step-1) | Khung chạy: gateway, Compose, CI, giám sát; thử LiveKit | Cả nhóm; Vg điều phối, Thái thử LiveKit | Ai cũng tự dựng được môi trường; lần theo được request lỗi; một phiên âm thanh thật | — |
+| [STEP-1](#step-1) | Khung chạy: gateway, Compose, CI, giám sát; thử LiveKit | Cả nhóm; Vg điều phối, Thái thử LiveKit | Ai cũng tự dựng được môi trường; lần theo được request lỗi; một phiên âm thanh thật | 2026-11-12: [S1-01 hoàn tất](../records/planning/s1-01-confirmation-2026-11-12.md); [S1-02 đã kiểm thử, chờ review](../records/verification/gateway/s1-02-2026-11-12.md). Tiến độ các thẻ còn lại xem Trello. |
 | [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | — |
 | [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | — |
 | [STEP-4](#step-4) | Tính năng mới trên kiến trúc mới: tin phòng, phòng thoại, hoàn thiện Community | Theo service | Đạt [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion) | — |

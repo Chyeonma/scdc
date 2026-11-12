@@ -46,7 +46,15 @@ const dm = [
   evidence,
 }));
 
-const PROJECTS = [community, ...dm];
+const gateway = {
+  name: 'gateway',
+  testMatch: ['gateway.spec.js', 'mergeMvp.spec.js'],
+  timeout: 120_000,
+  outputDir: path.join(process.env.SCDC_GATEWAY_ARTIFACTS || path.join(root, 'artifacts/gateway'), 'browser'),
+  use: { baseURL: process.env.SCDC_GATEWAY_URL, viewport: { width: 1280, height: 800 }, trace: 'off' },
+};
+
+const PROJECTS = [community, ...dm, gateway];
 
 // Đọc project được chọn từ dòng lệnh để kiểm tra môi trường và đặt file kết quả JSON.
 function selectedProjects(argv) {
@@ -60,7 +68,10 @@ function selectedProjects(argv) {
 
 const selected = selectedProjects(process.argv);
 const isListing = process.argv.includes('--list');
-if (!isListing && selected.length !== 1) {
+// Workers reload the config without the runner's --project arguments.
+// The parent already validated the selected project and its environment.
+const isWorker = process.env.TEST_WORKER_INDEX !== undefined;
+if (!isListing && !isWorker && selected.length !== 1) {
   throw new Error(`Chọn đúng một bộ E2E bằng --project <tên>. Có: ${PROJECTS.map((p) => p.name).join(', ')}.`);
 }
 
@@ -69,6 +80,16 @@ if (selected[0] === 'community') {
   const database = process.env.SCDC_E2E_DATABASE;
   if (!baseURL || !database?.endsWith('_test') || !['localhost', '127.0.0.1'].includes(new URL(baseURL).hostname)) {
     throw new Error('Set SCDC_E2E_URL to an isolated localhost WebClient and SCDC_E2E_DATABASE to its database ending _test.');
+  }
+}
+
+if (selected[0] === 'gateway' && !isListing) {
+  const url = process.env.SCDC_GATEWAY_URL;
+  if (!url || !['localhost', '127.0.0.1'].includes(new URL(url).hostname)
+      || process.env.SCDC_GATEWAY_DATABASE !== 'scdc_gateway_test'
+      || !/^scdc-gateway-[a-z0-9-]+$/.test(process.env.SCDC_GATEWAY_PROJECT || '')
+      || !['docker', 'podman'].includes(process.env.SCDC_GATEWAY_ENGINE)) {
+    throw new Error('Use scripts/test_gateway.py to run gateway checks on their dedicated local stack.');
   }
 }
 
@@ -83,6 +104,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter,
-  use: { browserName: 'chromium', headless: true, screenshot: 'off', video: 'off' },
+  use: { browserName: 'chromium', channel: process.env.SCDC_E2E_BROWSER_CHANNEL,
+    headless: true, screenshot: 'off', video: 'off' },
   projects: PROJECTS.map(({ evidence, ...project }) => project),
 });
