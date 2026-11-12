@@ -40,6 +40,7 @@ Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#tea
 |---|---|
 | [clients/WebClient](clients/WebClient) | Giao diện web, dùng React và Vite. |
 | [services](services) | Backend xử lý nghiệp vụ, cung cấp API và cập nhật thời gian thực. Dùng .NET. |
+| [services/Sample](services/Sample) | Service mẫu S1-03 theo cấu trúc bốn project v1; trả `/health` qua Nginx. |
 | [database/postgres](database/postgres) | Script SQL khởi tạo, cập nhật cấu trúc và tạo dữ liệu mẫu cho PostgreSQL. |
 | [compose.yaml](compose.yaml) | Cấu hình chạy giao diện, API và cơ sở dữ liệu bằng container trong môi trường phát triển. |
 | [Makefile](Makefile) | Các lệnh chạy, build, kiểm thử và kiểm tra tài liệu. |

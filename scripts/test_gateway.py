@@ -54,13 +54,16 @@ def main():
         for attempt in range(120):
             try:
                 with opener.open(origin + '/api/v1/health', timeout=2) as response:
-                    if response.status == 200:
+                    api_ready = response.status == 200
+                with opener.open(origin + '/health', timeout=2) as response:
+                    sample = json.load(response)
+                    if api_ready and response.status == 200 and sample.get('service') == 'sample-service' and sample.get('status') == 'healthy':
                         break
             except (OSError, urllib.error.URLError):
                 pass
             time.sleep(0.5)
         else:
-            raise RuntimeError('API did not become reachable through the gateway')
+            raise RuntimeError('API and sample service did not become reachable through the gateway')
         run(compose + ['exec', '-T', 'web-client', 'nginx', '-t'], 'nginx syntax')
         run(compose + ['exec', '-T', 'web-client', 'nginx', '-v'], 'nginx version')
         run(compose + ['ps', '--format', 'json'], 'containers')
@@ -75,6 +78,7 @@ def main():
             (artifact / 'result.json').write_text(json.dumps({
                 'project': project, 'engine': args.engine, 'gateway': origin,
                 'database': 'scdc_gateway_test', 'passed': passed, 'kept': args.keep,
+                'sample_health': origin + '/health',
             }, indent=2) + '\n')
             print(f'Evidence: {artifact.relative_to(ROOT)}', flush=True)
     return 0

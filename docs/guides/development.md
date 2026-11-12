@@ -50,11 +50,14 @@ docker compose up -d --build
 | Swagger qua gateway (Development) | `http://localhost:3000/swagger` |
 | OpenAPI JSON qua gateway (Development) | `http://localhost:3000/swagger/v1/swagger.json` |
 | Health của Nginx | `http://localhost:3000/healthz` |
+| Health của service mẫu S1-03 qua gateway | `http://localhost:3000/health` |
 | Health của API qua gateway | `http://localhost:3000/api/v1/health` |
 | API trực tiếp để debug | `http://localhost:5026` |
 | PostgreSQL | `localhost:5432` |
 
 Compose dựng PostgreSQL, API và web.
+
+S1-03 thêm container `sample-service`, build từ bốn project trong `services/Sample/`. `GET /health` qua gateway trả JSON có `service: "sample-service"`, `status` và `checkedAt` UTC. Service mẫu chạy độc lập với monolith và database; cổng 8080 chỉ dùng trong mạng Compose. Chi tiết cấu trúc và contract tại [service mẫu S1-03](../system/backend.md#s1-03-sample-service).
 
 - **Đã có:** tài khoản; Community (tạo, xem, tìm, tham gia server công khai, vai trò, phòng chữ, ACL); DM (hộp thư, gửi, lịch sử, gửi lại, sửa, xóa, ChatHub, outbox, kết nối lại). Xem [hồ sơ tích hợp](../records/verification/messaging/merge-2026-10-13.md).
 - **Chưa có:** tin phòng, realtime Community. Worker email ở nhánh Identity riêng ([hiện trạng email](../features/accounts/email-links.md#status)).
@@ -72,10 +75,11 @@ Container `web-client` vừa phục vụ file build React vừa làm gateway. Tr
 ```bash
 podman compose exec web-client nginx -t
 curl --fail http://localhost:3000/healthz
+curl --fail http://localhost:3000/health
 curl --fail http://localhost:3000/api/v1/health
 ```
 
-Dùng `docker compose` nếu chọn Docker. `/healthz` chỉ kiểm tra Nginx; health API hiện chưa kiểm tra database. Khi upstream chưa sẵn sàng, API và Hub có thể trả lỗi gateway; file giao diện vẫn được phục vụ.
+Dùng `docker compose` nếu chọn Docker. `/healthz` chỉ kiểm tra Nginx; `/health` kiểm tra tiến trình service mẫu; `/api/v1/health` hiện chưa kiểm tra database của monolith. Khi upstream chưa sẵn sàng, các đường dẫn tương ứng có thể trả lỗi gateway; file giao diện vẫn được phục vụ.
 
 Kiểm thử S1-02 cần Node.js 24, npm và trình duyệt Playwright. Cài Chromium bằng `npx playwright install chromium` trong `clients/WebClient`, hoặc đặt `SCDC_E2E_BROWSER_CHANNEL=chrome` nếu đã có Google Chrome.
 
@@ -85,7 +89,7 @@ make test-gateway ENGINE=podman
 make test-gateway
 ```
 
-Lệnh cài dependency frontend, build [stack thử riêng](../../compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart và chủ động đổi IP container API, giữ nguyên container Nginx. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
+Lệnh cài dependency frontend, build [stack thử riêng](../../compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart, chủ động đổi IP container API và service mẫu, giữ nguyên container Nginx; kiểm tra service mẫu vẫn trả health khi monolith dừng. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
 
 Đổi cổng hoặc giữ stack để điều tra lỗi sau khi đã cài dependency:
 

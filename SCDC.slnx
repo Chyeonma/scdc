@@ -9,6 +9,12 @@
     <Project Path="services/Modules/Community/SCDC.Community.csproj" />
     <Project Path="services/Modules/Messaging/SCDC.Messaging.csproj" />
   </Folder>
+  <Folder Name="/services/Sample/">
+    <Project Path="services/Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj" />
+    <Project Path="services/Sample/SCDC.Sample.Application/SCDC.Sample.Application.csproj" />
+    <Project Path="services/Sample/SCDC.Sample.Domain/SCDC.Sample.Domain.csproj" />
+    <Project Path="services/Sample/SCDC.Sample.Infrastructure/SCDC.Sample.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SCDC.Api.Tests/SCDC.Api.Tests.csproj" />
   </Folder>

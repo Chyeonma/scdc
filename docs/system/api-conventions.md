@@ -108,6 +108,7 @@ flowchart LR
 | `/hubs` và `/hubs/…` | Chuyển negotiate, WebSocket, Server-Sent Events và Long Polling tới API; dùng HTTP/1.1, Upgrade và Connection, tắt buffering, timeout đọc và gửi 3.600 giây |
 | `/swagger` và `/swagger/…` | Chuyển tới Swagger của API trong Development |
 | `/healthz` | Nginx trả `healthy`; endpoint này không kiểm tra API hay database |
+| `/health` (S1-03) | Chuyển tới service mẫu `sample-service:8080/health`, trả JSON nhận diện service mẫu |
 
 [Cấu hình Nginx](../../clients/WebClient/nginx.conf) ưu tiên các prefix API, Hub và Swagger trước quy tắc file tĩnh. Request như `/api/not-found.js` được API xử lý thay vì rơi vào file JavaScript hoặc SPA. Trang HTML không cache; asset của bản build được cache theo tên có hash.
 
@@ -115,7 +116,7 @@ flowchart LR
 
 Nginx chuyển Host, địa chỉ client và giao thức tới API. Gateway không tự gửi lại request upstream; client và API đối chiếu thao tác gửi lại bằng khóa nghiệp vụ. Access log của `/hubs` được tắt; error log của route này chỉ giữ mức critical vì lỗi kết nối thông thường có thể chứa URL và token.
 
-[Compose phát triển](../../compose.yaml) tiếp tục dùng cổng 3000 cho gateway, 5026 cho debug API và 5432 cho database. [Hướng dẫn gateway](../guides/development.md#gateway) ghi địa chỉ và lệnh kiểm tra. S1-03 bổ sung service mẫu; S1-04 làm CI; S1-05 làm giám sát. Tách service, chat phòng, Media, gRPC và mTLS nằm ở các gói khác.
+[Compose phát triển](../../compose.yaml) tiếp tục dùng cổng 3000 cho gateway, 5026 cho debug API và 5432 cho database. [Hướng dẫn gateway](../guides/development.md#gateway) ghi địa chỉ và lệnh kiểm tra. [S1-03 bổ sung service mẫu](backend.md#s1-03-sample-service); S1-04 làm CI; S1-05 làm giám sát. Tách service, chat phòng, Media, gRPC và mTLS nằm ở các gói khác.
 
 #### Kiểm chứng
 

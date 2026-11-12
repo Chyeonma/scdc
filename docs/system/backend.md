@@ -2,7 +2,7 @@
 
 Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc giữa các phần, và các quyết định v1 về worker, Hub, repository, chia project, thư viện dùng chung và mã sinh từ gRPC.
 
-**Trạng thái:** code hiện là MVP: một ứng dụng API ([SCDC.slnx](../../SCDC.slnx)). Cấu trúc v1 (D12, D13, D39 đến D45, D47) đã chốt nhưng chưa di chuyển code hay tạo project nào.
+**Trạng thái:** nghiệp vụ hiện là MVP trong một ứng dụng API. [Service mẫu S1-03](#s1-03-sample-service) bắt đầu dựng bốn project theo D40 và D43 trong [solution](../../SCDC.slnx); bốn service nghiệp vụ chưa được tách.
 
 ## Cấu trúc hiện tại (MVP)
 
@@ -145,6 +145,57 @@ Ví dụ với Channels:
 Tham khảo [Clean Architecture](https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/common-web-application-architectures#clean-architecture). Lưu ý: tham chiếu bắc cầu có thể cho dùng kiểu từ project gián tiếp ([MSBuild](https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#disabletransitiveprojectreferences)); graph project không thay được review.
 
 Migration: chạy như bước riêng ([D48](database.md#v1-migration-execution)) bằng một công cụ chung ([D50](database.md#v1-migration-runner)).
+
+<a id="s1-03-sample-service"></a>
+
+### S1-03 — Service mẫu `/health` sau gateway
+
+Service mẫu chứng minh cách đóng gói một tiến trình .NET độc lập, chia project và định tuyến từ Nginx trước khi tách các service nghiệp vụ. `Sample` là khung thử hạ tầng cho [S1-03](../project/tasks/step-1.md), nằm ngoài bốn service nghiệp vụ của v1.
+
+**Trạng thái:** đã triển khai và kiểm thử trên nhánh `tech/s1-03-sample-service`, kế thừa commit gateway S1-02 `d325070`; [10 ca gateway và 77 test frontend đạt](../records/verification/gateway/s1-03-2026-11-13.md), chờ review.
+
+| Project | Trách nhiệm và tham chiếu |
+|---|---|
+| [SCDC.Sample.Api](../../services/Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj) | Khởi động và endpoint `/health`; gọi Application, dùng Infrastructure để đăng ký DI |
+| [SCDC.Sample.Application](../../services/Sample/SCDC.Sample.Application/SCDC.Sample.Application.csproj) | `ReadServiceHealth`, response và interface `IHealthProbe`; tham chiếu Domain |
+| [SCDC.Sample.Domain](../../services/Sample/SCDC.Sample.Domain/SCDC.Sample.Domain.csproj) | Snapshot sức khỏe thuần .NET; không có tham chiếu project khác |
+| [SCDC.Sample.Infrastructure](../../services/Sample/SCDC.Sample.Infrastructure/SCDC.Sample.Infrastructure.csproj) | Probe liveness của tiến trình, thời gian UTC và đăng ký DI; tham chiếu Application và Domain |
+
+Các project đặt trong `services/Sample/`, chia code theo chức năng `Health/` và bật `DisableTransitiveProjectReferences`. Service mẫu không tham chiếu module, BuildingBlocks hay Contracts của monolith. [Dockerfile](../../services/Sample/SCDC.Sample.Api/Dockerfile) chỉ lấy build context `services/Sample`, restore và publish riêng project Api.
+
+#### HTTP và định tuyến
+
+`GET /health` của service trả HTTP 200 và JSON, có `Cache-Control: no-store`. Ví dụ response:
+
+```json
+{
+  "service": "sample-service",
+  "status": "healthy",
+  "checkedAt": "2026-11-13T00:00:00Z"
+}
+```
+
+`checkedAt` được tạo theo giờ UTC tại lần gọi. Probe hiện kiểm tra liveness của tiến trình mẫu; nó không dùng database hay kết nối tới monolith. JWT và endpoint cần xác thực thuộc S1-06.
+
+| Địa chỉ qua gateway | Bên trả kết quả |
+|---|---|
+| `/health` | Service mẫu `sample-service:8080/health` |
+| `/healthz` | Nginx trả `healthy` cho chính gateway |
+| `/api/v1/health` | Monolith trả trạng thái các module hiện có |
+
+[Nginx](../../clients/WebClient/nginx.conf) định tuyến **đúng `/health`** tới service mẫu và dùng cùng cơ chế resolver của S1-02. Service mẫu chỉ mở cổng 8080 trong mạng Compose, không publish cổng riêng ra máy host. Khi service mẫu dừng, gateway trả lỗi upstream cho `/health`; giao diện và monolith có đường định tuyến riêng.
+
+#### Chạy và kiểm chứng
+
+[Compose phát triển](../../compose.yaml) build và chạy service mẫu cùng stack qua `podman compose up -d --build` hoặc `docker compose up -d --build`, sau khi đã chuẩn bị môi trường theo [hướng dẫn phát triển](../guides/development.md#setup). Thử `curl --fail http://localhost:3000/health` để gọi qua Nginx.
+
+Build riêng mà không cần dựng monolith:
+
+```bash
+dotnet build services/Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj --configuration Release
+```
+
+Bộ [kiểm thử gateway](../../clients/WebClient/e2e/gateway.spec.js) thêm các ca nhận diện JSON của service mẫu, monolith dừng và service mẫu đổi IP; các ca S1-02 tiếp tục chạy trong cùng [stack thử riêng](../../compose.gateway-test.yaml). Cách chạy: `make test-gateway ENGINE=podman`, xem [hướng dẫn gateway](../guides/development.md#gateway). Việc đã có test không thay cho kết quả chạy ghi trong hồ sơ kiểm thử.
 
 <a id="v1-shared-code"></a>
 

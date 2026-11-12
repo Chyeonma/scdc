@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SCDC.Sample.Application/SCDC.Sample.Application.csproj" />
+    <ProjectReference Include="../SCDC.Sample.Infrastructure/SCDC.Sample.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

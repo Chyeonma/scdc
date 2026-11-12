@@ -24,6 +24,12 @@ services:
       - scdc-community-keys:/app/community-keys
       - scdc-messaging-keys:/app/messaging-keys
 
+  sample-service:
+    build:
+      context: ./services/Sample
+      dockerfile: SCDC.Sample.Api/Dockerfile
+    restart: unless-stopped
+
   web-client:
     build:
       context: ./clients/WebClient
@@ -32,6 +38,8 @@ services:
       - "3000:80"
     depends_on:
       chat-service:
+        condition: service_started
+      sample-service:
         condition: service_started
     restart: unless-stopped
 

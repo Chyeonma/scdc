@@ -1,4 +1,4 @@
-# Dedicated S1-02 acceptance stack. The runner supplies a unique project name.
+# Dedicated gateway acceptance stack (S1-02/S1-03). The runner supplies a unique project name.
 # Only Nginx is published; test clients cannot call the API directly from the host.
 name: scdc-gateway-test
 services:
@@ -40,6 +40,11 @@ services:
       - gateway-community-keys:/app/community-keys
       - gateway-messaging-keys:/app/messaging-keys
 
+  sample-service:
+    build:
+      context: ./services/Sample
+      dockerfile: SCDC.Sample.Api/Dockerfile
+
   web-client:
     build:
       context: ./clients/WebClient
@@ -48,6 +53,8 @@ services:
       - "127.0.0.1:${GATEWAY_WEB_PORT:-15310}:80"
     depends_on:
       chat-service:
+        condition: service_started
+      sample-service:
         condition: service_started
 
 volumes:

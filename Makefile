@@ -29,7 +29,7 @@ help:
 	  '  make test               Chạy test backend và frontend' \
 	  '  make test-api           Chạy test backend (cần PostgreSQL)' \
 	  '  make test-web           Cài dependency và chạy test frontend' \
-	  '  make test-gateway       Kiểm thử Nginx, REST, SignalR và DM trên stack riêng' \
+	  '  make test-gateway       Kiểm thử Nginx, service mẫu, REST, SignalR và DM trên stack riêng' \
 	  '  make docs-check         Kiểm tra link và anchor tài liệu' \
 	  '  make test-tools         Kiểm thử công cụ đồng bộ trong repo Git tạm' \
 	  '' \

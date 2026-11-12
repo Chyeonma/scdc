@@ -83,6 +83,65 @@ test('SignalR negotiate is authenticated and exposes all supported transports', 
     expect.arrayContaining(['WebSockets', 'ServerSentEvents', 'LongPolling']));
 });
 
+test('sample /health is JSON from a separate service and is never cached', async ({ request }) => {
+  const response = await request.get('/health?probe=s1-03');
+  expect(response.status()).toBe(200);
+  expect(response.headers()['content-type']).toContain('application/json');
+  expect(response.headers()['cache-control']).toContain('no-store');
+  const health = await response.json();
+  expect(health.service).toBe('sample-service');
+  expect(health.status).toBe('healthy');
+  expect(Math.abs(Date.now() - Date.parse(health.checkedAt))).toBeLessThan(10_000);
+  expect((await request.post('/health')).status()).toBe(405);
+  const gateway = await request.get('/healthz');
+  expect(await gateway.text()).toBe('healthy');
+  const api = await request.get('/api/v1/health');
+  expect(Array.isArray((await api.json()).modules)).toBe(true);
+});
+
+test('sample health remains available while the monolith is stopped', async ({ request }) => {
+  try {
+    await compose('stop', 'chat-service');
+    const response = await request.get('/health');
+    expect(response.status()).toBe(200);
+    expect((await response.json()).service).toBe('sample-service');
+    expect((await request.get('/api/v1/health')).status()).toBe(502);
+    expect((await request.get('/')).status()).toBe(200);
+  } finally {
+    await compose('start', 'chat-service');
+    await expect.poll(async () => (await request.get('/api/v1/health')).status(), { timeout: 30_000 }).toBe(200);
+  }
+});
+
+test('sample outage and replacement IP do not require restarting Nginx', async ({ request }) => {
+  const gatewayId = await compose('ps', '-q', 'web-client');
+  const oldId = await compose('ps', '-q', 'sample-service');
+  const original = JSON.parse(await engine('inspect', oldId))[0];
+  const [network, settings] = Object.entries(original.NetworkSettings.Networks)[0];
+  const holder = `${project}-sample-old-ip`;
+  let held = false;
+  try {
+    await compose('stop', 'sample-service');
+    expect((await request.get('/health')).status()).toBe(502);
+    expect((await request.get('/api/v1/health')).status()).toBe(200);
+    expect((await request.get('/')).status()).toBe(200);
+    await compose('rm', '-f', 'sample-service');
+    await engine('run', '-d', '--name', holder, '--network', network, '--ip', settings.IPAddress,
+      'docker.io/library/nginx:alpine', 'sleep', '180');
+    held = true;
+    await compose('up', '-d', '--no-deps', 'sample-service');
+    const newId = await compose('ps', '-q', 'sample-service');
+    const replacement = JSON.parse(await engine('inspect', newId))[0];
+    expect(replacement.NetworkSettings.Networks[network].IPAddress).not.toBe(settings.IPAddress);
+    expect(await compose('ps', '-q', 'web-client')).toBe(gatewayId);
+    await expect.poll(async () => (await request.get('/health')).status(), { timeout: 30_000 }).toBe(200);
+    expect((await (await request.get('/health')).json()).service).toBe('sample-service');
+  } finally {
+    if (held) await engine('rm', '--force', '--volumes', holder);
+    await compose('up', '-d', '--no-deps', 'sample-service');
+  }
+});
+
 for (const [name, transport] of [['WebSockets', HttpTransportType.WebSockets],
   ['ServerSentEvents', HttpTransportType.ServerSentEvents], ['LongPolling', HttpTransportType.LongPolling]]) {
   test(`DM is delivered through Nginx using ${name}`, async ({ request, baseURL }) => {
