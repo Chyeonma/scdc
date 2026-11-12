@@ -1,0 +1,57 @@
+# Dedicated S1-02 acceptance stack. The runner supplies a unique project name.
+# Only Nginx is published; test clients cannot call the API directly from the host.
+name: scdc-gateway-test
+services:
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_gateway_test
+      POSTGRES_USER: scdc_gateway_test
+      POSTGRES_PASSWORD: gateway-test-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scdc_gateway_test -d scdc_gateway_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - gateway-postgres-data:/var/lib/postgresql
+      - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_gateway_test;Password=gateway-test-only
+      Modules__Identity__SigningKey: gateway-test-only-signing-key-at-least-32-characters
+      Modules__Identity__ExposeDevelopmentTokens: "true"
+      Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest
+      Modules__Community__Operations__ActiveKeyId: gateway-test
+      Modules__Community__Operations__Keys__gateway-test: Z2F0ZXdheS10ZXN0LW9ubHkta2V5LWF0LWxlYXN0LTMyLWJ5dGVz
+      Modules__Community__KeyRingPath: /app/community-keys
+      Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
+      Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - gateway-identity-keys:/app/.dm-keys/user-search
+      - gateway-community-keys:/app/community-keys
+      - gateway-messaging-keys:/app/messaging-keys
+
+  web-client:
+    build:
+      context: ./clients/WebClient
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${GATEWAY_WEB_PORT:-15310}:80"
+    depends_on:
+      chat-service:
+        condition: service_started
+
+volumes:
+  gateway-postgres-data:
+  gateway-identity-keys:
+  gateway-community-keys:
+  gateway-messaging-keys:

@@ -2,7 +2,7 @@
 
 Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của **nội dung** thẻ (tiêu đề, người làm đề xuất, đầu ra, tiêu chí xong, phụ thuộc). Cột trạng thái, người được gán, hạn và bình luận quản lý trên Trello. Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đề xuất, chờ nhóm xác nhận ở thẻ S1-01.
+**Trạng thái:** đang thực hiện. S1-01 đã hoàn tất theo [xác nhận ngày 2026-11-12](../../records/planning/s1-01-confirmation-2026-11-12.md).
 
 ## S1-01 · Họp thống nhất lộ trình
 - Nhãn: docs
@@ -10,6 +10,7 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 - Đầu ra: cả nhóm đọc planning.md#roadmap; quyết định có hoãn gRPC và mTLS hay không (ghi DEC mới nếu đổi); bỏ chữ "Đề xuất" khỏi lộ trình.
 - Xong khi: biên bản họp tuần ghi kết luận; planning.md đã cập nhật.
 - Phụ thuộc: không. Làm đầu tiên.
+- Kết quả: **Hoàn tất — 2026-11-12**, theo [xác nhận của người dùng](../../records/planning/s1-01-confirmation-2026-11-12.md); lộ trình đã được cập nhật. Việc hoãn gRPC và mTLS cần xác nhận riêng.
 
 ## S1-02 · Nginx làm cổng vào trước monolith
 - Nhãn: tech
@@ -17,6 +18,8 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 - Đầu ra: container Nginx định tuyến /api, /hubs tới API hiện tại và phục vụ file build WebClient (D09, D10, D22).
 - Xong khi: WebClient chạy qua Nginx; DM gửi, nhận realtime vẫn đúng; SignalR (WebSocket) qua được gateway.
 - Phụ thuộc: S1-01.
+- Thiết kế và kiểm chứng: [Nginx trước monolith](../../system/api-conventions.md#s1-02-preparation). Nhánh `tech/s1-02-nginx-gateway`.
+- Kết quả: **Đã triển khai và kiểm thử — 2026-11-12**, [7 ca gateway và 77 test frontend đạt](../../records/verification/gateway/s1-02-2026-11-12.md); chờ review theo quy trình.
 
 ## S1-03 · Service mẫu `/health` sau gateway
 - Nhãn: tech
