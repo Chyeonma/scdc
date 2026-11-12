@@ -27,6 +27,8 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 - Đầu ra: một project .NET nhỏ theo cây project v1 (D40, D43), chạy trong Compose, Nginx định tuyến tới.
 - Xong khi: gọi /health qua gateway trả kết quả; dựng lại bằng một lệnh compose.
 - Phụ thuộc: S1-02.
+- Thiết kế và kiểm chứng: [service mẫu theo D40 và D43](../../system/backend.md#s1-03-sample-service). Nhánh `tech/s1-03-sample-service`, kế thừa commit S1-02 `d325070`.
+- Kết quả: **Đã triển khai và kiểm thử — 2026-11-13**, [10 ca gateway và 77 test frontend đạt](../../records/verification/gateway/s1-03-2026-11-13.md); build độc lập và toàn solution đạt; chờ review theo quy trình.
 
 ## S1-04 · CI build và chạy test
 - Nhãn: tech
