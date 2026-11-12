@@ -20,6 +20,7 @@ Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình 
 - [Database và dữ liệu mẫu](#database)
 - [Quy ước code và Git](#conventions)
 - [Kiểm thử](#testing)
+- [CI trên GitHub Actions](continuous-integration.md)
 - [Xử lý lỗi thường gặp](#troubleshooting)
 - [Community: database thử, kiểm thử và migration](#community)
 
@@ -296,6 +297,8 @@ Khi review: đối chiếu yêu cầu và AC bị ảnh hưởng, quyền, API, 
 <a id="6-kiểm-thử"></a>
 
 ## 6. Kiểm thử
+
+Pull request được kiểm tra bằng workflow [CI build và kiểm thử](continuous-integration.md): build toàn solution, chạy test backend với PostgreSQL riêng, chạy test và build WebClient. Hướng dẫn cấu hình check `CI` bắt buộc trước khi merge nằm trong cùng trang.
 
 <a id="backend"></a>
 
