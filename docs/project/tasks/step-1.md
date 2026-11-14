@@ -45,6 +45,7 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 - Đầu ra: Collector và OpenObserve trong Compose (D33–D35); API và service mẫu gửi log, trace.
 - Xong khi: tìm được trace của một request lỗi đi qua Nginx và API.
 - Phụ thuộc: S1-02, S1-03.
+- Kết quả: **Đã triển khai và kiểm chứng — 2026-11-14**, [hồ sơ S1-05](../../records/verification/observability/s1-05-2026-11-14.md): log, metric, trace vào OpenObserve, lỗi qua gateway, Collector dừng/phục hồi và 10/10 gateway đạt; chờ review.
 
 ## S1-06 · Khung SCDC.Shared.Core và kiểm tra JWT dùng chung
 - Nhãn: tech, refactor

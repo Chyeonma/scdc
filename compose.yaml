@@ -5,6 +5,9 @@ services:
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Telemetry__Enabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
       Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
@@ -28,6 +31,41 @@ services:
     build:
       context: ./services/Sample
       dockerfile: SCDC.Sample.Api/Dockerfile
+    environment:
+      Telemetry__Enabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+    restart: unless-stopped
+
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.165.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      OPENOBSERVE_ROOT_EMAIL: ${OPENOBSERVE_ROOT_EMAIL:-root@scdc.local}
+      OPENOBSERVE_ROOT_PASSWORD: ${OPENOBSERVE_ROOT_PASSWORD:-ScdcObserve!2026Local}
+    volumes:
+      - ./ops/observability/collector.yaml:/etc/otelcol/config.yaml:ro,z
+    depends_on:
+      openobserve:
+        condition: service_started
+    mem_limit: 256m
+    restart: unless-stopped
+
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v1.1.2
+    environment:
+      ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_ROOT_EMAIL:-root@scdc.local}
+      ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_ROOT_PASSWORD:-ScdcObserve!2026Local}
+      ZO_DATA_DIR: /data
+      ZO_TELEMETRY: "false"
+      ZO_COMPACT_DATA_RETENTION_DAYS: "14"
+      ZO_HTTP_WORKER_NUM: "2"
+      ZO_MEMORY_CACHE_ENABLED: "false"
+    ports:
+      - "127.0.0.1:5080:5080"
+    volumes:
+      - scdc-openobserve-data:/data
+    mem_limit: 1g
     restart: unless-stopped
 
   web-client:
@@ -66,3 +104,4 @@ volumes:
   identity-user-search-keys:
   scdc-community-keys:
   scdc-messaging-keys:
+  scdc-openobserve-data:

@@ -1,0 +1,38 @@
+# Overlay for compose.gateway-test.yaml; all data belongs to the unique test project.
+services:
+  chat-service:
+    environment:
+      Telemetry__Enabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "2000"
+  sample-service:
+    environment:
+      Telemetry__Enabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "2000"
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.165.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      OPENOBSERVE_ROOT_EMAIL: root@scdc-test.local
+      OPENOBSERVE_ROOT_PASSWORD: ObserveTest!2026
+    volumes:
+      - ./ops/observability/collector.yaml:/etc/otelcol/config.yaml:ro,z
+    mem_limit: 256m
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v1.1.2
+    environment:
+      ZO_ROOT_USER_EMAIL: root@scdc-test.local
+      ZO_ROOT_USER_PASSWORD: ObserveTest!2026
+      ZO_DATA_DIR: /data
+      ZO_TELEMETRY: "false"
+      ZO_COMPACT_DATA_RETENTION_DAYS: "14"
+      ZO_HTTP_WORKER_NUM: "2"
+      ZO_MEMORY_CACHE_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${OBSERVE_TEST_PORT:-15480}:5080"
+    volumes:
+      - observe-test-data:/data
+    mem_limit: 1g
+volumes:
+  observe-test-data:

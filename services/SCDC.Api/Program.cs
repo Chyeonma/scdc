@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SCDC.Api.Observability;
 using Microsoft.OpenApi;
 using SCDC.Api.Errors;
 using SCDC.Api.OpenApi;
@@ -10,6 +11,7 @@ using SCDC.Contracts.Persistence;
 using SCDC.Modules.Messaging.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddScdcTelemetry("scdc-monolith");
 // Query credentials in WebSocket handshakes must never reach request-start diagnostics.
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
@@ -64,6 +66,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+app.UseScdcRequestTelemetry();
 
 if (args.Contains("--initialize-user-search-keys", StringComparer.Ordinal))
 {

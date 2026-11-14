@@ -1,0 +1,54 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  basicauth/openobserve:
+    client_auth:
+      username: ${env:OPENOBSERVE_ROOT_EMAIL}
+      password: ${env:OPENOBSERVE_ROOT_PASSWORD}
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 128
+    spike_limit_mib: 32
+  batch:
+    timeout: 1s
+    send_batch_size: 256
+
+exporters:
+  otlp_http/openobserve:
+    endpoint: http://openobserve:5080/api/default
+    auth:
+      authenticator: basicauth/openobserve
+    headers:
+      stream-name: scdc
+    timeout: 3s
+    sending_queue:
+      queue_size: 256
+      num_consumers: 2
+    retry_on_failure:
+      initial_interval: 1s
+      max_interval: 5s
+      max_elapsed_time: 30s
+
+service:
+  extensions: [health_check, basicauth/openobserve]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/openobserve]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/openobserve]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/openobserve]

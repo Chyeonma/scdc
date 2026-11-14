@@ -52,6 +52,7 @@ docker compose up -d --build
 | OpenAPI JSON qua gateway (Development) | `http://localhost:3000/swagger/v1/swagger.json` |
 | Health của Nginx | `http://localhost:3000/healthz` |
 | Health của service mẫu S1-03 qua gateway | `http://localhost:3000/health` |
+| OpenObserve local | `http://localhost:5080`; tài khoản và cách tìm trace xem [giám sát](../system/observability.md#s1-05-implementation) |
 | Health của API qua gateway | `http://localhost:3000/api/v1/health` |
 | API trực tiếp để debug | `http://localhost:5026` |
 | PostgreSQL | `localhost:5432` |
@@ -297,6 +298,8 @@ Khi review: đối chiếu yêu cầu và AC bị ảnh hưởng, quyền, API, 
 <a id="6-kiểm-thử"></a>
 
 ## 6. Kiểm thử
+
+Giám sát S1-05 có `make test-observability ENGINE=podman`: kiểm tra log, metric, trace, dữ liệu nhạy cảm và Collector dừng trên stack riêng. Cách đọc kết quả và giới hạn xem [giám sát](../system/observability.md#s1-05-implementation).
 
 Pull request được kiểm tra bằng workflow [CI build và kiểm thử](continuous-integration.md): build toàn solution, chạy test backend với PostgreSQL riêng, chạy test và build WebClient. Hướng dẫn cấu hình check `CI` bắt buộc trước khi merge nằm trong cùng trang.
 

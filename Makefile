@@ -10,7 +10,7 @@ TO ?=
 export SCDC_DOCS_FROM = $(FROM)
 export SCDC_DOCS_TO = $(TO)
 
-.PHONY: help up down status logs db compose-check init-dm-key api web build test test-api test-web test-gateway docs-check docs-sync docs-sync-preview test-tools
+.PHONY: help up down status logs db compose-check init-dm-key api web build test test-api test-web test-gateway test-observability docs-check docs-sync docs-sync-preview test-tools
 
 help:
 	@printf '%s\n' \
@@ -30,6 +30,7 @@ help:
 	  '  make test-api           Chạy test backend (cần PostgreSQL)' \
 	  '  make test-web           Cài dependency và chạy test frontend' \
 	  '  make test-gateway       Kiểm thử Nginx, service mẫu, REST, SignalR và DM trên stack riêng' \
+	  '  make test-observability Kiểm thử log, metric, trace và lỗi Collector trên stack riêng' \
 	  '  make docs-check         Kiểm tra link và anchor tài liệu' \
 	  '  make test-tools         Kiểm thử công cụ đồng bộ trong repo Git tạm' \
 	  '' \
@@ -96,6 +97,9 @@ test-web:
 test-gateway:
 	npm --prefix clients/WebClient ci
 	$(PYTHON) scripts/test_gateway.py --engine $(ENGINE)
+
+test-observability:
+	$(PYTHON) scripts/test_observability.py --engine $(ENGINE)
 
 docs-check:
 	$(PYTHON) scripts/check_docs.py
