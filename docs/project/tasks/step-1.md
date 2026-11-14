@@ -53,6 +53,7 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 - Đầu ra: project Shared.Core (D45) với phần cấu hình kiểm tra JWT; service mẫu dùng nó để bảo vệ một endpoint.
 - Xong khi: service mẫu chấp nhận token do API hiện tại cấp, từ chối token sai hoặc hết hạn.
 - Phụ thuộc: S1-03.
+- Kết quả: **Đã triển khai và kiểm chứng — 2026-11-14**, [hồ sơ S1-06](../../records/verification/authentication/s1-06-2026-11-14.md): Shared.Core thuần .NET, RS256, sample dùng public key; 289 backend, 77 frontend, 12 gateway và 8 check giám sát đạt; chờ review.
 
 ## S1-07 · Thử LiveKit (V1-MEDIA-01)
 - Nhãn: tech

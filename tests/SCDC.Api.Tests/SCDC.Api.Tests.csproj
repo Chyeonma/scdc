@@ -30,6 +30,8 @@
     <ProjectReference Include="../../services/SCDC.Api/SCDC.Api.csproj" Aliases="global,ScdcApi" />
     <ProjectReference Include="../../services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
     <ProjectReference Include="../../tools/SCDC.DbMigrator/SCDC.DbMigrator.csproj" />
+    <ProjectReference Include="../../services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
+    <ProjectReference Include="../../services/Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj" Aliases="ScdcSample" />
   </ItemGroup>
 
 </Project>

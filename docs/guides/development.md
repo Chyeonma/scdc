@@ -52,6 +52,7 @@ docker compose up -d --build
 | OpenAPI JSON qua gateway (Development) | `http://localhost:3000/swagger/v1/swagger.json` |
 | Health của Nginx | `http://localhost:3000/healthz` |
 | Health của service mẫu S1-03 qua gateway | `http://localhost:3000/health` |
+| Endpoint thử JWT S1-06 | `http://localhost:3000/sample/protected`; cần bearer access token do Identity cấp |
 | OpenObserve local | `http://localhost:5080`; tài khoản và cách tìm trace xem [giám sát](../system/observability.md#s1-05-implementation) |
 | Health của API qua gateway | `http://localhost:3000/api/v1/health` |
 | API trực tiếp để debug | `http://localhost:5026` |
@@ -226,8 +227,9 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | Khóa | Giá trị local / vai trò |
 |---|---|
 | `ConnectionStrings:Database` | `Host=localhost;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev` khi API chạy local; host `postgres` trong Compose |
-| `Modules:Identity:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient` |
-| `Modules:Identity:SigningKey` | Khóa local có trong cấu hình Development; cấu hình ngoài Development cần khóa riêng đủ dài |
+| `Authentication:Jwt:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient`, dùng chung cho bên cấp và bên xác minh |
+| `Authentication:Jwt:PublicKeyDirectory` / `KeyIds` | Thư mục public key SPKI và danh sách ID tin cậy; file `<kid>.pub.pem`, nạp khi khởi động |
+| `Modules:Identity:PrivateKeyPath` / `SigningKeyId` | File private key PKCS#8 chỉ cấp cho Identity và key ID đang ký. Compose tự khởi tạo trong volume bền qua `identity-keygen` |
 | `Modules:Identity:ExposeDevelopmentTokens` | `true` trong Development, dùng token trả về để thử xác minh/reset; giá trị mặc định `false` |
 | `Modules:Community:Operations:ActiveKeyId` / `Keys:<id>` | ID active và key base64 ít nhất 32 byte ngẫu nhiên; giữ key cũ cho operation còn lưu, xem [mục 8](#community-configuration) |
 | `Modules:Community:KeyRingPath` | Thư mục keyring bền, API đọc/ghi được; giữ qua restart để cursor vẫn đọc được |
@@ -238,6 +240,22 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Database`.
 
 Nguồn: [appsettings.json](../../services/SCDC.Api/appsettings.json), [cấu hình Development](../../services/SCDC.Api/appsettings.Development.json), [Vite config](../../clients/WebClient/vite.config.js).
+
+### Khóa JWT khi debug API trên máy
+
+Compose tự tạo khóa RSA ở lần chạy đầu; các lần sau giữ nguyên khóa trong `scdc-identity-private-keys` và `scdc-identity-public-keys`. Service mẫu chỉ nhận volume công khai chỉ đọc. Không xóa các volume khóa khi khởi động lại thông thường.
+
+Khi chạy API trực tiếp, tạo bộ khóa local riêng trước:
+
+```bash
+export Modules__Identity__PrivateKeyPath="$(pwd)/.local/jwt/private/identity-local-v1.pem"
+export Modules__Identity__SigningKeyId=identity-local-v1
+export Authentication__Jwt__PublicKeyDirectory="$(pwd)/.local/jwt/public"
+export Authentication__Jwt__KeyIds__0=identity-local-v1
+dotnet run --project services/SCDC.Api --no-launch-profile -- --initialize-jwt-keys
+```
+
+Lệnh có thể chạy lại và không ghi đè khóa hiện hữu; private file tạo với quyền 0600 trên Unix. Giữ các biến trên trong terminal chạy API; khi chạy sample chỉ cấp các biến `Authentication__Jwt__*` và public key. Kiểm thử backend tự sinh RSA fixture riêng. Cách đổi khóa và giới hạn kiểm tra phiên của sample xem [D28–D29](../system/api-conventions.md#v1-user-token-signing).
 
 <a id="identity"></a>
 
@@ -314,7 +332,7 @@ dotnet test SCDC.slnx --configuration Release
 Bộ test gồm Identity, Community, DM, response API, quyền, chống trùng, migration, transaction, realtime.
 
 - Dùng PostgreSQL riêng, tên database kết thúc `_test`, user có quyền tạo và xóa database fixture.
-- Đặt connection string, signing key và token Development theo [cấu hình](#configuration); DM xem [hồ sơ DM](../records/verification/messaging/DM-MVP.md).
+- Đặt connection string và token Development theo [cấu hình](#configuration); test factory tự cấp khóa RSA. DM vẫn cần khóa fingerprint theo [hồ sơ DM](../records/verification/messaging/DM-MVP.md).
 - **Không** chạy trên `scdc_chat` hay database cần giữ.
 
 <a id="frontend--trong-clientswebclient"></a>
@@ -350,7 +368,7 @@ python3 scripts/check_docs.py
 
 | Hiện tượng | Kiểm tra / xử lý |
 |---|---|
-| API không khởi động | Kiểm tra connection string, signing key, môi trường và log; khởi động PostgreSQL trước |
+| API không khởi động | Kiểm tra connection string, cặp khóa RSA, key ID, môi trường và log; khởi động PostgreSQL trước |
 | Trùng cổng 3000/5026/5432 | Kiểm tra service Compose và tiến trình local, dừng thành phần trùng trước khi chạy |
 | Login tài khoản seed thất bại | Seed không chứa password đăng nhập thực; tạo và xác minh tài khoản qua API |
 | Login trả 403 | Xem `errorCode`; chưa xác minh cần hoàn tất verify, không tự coi mọi 403 là phiên hết hạn |
@@ -428,7 +446,12 @@ Schema đã gồm ledger 001 đến 004. Không cần seed; tài khoản thử t
 
 ```bash
 export ConnectionStrings__Database='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc;Password=scdc_docs_test_only'
-export Modules__Identity__SigningKey="$(openssl rand -base64 48)"
+export SCDC_TEST_JWT_DIR="$(mktemp -d /tmp/scdc-community-jwt.XXXXXX)"
+export Modules__Identity__PrivateKeyPath="$SCDC_TEST_JWT_DIR/private.pem"
+export Authentication__Jwt__PublicKeyDirectory="$SCDC_TEST_JWT_DIR/public"
+export Authentication__Jwt__KeyIds__0=identity-local-v1
+export Modules__Identity__SigningKeyId=identity-local-v1
+dotnet run --project services/SCDC.Api --no-launch-profile -- --initialize-jwt-keys
 export Modules__Identity__ExposeDevelopmentTokens=true
 export Modules__Community__Operations__ActiveKeyId=docs_test
 export Modules__Community__Operations__Keys__docs_test="$(openssl rand -base64 32)"
@@ -438,7 +461,7 @@ export Modules__Community__KeyRingPath="$(mktemp -d /tmp/scdc-community-docs-key
 Lưu ý về khóa:
 
 - Các khóa trên chỉ dùng cho lần thử này. Không đưa khóa hay token vào commit hoặc file công khai.
-- Giữ nguyên signing key, HMAC key và thư mục keyring khi khởi động lại API trong cùng lần thử. Chạy lại khối lệnh sinh khóa sẽ làm token, cursor và thao tác cũ không đọc được.
+- Giữ nguyên cặp khóa RSA, HMAC key và thư mục keyring khi khởi động lại API trong cùng lần thử. Dùng thư mục khóa mới sẽ làm token, cursor và thao tác cũ không đọc được; lệnh `--initialize-jwt-keys` không ghi đè khóa hiện hữu.
 - Test tự tạo HMAC và keyring riêng, nhưng dùng cấu hình DB và Identity ở trên.
 - `KeyRingPath` phải là đường dẫn tuyệt đối; API cần quyền đọc ghi.
 - Ở môi trường cần giữ dữ liệu: lưu HMAC key và keyring bằng secret hoặc volume bền. Khi đổi khóa đang dùng, giữ lại khóa cũ để đối chiếu thao tác đã lưu. Mất khóa cũ thì API trả 503, không tạo lại tài nguyên.

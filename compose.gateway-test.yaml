@@ -1,7 +1,23 @@
 # Dedicated gateway acceptance stack (S1-02/S1-03). The runner supplies a unique project name.
 # Only Nginx is published; test clients cannot call the API directly from the host.
 name: scdc-gateway-test
+x-jwt-trust: &jwt-trust
+  Authentication__Jwt__Issuer: SCDC
+  Authentication__Jwt__Audience: SCDC.WebClient
+  Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+  Authentication__Jwt__KeyIds__0: identity-local-v1
 services:
+  identity-keygen:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    entrypoint: ["dotnet", "SCDC.Api.dll", "--initialize-jwt-keys"]
+    environment:
+      <<: *jwt-trust
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+    volumes:
+      - gateway-private-keys:/app/auth-private
+      - gateway-public-keys:/app/auth-public
   postgres:
     image: docker.io/library/postgres:18-alpine
     environment:
@@ -22,9 +38,10 @@ services:
       context: .
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
+      <<: *jwt-trust
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_gateway_test;Password=gateway-test-only
-      Modules__Identity__SigningKey: gateway-test-only-signing-key-at-least-32-characters
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest
       Modules__Community__Operations__ActiveKeyId: gateway-test
@@ -33,17 +50,28 @@ services:
       Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
     depends_on:
+      identity-keygen:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     volumes:
       - gateway-identity-keys:/app/.dm-keys/user-search
       - gateway-community-keys:/app/community-keys
       - gateway-messaging-keys:/app/messaging-keys
+      - gateway-private-keys:/app/auth-private:ro
+      - gateway-public-keys:/app/auth-public:ro
 
   sample-service:
     build:
-      context: ./services/Sample
-      dockerfile: SCDC.Sample.Api/Dockerfile
+      context: ./services
+      dockerfile: Sample/SCDC.Sample.Api/Dockerfile
+    environment:
+      <<: *jwt-trust
+    volumes:
+      - gateway-public-keys:/app/auth-public:ro
+    depends_on:
+      identity-keygen:
+        condition: service_completed_successfully
 
   web-client:
     build:
@@ -62,3 +90,5 @@ volumes:
   gateway-identity-keys:
   gateway-community-keys:
   gateway-messaging-keys:
+  gateway-private-keys:
+  gateway-public-keys:

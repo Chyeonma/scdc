@@ -113,6 +113,40 @@ test('sample health remains available while the monolith is stopped', async ({ r
   }
 });
 
+test('sample accepts an Identity RS256 token using only read-only public keys', async ({ request }) => {
+  const auth = await actor(request);
+  const [encodedHeader, encodedClaims, signature] = auth.accessToken.split('.');
+  expect(JSON.parse(Buffer.from(encodedHeader, 'base64url').toString()).alg).toBe('RS256');
+  expect((await request.get('/sample/protected')).status()).toBe(401);
+  expect((await request.get(`/sample/protected?access_token=${auth.accessToken}`)).status()).toBe(401);
+  const accepted = await request.get('/sample/protected', { headers: headers(auth) });
+  expect(accepted.status()).toBe(200);
+  expect(await accepted.json()).toEqual({ service: 'sample-service', userId: auth.user.id });
+  expect(accepted.headers()['cache-control']).toContain('no-store');
+  const claims = JSON.parse(Buffer.from(encodedClaims, 'base64url').toString());
+  claims.sub = randomUUID();
+  const tampered = `${encodedHeader}.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.${signature}`;
+  expect((await request.get('/sample/protected', { headers: { Authorization: `Bearer ${tampered}` } })).status()).toBe(401);
+  const container = await compose('ps', '-q', 'sample-service');
+  const info = JSON.parse(await engine('inspect', container))[0];
+  expect(info.Mounts.some(mount => mount.Destination === '/app/auth-private')).toBe(false);
+  expect(info.Mounts.find(mount => mount.Destination === '/app/auth-public').RW).toBe(false);
+  const publicBefore = await engine('exec', container, 'cat', '/app/auth-public/identity-local-v1.pub.pem');
+  await compose('run', '--rm', '--no-deps', 'identity-keygen');
+  expect(await engine('exec', container, 'cat', '/app/auth-public/identity-local-v1.pub.pem')).toBe(publicBefore);
+});
+
+test('sample validates an issued token while Identity is stopped', async ({ request }) => {
+  const auth = await actor(request);
+  try {
+    await compose('stop', 'chat-service');
+    expect((await request.get('/sample/protected', { headers: headers(auth) })).status()).toBe(200);
+  } finally {
+    await compose('start', 'chat-service');
+    await expect.poll(async () => (await request.get('/api/v1/health')).status(), { timeout: 30_000 }).toBe(200);
+  }
+});
+
 test('sample outage and replacement IP do not require restarting Nginx', async ({ request }) => {
   const gatewayId = await compose('ps', '-q', 'web-client');
   const oldId = await compose('ps', '-q', 'sample-service');

@@ -14,12 +14,12 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(TestJwtKeys.Configuration().Concat(new Dictionary<string, string?>
         {
             ["Modules:Community:Operations:ActiveKeyId"] = "test",
             ["Modules:Community:Operations:Keys:test"] = CommunityKey,
             ["Modules:Community:KeyRingPath"] = CommunityKeyRingPath
-        }));
+        })));
         builder.ConfigureServices(services =>
         {
             services

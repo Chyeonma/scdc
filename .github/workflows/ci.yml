@@ -22,7 +22,6 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "true"
       ConnectionStrings__Database: Host=127.0.0.1;Port=5432;Database=scdc_ci_test;Username=scdc_ci;Password=ci-postgres-only
-      Modules__Identity__SigningKey: scdc-ci-test-signing-key-at-least-32-characters
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Identity__UserSearch__ApplicationName: SCDC.CI
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1

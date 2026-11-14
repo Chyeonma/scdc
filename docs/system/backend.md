@@ -161,7 +161,7 @@ Service mẫu chứng minh cách đóng gói một tiến trình .NET độc l�
 | [SCDC.Sample.Domain](../../services/Sample/SCDC.Sample.Domain/SCDC.Sample.Domain.csproj) | Snapshot sức khỏe thuần .NET; không có tham chiếu project khác |
 | [SCDC.Sample.Infrastructure](../../services/Sample/SCDC.Sample.Infrastructure/SCDC.Sample.Infrastructure.csproj) | Probe liveness của tiến trình, thời gian UTC và đăng ký DI; tham chiếu Application và Domain |
 
-Các project đặt trong `services/Sample/`, chia code theo chức năng `Health/` và bật `DisableTransitiveProjectReferences`. Service mẫu không tham chiếu module, BuildingBlocks hay Contracts của monolith. [Dockerfile](../../services/Sample/SCDC.Sample.Api/Dockerfile) chỉ lấy build context `services/Sample`, restore và publish riêng project Api.
+Các project đặt trong `services/Sample/`, chia code theo chức năng `Health/` và bật `DisableTransitiveProjectReferences`. Service mẫu không tham chiếu module, BuildingBlocks hay Contracts của monolith. Từ S1-06, Api tham chiếu thêm `Shared.Core`; [Dockerfile](../../services/Sample/SCDC.Sample.Api/Dockerfile) dùng context `services`, chỉ copy `Sample/` và `Shared/`, restore và publish riêng project Api.
 
 #### HTTP và định tuyến
 
@@ -175,7 +175,7 @@ Các project đặt trong `services/Sample/`, chia code theo chức năng `Healt
 }
 ```
 
-`checkedAt` được tạo theo giờ UTC tại lần gọi. Probe hiện kiểm tra liveness của tiến trình mẫu; nó không dùng database hay kết nối tới monolith. JWT và endpoint cần xác thực thuộc S1-06.
+`checkedAt` được tạo theo giờ UTC tại lần gọi. Probe hiện kiểm tra liveness của tiến trình mẫu; nó không dùng database hay kết nối tới monolith. Endpoint cần xác thực của S1-06 là `GET /sample/protected`.
 
 | Địa chỉ qua gateway | Bên trả kết quả |
 |---|---|
@@ -223,6 +223,8 @@ Không áp cho thư viện bên thứ ba, hợp đồng Protobuf, mã sinh hay t
 <a id="v1-shared-library-layout"></a>
 
 ### D45 — Một thư viện chung: SCDC.Shared.Core
+
+S1-06 đã tạo [project Core](../../services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj) với `JwtTrustOptions` và `TrustedRsaKey`: cấu hình issuer, audience, tập key ID tin cậy và bộ đọc SPKI/RSA thuần .NET. Core không có package, framework hay project reference. Adapter `JwtBearer` nằm ở Identity và Sample.Api; SDK telemetry cũng ở từng Api. Kết quả xem [hồ sơ S1-06](../records/verification/authentication/s1-06-2026-11-14.md).
 
 **Quyết định:** ban đầu chỉ có `services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj`, chứa kiểu kỹ thuật thuần .NET như `Result`, `Result<T>`, `Error`.
 

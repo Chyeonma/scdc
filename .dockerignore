@@ -4,6 +4,9 @@
 .codex
 .claude
 .aws
+.local
+**/*.pem
+**/*.key
 .config
 .vs
 .vscode

@@ -238,7 +238,7 @@ Tham khảo [gRPC services](https://learn.microsoft.com/en-us/aspnet/core/grpc/b
 **Lý do:** chỉ Identity ký được token. **Đổi lại:** phải phân phối khóa công khai và thay khóa. Phương án dùng chung một khóa bí mật cho mọi service không được chọn. Tham khảo [JWT bearer](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0), [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518.html#section-3).
 
 - Khóa riêng không bao giờ gửi cho service khác hay WebClient.
-- MVP hiện dùng khóa đối xứng HS256 trong [TokenService](../../services/Modules/Identity/Infrastructure/Security/TokenService.cs); chưa đổi code.
+- Từ S1-06, [TokenService](../../services/Modules/Identity/Infrastructure/Security/TokenService.cs) ký **RS256**, khóa sinh mặc định RSA 3072 bit. Bộ xác minh chỉ cho phép RS256, kiểm tra issuer, audience, thời hạn và các claim `sub`, `sid`, `sst`. HS256 cũ không còn được chấp nhận; refresh token còn hiệu lực có thể cấp access token mới.
 - Chữ ký hợp lệ chưa chứng minh phiên, tài khoản hay quyền còn hiệu lực; phiên kiểm tra qua Redis ([D30](access-revocation.md#v1-session-validation)), quyền ghi theo [D05](access-revocation.md#v1-authorization-coordination).
 - D20 xác thực service; D28 xác thực token người dùng. Hai việc khác nhau.
 
@@ -252,13 +252,21 @@ Tham khảo [gRPC services](https://learn.microsoft.com/en-us/aspnet/core/grpc/b
 
 Phạm vi ban đầu: bốn service trên [máy phát triển và demo](environments.md#v1-available-infrastructure). Môi trường công khai đánh giá riêng.
 
+S1-06 dùng private key PEM PKCS#8 chỉ cấp cho Identity; public key PEM SPKI đặt trong thư mục tin cậy của từng consumer. `Authentication:Jwt` chứa issuer `SCDC`, audience `SCDC.WebClient`, `PublicKeyDirectory`, danh sách `KeyIds` và `ClockSkewSeconds` (mặc định 30). Mỗi file công khai có tên `<kid>.pub.pem`; chỉ nạp key ID được cấu hình, RSA 2048–4096 bit. Dữ liệu JWT không được dùng làm đường dẫn hay URL tải khóa.
+
+Compose chạy `identity-keygen` trước API: chỉ sinh khóa khi chưa có, giữ khóa hiện hữu và từ chối cặp khóa không khớp. API và sample mount public volume chỉ đọc; sample không có private volume. Cấu hình được nạp và kiểm tra khi khởi động, nên thay tập khóa cần khởi động lại consumer.
+
+Khi xoay khóa, cấp public key mới và thêm key ID cho mọi consumer trước, khởi động lại và kiểm tra, rồi mới chuyển `Modules:Identity:SigningKeyId` và `PrivateKeyPath` sang private key mới. Giữ public key cũ ít nhất hết hạn token cũ cộng clock skew; sau đó bỏ key ID cũ và khởi động lại. Khóa bị lộ phải thu hồi ngay theo quy trình sự cố, chấp nhận token cũ bị từ chối. Công cụ khởi tạo local không tự xoay hay ghi đè khóa.
+
+`GET /sample/protected` là endpoint thử chữ ký và thời hạn, trả service và `userId` từ token; không đọc dữ liệu nghiệp vụ. Sample chưa kiểm tra trạng thái phiên phân tán; phần đó thuộc S2-06. Monolith vẫn kiểm tra phiên và security stamp trong Identity như trước.
+
 ## Còn mở
 
 - **D04, D27:** endpoint, timeout, gửi lại, cơ chế nhất quán; ánh xạ lỗi gRPC; danh sách sự kiện và bên nhận; schema và `.proto`; ID, version, chống trùng, thứ tự, lỗi không xử lý được, hàng đợi tồn, thời hạn lưu; đối chiếu sau khởi động lại; cách chuyển sang broker.
 - **D46:** công cụ và phiên bản sinh mã, namespace, quản lý phiên bản hợp đồng, CI, các phương thức cụ thể.
 - **D09, D10:** route cụ thể tới từng service; host, domain, TLS; xác thực tại Gateway; BFF; số bản và HA; phiên bản image Nginx.
 - **D20:** CA, danh tính cụ thể, định dạng và quyền file khóa, cấp, gia hạn, thu hồi chứng chỉ; tin cậy theo môi trường; ma trận quyền RPC; cách truyền thông tin người thực hiện; danh tính worker.
-- **D28, D29:** thuật toán; đường dẫn, định dạng và bảo vệ khóa; vòng đời khóa; issuer, audience, claims; định dạng file khóa công khai; nạp lại hay khởi động lại khi đổi khóa; thời gian chuyển tiếp. Chưa chọn JWKS, xác thực tại Gateway, hay khóa của LiveKit.
+- **D28, D29:** tự động hóa cấp, xoay và thu hồi khóa cho môi trường công khai. Chưa chọn JWKS, xác thực tại Gateway, hay khóa của LiveKit; cấu hình local S1-06 và trình tự chuyển khóa được ghi bên trên.
 
 ---
 

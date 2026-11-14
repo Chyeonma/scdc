@@ -1,15 +1,36 @@
+x-jwt-trust: &jwt-trust
+  Authentication__Jwt__Issuer: SCDC
+  Authentication__Jwt__Audience: SCDC.WebClient
+  Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+  Authentication__Jwt__KeyIds__0: identity-local-v1
+
 services:
+  identity-keygen:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    entrypoint: ["dotnet", "SCDC.Api.dll", "--initialize-jwt-keys"]
+    environment:
+      <<: *jwt-trust
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Modules__Identity__SigningKeyId: identity-local-v1
+    volumes:
+      - scdc-identity-private-keys:/app/auth-private
+      - scdc-identity-public-keys:/app/auth-public
+
   chat-service:
     build:
       context: .
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
+      <<: *jwt-trust
       ASPNETCORE_ENVIRONMENT: Development
       Telemetry__Enabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_METRIC_EXPORT_INTERVAL: "5000"
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
-      Modules__Identity__SigningKey: scdc-development-signing-key-change-before-production-2026
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Modules__Identity__SigningKeyId: identity-local-v1
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
       Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
@@ -19,6 +40,8 @@ services:
     ports:
       - "5026:8080"
     depends_on:
+      identity-keygen:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     restart: unless-stopped
@@ -26,15 +49,23 @@ services:
       - identity-user-search-keys:/app/.dm-keys/user-search
       - scdc-community-keys:/app/community-keys
       - scdc-messaging-keys:/app/messaging-keys
+      - scdc-identity-private-keys:/app/auth-private:ro
+      - scdc-identity-public-keys:/app/auth-public:ro
 
   sample-service:
     build:
-      context: ./services/Sample
-      dockerfile: SCDC.Sample.Api/Dockerfile
+      context: ./services
+      dockerfile: Sample/SCDC.Sample.Api/Dockerfile
     environment:
+      <<: *jwt-trust
       Telemetry__Enabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_METRIC_EXPORT_INTERVAL: "5000"
+    volumes:
+      - scdc-identity-public-keys:/app/auth-public:ro
+    depends_on:
+      identity-keygen:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   otel-collector:
@@ -105,3 +136,5 @@ volumes:
   scdc-community-keys:
   scdc-messaging-keys:
   scdc-openobserve-data:
+  scdc-identity-private-keys:
+  scdc-identity-public-keys:

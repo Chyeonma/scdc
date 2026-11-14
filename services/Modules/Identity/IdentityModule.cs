@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -6,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using SCDC.BuildingBlocks.Application;
 using SCDC.Contracts.Identity;
 using SCDC.Contracts.Persistence;
@@ -16,6 +16,7 @@ using SCDC.Modules.Identity.Infrastructure.Persistence;
 using SCDC.Modules.Identity.Infrastructure.Security;
 using SCDC.Modules.Identity.Infrastructure.Services;
 using ModuleIdentityOptions = SCDC.Modules.Identity.Infrastructure.IdentityOptions;
+using SCDC.Shared.Core.Authentication;
 
 namespace SCDC.Modules.Identity;
 
@@ -32,12 +33,19 @@ public static class IdentityModule
         }
 
         var identitySection = configuration.GetSection(ModuleIdentityOptions.SectionName);
-        var identityOptions = identitySection.Get<ModuleIdentityOptions>()
-            ?? throw new InvalidOperationException("Modules:Identity must be configured.");
+        services.AddOptions<JwtTrustOptions>()
+            .Bind(configuration.GetSection(JwtTrustOptions.SectionName))
+            .Validate(options => { _ = options.LoadPublicKeys(); return true; }, "Invalid JWT trust.")
+            .ValidateOnStart();
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<JwtTrustOptions>>().Value);
+        services.AddSingleton(provider => new IdentitySigningKey(
+            provider.GetRequiredService<IOptions<ModuleIdentityOptions>>().Value,
+            provider.GetRequiredService<JwtTrustOptions>()));
 
         services.AddOptions<ModuleIdentityOptions>()
             .Bind(identitySection)
-            .Validate(options => options.SigningKey.Length >= 32, "Identity signing key must contain at least 32 characters.")
+            .Validate(options => File.Exists(options.PrivateKeyPath), "Identity private key file must exist.")
+            .Validate<JwtTrustOptions>((options, trust) => { _ = new IdentitySigningKey(options, trust); return true; }, "Invalid Identity signing key.")
             .Validate(options => options.AccessTokenMinutes > 0, "Access token lifetime must be positive.")
             .Validate(options => options.SessionDays > 0, "Session lifetime must be positive.")
             .Validate(options => options.MaxFailedLoginAttempts > 0, "Lockout threshold must be positive.")
@@ -65,22 +73,26 @@ public static class IdentityModule
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+            .AddJwtBearer();
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<JwtTrustOptions>((options, trust) =>
             {
                 options.MapInboundClaims = false;
+                options.IncludeErrorDetails = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = identityOptions.Issuer,
+                    ValidIssuer = trust.Issuer,
                     ValidateAudience = true,
-                    ValidAudience = identityOptions.Audience,
+                    ValidAudience = trust.Audience,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(identityOptions.SigningKey)),
+                    IssuerSigningKeys = trust.LoadPublicKeys().Select(key => new RsaSecurityKey(key.Parameters) { KeyId = key.KeyId }),
+                    ValidAlgorithms = [JwtTrustOptions.Algorithm],
+                    TryAllIssuerSigningKeys = false,
                     ValidateLifetime = true,
                     RequireExpirationTime = true,
                     RequireSignedTokens = true,
-                    ClockSkew = TimeSpan.FromSeconds(30),
+                    ClockSkew = TimeSpan.FromSeconds(trust.ClockSkewSeconds),
                     NameClaimType = "name"
                 };
                 options.Events = new JwtBearerEvents
@@ -100,6 +112,13 @@ public static class IdentityModule
         services.AddAuthorization();
         services.AddSingleton<IModuleDescriptor, IdentityModuleDescriptor>();
         return services;
+    }
+
+    public static void InitializeSigningKeys(IConfiguration configuration)
+    {
+        var options = configuration.GetSection(ModuleIdentityOptions.SectionName).Get<ModuleIdentityOptions>() ?? new();
+        var trust = configuration.GetSection(JwtTrustOptions.SectionName).Get<JwtTrustOptions>() ?? new();
+        IdentitySigningKey.Initialize(options, trust);
     }
 
     private static async Task ValidateSessionAsync(TokenValidatedContext context)

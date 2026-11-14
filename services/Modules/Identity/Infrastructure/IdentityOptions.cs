@@ -4,9 +4,8 @@ internal sealed class IdentityOptions
 {
     public const string SectionName = "Modules:Identity";
 
-    public string Issuer { get; init; } = "SCDC";
-    public string Audience { get; init; } = "SCDC.WebClient";
-    public string SigningKey { get; init; } = string.Empty;
+    public string SigningKeyId { get; init; } = "identity-local-v1";
+    public string PrivateKeyPath { get; init; } = string.Empty;
     public int AccessTokenMinutes { get; init; } = 15;
     public int SessionDays { get; init; } = 30;
     public int EmailVerificationTokenMinutes { get; init; } = 30;

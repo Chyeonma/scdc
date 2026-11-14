@@ -1,14 +1,16 @@
 # syntax=docker/dockerfile:1
-# Build context: services/Sample. This image builds without the monolith.
+# Build context: services. Only Sample and Shared.Core are copied; no monolith project is built.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["SCDC.Sample.Domain/SCDC.Sample.Domain.csproj", "SCDC.Sample.Domain/"]
-COPY ["SCDC.Sample.Application/SCDC.Sample.Application.csproj", "SCDC.Sample.Application/"]
-COPY ["SCDC.Sample.Infrastructure/SCDC.Sample.Infrastructure.csproj", "SCDC.Sample.Infrastructure/"]
-COPY ["SCDC.Sample.Api/SCDC.Sample.Api.csproj", "SCDC.Sample.Api/"]
-RUN dotnet restore SCDC.Sample.Api/SCDC.Sample.Api.csproj
-COPY . .
-RUN dotnet publish SCDC.Sample.Api/SCDC.Sample.Api.csproj \
+COPY ["Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj", "Shared/SCDC.Shared.Core/"]
+COPY ["Sample/SCDC.Sample.Domain/SCDC.Sample.Domain.csproj", "Sample/SCDC.Sample.Domain/"]
+COPY ["Sample/SCDC.Sample.Application/SCDC.Sample.Application.csproj", "Sample/SCDC.Sample.Application/"]
+COPY ["Sample/SCDC.Sample.Infrastructure/SCDC.Sample.Infrastructure.csproj", "Sample/SCDC.Sample.Infrastructure/"]
+COPY ["Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj", "Sample/SCDC.Sample.Api/"]
+RUN dotnet restore Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj
+COPY Shared/ Shared/
+COPY Sample/ Sample/
+RUN dotnet publish Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj \
     --configuration Release --output /app/publish --no-restore /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final

@@ -5,6 +5,7 @@ WORKDIR /src
 
 COPY ["services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj", "services/SCDC.BuildingBlocks/"]
 COPY ["services/SCDC.Contracts/SCDC.Contracts.csproj", "services/SCDC.Contracts/"]
+COPY ["services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj", "services/Shared/SCDC.Shared.Core/"]
 COPY ["services/Modules/Identity/SCDC.Identity.csproj", "services/Modules/Identity/"]
 COPY ["services/Modules/Community/SCDC.Community.csproj", "services/Modules/Community/"]
 COPY ["services/Modules/Messaging/SCDC.Messaging.csproj", "services/Modules/Messaging/"]
@@ -30,6 +31,9 @@ COPY --from=build /app/publish .
 RUN mkdir -p /app/.dm-keys/user-search /app/community-keys /app/messaging-keys \
     && chown -R "$APP_UID:$APP_UID" /app/.dm-keys /app/community-keys /app/messaging-keys \
     && chmod 700 /app/.dm-keys/user-search /app/community-keys /app/messaging-keys
+RUN mkdir -p /app/auth-private /app/auth-public \
+    && chown -R "$APP_UID:$APP_UID" /app/auth-private /app/auth-public \
+    && chmod 700 /app/auth-private
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "SCDC.Api.dll"]

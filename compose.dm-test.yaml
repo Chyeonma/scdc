@@ -2,6 +2,17 @@
 # Never combine this file with compose.yaml; seed.sql is intentionally absent.
 name: scdc-dm-acceptance
 services:
+  identity-keygen:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    entrypoint: ["dotnet", "SCDC.Api.dll", "--initialize-jwt-keys"]
+    environment:
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+    volumes:
+      - dm-identity-private-keys:/app/auth-private
+      - dm-identity-public-keys:/app/auth-public
   postgres:
     image: docker.io/library/postgres:18-alpine
     environment:
@@ -26,7 +37,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
-      Modules__Identity__SigningKey: ${DM_IDENTITY_SIGNING_KEY:?Run Init first}
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Community__Operations__ActiveKeyId: dm-test
       Modules__Community__Operations__Keys__dm-test: ${DM_IDENTITY_SIGNING_KEY:?Run Init first}
@@ -44,11 +56,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      identity-keygen:
+        condition: service_completed_successfully
     volumes:
       - ./.dm-acceptance/keyrings/cursor:/app/dm-keys/cursor
       - ./.dm-acceptance/keyrings/hmac:/app/dm-keys/hmac:ro
       - ./.dm-acceptance/dispatcher:/app/dm-dispatcher
       - dm-community-keys:/app/community-keys
+      - dm-identity-private-keys:/app/auth-private:ro
+      - dm-identity-public-keys:/app/auth-public:ro
 
   web-client:
     build:
@@ -66,7 +82,6 @@ services:
     working_dir: /workspace
     environment:
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
-      Modules__Identity__SigningKey: ${DM_IDENTITY_SIGNING_KEY}
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Identity__UserSearch__CursorKeyRingPath: /artifacts/user-search-keys
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-integration-tests
@@ -88,3 +103,5 @@ volumes:
   dm-postgres-data:
   dm-community-keys:
   dm-test-nuget:
+  dm-identity-private-keys:
+  dm-identity-public-keys:

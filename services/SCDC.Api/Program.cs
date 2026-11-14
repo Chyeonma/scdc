@@ -11,6 +11,11 @@ using SCDC.Contracts.Persistence;
 using SCDC.Modules.Messaging.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
+if (args.Contains("--initialize-jwt-keys", StringComparer.Ordinal))
+{
+    IdentityModule.InitializeSigningKeys(builder.Configuration);
+    return;
+}
 builder.AddScdcTelemetry("scdc-monolith");
 // Query credentials in WebSocket handshakes must never reach request-start diagnostics.
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);

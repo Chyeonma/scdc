@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SCDC.Modules.Identity.Domain;
+using SCDC.Shared.Core.Authentication;
 
 namespace SCDC.Modules.Identity.Infrastructure.Security;
 
@@ -27,6 +28,8 @@ internal sealed record OpaqueToken(string Value, string Hash);
 
 internal sealed class TokenService(
     IOptions<IdentityOptions> options,
+    JwtTrustOptions trust,
+    IdentitySigningKey signingKey,
     TimeProvider timeProvider) : ITokenService
 {
     private readonly IdentityOptions _options = options.Value;
@@ -48,15 +51,13 @@ internal sealed class TokenService(
             new Claim("sid", sessionId.ToString()),
             new Claim("sst", securityStamp.ToString())
         };
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
-            _options.Issuer,
-            _options.Audience,
+            trust.Issuer,
+            trust.Audience,
             claims,
             now.UtcDateTime,
             expiresAt.UtcDateTime,
-            credentials);
+            signingKey.Credentials);
 
         return new IssuedAccessToken(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
     }
