@@ -149,9 +149,131 @@ Khi chuyển dữ liệu, phải giữ:
 - Sau khi v1 đã nhận ghi mới, không mở lại database MVP cũ; muốn quay lại phải xử lý phần chênh lệch.
 - Công cụ migration (D50) vẫn chỉ chạm một database mỗi lần; cách đọc dữ liệu nguồn và cấp quyền cho bước chuyển cần thiết kế riêng.
 
+<a id="s2-01-boundaries"></a>
+
+## S2-01 — Xử lý các phụ thuộc giữa module
+
+Bảng này là đầu vào triển khai STEP-2, đối chiếu code tại `59748f8` và schema PostgreSQL ngày 2026-11-15. Số lượng dữ liệu được ghi theo snapshot thực tế ngày 2026-11-14. **Đã soạn phương án cho toàn bộ mục khảo sát; chờ Sáng review phần Messaging.** Chưa chạy migration hoặc thay hợp đồng runtime trong S2-01. [Hồ sơ đối chiếu](../records/verification/architecture/s2-01-2026-11-15.md) ghi nguồn, số lượng và kiểm tra độ phủ.
+
+Phân công theo [các thẻ STEP-2](../project/tasks/step-2.md): Vg làm S2-02, 03, 04, 06, 07, 09, 10; Sáng làm S2-05, 08, 11. Mỗi dòng dưới gắn với thẻ thực hiện, từ đó xác định người làm. S2-01 không xác nhận thay việc review của người phụ trách.
+
+### Nguyên tắc giữ dữ liệu và quyền
+
+- Bỏ ràng buộc SQL xuyên module, giữ nguyên cột, UUID, giá trị NULL, version và thời điểm hiện có. Không tạo FK mới sang bản sao người dùng hoặc dùng cascade để xóa dữ liệu module khác.
+- ID người dùng ngoài module là tham chiếu nghiệp vụ. Identity trả thông tin công khai qua hợp đồng; user không tồn tại hoặc không khả dụng nhận placeholder theo từng API, không làm mất lịch sử và không cấp quyền mới.
+- Kiểm tra trước khi ghi phải theo hàng rào và giấy phép có epoch của D05–D07. Gọi `FindUser` một lần, JWT hợp lệ hay cache hồ sơ không bảo vệ quyền tới commit. Redis dùng để kiểm tra phiên, không thay hàng rào ghi.
+- Tất cả thao tác, dấu chống trùng, outbox/inbox và tombstone hiện có được giữ theo D51. Phân loại không rõ phải dừng để review; không đoán owner, tự đánh dấu đã phát hay phát lại sự kiện cũ.
+- STEP-2 vẫn chạy một tiến trình. Adapter nội bộ phải giữ hình dạng hợp đồng có deadline, lỗi không rõ kết quả, epoch và ID chống trùng như lời gọi qua mạng. Giao thức gRPC/mTLS đang chốt vẫn giữ nguyên; đề xuất hoãn chưa được xác nhận.
+
+### Khóa ngoại của Community: 9 ràng buộc
+
+Các FK tới người dùng dưới đây cùng trỏ `identity.users(id)`. Bỏ FK trong S2-04; xử lý quyền ghi và tra cứu người dùng hoàn thiện ở S2-07. Ràng buộc nội bộ Community, đặc biệt owner/member, membership epoch và unique role/channel, vẫn giữ.
+
+| FK | Cột nguồn | Xử lý thay thế | Thẻ |
+|---|---|---|---|
+| `fk_server_bans_banned_by` | `community.bans.banned_by_user_id` | Giữ ID người cấm để tra cứu lịch sử; không phụ thuộc tài khoản còn hoạt động | S2-04, S2-07 |
+| `fk_server_bans_revoked_by` | `community.bans.revoked_by_user_id` | Giữ ID hoặc NULL đã lưu; không tự SET NULL khi Identity đổi trạng thái | S2-04, S2-07 |
+| `fk_server_bans_user` | `community.bans.user_id` | Giữ ID bị cấm; không làm mất lệnh cấm khi không lấy được hồ sơ | S2-04, S2-07 |
+| `fk_server_channels_space` | `community.channels(space_id, space_type)` → `messaging.spaces(id, space_type)` | Giữ cùng channel/space ID và loại phòng; thay tính nguyên tử bằng chuẩn bị, xác nhận, hủy có chống trùng và trạng thái bền | S2-04, S2-09 |
+| `fk_server_member_roles_assigner` | `community.member_roles.assigned_by_user_id` | Giữ người gán; quyền gán dựa vào Community và giấy phép tài khoản tới commit | S2-04, S2-07 |
+| `operations_actor_user_id_fkey` | `community.operations.actor_user_id` | Giữ actor trong dấu chống trùng; không xóa operation khi mất hồ sơ hoặc thu hồi tài khoản | S2-04, S2-07 |
+| `fk_server_members_inviter` | `community.server_members.invited_by_user_id` | Giữ ID người mời hoặc NULL; kiểm tra tư cách người mời bằng hợp đồng khi thao tác mới | S2-04, S2-07 |
+| `fk_server_members_user` | `community.server_members.user_id` | Community sở hữu membership và epoch; xác minh tài khoản qua Identity, không JOIN hay đặt FK sang bản sao | S2-04, S2-07 |
+| `fk_servers_owner` | `community.servers.owner_user_id` | Giữ owner ID và bất biến owner là member; kiểm tra tài khoản qua giấy phép, không dùng FK Identity | S2-04, S2-07 |
+
+### Khóa ngoại của Messaging: 16 ràng buộc
+
+Tất cả cùng trỏ `identity.users(id)`. S2-05 bỏ FK; S2-08 thay guard và đọc hồ sơ dùng chung connection. Các ràng buộc giữa message, conversation, space và operation trong Messaging vẫn giữ.
+
+| FK | Cột nguồn | Xử lý thay thế | Thẻ |
+|---|---|---|---|
+| `fk_direct_conversations_user_high` | `messaging.direct_conversations.user_high_id` | Giữ cặp ID và thứ tự UUID; xác minh peer qua hợp đồng khi mở/gửi, giữ hội thoại cũ | S2-05, S2-08 |
+| `fk_direct_conversations_user_low` | `messaging.direct_conversations.user_low_id` | Như trên; giữ unique cặp DM và tính lặp an toàn | S2-05, S2-08 |
+| `fk_group_conversations_owner` | `messaging.group_conversations.owner_user_id` | Giữ owner ID; đây là bảng nền, không tự mở rộng tính năng group chat | S2-05 |
+| `fk_message_mentions_user` | `messaging.mentions.mentioned_user_id` | Giữ ID đích; hồ sơ hiển thị qua hợp đồng khi có luồng dùng, không JOIN | S2-05 |
+| `fk_message_edits_editor` | `messaging.message_edits.edited_by_user_id` | Giữ người sửa; quyền sửa do Messaging và giấy phép tài khoản bảo vệ | S2-05, S2-08 |
+| `fk_messages_author` | `messaging.messages.author_user_id` | Giữ tác giả; thông tin công khai lấy theo batch từ Identity, giữ lịch sử khi tác giả không khả dụng | S2-05, S2-08 |
+| `fk_messages_deleted_by` | `messaging.messages.deleted_by_user_id` | Giữ ID hoặc NULL; tombstone và quyền xóa vẫn thuộc Messaging | S2-05, S2-08 |
+| `fk_pinned_messages_user` | `messaging.pinned_messages.pinned_by_user_id` | Giữ ID người ghim; bảng nền không tạo thêm tính năng trong STEP-2 | S2-05 |
+| `fk_message_reactions_user` | `messaging.reactions.user_id` | Giữ ID và unique hiện có; không cấp quyền từ việc tham chiếu có tồn tại | S2-05 |
+| `fk_message_receipts_user` | `messaging.receipts.user_id` | Giữ ID người nhận và tiến độ; không xóa theo cascade Identity | S2-05 |
+| `fk_chat_space_members_remover` | `messaging.space_members.removed_by_user_id` | Giữ ID hoặc NULL của người loại; không đặt lại lịch sử/epoch | S2-05, S2-08 |
+| `fk_chat_space_members_user` | `messaging.space_members.user_id` | Messaging sở hữu tư cách trong space; phiên và tài khoản kiểm tra qua hợp đồng | S2-05, S2-08 |
+| `fk_chat_space_user_states_user` | `messaging.space_user_states.user_id` | Giữ ID và trạng thái người dùng trong hội thoại; không đọc bảng Identity | S2-05, S2-08 |
+| `fk_chat_spaces_creator` | `messaging.spaces.created_by_user_id` | Giữ ID người tạo hoặc NULL; tạo space từ giấy phép hoặc hợp đồng provision phòng | S2-05, S2-08, S2-09 |
+| `fk_user_blocks_blocked` | `messaging.user_blocks.blocked_user_id` | Giữ ID bị chặn; bỏ cascade xuyên module, xử lý vòng đời tại owner | S2-05 |
+| `fk_user_blocks_blocker` | `messaging.user_blocks.blocker_user_id` | Giữ ID người chặn và cặp chống trùng; không làm sống lại quyền do mất hồ sơ | S2-05 |
+
+### Moderation: 7 ràng buộc, chưa có code dùng
+
+Hai bảng `moderation.message_reports` và `moderation.actions` không thuộc tính năng v1 đã chọn, không tạo service Moderation. Snapshot 2026-11-14 ghi nhận 0 dòng ở cả hai bảng. S2-05 bỏ bảy FK sau và loại hai bảng rỗng bằng migration có preflight, đồng thời cập nhật bootstrap tương ứng. Kiểm tra rỗng và loại bảng phải nằm trong cùng transaction có khóa chặn ghi. Nếu lúc chạy có dữ liệu, migration phải dừng để duyệt cách lưu và chuyển dữ liệu theo D51; không tự DROP hay bỏ nội dung snapshot.
+
+| FK | Tham chiếu | Xử lý | Thẻ |
+|---|---|---|---|
+| `fk_moderation_actions_moderator` | `actions.moderator_user_id` → `identity.users` | Bỏ FK; preflight và loại bảng rỗng theo chính sách trên | S2-05 |
+| `fk_moderation_actions_server` | `actions.server_id` → `community.servers` | Như trên; không chuyển quan hệ này sang FK khác | S2-05 |
+| `fk_moderation_actions_target_message` | `actions.target_message_id` → `messaging.messages` | Như trên; dữ liệu có sẵn phải được giữ nếu preflight thấy khác rỗng | S2-05 |
+| `fk_moderation_actions_target_user` | `actions.target_user_id` → `identity.users` | Như trên | S2-05 |
+| `fk_message_reports_message` | `message_reports.message_id` → `messaging.messages` | Bỏ FK; không phát sinh quyền xem nội dung snapshot qua API | S2-05 |
+| `fk_message_reports_reporter` | `message_reports.reporter_user_id` → `identity.users` | Bỏ FK; preflight và loại bảng rỗng | S2-05 |
+| `fk_message_reports_reviewer` | `message_reports.reviewed_by_user_id` → `identity.users` | Bỏ FK; giữ NULL/ID nếu có dữ liệu cần chuyển trước khi loại bảng | S2-05 |
+
+### View đọc chéo schema
+
+| View | Phụ thuộc ngoài module | Xử lý | Thẻ |
+|---|---|---|---|
+| `messaging.v_space_overview` | `identity.user_profiles`, `community.channels`, `community.servers` | Bỏ view; code hiện không dùng. Nếu cần màn hình tương đương, ghép response từ các owner qua hợp đồng, không dựng lại view hay bản sao toàn bảng | S2-05 |
+| `messaging.v_message_timeline` | `identity.users`, `identity.user_profiles` | Bỏ view; API lịch sử tiếp tục đọc Messaging và lấy summary công khai theo hợp đồng | S2-05, S2-08 |
+
+Hai view nội bộ Identity (`identity.v_user_accounts`, `identity.v_active_sessions`) giữ tại Identity; không cho role module khác đọc.
+
+### Hợp đồng và transaction
+
+Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và phương thức thay thế chi tiết được thiết kế ở S2-02; không đổi chữ ký trong S2-01.
+
+| Hợp đồng hiện tại | Bên dùng và chỗ dính | Hướng xử lý | Thẻ |
+|---|---|---|---|
+| `IAccountAccessGuard` | `MembershipService`, `ServerService`, `CommunityManagementGuard` truyền transaction Community cho Identity | Thay bằng cấp giấy phép tài khoản có epoch và hàng rào cục bộ; Community giữ transaction của mình, kiểm tra trước commit | S2-02, S2-07 |
+| `IAccountPairAccessGuard` | Sáu file Messaging; `AccountPairAccessGuard` gắn DbContext Identity vào transaction shared | Thay bằng hợp đồng actor/peer và giấy phép đúng phạm vi; không mang DbConnection/DbTransaction qua ranh giới; peer không khả dụng không làm mất lịch sử | S2-02, S2-08 |
+| `ISharedDatabaseSession` và `ISharedDatabaseTransaction` | Connection chung cho Identity, Messaging, guard và OutboxStore | Loại khỏi hợp đồng giữa module; unit of work nội bộ theo owner và connection string riêng | S2-03, S2-08, S2-10 |
+| `IChatSpaceLifecycle` | `ChannelService` gọi Messaging tạo space trong transaction Community | Thay bằng prepare/confirm/cancel có operation ID, version và trạng thái bền theo D14–D19; timeout không được coi là rollback | S2-02, S2-09 |
+| `IChannelAccessGuard` | Wrapper đã đăng ký DI; chưa có caller dùng interface, lớp `CommunityChannelGuard` có đường gọi nội bộ | Giữ luật ACL nội bộ; bỏ wrapper nhận transaction ở S2-10, hợp đồng quyền mới dùng giấy phép/epoch theo S2-02. Không xóa cả lớp guard | S2-02, S2-10 |
+| `IUserDirectory` | `RoleService` đọc summary qua IdentityDbContext | Giữ ý nghĩa lookup công khai, thay adapter bằng lời gọi batch có deadline; thiếu user trả placeholder/không khả dụng. Không dùng kết quả làm giấy phép ghi | S2-07 |
+| `IHistoricalUserSummaryReader` | `ConversationInbox`, `MessageHistory`, `ConversationAccess`; hiện đọc qua DbContext đã gắn transaction chung | Tách lookup khỏi transaction, gọi batch tới Identity; chỉ projection công khai, không sao chép email, security stamp hay credential vào Messaging | S2-08 |
+| `IAuthenticatedSessionReader` | `ChatHub`, `OutboxDispatcher`, `SubscriptionReconciler` đọc Identity DB | Thay adapter bằng đọc phiên tối thiểu ở Redis do Identity công bố; mất/hỏng Redis phải dừng cấp quyền mới và giữ quy tắc 5 giây | S2-06, S2-11 |
+| `IUserSearchDirectory` | Chỉ `UsersController` của API dùng; truy vấn thuộc Identity | Giữ trong ranh giới Identity và chuyển cùng Identity khi tách; không tạo DB reader ở Messaging hay replicate chỉ mục người dùng sang đó | S2-10 |
+| `IChannelAccessChecker` | Chỉ có khai báo, không implementation/DI/caller | Xóa placeholder ở S2-10; không coi check boolean cũ là quyền ghi tới commit. Hợp đồng permission mới theo S2-02 | S2-10 |
+| `IRealtimeAccessRevoker` | Chỉ có khai báo, không implementation/DI/caller | Xóa placeholder; hợp đồng thu hồi tương lai phải có phạm vi, epoch, operation ID, xác nhận sau commit và phục hồi theo D05–D07 | S2-10 |
+
+### Outbox, inbox, audit và hạ tầng chung
+
+`integration.outbox_events` hiện là **một bảng dùng bởi cả Identity, Community và Messaging**. Nguồn xác minh là mapping trong [IdentityDbContext](../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [MessagingDbContext](../../services/Modules/Messaging/Infrastructure/Persistence/MessagingDbContext.cs) và writer [TransactionalOutbox](../../services/SCDC.BuildingBlocks/Infrastructure/Outbox/TransactionalOutbox.cs) của Community. [OutboxStore](../../services/Modules/Messaging/Realtime/OutboxStore.cs) chỉ nhận `Messaging.MessageChanged`; nó không phát sự kiện Identity hoặc Community.
+
+| Đối tượng | Owner và cách tách | Thẻ |
+|---|---|---|
+| `integration.outbox_events`: `Identity.*` | Identity → `identity.outbox_events` trong STEP-2; mọi writer Identity đổi mapping cùng migration | S2-03 |
+| `integration.outbox_events`: `Community.*` | Community → `community.outbox_events`; `TransactionalOutbox` gắn owner cụ thể, không chọn bảng từ input HTTP | S2-03 |
+| `integration.outbox_events`: `Messaging.*` và legacy `MessageCreated` | Messaging → `messaging.outbox_events`; giữ nguyên event ID, type, payload, timestamp, version, published state, attempt và lease. Không đổi legacy type để phát lại | S2-03 |
+| Event type chưa phân loại | Dừng cutover để bổ sung owner được review; không bỏ dòng hay coi bảng cũ đã chuyển hết | S2-03 |
+| `integration.inbox_events` | Inbox thuộc **consumer**. Đích STEP-2 là `<consumer>.inbox_events` khi có consumer; giữ consumer name, event ID và dấu chống trùng. Không có caller; snapshot 2026-11-14 có 0 dòng | S2-03, S2-10 |
+| `audit.security_events` | **Đang có code Identity dùng; snapshot 2026-11-14 có 37 dòng**. Chuyển nguyên dữ liệu sang `identity.security_events`; giữ ID, timestamp, append-only, không FK user và chính sách audit 90 ngày, IP/user-agent 7 ngày. Worker dọn dữ liệu chưa được triển khai trong S2-01 | S2-03 |
+| Schema `audit` và `integration` cũ | Chỉ loại sau đối chiếu đủ từng dòng và chuyển toàn bộ writer/reader; migration role giữ quyền DDL, app role không giữ quyền chéo tạm sau S2-11 | S2-03, S2-10, S2-11 |
+| Một `ConnectionStrings:Database` | Thay bằng ba cấu hình Identity/Community/Messaging; role của owner chỉ dùng schema của mình khi STEP-2 kết thúc. Mọi quyền chéo tạm phải có danh sách và ngày gỡ | S2-03, S2-11 |
+| Hàm `common.*` | Hàm kỹ thuật như cập nhật timestamp và đếm UTF-16 được chuyển/copy vào schema owner, cập nhật trigger/check và kiểm thử Unicode; không chia sẻ connection hay dữ liệu nghiệp vụ | S2-03 |
+| `common.schema_migrations` | Ledger Community hiện tại được giữ nguyên checksum và lịch sử; migration tool nhận owner rõ ràng, ledger theo owner khi nâng cấp. Role API không cần đọc hay sửa ledger | S2-03, S2-10 |
+
+Khi lên STEP-3, các bảng owner-local đi cùng database owner; có thể dùng lại tên schema kỹ thuật bên trong từng database riêng. Không có database Integration hay Audit dùng chung. S2-03 phải đối chiếu số dòng và event ID trước/sau, giữ trạng thái công việc; S2-11 xác nhận ba role không đọc được bảng của nhau và các đường cũ vẫn chạy.
+
+### Điều kiện chuyển sang triển khai
+
+1. Review Messaging của Sáng được ghi nhận; còn mở duy nhất ở mức S2-01 là xác nhận review đó.
+2. S2-02 cụ thể hóa giấy phép, hàng rào, lỗi chậm/mất xác nhận và ba luồng DM, vai trò, tạo phòng. Không chỉ đổi tham số để bỏ transaction.
+3. Các migration S2-03/04/05 được thử trên bản sao có dữ liệu MVP, giữ migration cũ bất biến; không dùng `schema.sql` để nâng cấp volume hiện tại.
+4. Sau S2-10, S2-11 phải thử quyền database thực tế, lỗi Redis/lời gọi, sự kiện trùng/sai thứ tự và thời gian thu hồi. JWT RS256 của S1-06 không thay các điều kiện này.
+
 ## Còn mở
 
-- Tên database và schema, phân quyền chi tiết, vị trí outbox, inbox, audit, cơ chế đồng bộ giữa service, thứ tự migration (D02).
+- Bảng xử lý STEP-2 đã có ở S2-01 bên trên, chờ review Messaging; DDL, quyền chi tiết và thứ tự migration được triển khai tại S2-03 đến S2-11. Tên database triển khai STEP-3 và cơ chế đồng bộ cụ thể tiếp tục được thiết kế theo gói (D02).
 - Engine, thư viện, tên và vị trí project, container, CLI, cách đóng gói phần kiểm tra trước, quyền SQL, cơ chế transaction và khóa, CI/CD (D48 đến D50).
 - Cách tiếp nhận lịch sử migration cũ; kế hoạch tách dữ liệu MVP.
 - Mapping schema và dữ liệu, xử lý khóa và phiên, ledger, công cụ và trình tự chuyển (D51, D52). Thời gian bảo trì cần đo trên dữ liệu đại diện.

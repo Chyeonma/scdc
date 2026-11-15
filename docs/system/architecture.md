@@ -59,6 +59,8 @@ Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.
 - Có interface không có nghĩa đã có bên dùng hay đã chạy đủ; xem trạng thái ở từng trang tính năng.
 - MVP được dùng transaction chung trong một ứng dụng. Khi tách service, phải thay bằng hợp đồng mạng và chính sách nhất quán. Chi tiết: [backend](backend.md), [database](database.md), [Community](../features/community/mechanics.md), [thu hồi truy cập](access-revocation.md).
 
+Khảo sát S2-01 đã đối chiếu 32 FK xuyên schema, 2 view và các hợp đồng đang dùng; [bảng xử lý từng phụ thuộc](database.md#s2-01-boundaries) phân rõ owner và thẻ thực hiện. Audit đang thuộc Identity; outbox hiện là bảng dùng bởi ba module. Các thay đổi ranh giới runtime sẽ triển khai trong STEP-2 sau review.
+
 <a id="future"></a>
 <a id="target"></a>
 

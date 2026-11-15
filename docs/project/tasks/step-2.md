@@ -6,27 +6,33 @@ Trạng thái: nháp
 
 Chưa đồng bộ lên Trello. Rà lại ở buổi S1-09, cập nhật theo kết quả S1-01 (giao thức giữa service) và S1-06 (thư viện JWT), rồi xóa dòng "Trạng thái: nháp" để đưa thẻ lên. Chưa ước lượng: ước lượng dựa trên thời gian thực tế của STEP-1.
 
-## Hiện trạng (khảo sát code ngày 2026-11-11)
+S2-01 đã có [bảng xử lý từng phụ thuộc](../../system/database.md#s2-01-boundaries), hoàn thiện và đối chiếu schema ngày 2026-11-15; chờ review Messaging của Sáng. Các thẻ triển khai dưới đây vẫn là nháp, đã bổ sung phạm vi outbox và audit theo khảo sát thực tế.
+
+## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
 Không đồng bộ; là đầu vào cho các thẻ bên dưới.
 
 | Loại chỗ dính | Số lượng | Ở đâu |
 |---|---|---|
-| Một connection string chung | 1 | `ConnectionStrings:Database` dùng cho cả ba module (`SCDC.Api/Program.cs`, `IdentityModule.cs`, `CommunityModule.cs`) |
+| Một connection string chung | 1 | `ConnectionStrings:Database` trong `SCDC.Api/Program.cs` và `CommunityModule.cs`; Identity/Messaging cùng dùng kết nối qua `ISharedDatabaseSession` |
 | Khóa ngoại khác schema | 32 | Community → `identity.users` (8), Community → `messaging.spaces` (1), Messaging → `identity.users` (16), `moderation` → identity, community, messaging (7). Nguồn: `database/postgres/schema.sql`, migration `001` |
 | View đọc chéo schema | 2 | `messaging.v_space_overview` (đọc identity, community), `messaging.v_message_timeline` (đọc identity); code không dùng |
-| Hợp đồng nhận transaction của bên gọi | 4 | `IAccountAccessGuard` (Community gọi ở 3 file), `IAccountPairAccessGuard` và `ISharedDatabaseSession` (Messaging gọi ở 6 file), `IChatSpaceLifecycle` (Community gọi khi tạo phòng), `IChannelAccessGuard` (đã cài, chưa có bên gọi) |
+| Phụ thuộc transaction xuyên module | 4 hợp đồng nghiệp vụ và 1 nhóm persistence | `IAccountAccessGuard` (Community gọi ở 3 file), `IAccountPairAccessGuard` dùng ngầm `ISharedDatabaseSession` (Messaging gọi ở 6 file), `IChatSpaceLifecycle` (Community gọi khi tạo phòng), `IChannelAccessGuard` (wrapper đã cài, chưa có caller dùng interface); nhóm persistence còn có `ISharedDatabaseTransaction` |
 | Hợp đồng đọc trực tiếp | 4 | `IUserDirectory` (Community: vai trò), `IHistoricalUserSummaryReader` (Messaging: 3 file), `IAuthenticatedSessionReader` (ChatHub, outbox, đăng ký realtime), `IUserSearchDirectory` (chỉ API dùng) |
 | Hợp đồng chưa ai dùng | 2 | `IChannelAccessChecker`, `IRealtimeAccessRevoker` |
+| Outbox dùng chung | 1 bảng, 3 owner | Identity và Messaging map EF, Community dùng `TransactionalOutbox`; Messaging dispatcher chỉ nhận `Messaging.MessageChanged` |
+| Audit đang hoạt động | 1 bảng | `audit.security_events` được Identity ghi, catalog có 37 dòng; không phải schema chưa dùng |
+| Moderation chưa dùng | 2 bảng | Không có caller; catalog có 0 dòng ở `message_reports` và `actions`; preflight lại trước khi loại bảng |
 
 Code của từng module không có SQL đọc thẳng bảng của module khác; chỗ dính nằm ở schema, view và các hợp đồng trên.
 
 ## S2-01 · Chốt cách xử lý từng chỗ dính
 - Nhãn: docs, tech
 - Người làm: Vg · Review: Sáng
-- Đầu ra: bảng trong [database](../../system/database.md) ghi, cho từng khóa ngoại, view và hợp đồng ở bảng hiện trạng: bỏ, giữ dạng ID không ràng buộc, thay bằng bản sao dữ liệu, hay thay bằng lời gọi. Quyết định số phận schema `moderation`, `audit` (chưa có code dùng) và hai hợp đồng chưa ai dùng. Ghi rõ bảng `integration.outbox_events` thuộc module nào.
+- Đầu ra: bảng trong [database](../../system/database.md#s2-01-boundaries) ghi, cho từng khóa ngoại, view và hợp đồng ở bảng hiện trạng: bỏ, giữ dạng ID không ràng buộc, thay bằng bản sao dữ liệu, hay thay bằng lời gọi. Quyết định số phận schema `moderation`, bảo toàn audit đang được Identity dùng và hai hợp đồng chưa ai dùng. Ghi rõ owner của từng nhóm sự kiện trong `integration.outbox_events`.
 - Xong khi: mỗi dòng trong bảng hiện trạng có cách xử lý và người làm; Sáng đồng ý phần Messaging.
 - Phụ thuộc: không; làm được ngay trong lúc làm STEP-1.
+- Kết quả: **Đã soạn và đối chiếu — 2026-11-15**, [hồ sơ S2-01](../../records/verification/architecture/s2-01-2026-11-15.md) bao phủ 32 FK, 2 view, 11 nhóm hợp đồng và dữ liệu phụ trợ; còn xác nhận review Messaging của Sáng để đạt đầy đủ tiêu chí hoàn tất.
 
 ## S2-02 · Thiết kế thay transaction chung
 - Nhãn: docs, tech
@@ -38,8 +44,8 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 ## S2-03 · Database user và connection string riêng cho mỗi module
 - Nhãn: tech, refactor
 - Người làm: Vg · Review: Thái
-- Đầu ra: ba connection string (Identity, Community, Messaging) thay cho `ConnectionStrings:Database`; ba user PostgreSQL. Giai đoạn đầu cấp thêm quyền đọc chéo tạm thời, ghi rõ danh sách; S2-11 thu hẹp lại.
-- Xong khi: ứng dụng và test chạy với ba user; Compose và [hướng dẫn phát triển](../../guides/development.md) đã cập nhật.
+- Đầu ra: ba connection string (Identity, Community, Messaging) thay cho `ConnectionStrings:Database`; ba user PostgreSQL. Theo S2-01, tách outbox theo owner, chuyển audit Identity cùng dữ liệu, bố trí hàm kỹ thuật và ledger theo owner. Giai đoạn đầu cấp thêm quyền đọc chéo tạm thời, ghi rõ danh sách; S2-11 thu hẹp lại.
+- Xong khi: ứng dụng và test chạy với ba user; đối chiếu đủ event ID, trạng thái công việc và audit trước/sau; Compose và [hướng dẫn phát triển](../../guides/development.md) đã cập nhật.
 - Phụ thuộc: S2-01.
 
 ## S2-04 · Bỏ khóa ngoại khác schema của Community
@@ -52,7 +58,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 ## S2-05 · Bỏ khóa ngoại và view khác schema của Messaging
 - Nhãn: refactor
 - Người làm: Sáng · Review: Vg
-- Đầu ra: migration bỏ 16 khóa ngoại sang `identity.users`; bỏ hoặc chuyển hai view đọc chéo; xử lý các khóa ngoại của schema `moderation` theo S2-01.
+- Đầu ra: migration bỏ 16 khóa ngoại sang `identity.users` và hai view đọc chéo; bỏ 7 FK của `moderation`, preflight và loại bảng rỗng theo S2-01. Nếu Moderation có dữ liệu, dừng để duyệt cách bảo toàn trước khi loại bảng.
 - Xong khi: migration chạy được trên dữ liệu MVP; test DM qua.
 - Phụ thuộc: S2-01.
 
