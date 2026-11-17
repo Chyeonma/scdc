@@ -72,7 +72,7 @@ Lý do: ít thành phần và ít cấu hình tích hợp hơn so với bộ Gra
 | Thời hạn giữ | Cấu hình OpenObserve 14 ngày cho dữ liệu giám sát; chưa kiểm chứng việc dọn sau đủ 14 ngày |
 | Giới hạn bộ nhớ | Collector 256 MiB, memory limiter 128 MiB; OpenObserve 1 GiB |
 
-Chạy `make up ENGINE=podman` hoặc `docker compose up -d --build`. Khóa Community và DM vẫn chuẩn bị theo [hướng dẫn phát triển](../guides/development.md#setup). Đổi biến root sau khi đã tạo volume không tự đổi mật khẩu tài khoản đang lưu; cần đổi tài khoản qua OpenObserve rồi cập nhật cấu hình Collector tương ứng.
+Lần đầu chạy `make setup` (hoặc `make setup ENGINE=podman`); lệnh chuẩn bị cấu hình, build, khởi chạy và kiểm tra toàn bộ stack theo [hướng dẫn phát triển](../guides/development.md#setup). Các lần sau dùng `make up` với cùng engine. Đổi biến root sau khi đã tạo volume không tự đổi mật khẩu tài khoản đang lưu; cần đổi tài khoản qua OpenObserve rồi cập nhật cấu hình Collector tương ứng.
 
 ### Tín hiệu và dữ liệu được xuất
 
@@ -94,7 +94,7 @@ Nginx chuyển tiếp context W3C của request. Image Nginx hiện không tạo
 ### Chạy kiểm chứng tự động
 
 ```bash
-make test-observability ENGINE=podman
+python3 scripts/test_observability.py --engine podman
 ```
 
 Lệnh dựng stack riêng bằng `compose.gateway-test.yaml` và `compose.observability-test.yaml`; gateway ở `127.0.0.1:15410`, OpenObserve thử ở `127.0.0.1:15480`. Script dừng PostgreSQL thử để tạo HTTP 500, tìm log và trace qua Search API của OpenObserve, kiểm tra canary nhạy cảm không lọt vào dữ liệu, rồi thử dừng và khởi động Collector. Stack thử và volume được dọn sau khi chạy. Log nằm trong `artifacts/observability/`.

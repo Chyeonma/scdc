@@ -14,7 +14,7 @@
 
 <!-- Lệnh đã chạy và kết quả; ca thử bằng tay; ảnh chụp nếu có giao diện. -->
 
-- [ ] `make test` (hoặc phần liên quan) qua
+- [ ] Các kiểm thử liên quan theo [hướng dẫn](../docs/guides/development.md#testing) qua
 - [ ] `make docs-check` qua (nếu sửa tài liệu)
 - [ ] Đã thử luồng liên quan trên môi trường phát triển
 

@@ -4,7 +4,7 @@
 
 Cách cài đặt, chạy, cấu hình và kiểm thử SCDC trên máy phát triển.
 
-**Cập nhật:** nền `900e226` ([MVP](../releases/mvp.md)); hướng dẫn gateway S1-02 cập nhật ngày 2026-11-12. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
+**Cập nhật:** 2026-11-17, hướng dẫn dựng môi trường S1-08 cho gateway, service mẫu, JWT và giám sát. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
 
 Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình và dữ liệu mẫu chỉ dùng cho môi trường phát triển.
 
@@ -14,7 +14,7 @@ Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình 
 
 - [Chuẩn bị và khởi chạy](#setup)
 - [Docker Desktop, Docker Engine và Podman](#container-engines)
-- [Lệnh ngắn](#short-commands)
+- [Lệnh thường dùng](#short-commands)
 - [Cấu hình](#configuration)
 - [Tài khoản để tích hợp](#identity)
 - [Database và dữ liệu mẫu](#database)
@@ -30,42 +30,72 @@ Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình 
 
 ## 1. Chuẩn bị và khởi chạy
 
-**Cần có:** Docker hoặc Podman, kèm Compose. Nếu debug trên máy: .NET SDK 10 và Node.js 24 với npm (cùng major với Dockerfile frontend).
+**Cần có:** Git, Make, Docker với Compose hoặc Podman với Compose provider, OpenSSL và curl. Clone repo rồi mở terminal tại thư mục chứa `Makefile` và `compose.yaml`. Các lệnh dưới dùng Bash, zsh hoặc WSL; Windows dùng Linux containers và bật WSL integration nếu chọn Docker Desktop.
 
-Backend .NET 10 (`SCDC.slnx`), frontend React 19 và Vite.
+Backend và frontend được build trong image. .NET SDK 10 và Node.js 24 chỉ cần khi debug hoặc kiểm thử trực tiếp trên máy; Python 3 cần cho các công cụ kiểm thử và tài liệu.
 
 <a id="chạy-bằng-compose"></a>
 
 ### Chạy bằng Compose
 
-Trước lần chạy đầu: đặt `COMMUNITY_OPERATION_KEY` cố định trong `.env` ([README](../../README.md#khởi-chạy)), rồi tạo khóa fingerprint DM:
+**Lần đầu**, dựng môi trường bằng một lệnh:
 
 ```bash
-make init-dm-key
-docker compose up -d --build
+make setup
 ```
+
+Nếu chọn Podman, dùng `make setup ENGINE=podman`, rồi thêm `ENGINE=podman` vào mọi lệnh Make bên dưới. Kiểm tra engine theo [mục công cụ container](#container-engines) nếu không kết nối được.
+
+`setup` thực hiện lần lượt:
+
+1. Tạo `.env` với khóa Community ngẫu nhiên nếu file chưa có. File hiện hữu được giữ nguyên; khóa không in ra terminal.
+2. Kiểm tra cấu hình Compose, build image và khởi chạy stack.
+3. Compose tự tạo khóa DM và JWT bằng hai job `messaging-keygen`, `identity-keygen`; API chờ các job thành công rồi mới chạy. Các job không ghi đè khóa hiện hữu.
+4. Chạy `make check`: đợi giao diện và các endpoint health trả HTTP 200, kiểm tra PostgreSQL nhận kết nối và cấu hình Nginx hợp lệ. Lệnh thất bại nếu một bước không đạt.
+
+Nếu đã có `.env` nhưng thiếu `COMMUNITY_OPERATION_KEY`, tạo khóa bằng `openssl rand -base64 32`, thêm vào file dưới dạng `COMMUNITY_OPERATION_KEY=<khóa-vừa-tạo>`, rồi chạy lại. Giữ nguyên file này cùng volume dữ liệu qua những lần chạy.
+
+Xem trạng thái sau khi dựng:
+
+```bash
+make status
+```
+
+Hai job tạo khóa có trạng thái `Exited (0)` là bình thường; các container PostgreSQL, API, service mẫu, WebClient/Nginx, Collector và OpenObserve phải đang chạy. LiveKit thuộc S1-07, chưa có trong stack này.
 
 | Dịch vụ | Địa chỉ |
 |---|---|
 | WebClient | `http://localhost:3000` |
 | Swagger qua gateway (Development) | `http://localhost:3000/swagger` |
-| OpenAPI JSON qua gateway (Development) | `http://localhost:3000/swagger/v1/swagger.json` |
-| Health của Nginx | `http://localhost:3000/healthz` |
-| Health của service mẫu S1-03 qua gateway | `http://localhost:3000/health` |
+| OpenAPI JSON qua gateway | `http://localhost:3000/swagger/v1/swagger.json` |
+| Health Nginx, service mẫu, API | `http://localhost:3000/healthz`, `/health`, `/api/v1/health` |
 | Endpoint thử JWT S1-06 | `http://localhost:3000/sample/protected`; cần bearer access token do Identity cấp |
-| OpenObserve local | `http://localhost:5080`; tài khoản và cách tìm trace xem [giám sát](../system/observability.md#s1-05-implementation) |
-| Health của API qua gateway | `http://localhost:3000/api/v1/health` |
+| OpenObserve local | `http://localhost:5080`; mặc định `root@scdc.local` / `ScdcObserve!2026Local` trên volume mới |
 | API trực tiếp để debug | `http://localhost:5026` |
 | PostgreSQL | `localhost:5432` |
 
-Compose dựng PostgreSQL, API và web.
+`make check` kiểm tra hạ tầng và health; để kiểm tra nghiệp vụ, tạo và xác minh hai tài khoản theo [mục 3](#identity), rồi thử gửi DM qua hai cửa sổ trình duyệt. Tài khoản seed không có mật khẩu đăng nhập thực.
 
-S1-03 thêm container `sample-service`, build từ bốn project trong `services/Sample/`. `GET /health` qua gateway trả JSON có `service: "sample-service"`, `status` và `checkedAt` UTC. Service mẫu chạy độc lập với monolith và database; cổng 8080 chỉ dùng trong mạng Compose. Chi tiết cấu trúc và contract tại [service mẫu S1-03](../system/backend.md#s1-03-sample-service).
+Để kiểm tra giám sát, gửi một request có trace ID dễ tìm:
 
-- **Đã có:** tài khoản; Community (tạo, xem, tìm, tham gia server công khai, vai trò, phòng chữ, ACL); DM (hộp thư, gửi, lịch sử, gửi lại, sửa, xóa, ChatHub, outbox, kết nối lại). Xem [hồ sơ tích hợp](../records/verification/messaging/merge-2026-10-13.md).
-- **Chưa có:** tin phòng, realtime Community. Worker email ở nhánh Identity riêng ([hiện trạng email](../features/accounts/email-links.md#status)).
-- Giữ key ring Community và volume khóa DM cùng với dữ liệu.
-- Database mới đã có migration Community 001 đến 004. Database đã có dữ liệu phải [nâng cấp](#migration) và đối chiếu migration DM ([hồ sơ](../records/verification/messaging/DM-MVP.md)).
+```bash
+curl --fail -H 'traceparent: 00-11111111111111111111111111111111-2222222222222222-01' \
+  http://localhost:3000/health
+```
+
+Đăng nhập OpenObserve, chọn organization `default`; trong Logs và Traces chọn stream `scdc`, khoảng thời gian vừa chạy, tìm `trace_id = '11111111111111111111111111111111'`. Sau khi Collector gửi dữ liệu, kết quả phải có `service_name=scdc-sample`. Cách đổi tài khoản và tra cứu xem [giám sát](../system/observability.md#s1-05-implementation).
+
+**Dừng rồi chạy lại:**
+
+```bash
+make down
+make up
+make check
+```
+
+`down` giữ volume; `up` dùng lại image, dữ liệu và khóa. Khi sửa code, chạy `make build` rồi `make up` để dùng image mới. Có thể chạy lại `make setup` để build và kiểm tra toàn bộ; khóa và cấu hình hiện hữu vẫn được giữ.
+
+Database mới tự nạp schema và seed. Với database đã có dữ liệu, dùng [hướng dẫn nâng cấp](#migration); script khởi tạo không tự chạy lại. Phạm vi tính năng hiện có xem [MVP](../releases/mvp.md); tin phòng và realtime Community chưa có.
 
 <a id="gateway"></a>
 
@@ -87,12 +117,11 @@ Dùng `docker compose` nếu chọn Docker. `/healthz` chỉ kiểm tra Nginx; `
 Kiểm thử S1-02 cần Node.js 24, npm và trình duyệt Playwright. Cài Chromium bằng `npx playwright install chromium` trong `clients/WebClient`, hoặc đặt `SCDC_E2E_BROWSER_CHANNEL=chrome` nếu đã có Google Chrome.
 
 ```bash
-make test-gateway ENGINE=podman
-# Hoặc Docker:
-make test-gateway
+npm --prefix clients/WebClient ci
+python3 scripts/test_gateway.py --engine docker
 ```
 
-Lệnh cài dependency frontend, build [stack thử riêng](../../compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart, chủ động đổi IP container API và service mẫu, giữ nguyên container Nginx; kiểm tra service mẫu vẫn trả health khi monolith dừng. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
+Bộ này cần thêm Python 3. Dùng `--engine podman` nếu chọn Podman. Script build [stack thử riêng](../../compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart, chủ động đổi IP container API và service mẫu, giữ nguyên container Nginx; kiểm tra service mẫu vẫn trả health khi monolith dừng. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
 
 Đổi cổng hoặc giữ stack để điều tra lỗi sau khi đã cài dependency:
 
@@ -108,58 +137,40 @@ Script in tên project trong kết quả. Dọn đúng stack đã giữ bằng `
 
 ### Docker Desktop, Docker Engine và Podman
 
-Cả ba dùng chung [compose.yaml](../../compose.yaml) và Dockerfile. Makefile mặc định dùng Docker; thêm `ENGINE=podman` để dùng Podman. Máy cài cả hai thì chỉ rõ engine.
+Cả ba dùng chung [compose.yaml](../../compose.yaml) và Dockerfile. Chọn một engine và dùng nó cho cả tạo khóa, chạy, xem log và dừng; Docker và Podman không dùng chung volume dữ liệu.
 
-| Môi trường | Chuẩn bị | Lệnh khởi chạy qua Make |
+| Môi trường | Chuẩn bị | Kiểm tra trước khi dựng |
 |---|---|---|
-| Docker Desktop trên Windows | Mở Docker Desktop, dùng Linux containers; để chạy Make trong WSL, bật WSL integration cho distro và cài Make/Python/Git trong distro | `make up` |
-| Docker Engine với CLI | Engine đang chạy, CLI kết nối được và đã cài Compose plugin | `make up` |
-| Podman | Podman hoạt động và có Compose provider; Windows/macOS cần Podman machine đang chạy | `make up ENGINE=podman` |
+| Docker Desktop | Mở ứng dụng; Windows dùng Linux containers và bật WSL integration | `docker info` và `docker compose version` |
+| Docker Engine với CLI | Engine đang chạy, CLI kết nối được và đã cài Compose plugin | `docker info` và `docker compose version` |
+| Podman | Cài Compose provider; Windows/macOS cần Podman machine đang chạy | `podman info` và `podman compose version` |
 
 - [Docker Desktop](https://docs.docker.com/compose/install/) đã gồm Engine, CLI và Compose.
 - [`podman compose`](https://docs.podman.io/en/latest/markdown/podman-compose.1.html) gọi một Compose provider bên ngoài (`podman-compose` hoặc `docker-compose`); chọn bằng `PODMAN_COMPOSE_PROVIDER` nếu cần.
 - [Podman machine](https://docs.podman.io/en/latest/markdown/podman-machine.1.html): chưa có thì `podman machine init`, rồi `podman machine start`.
 
-Kiểm tra cấu hình trước khi khởi chạy và dùng cùng engine cho mọi thao tác:
-
-```bash
-make compose-check ENGINE=podman
-make up ENGINE=podman
-make status ENGINE=podman
-make logs ENGINE=podman
-make down ENGINE=podman
-```
-
-- `export ENGINE=podman` trong shell để mọi lệnh `make` dùng Podman.
-- Gọi thẳng provider: `make up COMPOSE="podman-compose"` (dùng cùng giá trị cho các lệnh khác).
-- `compose-check` chỉ kiểm tra cấu hình; vẫn phải chạy stack để biết build, healthcheck và thứ tự khởi động có ổn không.
-- Docker và Podman có volume riêng; đổi engine không mang theo dữ liệu PostgreSQL.
-
-Tên image ghi đầy đủ registry (`docker.io/library/...`, `mcr.microsoft.com/...`) để Podman không phải đoán ([quy tắc tên image](https://docs.podman.io/en/latest/markdown/podman-pull.1.html)).
-
-**Windows dùng PowerShell:** Makefile cần shell POSIX, nên muốn dùng `make` thì chạy trong WSL. Không dùng WSL thì gọi thẳng CLI và script từ thư mục gốc (cần Python và Git trên Windows):
-
-```powershell
-docker compose up -d --build
-docker compose ps
-docker compose down
-# Thay bằng podman compose nếu dùng Podman:
-podman compose up -d --build
-py -3 scripts/check_docs.py
-py -3 scripts/sync_docs.py --source main --target feat/identity --dry-run
-py -3 scripts/sync_docs.py --source main --target feat/identity
-```
-
-Nếu Python của máy cung cấp lệnh `python` thay vì `py`, thay `py -3` bằng `python`. Đồng bộ docs chỉ cần Python/Git; không phụ thuộc Docker hay Podman.
+`make setup` gọi Compose và kiểm tra stack thực tế. Make không thay engine hoặc Compose provider; cần cài và khởi động chúng trước. Tên image ghi đầy đủ registry (`docker.io/library/...`, `mcr.microsoft.com/...`) để Podman không phải đoán ([quy tắc tên image](https://docs.podman.io/en/latest/markdown/podman-pull.1.html)).
 
 <a id="debug-backend-local"></a>
 
 ### Debug backend local
 
-API chạy trên máy cần HMAC và key ring Community; gửi tin DM cần thêm thư mục khóa fingerprint ([cấu hình](#configuration)). Khi kiểm thử, dùng [database thử riêng](#local-environment).
+Phần này là tùy chọn; cần .NET SDK 10. API chạy trên máy không tự đọc `.env` của Compose. Cần cấu hình khóa JWT theo [mục dưới](#configuration), HMAC và keyring Community, cùng thư mục khóa fingerprint DM.
+
+Giữ một bộ khóa riêng cho cách chạy local; không trộn với dữ liệu đã tạo bằng khóa Compose. Nếu cần môi trường thử có cấu hình đầy đủ, làm theo [database thử riêng](#local-environment) và [cấu hình API](#community-configuration) ở mục 8. Để gửi DM trên môi trường local đó, đặt thêm trong cùng terminal:
 
 ```bash
-docker compose up -d postgres
+export Modules__Messaging__FingerprintKeyDirectory="$(pwd)/.local/messaging-keys"
+export Modules__Messaging__ActiveFingerprintKeyId=dm-local-v1
+mkdir -p "$Modules__Messaging__FingerprintKeyDirectory"
+if [ ! -e "$Modules__Messaging__FingerprintKeyDirectory/dm-local-v1.key" ]; then
+  (umask 077; openssl rand 32 > "$Modules__Messaging__FingerprintKeyDirectory/dm-local-v1.key")
+fi
+```
+
+Sau khi đã đặt kết nối và các khóa, build và chạy:
+
+```bash
 dotnet restore SCDC.slnx
 dotnet build SCDC.slnx --no-restore
 dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
@@ -181,37 +192,39 @@ npm ci
 npm run dev
 ```
 
-Vite chạy ở cổng 3000 và chuyển tiếp `/api`, `/hubs`, `/swagger` tới API ở 5026. Nếu container web đang chiếm cổng 3000 thì dừng nó trước.
+Phần này cần Node.js 24 và npm. Vite chạy ở cổng 3000 và chuyển tiếp `/api`, `/hubs`, `/swagger` tới API ở 5026. Nếu container web đang chiếm cổng 3000 thì chạy `docker compose stop web-client` trước. Khi dùng Vite, các kiểm tra Nginx và service mẫu vẫn phải thực hiện trên stack Compose.
 
 <a id="short-commands"></a>
 
 <a id="lệnh-ngắn-và-đồng-bộ-docs-giữa-các-nhánh"></a>
 
-### Lệnh ngắn
+<a id="lệnh-ngắn"></a>
 
-[Makefile](../../Makefile) gom các lệnh hay dùng. Gõ `make` hoặc `make help` để xem danh sách. Công cụ đồng bộ tài liệu cần `make`, Python 3 và Git đủ mới (hỗ trợ `switch`, `restore`, `rev-parse --end-of-options`).
+### Lệnh thường dùng
+
+Các lệnh trong [Makefile](../../Makefile) chạy từ gốc repo. Thêm `ENGINE=podman` nếu dùng Podman; `make` hoặc `make help` hiển thị danh sách.
 
 | Lệnh | Tác dụng |
 |---|---|
-| `make up` / `make down` | Build/chạy hoặc dừng stack Compose; `down` giữ volume |
-| `make status` / `make logs` | Xem container hoặc log API/PostgreSQL |
-| `make db` | Chạy riêng PostgreSQL |
-| `make compose-check` | Kiểm tra cấu hình Compose qua engine đã chọn |
-| `make api` / `make web` | Chạy backend/frontend local; frontend cài dependency bằng `npm ci` |
-| `make build` | Build backend và frontend |
-| `make test` | Test backend và frontend; backend cần PostgreSQL Development |
-| `make test-api` / `make test-web` | Test riêng backend/frontend |
-| `make test-gateway` | Test gateway, các transport SignalR và DM trên stack riêng; hỗ trợ `ENGINE=podman` |
-| `make docs-check` | Kiểm tra link và anchor tài liệu |
-| `make test-tools` | Kiểm thử công cụ đồng bộ trong các repo Git tạm |
+| `make setup` | Tạo cấu hình khi chưa có, build, khởi chạy và kiểm tra toàn bộ stack |
+| `make up` | Chạy lại stack bằng image hiện có; không chủ động build lại |
+| `make build` | Build lại image; chạy `make up` sau đó để cập nhật container |
+| `make check` | Kiểm tra health, kết nối PostgreSQL và cấu hình Nginx |
+| `make status` | Xem container, gồm hai job tạo khóa đã thoát |
+| `make logs` | Xem 100 dòng cuối của mọi service |
+| `make logs SERVICE=chat-service` | Xem log của một service; thay tên bằng `postgres`, `otel-collector`, `openobserve` khi cần |
+| `make down` | Dừng stack, giữ volume |
+| `make docs-check` | Kiểm tra link và anchor tài liệu; cần Python 3 |
+
+Kiểm tra một stack khác trên cùng máy bằng `COMPOSE_ARGS="-p scdc-demo"` và `ENV_FILE=.env.demo`; dùng cùng giá trị cho mọi lệnh. `make check` dùng các cổng local trong bảng địa chỉ; tùy chọn project không tự đổi cổng. Makefile dành cho môi trường phát triển, không tự chạy kiểm thử trên database ứng dụng.
 
 <a id="docs-sync"></a>
 
-**Đồng bộ docs giữa các nhánh:** với [quy ước nhánh ngắn](../project/workflow.md#branches), chỉ cần `git pull --rebase origin main` trước khi mở PR. Công cụ `make docs-sync` chỉ còn dùng cho nhánh cũ sống lâu (ví dụ `feat/identity`): nó **chép đè toàn bộ** `docs/` từ nhánh nguồn sang nhánh đích, không trộn nội dung.
+**Đồng bộ docs giữa các nhánh:** với [quy ước nhánh ngắn](../project/workflow.md#branches), chỉ cần `git pull --rebase origin main` trước khi mở PR. Công cụ dưới chỉ dùng cho nhánh cũ sống lâu (ví dụ `feat/identity`): nó **chép đè toàn bộ** `docs/` từ nhánh nguồn sang nhánh đích, không trộn nội dung. Cần Python 3 và Git.
 
 ```bash
-make docs-sync-preview FROM=main TO=feat/identity   # xem file sẽ thêm, sửa, xóa
-make docs-sync FROM=main TO=feat/identity           # chép và đưa vào staging; tự xem diff rồi commit
+python3 scripts/sync_docs.py --source main --target feat/identity --dry-run
+python3 scripts/sync_docs.py --source main --target feat/identity
 ```
 
 Cần working tree sạch; công cụ không tự stash, commit hay push. Chi tiết: `python3 scripts/sync_docs.py --help`.
@@ -234,7 +247,7 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `Modules:Community:Operations:ActiveKeyId` / `Keys:<id>` | ID active và key base64 ít nhất 32 byte ngẫu nhiên; giữ key cũ cho operation còn lưu, xem [mục 8](#community-configuration) |
 | `Modules:Community:KeyRingPath` | Thư mục keyring bền, API đọc/ghi được; giữ qua restart để cursor vẫn đọc được |
 | `Modules:Identity:UserSearch:CursorKeyRingPath` / `ApplicationName` | Keyring bảo vệ cursor tìm người/inbox/lịch sử DM; provider riêng với Community, giữ qua restart. Compose lưu trong `identity-user-search-keys` |
-| `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Compose dùng `make init-dm-key` và volume `scdc-messaging-keys` |
+| `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Compose tự tạo khóa qua job `messaging-keygen`, giữ trong volume `scdc-messaging-keys` |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
 Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Database`.
@@ -269,6 +282,8 @@ Lệnh có thể chạy lại và không ghi đè khóa hiện hữu; private fi
 4. Quên mật khẩu dùng `POST /api/v1/auth/forgot-password`; response Development có thể chứa `developmentResetToken`. Dùng token đó cùng `newPassword` ở endpoint reset.
 
 Token Development chỉ để thử trên máy. Nền chưa có gửi lại email hay worker email; phần này ở nhánh `feat/identity@60f4db3` ([hiện trạng](../features/accounts/email-links.md#status)).
+
+Image không chứa `appsettings.Development.json`; Compose local bật `Modules__Identity__ExposeDevelopmentTokens` trực tiếp để luồng xác minh này dùng được. Khi debug bằng launch profile `http`, cấu hình Development được đọc từ file trên máy.
 
 Frontend quản lý phiên trong [api.js](../../clients/WebClient/src/api.js): có Web Locks thì đồng bộ phiên giữa các tab và chỉ một tab làm mới token; không có thì mỗi tab giữ token riêng. Hàm gọi API mặc định thử lại sau 401; các thao tác mở DM, gửi, sửa, xóa dùng `retry: false`. Gửi lại tin do người dùng bấm (DEC-021); kết nối lại thì tự bù dữ liệu qua REST.
 
@@ -317,7 +332,7 @@ Khi review: đối chiếu yêu cầu và AC bị ảnh hưởng, quyền, API, 
 
 ## 6. Kiểm thử
 
-Giám sát S1-05 có `make test-observability ENGINE=podman`: kiểm tra log, metric, trace, dữ liệu nhạy cảm và Collector dừng trên stack riêng. Cách đọc kết quả và giới hạn xem [giám sát](../system/observability.md#s1-05-implementation).
+Giám sát S1-05 dùng `python3 scripts/test_observability.py --engine docker` (hoặc `--engine podman`): kiểm tra log, metric, trace, dữ liệu nhạy cảm và Collector dừng trên stack riêng. Cần Python 3; cách đọc kết quả và giới hạn xem [giám sát](../system/observability.md#s1-05-implementation).
 
 Pull request được kiểm tra bằng workflow [CI build và kiểm thử](continuous-integration.md): build toàn solution, chạy test backend với PostgreSQL riêng, chạy test và build WebClient. Hướng dẫn cấu hình check `CI` bắt buộc trước khi merge nằm trong cùng trang.
 
@@ -354,7 +369,7 @@ Test Node: hàm gọi API, quản lý phiên, Community, DM. Playwright chạy v
 python3 scripts/check_docs.py
 ```
 
-`make docs-check` kiểm tra link và anchor trong tài liệu hiện hành và các README; không kiểm tra archive.
+Script kiểm tra link và anchor trong tài liệu hiện hành và các README; không kiểm tra archive.
 
 - Mỗi lần chạy ca kiểm thử phải ghi build, môi trường, dữ liệu, kết quả thực tế và bằng chứng ([mẫu hồ sơ](../records/templates/release-record.md)). Quy trình xem [nghiệm thu](../releases/acceptance.md#testing) và [điều kiện phát hành](../releases/acceptance.md#release-gates).
 - Lệnh trong trang này chỉ dùng trên máy; không thay manifest production ([runbook](operations.md)).
@@ -369,7 +384,11 @@ python3 scripts/check_docs.py
 | Hiện tượng | Kiểm tra / xử lý |
 |---|---|
 | API không khởi động | Kiểm tra connection string, cặp khóa RSA, key ID, môi trường và log; khởi động PostgreSQL trước |
+| Compose báo thiếu `COMMUNITY_OPERATION_KEY` | `make setup` chỉ tạo `.env` khi file chưa có; nếu file hiện hữu thiếu khóa thì bổ sung khóa, rồi chạy lại |
+| Job tạo khóa đã thoát | `Exited (0)` là thành công; mã khác 0 thì xem `make logs SERVICE=identity-keygen` hoặc `make logs SERVICE=messaging-keygen` |
 | Trùng cổng 3000/5026/5432 | Kiểm tra service Compose và tiến trình local, dừng thành phần trùng trước khi chạy |
+| Gateway trả 502 khi vừa khởi động | Chờ hai API sẵn sàng; xem `docker compose logs --tail=100 chat-service sample-service web-client` |
+| OpenObserve chưa có log hoặc trace | Kiểm tra khoảng thời gian, organization `default`, stream `scdc`; xem `make logs SERVICE=otel-collector` và `make logs SERVICE=openobserve` |
 | Login tài khoản seed thất bại | Seed không chứa password đăng nhập thực; tạo và xác minh tài khoản qua API |
 | Login trả 403 | Xem `errorCode`; chưa xác minh cần hoàn tất verify, không tự coi mọi 403 là phiên hết hạn |
 | Không thấy Swagger | Swagger chỉ bật khi môi trường Development |

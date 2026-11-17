@@ -43,7 +43,7 @@ Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#tea
 | [services/Sample](services/Sample) | Service mẫu S1-03 theo cấu trúc bốn project v1; trả `/health` qua Nginx. |
 | [database/postgres](database/postgres) | Script SQL khởi tạo, cập nhật cấu trúc và tạo dữ liệu mẫu cho PostgreSQL. |
 | [compose.yaml](compose.yaml) | Cấu hình chạy giao diện, API và cơ sở dữ liệu bằng container trong môi trường phát triển. |
-| [Makefile](Makefile) | Các lệnh chạy, build, kiểm thử và kiểm tra tài liệu. |
+| [Makefile](Makefile) | Dựng, chạy, kiểm tra và dừng môi trường phát triển. |
 | [CI](.github/workflows/ci.yml) | Build và chạy test backend, frontend trên mỗi pull request; [hướng dẫn](docs/guides/continuous-integration.md). |
 | [docs](docs/README.md) | Tài liệu sản phẩm, thiết kế hệ thống và hướng dẫn làm việc. |
 
@@ -51,8 +51,10 @@ Backend hiện chạy trong một ứng dụng API. [Kiến trúc v1](docs/syste
 
 ## Khởi chạy
 
-Cần Docker hoặc Podman với Compose.
+Cần Git, Make, Docker hoặc Podman với Compose, OpenSSL và curl. Chạy từ gốc repo trong Bash, zsh hoặc WSL:
 
-Trước lần chạy đầu, tạo khóa bằng `openssl rand -base64 32`. Lưu khóa vào biến `COMMUNITY_OPERATION_KEY` trong file `.env` tại thư mục gốc dự án. Giữ nguyên khóa và các volume dữ liệu qua những lần chạy.
+```bash
+make setup
+```
 
-Các bước chạy ứng dụng và kiểm thử nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup).
+Podman dùng `make setup ENGINE=podman`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Compose tự khởi tạo khóa DM và JWT. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).

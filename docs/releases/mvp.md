@@ -88,7 +88,7 @@ Các gói trên là phân công giai đoạn MVP. Lộ trình v1 xem [kế hoạ
 ## Chạy lại bản MVP
 
 - Dùng commit `900e226` làm mốc đối chiếu. Giữ lịch sử migration và hồ sơ kiểm thử khi phát triển tiếp.
-- Chạy bằng [compose.yaml](../../compose.yaml): đặt `COMMUNITY_OPERATION_KEY` cố định trong `.env` ([README](../../README.md#khởi-chạy)), chạy `make init-dm-key`, rồi `docker compose up -d --build`. Dùng cùng một engine (Docker hoặc Podman) cho mọi lệnh container.
+- Với checkout hiện hành, chạy `make setup` để dựng [stack Compose](../../compose.yaml), hoặc thêm `ENGINE=podman` nếu chọn Podman. Cấu hình và khóa được chuẩn bị theo [hướng dẫn phát triển](../guides/development.md#setup). Dùng cùng một engine cho các lần chạy sau.
 - Giữ volume PostgreSQL, key ring Identity và Community, khóa fingerprint DM cùng với dữ liệu.
 - Tài khoản trong dữ liệu mẫu không dùng để đăng nhập; tạo tài khoản thử qua API ([hướng dẫn](../guides/development.md#identity)).
 - `schema.sql` chỉ để khởi tạo mới, không dùng để tạo lại database đang có dữ liệu. Database đã có dữ liệu phải chạy migration theo từng gói: [Community](../guides/development.md#migration), [DM](../records/verification/messaging/DM-MVP.md).

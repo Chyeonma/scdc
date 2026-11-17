@@ -5,6 +5,22 @@ x-jwt-trust: &jwt-trust
   Authentication__Jwt__KeyIds__0: identity-local-v1
 
 services:
+  messaging-keygen:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        if [ ! -e /app/messaging-keys/dm-local-v1.key ]; then
+          head -c 32 /dev/urandom > /app/messaging-keys/dm-local-v1.key
+        fi
+        test "$$(wc -c < /app/messaging-keys/dm-local-v1.key)" -ge 32
+    volumes:
+      - scdc-messaging-keys:/app/messaging-keys
+
   identity-keygen:
     build:
       context: .
@@ -32,6 +48,7 @@ services:
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Modules__Identity__SigningKeyId: identity-local-v1
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
+      Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
       Modules__Community__Operations__ActiveKeyId: local1
@@ -40,6 +57,8 @@ services:
     ports:
       - "5026:8080"
     depends_on:
+      messaging-keygen:
+        condition: service_completed_successfully
       identity-keygen:
         condition: service_completed_successfully
       postgres:

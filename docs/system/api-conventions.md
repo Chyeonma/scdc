@@ -123,10 +123,11 @@ Nginx chuyển Host, địa chỉ client và giao thức tới API. Gateway khô
 [Stack nghiệm thu](../../compose.gateway-test.yaml) dùng database `scdc_gateway_test`, khóa và volume riêng; chỉ Nginx có cổng publish. [Script chạy](../../scripts/test_gateway.py) tạo project riêng cho mỗi lần, chạy test và dọn dữ liệu thử. Các ca đăng ký hoặc gửi tin không dùng database phát triển.
 
 ```bash
-make test-gateway ENGINE=podman
+npm --prefix clients/WebClient ci
+python3 scripts/test_gateway.py --engine podman
 ```
 
-Cần Node.js 24, npm và Chromium của Playwright, hoặc Google Chrome với `SCDC_E2E_BROWSER_CHANNEL=chrome`. Cách chọn engine, đổi cổng và giữ stack nằm trong [hướng dẫn phát triển](../guides/development.md#gateway).
+Cần Python 3, Node.js 24, npm và Chromium của Playwright, hoặc Google Chrome với `SCDC_E2E_BROWSER_CHANNEL=chrome`. Cách chọn engine, đổi cổng và giữ stack nằm trong [hướng dẫn phát triển](../guides/development.md#gateway).
 
 [Project E2E gateway](../../clients/WebClient/playwright.config.js) chạy [các ca gateway](../../clients/WebClient/e2e/gateway.spec.js) và [ca tích hợp Community với DM](../../clients/WebClient/e2e/mergeMvp.spec.js):
 

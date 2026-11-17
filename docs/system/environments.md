@@ -16,10 +16,10 @@ Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/
 | Volume `scdc-postgres-data` | Giữ dữ liệu DB qua khởi động lại | Compose |
 | Volume `scdc-community-keys` | Key ring cursor Community | Compose |
 | Volume `identity-user-search-keys` | Key ring cursor tìm người, hộp thư, lịch sử DM | Compose |
-| Volume `scdc-messaging-keys` | Khóa fingerprint DM (tạo bằng `make init-dm-key`) | Compose |
+| Volume `scdc-messaging-keys` | Khóa fingerprint DM, tự tạo bởi job `messaging-keygen` | Compose |
 
 - WebClient chuyển tiếp `/api`, `/hubs`, `/swagger` tới API.
-- API chờ PostgreSQL sẵn sàng (`pg_isready`) mới khởi động. Thứ tự khởi động không thay cho kiểm thử hành trình.
+- API chờ PostgreSQL sẵn sàng (`pg_isready`) và hai job tạo khóa DM/JWT thành công mới khởi động. Thứ tự khởi động không thay cho kiểm thử hành trình.
 - Địa chỉ, công cụ, giá trị trên máy: [hướng dẫn](../guides/development.md#setup); danh sách khóa cấu hình: [cấu hình](../guides/development.md#configuration).
 - Không ghi bí mật production vào tài liệu. Hồ sơ chỉ ghi tên khóa, ID khóa và nguồn cấp.
 

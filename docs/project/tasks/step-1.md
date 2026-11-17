@@ -65,9 +65,10 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 ## S1-08 · Hướng dẫn dựng môi trường từ đầu
 - Nhãn: docs
 - Người làm: Thái · Review: Vg, Sáng (mỗi người tự làm theo)
-- Đầu ra: cập nhật guides/development.md cho gateway, giám sát, service mẫu.
-- Xong khi: mỗi thành viên dựng được môi trường trên máy sạch (hoặc xóa hết volume) chỉ bằng hướng dẫn.
+- Đầu ra: bộ lệnh Make tối thiểu và [hướng dẫn dựng môi trường](../../guides/development.md#setup) cho gateway, giám sát, service mẫu: tạo cấu hình, build, khởi chạy, kiểm tra và dừng/chạy lại. Compose tự khởi tạo khóa DM và JWT.
+- Xong khi: mỗi thành viên dựng được môi trường trên máy sạch hoặc stack riêng dùng volume mới chỉ bằng hướng dẫn.
 - Phụ thuộc: S1-02 đến S1-05.
+- Kết quả: **Đã thiết kế lại bộ lệnh Make và kiểm chứng local — 2026-11-17**, [hồ sơ S1-08](../../records/verification/environment/s1-08-2026-11-17.md): `make setup` tự tạo cấu hình, build, khởi chạy và kiểm tra stack; Compose tự tạo khóa DM/JWT. 12 mục kiểm tra đạt trên volume mới, gồm chạy lại setup, đăng ký/xác minh/đăng nhập, DM, log/trace và dừng/chạy lại giữ dữ liệu, khóa. Chờ Vg và Sáng tự làm theo để xác nhận kiểm tra chéo.
 
 ## S1-09 · Demo và tổng kết STEP-1
 - Nhãn: docs

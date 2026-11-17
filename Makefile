@@ -1,105 +1,86 @@
 .DEFAULT_GOAL := help
 
-PYTHON ?= python3
 ENGINE ?= docker
 COMPOSE ?= $(ENGINE) compose
+COMPOSE_ARGS ?=
+ENV_FILE ?= .env
+PYTHON ?= python3
 FROM ?= main
 TO ?=
 
-# Pass refs as environment values rather than interpolating them into shell code.
+export SCDC_ENV_FILE = $(ENV_FILE)
 export SCDC_DOCS_FROM = $(FROM)
 export SCDC_DOCS_TO = $(TO)
 
-.PHONY: help up down status logs db compose-check init-dm-key api web build test test-api test-web test-gateway test-observability docs-check docs-sync docs-sync-preview test-tools
+COMPOSE_COMMAND = $(COMPOSE) --env-file "$$SCDC_ENV_FILE" $(COMPOSE_ARGS)
+
+.PHONY: help init setup up build check status logs down docs-check docs-sync docs-sync-preview
 
 help:
 	@printf '%s\n' \
-	  'SCDC — lệnh ngắn (chạy từ root repo)' \
+	  'SCDC — môi trường phát triển (chạy từ gốc repo)' \
 	  '' \
-	  '  make up                 Build và chạy stack Compose' \
-	  '  make down               Dừng stack Compose, giữ volume' \
-	  '  make status             Xem trạng thái container' \
-	  '  make logs               Xem log API và PostgreSQL' \
-	  '  make db                 Chạy riêng PostgreSQL' \
-	  '  make compose-check      Kiểm tra cấu hình Compose, chưa chạy container' \
-	  '  make init-dm-key        Tạo khóa fingerprint DM trong volume nếu chưa có' \
-	  '  make api                Chạy backend local' \
-	  '  make web                Cài dependency và chạy frontend local' \
-	  '  make build              Build backend và frontend' \
-	  '  make test               Chạy test backend và frontend' \
-	  '  make test-api           Chạy test backend (cần PostgreSQL)' \
-	  '  make test-web           Cài dependency và chạy test frontend' \
-	  '  make test-gateway       Kiểm thử Nginx, service mẫu, REST, SignalR và DM trên stack riêng' \
-	  '  make test-observability Kiểm thử log, metric, trace và lỗi Collector trên stack riêng' \
-	  '  make docs-check         Kiểm tra link và anchor tài liệu' \
-	  '  make test-tools         Kiểm thử công cụ đồng bộ trong repo Git tạm' \
+	  '  make setup       Chuẩn bị .env, build, chạy và kiểm tra stack' \
+	  '  make up          Chạy lại stack, giữ dữ liệu và khóa' \
+	  '  make build       Build lại image sau khi sửa code; sau đó chạy make up' \
+	  '  make check       Kiểm tra gateway, API, service mẫu, database và OpenObserve' \
+	  '  make status      Xem container, gồm các job khởi tạo khóa' \
+	  '  make logs        Xem 100 dòng log cuối; SERVICE=chat-service để chọn service' \
+	  '  make down        Dừng stack, giữ các volume' \
 	  '' \
-	  '  ENGINE mặc định là docker (Docker Desktop hoặc Docker Engine).' \
-	  '  make up ENGINE=podman   Dùng Podman và Compose provider đã cài.' \
-	  '  Dùng cùng ENGINE cho down/status/logs/db/compose-check.' \
-	  '  Có thể override COMPOSE, ví dụ COMPOSE="podman-compose".' \
-	  '  Windows: chạy Make trong WSL; lệnh PowerShell xem docs/guides/development.md.' \
+	  '  Docker là mặc định. Dùng ENGINE=podman cho mọi lệnh nếu chọn Podman.' \
+	  '  make init chỉ tạo .env khi chưa có; không ghi đè file hiện hữu.' \
+	  '  ENV_FILE và COMPOSE_ARGS dùng khi cần stack riêng, ví dụ COMPOSE_ARGS="-p scdc-demo".' \
 	  '' \
-	  '  make docs-sync FROM=main' \
-	  '      Chép toàn bộ docs/ từ main vào nhánh hiện tại, đưa vào staging.' \
-	  '  make docs-sync FROM=main TO=feat/identity' \
-	  '      Chuyển sang nhánh đích local rồi chép docs/ (working tree phải sạch).' \
-	  '  make docs-sync-preview FROM=main TO=feat/identity' \
-	  '      Chỉ xem các file thêm/sửa/xóa; giữ nguyên nhánh và file.' \
-	  '' \
-	  '  FROM mặc định là main; có thể dùng origin/main sau khi git fetch.' \
-	  '  Đồng bộ theo bản đã commit; file bị xóa ở nguồn cũng bị xóa ở đích.' \
-	  '  Công cụ không tự commit hoặc push.'
+	  '  Tài liệu: make docs-check (cần Python 3).' \
+	  '  Nhánh docs cũ: make docs-sync-preview FROM=main TO=<nhánh>, rồi make docs-sync.' \
+	  '  Hướng dẫn: docs/guides/development.md'
 
-up:
-	$(COMPOSE) up -d --build
+init:
+	@set -eu; \
+	  if [ -e "$$SCDC_ENV_FILE" ]; then \
+	    printf 'Giữ cấu hình hiện có: %s\n' "$$SCDC_ENV_FILE"; \
+	  else \
+	    scdc_operation_key=$$(openssl rand -base64 32); \
+	    (umask 077; set -C; printf 'COMMUNITY_OPERATION_KEY=%s\n' "$$scdc_operation_key" > "$$SCDC_ENV_FILE"); \
+	    printf 'Đã tạo cấu hình: %s\n' "$$SCDC_ENV_FILE"; \
+	  fi
 
-down:
-	$(COMPOSE) down
+setup: init
+	$(COMPOSE_COMMAND) config --quiet
+	$(COMPOSE_COMMAND) up -d --build
+	$(MAKE) --no-print-directory check
+
+up: init
+	$(COMPOSE_COMMAND) up -d
+
+build: init
+	$(COMPOSE_COMMAND) build
+
+check:
+	@set -eu; \
+	  for scdc_url in \
+	    http://localhost:3000/ \
+	    http://localhost:3000/healthz \
+	    http://localhost:3000/health \
+	    http://localhost:3000/api/v1/health \
+	    http://localhost:5080/healthz; do \
+	    printf 'Kiểm tra %s\n' "$$scdc_url"; \
+	    curl --fail --silent --show-error --output /dev/null \
+	      --connect-timeout 2 --max-time 5 --retry 15 --retry-delay 2 --retry-connrefused \
+	      "$$scdc_url"; \
+	  done
+	$(COMPOSE_COMMAND) exec -T postgres pg_isready -U scdc -d scdc_chat
+	$(COMPOSE_COMMAND) exec -T web-client nginx -t
 
 status:
-	$(COMPOSE) ps
+	$(COMPOSE_COMMAND) ps -a
 
 logs:
-	$(COMPOSE) logs --tail=100 chat-service postgres
+	$(COMPOSE_COMMAND) logs --tail=100 $(SERVICE)
 
-db:
-	$(COMPOSE) up -d postgres
-
-compose-check:
-	$(COMPOSE) config --quiet
-
-init-dm-key:
-	$(COMPOSE) build chat-service
-	$(COMPOSE) run --rm --no-deps --entrypoint /bin/sh chat-service -c 'umask 077; if [ ! -e /app/messaging-keys/dm-local-v1.key ]; then head -c 32 /dev/urandom > /app/messaging-keys/dm-local-v1.key; fi; test "$$(wc -c < /app/messaging-keys/dm-local-v1.key)" -ge 32'
-
-api:
-	dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
-
-web:
-	npm --prefix clients/WebClient ci
-	npm --prefix clients/WebClient run dev
-
-build:
-	dotnet build SCDC.slnx --configuration Release
-	npm --prefix clients/WebClient ci
-	npm --prefix clients/WebClient run build
-
-test: test-api test-web
-
-test-api:
-	dotnet test SCDC.slnx --configuration Release
-
-test-web:
-	npm --prefix clients/WebClient ci
-	npm --prefix clients/WebClient test
-
-test-gateway:
-	npm --prefix clients/WebClient ci
-	$(PYTHON) scripts/test_gateway.py --engine $(ENGINE)
-
-test-observability:
-	$(PYTHON) scripts/test_observability.py --engine $(ENGINE)
+down:
+	$(COMPOSE_COMMAND) down
 
 docs-check:
 	$(PYTHON) scripts/check_docs.py
@@ -109,6 +90,3 @@ docs-sync:
 
 docs-sync-preview:
 	$(PYTHON) scripts/sync_docs.py --dry-run
-
-test-tools:
-	$(PYTHON) -B -m unittest discover -s scripts/tests -p 'test_*.py' -v
