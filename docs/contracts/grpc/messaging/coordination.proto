@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package scdc.messaging.v1;
+option csharp_namespace = "SCDC.Messaging.Grpc.V1";
+
+import "google/protobuf/timestamp.proto";
+import "identity/access.proto";
+
+// Target S2-02 contracts; no runtime change in this task.
+service MessagingFence {
+  rpc Apply(scdc.identity.v1.FenceBatch) returns (scdc.identity.v1.FenceReceipt);
+  rpc Get(scdc.identity.v1.FenceQuery) returns (scdc.identity.v1.FenceReceipt);
+}
+
+service ChannelProvisioning {
+  rpc Prepare(PrepareChannel) returns (ProvisionStatus);
+  rpc Confirm(ChannelDecision) returns (ProvisionStatus);
+  rpc Cancel(ChannelDecision) returns (ProvisionStatus);
+  rpc Get(ProvisionQuery) returns (ProvisionStatus);
+}
+
+service IntegrationInbox {
+  rpc Accept(IntegrationEvent) returns (EventReceipt);
+}
+
+message PrepareChannel {
+  string operation_id = 1;
+  string channel_id = 2;
+  string server_id = 3;
+  string actor_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  bytes fingerprint = 6;
+  uint64 routing_generation = 7;
+  uint64 channel_epoch = 8;
+  // This receiver provisions text spaces only. Voice belongs to Media.
+}
+
+message ChannelDecision {
+  string operation_id = 1;
+  string channel_id = 2;
+  bytes fingerprint = 3;
+  uint64 decision_version = 4;
+  uint64 routing_generation = 5;
+  uint64 channel_epoch = 6;
+}
+
+message ProvisionQuery {
+  string operation_id = 1;
+  string channel_id = 2;
+  uint64 routing_generation = 3;
+}
+
+enum ProvisionPhase {
+  PROVISION_PHASE_UNSPECIFIED = 0;
+  PROVISION_PHASE_PREPARED = 1;
+  PROVISION_PHASE_READY = 2;
+  PROVISION_PHASE_CANCELLED = 3;
+}
+
+message ProvisionStatus {
+  string operation_id = 1;
+  string channel_id = 2;
+  ProvisionPhase phase = 3;
+  uint64 decision_version = 4;
+  bool cleanup_pending = 5;
+}
+
+message IntegrationEvent {
+  string event_id = 1;
+  scdc.identity.v1.Authority producer = 2;
+  string event_type = 3;
+  string aggregate_id = 4;
+  uint64 aggregate_version = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  bytes payload_json = 7;
+  uint64 routing_generation = 8;
+}
+
+message EventReceipt {
+  string event_id = 1;
+  // Means inbox/work persisted, not Hub delivery or fence completion.
+}

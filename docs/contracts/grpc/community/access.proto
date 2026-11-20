@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package scdc.community.v1;
+option csharp_namespace = "SCDC.Community.Grpc.V1";
+
+import "identity/access.proto";
+
+// Target contracts. Application adapters must not reference generated types.
+service CommunityAccess {
+  rpc AcquirePermit(scdc.identity.v1.AccessRequest) returns (scdc.identity.v1.AccessReply);
+  rpc GetChange(scdc.identity.v1.ChangeQuery) returns (scdc.identity.v1.ChangeStatus);
+}
+
+// Community receives Identity fences for its own local transactions.
+service CommunityFence {
+  rpc Apply(scdc.identity.v1.FenceBatch) returns (scdc.identity.v1.FenceReceipt);
+  rpc Get(scdc.identity.v1.FenceQuery) returns (scdc.identity.v1.FenceReceipt);
+}

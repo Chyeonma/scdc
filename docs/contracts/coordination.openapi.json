@@ -1,0 +1,657 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SCDC access and channel coordination — target S2-02",
+    "version": "1.0.0",
+    "description": "Thiết kế mục tiêu, chưa có controller hoặc RPC host. Giao thức và quyền tại access-revocation.md và Community channels.md; không mô tả endpoint MVP đã triển khai."
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/revocations/{operationId}": {
+      "get": {
+        "operationId": "getOwnRevocation",
+        "description": "Phiên hiện tại hợp lệ, operation thuộc chính tài khoản gọi. Được dùng phiên đăng nhập mới để đối chiếu sau logout; không trả dữ liệu tài khoản khác.",
+        "x-scdc-target-only": true,
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "description": "Operation ID nội bộ UUIDv7.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chỉ đọc trạng thái đã lưu; không chạy hoặc tiếp tục thao tác.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessChangeStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đọc tiến trình thu hồi của tài khoản"
+      }
+    },
+    "/api/v1/servers/{serverId}/access-operations/{operationId}": {
+      "get": {
+        "operationId": "getCommunityAccessChange",
+        "description": "Kiểm tra phiên và membership hiện tại. Chỉ người tạo thao tác hoặc chủ server hiện tại xem trạng thái tối thiểu; không trả policy dự kiến hay danh sách thành viên.",
+        "x-scdc-target-only": true,
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "description": "Server thuộc phạm vi hiện tại.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "description": "Operation ID nội bộ UUIDv7.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chỉ đọc trạng thái đã lưu; không chạy hoặc tiếp tục thao tác.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessChangeStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đọc tiến trình thay đổi quyền Community"
+      }
+    },
+    "/api/v1/servers/{serverId}/channel-operations/{clientOperationId}": {
+      "get": {
+        "operationId": "getOwnChannelOperation",
+        "description": "Chỉ operation create_channel của actor hiện tại. Pending/cancelled cần membership hiện tại và quyền tạo phòng; completed cần quyền xem phòng. GET không tạo, gia hạn hoặc kích hoạt worker. Không tìm thấy không chứng minh POST chưa tới.",
+        "x-scdc-target-only": true,
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "description": "Server của thao tác.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "clientOperationId",
+            "in": "path",
+            "required": true,
+            "description": "Khóa UUIDv4 được giữ nguyên từ trước POST.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chỉ đọc trạng thái đã lưu; không chạy hoặc tiếp tục thao tác.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelOperationStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lỗi theo quyền hiện tại hoặc phụ thuộc chưa sẵn sàng.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đối chiếu thao tác tạo phòng của mình"
+      }
+    },
+    "/api/v1/servers/{serverId}/channels": {
+      "post": {
+        "summary": "Tạo phòng với phối hợp Community và Messaging",
+        "operationId": "createChannelCoordinated",
+        "x-scdc-target-only": true,
+        "description": "Mục tiêu S2-02, chưa triển khai. Client mutation không tự thử lại; đối chiếu trạng thái khi chưa rõ kết quả. Các trường request/kết quả nghiệp vụ dùng lại nguồn Community.",
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembership"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./community.openapi.json#/components/schemas/CreateChannelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Kết quả đã commit theo giao thức S2-02; kiểm tra quyền hiện tại trước khi trả dữ liệu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./community.openapi.json#/components/schemas/Channel"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Kết quả đã commit theo giao thức S2-02; kiểm tra quyền hiện tại trước khi trả dữ liệu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./community.openapi.json#/components/schemas/Channel"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/OutcomeUnknown"
+          },
+          "409": {
+            "$ref": "#/components/responses/ChannelCreationCancelled"
+          }
+        }
+      }
+    },
+    "/api/v1/servers/{serverId}/members/{userId}/roles": {
+      "put": {
+        "summary": "Thay vai trò với hàng rào quyền",
+        "operationId": "replaceMemberRolesCoordinated",
+        "x-scdc-target-only": true,
+        "description": "Mục tiêu S2-02, chưa triển khai. Client mutation không tự thử lại; đối chiếu trạng thái khi chưa rõ kết quả. Các trường request/kết quả nghiệp vụ dùng lại nguồn Community.",
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembership"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./community.openapi.json#/components/schemas/ReplaceMemberRolesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kết quả đã commit theo giao thức S2-02; kiểm tra quyền hiện tại trước khi trả dữ liệu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./community.openapi.json#/components/schemas/MemberRoles"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/OutcomeUnknown"
+          },
+          "409": {
+            "description": "Lỗi theo quyền và trạng thái hiện tại.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "202": {
+            "$ref": "#/components/responses/PendingAccessChange"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "parameters": {
+      "ActorMembership": {
+        "name": "X-SCDC-Membership-Id",
+        "in": "header",
+        "required": true,
+        "description": "Mục tiêu v1: membership của actor từ ngữ cảnh server lúc phát sinh mutation; so khớp lần tham gia hiện tại. Không áp cho tạo/join server hoặc DM.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "schemas": {
+      "OperationRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "phase",
+          "statusUrl"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "fencing"
+            ]
+          },
+          "statusUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "AccessChangeStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "phase",
+          "version",
+          "cleanupPending"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "fencing",
+              "committed",
+              "aborted"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "cleanupPending": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChannelOperationStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "clientOperationId",
+          "phase",
+          "version",
+          "cleanupPending"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientOperationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "preparing",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "cleanupPending": {
+            "type": "boolean"
+          },
+          "resourceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chỉ có khi COMPLETED và actor được xem phòng; không trả tài nguyên đã xóa."
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "errorCode",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "statusUrl": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "PendingAccessChange": {
+        "description": "202 cho thay quyền/thu hồi đã lưu ý định nhưng chưa commit hiệu lực; không áp cho POST tạo phòng.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/OperationRef"
+            }
+          }
+        }
+      },
+      "ChannelCreationCancelled": {
+        "description": "409 CHANNEL_CREATION_CANCELLED sau quyết định hủy bền đã chặn công bố muộn; cleanup có thể chưa xong.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "OutcomeUnknown": {
+        "description": "503 OPERATION_OUTCOME_UNKNOWN. Đối chiếu bằng GET với khóa cũ; không tự POST lại hay kết luận đã rollback.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-scdc-mutation-integration": {
+    "accessChange": {
+      "pendingResponse": {
+        "$ref": "#/components/responses/PendingAccessChange"
+      },
+      "getPaths": [
+        "/api/v1/auth/revocations/{operationId}",
+        "/api/v1/servers/{serverId}/access-operations/{operationId}"
+      ]
+    },
+    "createChannel": {
+      "existingPath": "/api/v1/servers/{serverId}/channels",
+      "successStatuses": [
+        201,
+        200
+      ],
+      "cancelledResponse": {
+        "$ref": "#/components/responses/ChannelCreationCancelled"
+      },
+      "unknownResponse": {
+        "$ref": "#/components/responses/OutcomeUnknown"
+      },
+      "statusPath": "/api/v1/servers/{serverId}/channel-operations/{clientOperationId}"
+    },
+    "membershipHeader": {
+      "$ref": "#/components/parameters/ActorMembership"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Đường dẫn tương đối qua gateway; hợp đồng mục tiêu S2-02."
+    }
+  ]
+}

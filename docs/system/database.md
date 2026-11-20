@@ -153,9 +153,9 @@ Khi chuyển dữ liệu, phải giữ:
 
 ## S2-01 — Xử lý các phụ thuộc giữa module
 
-Bảng này là đầu vào triển khai STEP-2, đối chiếu code tại `59748f8` và schema PostgreSQL ngày 2026-11-15. Số lượng dữ liệu được ghi theo snapshot thực tế ngày 2026-11-14. **Đã soạn phương án cho toàn bộ mục khảo sát; chờ Sáng review phần Messaging.** Chưa chạy migration hoặc thay hợp đồng runtime trong S2-01. [Hồ sơ đối chiếu](../records/verification/architecture/s2-01-2026-11-15.md) ghi nguồn, số lượng và kiểm tra độ phủ.
+Bảng này là đầu vào triển khai STEP-2, đối chiếu code tại `59748f8` và schema PostgreSQL ngày 2026-11-15. Số lượng dữ liệu được ghi theo snapshot thực tế ngày 2026-11-14. **S2-01 hoàn tất theo [xác nhận tiến độ ngày 2026-11-17](../records/planning/progress-2026-11-17.md).** Chưa chạy migration hoặc thay hợp đồng runtime trong S2-01. [Hồ sơ đối chiếu](../records/verification/architecture/s2-01-2026-11-15.md) ghi nguồn, số lượng và kiểm tra độ phủ.
 
-Phân công theo [các thẻ STEP-2](../project/tasks/step-2.md): Vg làm S2-02, 03, 04, 06, 07, 09, 10; Sáng làm S2-05, 08, 11. Mỗi dòng dưới gắn với thẻ thực hiện, từ đó xác định người làm. S2-01 không xác nhận thay việc review của người phụ trách.
+Phân công theo [các thẻ STEP-2](../project/tasks/step-2.md): Vg làm S2-02, 03, 04, 06, 07, 09, 10; Sáng làm S2-05, 08, 11. Mỗi dòng dưới gắn với thẻ thực hiện, từ đó xác định người làm. Trạng thái hiện tại nằm ở thẻ; hồ sơ kiểm chứng giữ nguyên phạm vi lịch sử.
 
 ### Nguyên tắc giữ dữ liệu và quyền
 
@@ -229,7 +229,7 @@ Hai view nội bộ Identity (`identity.v_user_accounts`, `identity.v_active_ses
 
 ### Hợp đồng và transaction
 
-Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và phương thức thay thế chi tiết được thiết kế ở S2-02; không đổi chữ ký trong S2-01.
+Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và phương thức thay thế chi tiết đã có ở [S2-02](access-revocation.md#s2-02-protocol); chưa đổi chữ ký runtime trong S2-01/S2-02.
 
 | Hợp đồng hiện tại | Bên dùng và chỗ dính | Hướng xử lý | Thẻ |
 |---|---|---|---|
@@ -266,14 +266,14 @@ Khi lên STEP-3, các bảng owner-local đi cùng database owner; có thể dù
 
 ### Điều kiện chuyển sang triển khai
 
-1. Review Messaging của Sáng được ghi nhận; còn mở duy nhất ở mức S2-01 là xác nhận review đó.
-2. S2-02 cụ thể hóa giấy phép, hàng rào, lỗi chậm/mất xác nhận và ba luồng DM, vai trò, tạo phòng. Không chỉ đổi tham số để bỏ transaction.
+1. Dùng danh sách phụ thuộc đã chốt ở S2-01 và trạng thái hiện tại trong [STEP-2](../project/tasks/step-2.md).
+2. Triển khai giấy phép, hàng rào, phục hồi và ba luồng theo [S2-02](access-revocation.md#s2-02-protocol); không chỉ bỏ tham số transaction.
 3. Các migration S2-03/04/05 được thử trên bản sao có dữ liệu MVP, giữ migration cũ bất biến; không dùng `schema.sql` để nâng cấp volume hiện tại.
 4. Sau S2-10, S2-11 phải thử quyền database thực tế, lỗi Redis/lời gọi, sự kiện trùng/sai thứ tự và thời gian thu hồi. JWT RS256 của S1-06 không thay các điều kiện này.
 
 ## Còn mở
 
-- Bảng xử lý STEP-2 đã có ở S2-01 bên trên, chờ review Messaging; DDL, quyền chi tiết và thứ tự migration được triển khai tại S2-03 đến S2-11. Tên database triển khai STEP-3 và cơ chế đồng bộ cụ thể tiếp tục được thiết kế theo gói (D02).
+- Bảng xử lý STEP-2 và hợp đồng S2-02 đã có; DDL, quyền chi tiết và thứ tự migration được triển khai tại S2-03 đến S2-11. Tên database triển khai STEP-3 và cơ chế chuyển dữ liệu cụ thể tiếp tục được thiết kế theo gói (D02).
 - Engine, thư viện, tên và vị trí project, container, CLI, cách đóng gói phần kiểm tra trước, quyền SQL, cơ chế transaction và khóa, CI/CD (D48 đến D50).
 - Cách tiếp nhận lịch sử migration cũ; kế hoạch tách dữ liệu MVP.
 - Mapping schema và dữ liệu, xử lý khóa và phiên, ledger, công cụ và trình tự chuyển (D51, D52). Thời gian bảo trì cần đo trên dữ liệu đại diện.

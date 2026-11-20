@@ -155,7 +155,7 @@ Cần Python 3, Node.js 24, npm và Chromium của Playwright, hoặc Google Chr
 
 - WebClient vẫn dùng REST và SignalR (DEC-081).
 - Nhà cung cấp bên ngoài và webhook dùng hợp đồng của họ.
-- ProblemDetails ở trên là cho HTTP; cách ánh xạ lỗi gRPC chưa chốt.
+- ProblemDetails ở trên là cho HTTP; ánh xạ lỗi quyền/điều phối theo [S2-02](access-revocation.md#s2-02-protocol). RPC nghiệp vụ khác được bổ sung theo từng gói.
 - gRPC không thay được transaction và guard dùng chung của MVP. Quyền tới commit, lỗi mạng và thời hạn thu hồi cần thiết kế riêng ([thu hồi truy cập](access-revocation.md)).
 - Ví dụ đã chốt: lệnh cài hàng rào thu hồi ([D07](access-revocation.md#v1-revocation-transport)).
 
@@ -205,6 +205,8 @@ docs/contracts/grpc/
 - RPC nhận sự kiện Community → Messaging (D27) nằm trong nhóm `messaging/`; Community vẫn sở hữu ý nghĩa nghiệp vụ của sự kiện.
 - Kiểu Protobuf không được dùng trong Domain, hợp đồng Application hay `SCDC.Shared.Core` ([D43, D45](backend.md#v1-code-layout)).
 - Project hợp đồng C# và cách sinh mã xem [D47](backend.md#v1-grpc-code-generation).
+
+S2-02 có nguồn mục tiêu [Identity access](../contracts/grpc/identity/access.proto), [Community access](../contracts/grpc/community/access.proto), [Messaging coordination](../contracts/grpc/messaging/coordination.proto). Các envelope scope/permit/fence được khai báo một lần tại Identity và import vào hợp đồng Community/Messaging; đó là kiểu truyền, không trao quyền sở hữu policy Community cho Identity. Khi tạo project D47, Community/Messaging tham chiếu assembly hợp đồng Identity cho các kiểu import, không sinh lại chúng. STEP-2 dùng adapter nội bộ cùng ngữ nghĩa; host gRPC/mTLS và mã sinh trong solution thuộc STEP-3.
 
 Tham khảo [gRPC services](https://learn.microsoft.com/en-us/aspnet/core/grpc/basics?view=aspnetcore-10.0).
 
@@ -263,7 +265,7 @@ Khi xoay khóa, cấp public key mới và thêm key ID cho mọi consumer trư�
 
 ## Còn mở
 
-- **D04, D27:** endpoint, timeout, gửi lại, cơ chế nhất quán; ánh xạ lỗi gRPC; danh sách sự kiện và bên nhận; schema và `.proto`; ID, version, chống trùng, thứ tự, lỗi không xử lý được, hàng đợi tồn, thời hạn lưu; đối chiếu sau khởi động lại; cách chuyển sang broker.
+- **D04, D27:** hợp đồng quyền/phối hợp, timeout, gửi lại và lỗi đã có ở [S2-02](access-revocation.md#s2-02-protocol). Danh mục payload sự kiện nghiệp vụ, migration outbox, backlog, cách ly sự kiện lỗi và chuyển sang broker tiếp tục theo từng gói; ACK inbox không thay ACK fence.
 - **D46:** công cụ và phiên bản sinh mã, namespace, quản lý phiên bản hợp đồng, CI, các phương thức cụ thể.
 - **D09, D10:** route cụ thể tới từng service; host, domain, TLS; xác thực tại Gateway; BFF; số bản và HA; phiên bản image Nginx.
 - **D20:** CA, danh tính cụ thể, định dạng và quyền file khóa, cấp, gia hạn, thu hồi chứng chỉ; tin cậy theo môi trường; ma trận quyền RPC; cách truyền thông tin người thực hiện; danh tính worker.

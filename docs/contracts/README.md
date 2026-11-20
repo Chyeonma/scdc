@@ -1,6 +1,6 @@
 # SCDC — Hợp đồng máy đọc
 
-Thư mục này chứa các file OpenAPI, JSON Schema và (sau này) Protobuf, mô tả chính xác dữ liệu trao đổi giữa các bên. Ý nghĩa, quyền, luồng xử lý và tiêu chí chấp nhận được giải thích trong tài liệu tính năng; không chép lại schema vào Markdown.
+Thư mục này chứa các file OpenAPI, JSON Schema và Protobuf, mô tả chính xác dữ liệu trao đổi giữa các bên. Ý nghĩa, quyền, luồng xử lý và tiêu chí chấp nhận được giải thích trong tài liệu tính năng; không chép lại schema vào Markdown.
 
 **Trạng thái:** một số API đã có trong nền MVP (`900e226`), phần còn lại là thiết kế mục tiêu. Cần đối chiếu từng endpoint với Swagger và code; file tồn tại không có nghĩa mọi endpoint trong đó đã chạy.
 
@@ -8,7 +8,8 @@ Thư mục này chứa các file OpenAPI, JSON Schema và (sau này) Protobuf, m
 
 | File | Tài liệu giải thích | Trạng thái |
 |---|---|---|
-| gRPC/Protobuf v1 | [Nguồn `.proto`](../system/api-conventions.md#v1-grpc-contract-sources), [project hợp đồng C#](../system/backend.md#v1-grpc-code-generation) | Đã chọn vị trí, chưa có file |
+| [Identity access](grpc/identity/access.proto), [Community access](grpc/community/access.proto), [Messaging coordination](grpc/messaging/coordination.proto) | [S2-02](../system/access-revocation.md#s2-02-protocol), [tạo phòng](../features/community/channels.md#s2-02-channel-protocol), [project C#](../system/backend.md#v1-grpc-code-generation) | Hợp đồng mục tiêu đã có; chưa có host hoặc mã sinh trong solution |
+| [Coordination REST](coordination.openapi.json) | [Thu hồi](../system/access-revocation.md#s2-02-protocol), [tạo phòng](../features/community/channels.md#s2-02-channel-protocol) | Mục tiêu S2-02: GET trạng thái, phản hồi pending/hủy/chưa rõ và membership của actor |
 | [Account recovery](account-recovery.openapi.json) | [Liên kết email](../features/accounts/email-links.md), [khôi phục mật khẩu](../features/accounts/password-recovery.md) | Đã có xác minh email và đặt lại mật khẩu. Gửi lại email và worker gửi thư nằm ở nhánh Identity riêng, chưa tích hợp |
 | [Direct Messaging](direct-messaging.openapi.json) | [Nhắn tin riêng](../features/messaging/direct-messaging.md) | Đã có mở DM, hộp thư, gửi, lịch sử, sửa, xóa |
 | [Chat realtime](chat-realtime.schema.json) | [Đồng bộ tin](../features/messaging/synchronization.md) | Danh mục sự kiện SignalR; đã có cho DM. Cần đối chiếu với schema mục tiêu |

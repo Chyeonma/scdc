@@ -169,6 +169,58 @@ Transaction và guard dùng chung chỉ đúng khi một ứng dụng dùng mộ
 - Tạo phòng chỉ báo xong khi dữ liệu nền đã chuẩn bị ([D14](channels.md#v1-channel-provisioning)). Community lưu tiến độ và điều phối ([D15](channels.md#v1-channel-creation-coordination)); gọi gRPC và nhận kết quả sau khi bên kia commit ([D16](channels.md#v1-channel-preparation-transport)); chờ ngắn, hủy, bù ([D19](channels.md#v1-channel-creation-interruption)).
 - Một lời gọi gRPC không thay được transaction chung.
 
+<a id="s2-02-transactions"></a>
+
+### S2-02 — Adapter và transaction riêng
+
+Thiết kế này là đầu vào S2-07 đến S2-10. Các interface trong code hiện vẫn là bản MVP; S2-02 bổ sung hợp đồng mục tiêu, không sửa runtime.
+
+| Hợp đồng MVP | Thiết kế thay thế | Thẻ triển khai |
+|---|---|---|
+| `IAccountAccessGuard` | `IdentityAccess.AcquirePermit` cho actor; owner Community kiểm tra fence Identity trong transaction riêng | S2-07 |
+| `IAccountPairAccessGuard` | `IdentityAccess.AcquirePermit` theo mục đích DM; peer chỉ bắt buộc cho mở/gửi mới; reader hồ sơ độc lập | S2-08 |
+| `IChannelAccessGuard` | `CommunityAccess.AcquirePermit`; Messaging kiểm tra Identity và Community cùng dữ liệu tin cục bộ | S2-10; tin phòng ở STEP-4 |
+| `IChatSpaceLifecycle` | `ChannelProvisioning.Prepare/Confirm/Cancel/Get`; Community lưu quyết định, Messaging giữ không gian đang chuẩn bị và dấu hủy | S2-09 |
+
+Adapter Application dùng DTO nội bộ tương đương, deadline và CancellationToken. Api/Infrastructure chuyển đổi DTO ↔ Protobuf theo D43/D47; không đưa Protobuf, `DbConnection` hay `DbTransaction` vào hợp đồng Application/Domain. Code có thể dùng transaction trong module sở hữu, không truyền nó cho module khác. Hợp đồng và luật scope/epoch xem [S2-02](../../system/access-revocation.md#s2-02-protocol).
+
+Community là authority của chính sách cục bộ: nó cấp/kiểm tra scope của mình dưới khóa policy trong transaction cục bộ, không gọi loopback RPC khi đang giữ transaction. Permit Identity được lấy trước transaction đó. Giấy phép Community qua RPC phục vụ các owner khác như Messaging.
+
+**Một thao tác quản lý Community:**
+
+1. Lấy permit Identity; với thao tác lên thành viên/phòng có sẵn, đối chiếu membership ID của request với lần tham gia hiện tại. Đọc danh sách công khai hoặc tham gia mới không đòi membership chưa tồn tại.
+2. Mở transaction Community, khóa fence Identity rồi server và các dòng nghiệp vụ theo thứ tự UUID. Tính quyền tại Community; không hỏi Identity hoặc Messaging khi đang giữ transaction.
+3. Thao tác chỉ đổi dữ liệu cục bộ, không ảnh hưởng quyền: ghi dữ liệu và outbox, kiểm tra hạn permit rồi commit. Cập nhật tên không tự thu hồi quyền.
+4. Thao tác đổi quyền/tư cách/vòng đời: lưu thay đổi dự kiến và tiến trình `FENCING` như [thu hồi](../../system/access-revocation.md#s2-02-protocol). Chỉ thay policy đã công bố và ghi outbox của kết quả trong transaction cuối. Worker không cần JWT còn hạn để cài fence/abort; commit policy mới vẫn kiểm tra phiên và quyền actor.
+5. Phản hồi chưa xong trả `202` và operation ref theo [hợp đồng mục tiêu](../../contracts/coordination.openapi.json); kết quả hiện hành không bị gọi là đã đổi trước commit. Request client không tự gửi lại. GET chỉ quan sát.
+
+Quyền actor ở transaction cuối được tính trên policy đã commit trước thay đổi của chính thao tác đó; một cấu hình hợp lệ làm actor tự mất quyền xem vẫn được commit. Mutation PUT/PATCH/DELETE chưa có clientOperationId dùng operation ID server và fingerprint gồm actor, endpoint, scope, expectedVersion và body chuẩn hóa. Request trùng khi còn pending trả cùng operation ref nếu fingerprint khớp; khác nội dung nhận lỗi tạm/xung đột. Sau khi hoàn tất, request dùng version cũ giữ lỗi version hiện hành; client đối chiếu bằng GET trước lần lưu mới.
+
+**Đổi vai trò làm mất quyền xem phòng:**
+
+```mermaid
+sequenceDiagram
+    participant UI as Người quản lý
+    participant C as Community
+    participant I as Identity
+    participant CD as DB Community
+    participant M as Messaging
+    UI->>C: Đổi vai trò, membershipId, expectedVersion
+    C->>I: Permit Identity cho người quản lý
+    C->>CD: Kiểm tra quyền; lưu policy dự kiến + scope mất quyền
+    Note over C,CD: Commit ý định; chưa thay policy đã công bố
+    C->>M: Cài floor cho membership/channel access bị ảnh hưởng
+    M-->>C: Receipt sau commit, writer cũ đã kết thúc
+    C->>I: Kiểm tra lại phiên người quản lý trước final commit
+    C->>CD: Khóa fence Identity; CAS; commit policy + epoch + outbox
+    C-->>UI: Kết quả hoặc tra cứu operation đã chốt
+    Note over C,M: Ngừng nội dung trên kết nối mất quyền trong 5 giây từ commit policy
+```
+
+Community tự áp floor cần cho đường ghi của mình trong transaction cục bộ; sơ đồ chỉ vẽ lời gọi tới Messaging. Khi Media được bật, nó cũng phải ACK trước commit. Actor mất quyền Identity thì abort policy dự kiến bằng epoch mới; không rollback floor đã cài. Thu hồi đồng thời ở Identity không cần đợi transaction Community giữ khóa qua RPC.
+
+**Chuyển đổi code:** S2-07/08/09 có thể thêm adapter và kiểm thử riêng khi chưa bật toàn bộ. Cờ `AccessCoordinationV1` chỉ bật khi mọi đường ghi/đọc/Hub/worker của owner đã dùng gate tương ứng; không cho writer MVP bypass fence sau khi bật. Giữ khóa Identity cũ cho tới khi hoàn tất chuyển đổi tất cả caller; S2-10 bỏ hợp đồng cũ, S2-11 kiểm tra quyền DB và lỗi tranh chấp trên chế độ mới. Không đổi reader tên người thành nguồn cấp quyền.
+
 Quy tắc chuyển trạng thái và gửi lại theo epoch: [Memberships](memberships.md#technical), [Invitations](invitations.md#technical). Transaction riêng của từng chức năng: [Servers](servers.md#technical), [Memberships](memberships.md#membership-contracts), [Invitations](invitations.md#invite-contracts), [Channels](channels.md#technical), [Permissions](access-control.md#permission-contracts).
 
 <a id="account-transactions"></a>

@@ -1,0 +1,171 @@
+syntax = "proto3";
+
+package scdc.identity.v1;
+option csharp_namespace = "SCDC.Identity.Grpc.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// Target S2-02 contract; no RPC host or generated project is implemented yet.
+// Shared messages are transport envelopes, not shared domain models.
+service IdentityAccess {
+  rpc AcquirePermit(AccessRequest) returns (AccessReply);
+  rpc GetChange(ChangeQuery) returns (ChangeStatus);
+}
+
+enum Authority {
+  AUTHORITY_UNSPECIFIED = 0;
+  AUTHORITY_IDENTITY = 1;
+  AUTHORITY_COMMUNITY = 2;
+}
+
+enum Owner {
+  OWNER_UNSPECIFIED = 0;
+  OWNER_COMMUNITY = 1;
+  OWNER_MESSAGING = 2;
+  OWNER_MEDIA = 3;
+}
+
+enum Purpose {
+  PURPOSE_UNSPECIFIED = 0;
+  PURPOSE_ACCOUNT_READ = 1;
+  PURPOSE_COMMUNITY_WRITE = 2;
+  PURPOSE_DM_OPEN_NEW = 3;
+  PURPOSE_DM_READ = 4;
+  PURPOSE_DM_SEND_NEW = 5;
+  PURPOSE_DM_REPLAY = 6;
+  PURPOSE_DM_EDIT_OWN = 7;
+  PURPOSE_DM_DELETE_OWN = 8;
+  PURPOSE_CHANNEL_READ = 9;
+  PURPOSE_CHANNEL_SEND = 10;
+  PURPOSE_CHANNEL_REPLAY = 11;
+  PURPOSE_CHANNEL_EDIT_OWN = 12;
+  PURPOSE_CHANNEL_DELETE_OWN = 13;
+  PURPOSE_CHANNEL_CREATE = 14;
+  PURPOSE_MEDIA_JOIN = 15;
+  PURPOSE_MEDIA_PUBLISH = 16;
+  PURPOSE_COMMUNITY_MANAGE = 17;
+}
+
+enum ScopeKind {
+  SCOPE_KIND_UNSPECIFIED = 0;
+  SCOPE_KIND_ACCOUNT = 1;
+  SCOPE_KIND_SESSION = 2;
+  SCOPE_KIND_MEMBERSHIP = 3;
+  SCOPE_KIND_CHANNEL_ACCESS = 4;
+  SCOPE_KIND_MANAGEMENT = 5;
+  SCOPE_KIND_CHANNEL_LIFECYCLE = 6;
+}
+
+message Actor {
+  string user_id = 1;
+  string session_id = 2;
+  // Transient JWT claim; do not persist or log it in another owner's database.
+  string security_stamp = 3;
+}
+
+message ScopeRef {
+  Authority authority = 1;
+  ScopeKind kind = 2;
+  string user_id = 3;
+  string session_id = 4;
+  string server_id = 5;
+  string channel_id = 6;
+  string membership_id = 7;
+  string permission_code = 8;
+}
+
+message ScopeStamp {
+  ScopeRef scope = 1;
+  uint64 epoch = 2;
+}
+
+enum AccessContext {
+  ACCESS_CONTEXT_UNSPECIFIED = 0;
+  ACCESS_CONTEXT_HTTP_CALLER = 1;
+  ACCESS_CONTEXT_RESUMING_ACCEPTED_OPERATION = 2;
+}
+
+message AccessRequest {
+  Actor actor = 1;
+  Owner owner = 2;
+  Purpose purpose = 3;
+  string resource_id = 4;
+  string peer_id = 5;
+  string operation_id = 6;
+  string server_id = 7;
+  string channel_id = 8;
+  uint64 routing_generation = 9;
+  string permission_code = 10;
+  string expected_membership_id = 11;
+  string peer_session_id = 12;
+  AccessContext context = 13;
+}
+
+message Permit {
+  string permit_id = 1;
+  Authority issuer = 2;
+  Owner owner = 3;
+  Actor actor = 4;
+  Purpose purpose = 5;
+  string resource_id = 6;
+  string peer_id = 7;
+  string operation_id = 8;
+  repeated ScopeStamp scopes = 9;
+  google.protobuf.Timestamp issued_at = 10;
+  google.protobuf.Timestamp expires_at = 11;
+  uint64 routing_generation = 12;
+}
+
+message Rejection {
+  // Existing endpoint codes remain authoritative for public error mapping.
+  string code = 1;
+}
+
+message AccessReply {
+  oneof result {
+    Permit permit = 1;
+    Rejection rejection = 2;
+  }
+}
+
+message FenceBatch {
+  string operation_id = 1;
+  string batch_id = 2;
+  Authority issuer = 3;
+  repeated ScopeStamp floors = 4;
+  uint64 routing_generation = 5;
+}
+
+message FenceReceipt {
+  string operation_id = 1;
+  string batch_id = 2;
+  Owner owner = 3;
+  uint64 routing_generation = 4;
+  repeated ScopeStamp installed_floors = 5;
+  // Returned only after the owner transaction has committed.
+}
+
+message FenceQuery {
+  Authority issuer = 1;
+  string operation_id = 2;
+  string batch_id = 3;
+  uint64 routing_generation = 4;
+}
+
+message ChangeQuery {
+  string operation_id = 1;
+}
+
+enum ChangePhase {
+  CHANGE_PHASE_UNSPECIFIED = 0;
+  CHANGE_PHASE_FENCING = 1;
+  CHANGE_PHASE_COMMITTED = 2;
+  CHANGE_PHASE_ABORTED = 3;
+}
+
+message ChangeStatus {
+  string operation_id = 1;
+  ChangePhase phase = 2;
+  uint64 version = 3;
+  bool cleanup_pending = 4;
+}

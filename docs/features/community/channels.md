@@ -338,6 +338,74 @@ Community không đọc hay ghi DB của Messaging, Media. Sự kiện sau commi
 
 Phải chặn thao tác cũ sống lại, và chỉ dọn đúng dữ liệu của nó, không ảnh hưởng lần tạo mới. Trình duyệt không tự POST lại.
 
+<a id="s2-02-channel-protocol"></a>
+
+### S2-02 — Chuẩn bị, xác nhận và hủy phòng chữ
+
+Hợp đồng đích là [ChannelProvisioning](../../contracts/grpc/messaging/coordination.proto); adapter STEP-2 chạy trong process nhưng không nhận connection/transaction của Community. Phòng thoại sẽ dùng owner Media với cùng quy tắc quyết định; chưa bật tạo phòng thoại khi chưa có owner thật.
+
+| Nơi lưu | Dữ liệu thiết kế |
+|---|---|
+| `community.channel_provisions` | Operation ID nội bộ, actor/session ID, server, clientOperationId, channel ID, membership ID, fingerprint/key ID/version, nội dung đã chuẩn hóa, createdAt cố định, deadline, phase, decision version, cleanup state |
+| Unique phía Community | Actor + `create_channel` + server + clientOperationId; tên và hạn mức tính cả phòng đang chuẩn bị |
+| `messaging.channel_provisions` | Operation ID, channel/server ID, fingerprint, phase, decision version; unique cả operation ID và channel ID |
+| Không gian Messaging | Giữ cùng UUIDv7 với channel; trạng thái preparing/ready/cancelled, gắn đúng operation ID; chưa ready thì không tự cho đọc/gửi/đăng ký/outbox |
+
+Operation nội bộ UUIDv7 được tạo đúng một lần; clientOperationId vẫn UUIDv4. Channel lifecycle epoch bắt đầu ở 1; Prepare/Confirm giữ epoch này, không lấy epoch mới để kích hoạt lại một quyết định tạo cũ. Fingerprint HMAC và vòng đời key theo [chống trùng](mechanics.md#operations), không băm lại từ nội dung đã thay đổi. Dữ liệu chuẩn bị không được lộ qua list/detail, timeline, Hub hay dispatcher. Schema và migration được triển khai ở S2-09 sau khi bỏ FK ở S2-04.
+
+Migration S2-09 tiếp nhận channel/space và operation MVP đã commit như COMPLETED/READY. Giữ UUID, fingerprint, key/version và trạng thái outbox; nếu cần ID nội bộ mới thì tạo một lần và lưu mapping. Không tính lại fingerprint từ tên/topic hiện tại hoặc phát lại sự kiện tạo phòng. DM space không thuộc bảng provision phòng. Prepare/Confirm phải kiểm tra dấu hủy, trạng thái đã xóa và lifecycle floor; Cancel chỉ dọn đúng operation cũ kể cả khi floor đã cao hơn.
+
+**Community:** `PREPARING → COMPLETED` hoặc `PREPARING → CANCELLED` bằng CAS trên cùng dòng operation. Quyết định đã chốt bất biến; công việc gửi Confirm hoặc dọn dữ liệu có tiến độ riêng. **Messaging:** `PREPARED → READY` hoặc `PREPARED → CANCELLED`; Cancel tới trước Prepare cũng phải tạo dấu CANCELLED. Cùng ID khác channel/fingerprint là xung đột.
+
+1. Community lấy giấy phép Identity, kiểm tra actor membership và quyền `manage_channels`; trong transaction cục bộ giữ tên/chỗ, lưu operation PREPARING và channel ID. Chưa đưa phòng vào danh sách.
+2. Sau commit, gửi Prepare cùng operation ID, channel ID và fingerprint. Messaging chỉ nhận Community; tạo không gian ẩn và bản ghi provision cùng transaction, trả PREPARED sau commit. Lặp lại cùng dữ liệu trả cùng bản ghi.
+3. Có PREPARED trước deadline, Community lấy lại giấy phép Identity, khóa fence, server, operation; kiểm tra membership, quyền quản lý theo policy hiện tại và hạn. Nếu còn hợp lệ, CAS COMPLETED, ghi metadata phòng ready và outbox cùng commit. Đây là mốc hoàn tất nghiệp vụ; không đợi gửi sự kiện.
+4. Community gửi Confirm sau quyết định COMPLETED bằng danh tính service. Messaging khóa lifecycle fence, kiểm tra channel epoch của quyết định tạo và trạng thái không gian rồi đánh dấu READY; Confirm không tạo tài nguyên mới hoặc cấp quyền cho người dùng. Trong lúc Confirm chậm, một giấy phép phòng hiện tại do Community cấp sau COMPLETED cũng được dùng để kích hoạt đúng space PREPARED trong transaction owner trước khi phục vụ; thiếu giấy phép/không gian đúng thì từ chối. API không hứa owner luôn online sau khi tạo xong.
+5. Nếu hết ngân sách 5 giây mà chưa CAS COMPLETED, worker/request cạnh tranh CAS CANCELLED. Lưu dấu hủy, giải phóng tên/chỗ và việc cần dọn cùng commit. Từ đó Community không cấp bất kỳ giấy phép phòng ready nào cho operation này; vì vậy có thể báo đã hủy dù dữ liệu owner còn đang dọn.
+6. Gửi Cancel tới Messaging. Handler ghi dấu CANCELLED bền ngay cả khi chưa thấy Prepare, chỉ dọn dữ liệu PREPARED của đúng operation. Prepare đến muộn bị dấu này chặn; nếu nó đến trước Cancel thì dữ liệu vẫn ẩn và không có permit hợp lệ để sử dụng. Giữ dấu tối thiểu/fingerprint/ID trong v1; không xóa dấu sau khi dọn.
+7. Nếu CAS hủy gặp COMPLETED thì trả thành công hiện tại, không gửi Cancel. Nếu chưa biết CAS có commit không, trả kết quả chưa rõ rồi GET; không phát đồng thời Confirm và Cancel. Xung đột quyết định ở owner phải đối chiếu/đưa vào điều tra, không tự chọn bản đến cuối.
+
+**Mất quyền, phiên hết hạn hoặc server bị thay đổi:** trước COMPLETED thì chốt hủy, không hoàn tất bằng quyền cũ. Sau COMPLETED, Confirm là tiếp tục quyết định đã hợp lệ tại commit; mọi lần xem/gửi vẫn kiểm tra quyền hiện tại. Xóa phòng sau đó là thao tác khác, tăng lifecycle epoch; Confirm muộn không được làm sống lại phòng đã xóa. Giao thức xóa phòng đầy đủ thuộc COM-W08, không được suy rằng tạo phòng đã giải quyết xóa phòng.
+
+```mermaid
+sequenceDiagram
+    participant U as WebClient
+    participant C as Community
+    participant CD as DB Community
+    participant M as Messaging
+    participant MD as DB Messaging
+    U->>C: Tạo phòng (clientOperationId, membershipId)
+    C->>CD: Permit + quyền; giữ tên/chỗ; commit PREPARING
+    C->>M: Prepare (operationId, channelId, fingerprint)
+    M->>MD: Commit space ẩn + PREPARED
+    M-->>C: PREPARED (có thể mất phản hồi)
+    alt Đã xác nhận chuẩn bị, còn hạn và quyền
+        C->>CD: CAS COMPLETED + channel ready + outbox
+        C-->>U: 201 và phòng
+        C->>M: Confirm từ quyết định đã commit
+    else Hết hạn hoặc mất quyền, chưa COMPLETED
+        C->>CD: CAS CANCELLED + giải phóng tên/chỗ + việc dọn
+        C-->>U: 409 CHANNEL_CREATION_CANCELLED
+        C->>M: Cancel, ghi dấu và dọn PREPARED
+    end
+    U->>C: GET theo khóa cũ khi mất phản hồi
+    C-->>U: Chỉ đọc trạng thái, không kích hoạt xử lý
+```
+
+**REST mục tiêu:** [coordination.openapi.json](../../contracts/coordination.openapi.json) quy định GET `/api/v1/servers/{serverId}/channel-operations/{clientOperationId}`. Actor lấy từ phiên; chỉ đọc operation của chính mình. Pending/cancelled yêu cầu membership hiện tại và quyền tạo phòng; completed chỉ trả tài nguyên khi còn xem được. Không có quyền thì 404, mất phiên thì 401, chưa xác minh được thì 503. Không có khóa client thì không đoán theo tên/nội dung; tải lại danh sách có quyền rồi tạo thao tác mới khi người dùng chọn.
+
+POST vẫn 201/200 khi hoàn tất; đã hủy trả `409 CHANNEL_CREATION_CANCELLED`; chưa rõ trả `503 OPERATION_OUTCOME_UNKNOWN` với status URL. Không trả 202 để cho phép tạo phòng tiếp tục vô hạn. GET trả phase, version, cleanupPending và resource ID khi được phép; 404 không chứng minh request chưa tới. Gửi lại cùng khóa phải kiểm tra fingerprint và quyền; đã hủy thì cùng khóa vẫn kết thúc, Retry mới dùng khóa/channel ID mới. Cleanup cũ không lọc theo tên nên không xóa lần tạo mới.
+
+| Mã | Tình huống | Kết quả mong đợi |
+|---|---|---|
+| TC-S2-02-16 | Prepare commit mất ACK; Community restart | Đối chiếu cùng ID, một space; không công bố từ kết quả chưa rõ |
+| TC-S2-02-17 | Success và timeout/cancel tranh nhau | Một quyết định cuối; CAS thua đọc lại, không tự đảo quyết định |
+| TC-S2-02-18 | Cancel tới trước Prepare hoặc Prepare tới sau cleanup | Dấu hủy còn nguyên; không có phòng/space dùng được |
+| TC-S2-02-19 | Mất phiên/quyền khi đang prepare | Không COMPLETED; dữ liệu ẩn được dọn |
+| TC-S2-02-20 | Cùng khóa khác body, Retry sau hủy với khóa mới | Xung đột đúng; cleanup cũ không ảnh hưởng phòng mới |
+| TC-S2-02-21 | GET mất phản hồi, mất khóa hoặc mất quyền | GET chỉ đọc; không tạo/chạy lại; không lộ tài nguyên |
+| TC-S2-02-22 | Confirm trễ; gửi/xem trước Confirm hoặc sau xóa | Chỉ permit hiện tại kích hoạt đúng space; không hồi sinh phòng đã xóa |
+
 <a id="channel-webclient-và-bằng-chứng"></a>
 
 ### Giao diện và bằng chứng (MVP)
@@ -400,7 +468,7 @@ Phụ thuộc chung: [kế hoạch](../../project/planning.md#community-work-ite
 
 - Xóa phòng nguyên tử và tranh chấp gửi với xóa; lịch sử và ghi tin phòng dùng guard; Hub và thu hồi.
 - Phòng thoại phụ thuộc Media và bằng chứng ngắt riêng.
-- **v1 tạo phòng (D14 đến D19):** schema và ID tham chiếu; giao thức hủy và dọn; dấu hủy và thời hạn lưu; trả lại tên và hạn mức; thời gian chờ; mã lỗi; URL và schema tra cứu, quyền đọc, hành vi khi mất khóa; file `.proto`, quyền RPC, thời hạn và thử lại; tranh chấp với mất quyền hay xóa phòng; giao thức xóa phòng giữa service.
+- **v1 tạo phòng:** thiết kế schema, giao thức, hủy/dọn, deadline, lỗi, tra cứu và `.proto` đã có ở [S2-02](#s2-02-channel-protocol); triển khai và kiểm chứng tại S2-09. Giao thức xóa phòng giữa service và Media vẫn thuộc các gói tính năng tương ứng.
 - Kiểm thử v1 phải gồm: thành công tranh với hủy; mất phản hồi sau commit; lệnh đến muộn sau khi đã dọn; khởi động lại giữa lúc dọn; Thử lại sau khi hủy.
 
 ---
