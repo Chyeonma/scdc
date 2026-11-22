@@ -96,7 +96,7 @@ END `$`$;
   }
   if (@($ids | Select-Object -Unique).Count -ne 1) { throw 'Concurrent retries returned different IDs.' }
   $author=([guid]$a.id).ToString(); $uuid=$ClientMessageId.ToString()
-  $counts=Invoke-DmReadSql "SELECT json_build_object('messages',(SELECT count(*) FROM messaging.messages WHERE space_id='$space' AND author_user_id='$author' AND client_message_id='$uuid'),'operations',(SELECT count(*) FROM messaging.send_operations WHERE space_id='$space' AND author_user_id='$author' AND client_message_id='$uuid'),'createOutbox',(SELECT count(*) FROM integration.outbox_events WHERE space_id='$space' AND aggregate_id='$( $ids[0] )' AND aggregate_version=1))::text;" | ConvertFrom-Json
+  $counts=Invoke-DmReadSql "SELECT json_build_object('messages',(SELECT count(*) FROM messaging.messages WHERE space_id='$space' AND author_user_id='$author' AND client_message_id='$uuid'),'operations',(SELECT count(*) FROM messaging.send_operations WHERE space_id='$space' AND author_user_id='$author' AND client_message_id='$uuid'),'createOutbox',(SELECT count(*) FROM messaging.outbox_events WHERE space_id='$space' AND aggregate_id='$( $ids[0] )' AND aggregate_version=1))::text;" | ConvertFrom-Json
   if ($counts.messages -ne 1 -or $counts.operations -ne 1 -or $counts.createOutbox -ne 1) { throw 'Concurrent retry counts mismatch.' }
   $proof=@{conversationId=$space;clientMessageId=$uuid;statuses=$statuses;messageIds=$ids;counts=$counts;result='PASS'}
   Write-DmJson (Join-Path $folder "retry-concurrent-$PeerAlias.json") $proof

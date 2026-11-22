@@ -58,15 +58,15 @@ try:
 DO $$ BEGIN IF current_database()<>'scdc_dm_acceptance_test' OR NOT EXISTS(
  SELECT 1 FROM messaging.spaces WHERE id='{space}' AND created_by_user_id='{actor}')
  THEN RAISE EXCEPTION 'Owned acceptance space required'; END IF; END $$;
-CREATE FUNCTION integration.{trigger}() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION messaging.{trigger}() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
  IF NEW.space_id='{space}' AND EXISTS(SELECT 1 FROM messaging.messages
  WHERE id=NEW.aggregate_id AND author_user_id='{actor}' AND client_message_id='{operation}') THEN
  PERFORM pg_advisory_xact_lock({gate}); {rollback}
  END IF; RETURN NEW;
 END $$;
-CREATE TRIGGER {trigger} BEFORE INSERT ON integration.outbox_events
- FOR EACH ROW EXECUTE FUNCTION integration.{trigger}();
+CREATE TRIGGER {trigger} BEFORE INSERT ON messaging.outbox_events
+ FOR EACH ROW EXECUTE FUNCTION messaging.{trigger}();
 """, "GATE_READY")
     installed = True
     state(held=True, gatePid=pid, gate=gate, trigger=trigger, rollback=config["rollback"])
@@ -76,7 +76,7 @@ CREATE TRIGGER {trigger} BEFORE INSERT ON integration.outbox_events
             break
         time.sleep(0.05)
     reason = "released" if time.monotonic() < deadline else "expired-120s"
-    sql(f"SELECT pg_advisory_unlock({gate}); SET lock_timeout='10s'; DROP TRIGGER {trigger} ON integration.outbox_events; DROP FUNCTION integration.{trigger}();", "GATE_CLEAN")
+    sql(f"SELECT pg_advisory_unlock({gate}); SET lock_timeout='10s'; DROP TRIGGER {trigger} ON messaging.outbox_events; DROP FUNCTION messaging.{trigger}();", "GATE_CLEAN")
     installed = False
     state(held=False, gatePid=pid, gate=gate, trigger=trigger, reason=reason, cleaned=True)
 except Exception as error:
@@ -86,7 +86,7 @@ finally:
     if process.poll() is None:
         try:
             if installed:
-                sql(f"SELECT pg_advisory_unlock({gate}); SET lock_timeout='10s'; DROP TRIGGER IF EXISTS {trigger} ON integration.outbox_events; DROP FUNCTION IF EXISTS integration.{trigger}();", "GATE_FINALLY")
+                sql(f"SELECT pg_advisory_unlock({gate}); SET lock_timeout='10s'; DROP TRIGGER IF EXISTS {trigger} ON messaging.outbox_events; DROP FUNCTION IF EXISTS messaging.{trigger}();", "GATE_FINALLY")
             process.stdin.close()
             process.wait(timeout=15)
         except (OSError, RuntimeError, subprocess.TimeoutExpired):

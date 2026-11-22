@@ -8,8 +8,18 @@ if (args.Length is < 1 or > 2)
 }
 try
 {
-    var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Database")
-        ?? throw new InvalidOperationException("ConnectionStrings__Database must be configured.");
+    // This is an administrator/migrator connection, never a runtime module login.
+    var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Migration")
+        ?? throw new InvalidOperationException("ConnectionStrings__Migration must be configured.");
+    if (Path.GetFileName(args[0]) == "20261120_s2-03_module_databases.sql")
+    {
+        var inboxMap = args.Length == 2
+            ? JsonSerializer.Deserialize<Dictionary<string,string>>(await File.ReadAllTextAsync(args[1]))
+            : null;
+        var changed = await ModuleDatabaseMigration.ApplyAsync(connection,await File.ReadAllTextAsync(args[0]),inboxMap);
+        Console.WriteLine(changed ? "S2-03 applied to Identity, Community and Messaging." : "S2-03 already applied with matching checksums.");
+        return 0;
+    }
     var search = Path.GetFileName(args[0]) == "002-community-search.sql";
     var roles = Path.GetFileName(args[0]) == "003-community-roles.sql";
     var channels = Path.GetFileName(args[0]) == "004-community-channels-access.sql";
@@ -24,6 +34,8 @@ try
         ? JsonSerializer.Deserialize<Dictionary<Guid, LegacyChannelSettings>>(await File.ReadAllTextAsync(args[1]),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!
         : new Dictionary<Guid, LegacyChannelSettings>();
+    if (Path.GetFileName(args[0]) != "001-community-create-view.sql" && !search && !roles && !channels)
+        throw new MigrationPreflightException("Unsupported migration filename.");
     var applied = channels ? await CommunityChannelMigration.ApplyAsync(connection, sql, channelMap)
         : roles ? await CommunityRoleMigration.ApplyAsync(connection, sql)
         : search ? await CommunitySearchMigration.ApplyAsync(connection, sql)

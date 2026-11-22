@@ -105,9 +105,9 @@ public sealed partial class CommunityApiTests
         if (mutation == "acl") channel = (await JsonAsync(await ChannelCreateAsync(server))).GetProperty("id").GetGuid();
         var before = await AccessEventsAsync(server); var access = await SqlAsync("SELECT access_version FROM community.servers WHERE id=@server", ("server", server));
         var function = "fail_channel_" + Guid.NewGuid().ToString("N");
-        await SqlAsync($"CREATE FUNCTION integration.{function}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Channel fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {function} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{function}()");
+        await SqlAsync($"CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Channel fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {function} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{function}()");
         try { Assert.Equal(HttpStatusCode.InternalServerError, (await (mutation == "create" ? ChannelCreateAsync(server, operation: op) : AclPutAsync(server, channel, "deny"))).StatusCode); }
-        finally { await SqlAsync($"DROP TRIGGER {function} ON integration.outbox_events; DROP FUNCTION integration.{function}()"); }
+        finally { await SqlAsync($"DROP TRIGGER {function} ON community.outbox_events; DROP FUNCTION community.{function}()"); }
         Assert.Equal(before, await AccessEventsAsync(server)); Assert.Equal(access, await SqlAsync("SELECT access_version FROM community.servers WHERE id=@server", ("server", server)));
         if (mutation == "create")
         {

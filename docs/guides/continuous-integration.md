@@ -20,7 +20,7 @@ SDK được giới hạn trong major 10 bởi [global.json](../../global.json).
 
 ## Database kiểm thử
 
-Mỗi lần chạy backend có service PostgreSQL mới với database `scdc_ci_test`, user `scdc_ci`. Mật khẩu trong workflow chỉ phục vụ service tạm này. Health check chờ kết nối TCP trước khi chạy [schema.sql](../../database/postgres/schema.sql); workflow không nạp seed.
+Mỗi lần chạy backend có service PostgreSQL mới với database `scdc_ci_test`, user quản trị `scdc_ci`. Mật khẩu trong workflow chỉ phục vụ service tạm này. Health check chờ kết nối TCP trước khi chạy [schema.sql](../../database/postgres/schema.sql) và [module-roles.sql](../../database/postgres/module-roles.sql); workflow không nạp seed. API dùng ba connection string/user Identity, Community, Messaging; fixture dùng `ConnectionStrings:TestDatabase` để tạo dữ liệu và database thử. Cấu hình test tắt pooling Identity và cho Messaging tối đa 50 kết nối để giữ được 40 transaction đồng thời; runtime local mặc định 20 mỗi pool.
 
 User kiểm thử có quyền tạo và xóa các database fixture của test migration. Test tự tạo tài khoản và dữ liệu. Khóa DM ngẫu nhiên và thư mục khóa cursor nằm dưới `RUNNER_TEMP`; test factory cấp khóa Community riêng. Dispatcher nền được tắt vì test realtime chủ động gọi dispatcher để kiểm soát thời điểm phát sự kiện.
 

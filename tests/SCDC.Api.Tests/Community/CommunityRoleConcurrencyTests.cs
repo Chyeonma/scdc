@@ -22,9 +22,9 @@ public sealed partial class CommunityApiTests
         await SqlAsync("INSERT INTO messaging.spaces(id,space_type) VALUES(@channel,3); INSERT INTO community.channels(space_id,server_id,name,name_key) VALUES(@channel,@server,'fixture-room','fixture-room'); INSERT INTO community.channel_role_overrides(space_id,server_id,role_id,permission_code,effect) VALUES(@channel,@server,@role,'channel_view',@effect)",("channel",channel),("server",server),("role",role),("effect",(short)effect));
         var before=await SqlAsync("SELECT access_version FROM community.servers WHERE id=@server",("server",server));
         var name="test_role_delete_"+Guid.NewGuid().ToString("N");
-        await SqlAsync($"CREATE FUNCTION integration.{name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.payload->>'cause'='role_deleted' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Role delete fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {name} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{name}()");
+        await SqlAsync($"CREATE FUNCTION community.{name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.payload->>'cause'='role_deleted' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Role delete fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {name} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{name}()");
         try{Assert.Equal(HttpStatusCode.InternalServerError,(await SendAsync(HttpMethod.Delete,$"/api/v1/servers/{server}/roles/{role}?expectedVersion=1",_owner)).StatusCode);}
-        finally{await SqlAsync($"DROP TRIGGER {name} ON integration.outbox_events; DROP FUNCTION integration.{name}()");}
+        finally{await SqlAsync($"DROP TRIGGER {name} ON community.outbox_events; DROP FUNCTION community.{name}()");}
         Assert.Equal(before,await SqlAsync("SELECT access_version FROM community.servers WHERE id=@server",("server",server)));
         Assert.Equal("2",(await JsonAsync(await MemberRoleGetAsync(server))).GetProperty("version").GetString());
         Assert.Equal(1L,await SqlAsync("SELECT count(*) FROM community.channel_role_overrides WHERE role_id=@role",("role",role)));

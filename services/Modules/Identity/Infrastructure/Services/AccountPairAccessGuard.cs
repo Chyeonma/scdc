@@ -9,12 +9,20 @@ namespace SCDC.Modules.Identity.Infrastructure.Services;
 internal sealed class AccountPairAccessGuard(IdentityDbContext db, ISharedDatabaseSession session,
     IHistoricalUserSummaryReader summaries, TimeProvider clock) : IAccountPairAccessGuard
 {
-    public async Task DetachAsync(CancellationToken cancellationToken) =>
+    private readonly System.Data.Common.DbConnection _identityConnection = db.Database.GetDbConnection();
+
+    public async Task DetachAsync(CancellationToken cancellationToken)
+    {
         await db.Database.UseTransactionAsync(null, cancellationToken);
+        db.Database.SetDbConnection(_identityConnection, contextOwnsConnection: false);
+    }
 
     public async Task<AccountAccessResult> LockPairAsync(AccountAccessRequest request, CancellationToken cancellationToken)
     {
         if (session.Transaction is null) throw new InvalidOperationException("The account guard requires a shared transaction.");
+        // S2-03 bridge: the caller's Messaging user has explicit temporary Identity
+        // read/row-lock grants. S2-08 replaces this enlistment with permits.
+        db.Database.SetDbConnection(session.Connection, contextOwnsConnection: false);
         await db.Database.UseTransactionAsync(session.Transaction, cancellationToken);
         var pair = UuidNetworkOrder.Pair(request.ActorId, request.PeerId);
         foreach (var id in new[] { pair.Low, pair.High }.Distinct())

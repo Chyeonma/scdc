@@ -90,7 +90,7 @@ INSERT INTO identity.account_tokens
 VALUES
     ('01990000-0000-7102-8000-000000000001', '01990000-0000-7000-8000-000000000004', 1, repeat('d', 64), 'linh@example.local', '192.168.1.40', now() - interval '10 minutes', now() + interval '20 minutes');
 
-INSERT INTO audit.security_events
+INSERT INTO identity.security_events
     (id, user_id, event_type, ip_address, user_agent, metadata, occurred_at)
 VALUES
     ('01990000-0000-7200-8000-000000000001', '01990000-0000-7000-8000-000000000001', 'login_succeeded', '192.168.1.10', 'Mozilla/5.0 Demo Chrome Linux', '{"mfa":true}'::jsonb, now() - interval '1 hour'),
@@ -283,7 +283,7 @@ SET last_message_id = '01990000-0000-7700-8000-000000000005',
     last_activity_at = now() - interval '50 minutes'
 WHERE id = '01990000-0000-7300-8000-000000000004';
 
-INSERT INTO integration.outbox_events
+INSERT INTO messaging.outbox_events
     (id, event_type, aggregate_type, aggregate_id, aggregate_version, space_id, payload, occurred_at, available_at, published_at, attempt_count)
 VALUES
     ('01990000-0000-7800-8000-000000000001', 'MessageCreated', 'Message', '01990000-0000-7700-8000-000000000005', 1, '01990000-0000-7300-8000-000000000004', '{"message_id":"01990000-0000-7700-8000-000000000005","sequence_no":1005}'::jsonb, now() - interval '50 minutes', now() - interval '50 minutes', now() - interval '49 minutes', 1),

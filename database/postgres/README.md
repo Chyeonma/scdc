@@ -17,14 +17,16 @@ Thông số dưới đây dùng cho stack Compose Development:
 | Driver | PostgreSQL |
 | Host / port | `localhost:5432` |
 | Database | `scdc_chat` |
-| Username / password | `scdc` / `scdc_dev` |
+| Quản trị / migration | `scdc` / `scdc_dev` |
+| User API | `scdc_identity`, `scdc_community`, `scdc_messaging` |
 | SSL mode | `disable` |
 
-Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`, `moderation`, `audit`, `integration`, `common`.
+Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`, `moderation`.
 
 ## SQL và migration
 
 - [schema.sql](schema.sql): bootstrap schema, constraint, index, trigger và view; có DROP SCHEMA.
+- [module-roles.sql](module-roles.sql): cấp ba role runtime và liệt kê quyền tạm; Compose gọi qua [init-module-roles.sh](init-module-roles.sh). Mật khẩu local mặc định là `<tên_role>_dev`; có thể đặt ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD`.
 - [seed.sql](seed.sql): dữ liệu minh họa, password/token không dùng đăng nhập.
 - [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/development.md#migration).
 
@@ -57,6 +59,6 @@ FROM messaging.v_message_timeline
 ORDER BY sequence_no;
 
 SELECT *
-FROM integration.outbox_events
+FROM messaging.outbox_events
 ORDER BY occurred_at;
 ```

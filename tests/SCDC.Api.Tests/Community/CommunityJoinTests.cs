@@ -12,7 +12,7 @@ public sealed partial class CommunityApiTests
     private Task<HttpResponseMessage> JoinAsync(Guid id, Actor? actor = null, HttpClient? client = null)
         => SendAsync(HttpMethod.Post, $"/api/v1/servers/{id}/join", actor ?? _other, client: client);
     private Task<object?> JoinedEventsAsync(Guid id)
-        => SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id AND event_type='Community.MembershipJoined.v1'", ("id", id));
+        => SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id AND event_type='Community.MembershipJoined.v1'", ("id", id));
     private Task<object?> OtherMembershipsAsync(Guid id)
         => SqlAsync("SELECT count(*) FROM community.server_members WHERE server_id=@id AND user_id=@actor", ("id", id), ("actor", _other.UserId));
 
@@ -43,7 +43,7 @@ public sealed partial class CommunityApiTests
         Assert.Equal(1L, await OtherMembershipsAsync(id));
         Assert.Equal(1L, await JoinedEventsAsync(id));
         Assert.Equal(1L, await SqlAsync("""
-            SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id AND event_type='Community.MembershipJoined.v1'
+            SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id AND event_type='Community.MembershipJoined.v1'
               AND aggregate_version=2 AND published_at IS NULL AND payload->>'membershipId'=@epoch
               AND payload->>'membershipVersion'='1' AND payload->>'accessVersion'='2'
             """, ("id", id), ("epoch", epoch.ToString())));
@@ -153,10 +153,10 @@ public sealed partial class CommunityApiTests
         var function = "test_join_gate_" + suffix;
         var key = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, int.MaxValue);
         await SqlAsync($"""
-            CREATE FUNCTION integration.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.event_type='Community.MembershipJoined.v1' AND NEW.aggregate_id='{id}' THEN
               PERFORM pg_advisory_xact_lock({key}::bigint); END IF; RETURN NEW; END $$;
-            CREATE TRIGGER {trigger} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{function}();
+            CREATE TRIGGER {trigger} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{function}();
             """);
         var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
@@ -224,10 +224,10 @@ public sealed partial class CommunityApiTests
         var epoch = await LeftWithGrantsAsync(id);
         var name = "test_join_fail_" + Guid.NewGuid().ToString("N");
         await SqlAsync($"""
-            CREATE FUNCTION integration.{name}() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE FUNCTION community.{name}() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.event_type='Community.MembershipJoined.v1' AND NEW.aggregate_id='{id}' THEN
               RAISE EXCEPTION 'Injected join fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$;
-            CREATE TRIGGER {name} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{name}();
+            CREATE TRIGGER {name} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{name}();
             """);
         try
         {
@@ -244,7 +244,7 @@ public sealed partial class CommunityApiTests
             Assert.Equal(true, await SqlAsync("SELECT version=1 AND access_version=1 FROM community.servers WHERE id=@id", ("id", id)));
             Assert.Equal(0L, await JoinedEventsAsync(id));
         }
-        finally { await SqlAsync($"DROP TRIGGER {name} ON integration.outbox_events; DROP FUNCTION integration.{name}()"); }
+        finally { await SqlAsync($"DROP TRIGGER {name} ON community.outbox_events; DROP FUNCTION community.{name}()"); }
         Assert.Equal(HttpStatusCode.OK, (await JoinAsync(id)).StatusCode);
         Assert.Equal(1L, await JoinedEventsAsync(id));
     }

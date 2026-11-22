@@ -226,7 +226,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 | Bước | Mục tiêu | Phụ trách chính | Xong khi | Kết quả |
 |---|---|---|---|---|
 | [STEP-1](#step-1) | Khung chạy: gateway, Compose, CI, giám sát; thử LiveKit | Cả nhóm; Vg điều phối, Thái thử LiveKit | Ai cũng tự dựng được môi trường; lần theo được request lỗi; một phiên âm thanh thật | S1-01 đến S1-06 và S1-08 hoàn tất theo [xác nhận ngày 2026-11-17](../records/planning/progress-2026-11-17.md). Còn S1-07 (LiveKit) và S1-09 (demo, tổng kết). |
-| [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | S2-01 hoàn tất; [S2-02](../records/verification/architecture/s2-02-2026-11-20.md) đã hoàn thiện thiết kế và hợp đồng, chờ review nhóm. Các thẻ triển khai vẫn là nháp. |
+| [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | S2-01 hoàn tất; S2-02 hoàn tất thiết kế; [S2-03](../records/verification/architecture/s2-03-2026-11-20.md) hoàn tất triển khai và kiểm thử local ngày 2026-11-20, chờ review. Còn quyền, FK/view và transaction chéo theo task tiếp theo. Thẻ Trello vẫn nháp. |
 | [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | — |
 | [STEP-4](#step-4) | Tính năng mới trên kiến trúc mới: tin phòng, phòng thoại, hoàn thiện Community | Theo service | Đạt [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion) | — |
 

@@ -38,7 +38,7 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
         Assert.Equal("1", right.GetProperty("message").GetProperty("version").GetString());
         await b.Subscribe(space); Assert.Empty(b.Events); Assert.Empty(c.Events);
         Assert.Equal("1:1:1:1", await f.Counts(space));
-        Assert.Equal("1:1:0:0", await f.Scalar("SELECT concat(count(*),':',sum(attempt_count),':',count(*) FILTER(WHERE published_at IS NULL),':',count(*) FILTER(WHERE payload ? 'content' OR payload ? 'body')) FROM integration.outbox_events WHERE space_id=@id", space));
+        Assert.Equal("1:1:0:0", await f.Scalar("SELECT concat(count(*),':',sum(attempt_count),':',count(*) FILTER(WHERE published_at IS NULL),':',count(*) FILTER(WHERE payload ? 'content' OR payload ? 'body')) FROM messaging.outbox_events WHERE space_id=@id", space));
         // Header is required on REST. A valid query token must not authorize a history read.
         using var queryOnly = await f.D.Inner.Client.GetAsync($"/api/v1/direct-conversations/{space}/messages?access_token={Uri.EscapeDataString(f.D.Inner.Actor.AccessToken)}");
         Assert.Equal(HttpStatusCode.Unauthorized, queryOnly.StatusCode);
@@ -69,12 +69,12 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
         await f.D.Sql("UPDATE messaging.messages SET content='current-only',version=2,edited_at=now() WHERE space_id=@id", space);
         Assert.True(await Dispatcher.DispatchOnceAsync(conversationId: space)); var e = await b.Message();
         Assert.Equal("current-only", e.GetProperty("message").GetProperty("content").GetString()); Assert.Equal("2", e.GetProperty("message").GetProperty("version").GetString());
-        await f.D.Sql("UPDATE integration.outbox_events SET published_at=NULL,available_at=clock_timestamp() WHERE space_id=@id", space);
+        await f.D.Sql("UPDATE messaging.outbox_events SET published_at=NULL,available_at=clock_timestamp() WHERE space_id=@id", space);
         Assert.True(await Dispatcher.DispatchOnceAsync(conversationId: space)); var repeated = await b.Message();
         Assert.Equal(e.GetProperty("eventId").GetGuid(), repeated.GetProperty("eventId").GetGuid());
         Assert.Equal(sent.GetProperty("id").GetGuid(), repeated.GetProperty("message").GetProperty("id").GetGuid());
         Assert.Equal("1:1:1:1", await f.Counts(space));
-        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM integration.outbox_events WHERE space_id=@id AND (payload ? 'content' OR payload ? 'body')", space));
+        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM messaging.outbox_events WHERE space_id=@id AND (payload ? 'content' OR payload ? 'body')", space));
     }
 
     [Fact]
@@ -86,12 +86,12 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
         finally { await f.Fault(space, false); }
         Assert.False(await Dispatcher.DispatchOnceAsync(conversationId: space)); await b.Subscribe(space); Assert.Empty(b.Events);
         await f.Send(space, f.D.Inner.Actor, Guid.NewGuid(), "lease-recovery");
-        await f.D.Sql("UPDATE integration.outbox_events SET lease_token=gen_random_uuid(),lease_expires_at=clock_timestamp()+interval '1 minute' WHERE space_id=@id", space);
+        await f.D.Sql("UPDATE messaging.outbox_events SET lease_token=gen_random_uuid(),lease_expires_at=clock_timestamp()+interval '1 minute' WHERE space_id=@id", space);
         Assert.False(await Dispatcher.DispatchOnceAsync(conversationId: space));
-        await f.D.Sql("UPDATE integration.outbox_events SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE space_id=@id", space);
+        await f.D.Sql("UPDATE messaging.outbox_events SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE space_id=@id", space);
         Assert.True(await Dispatcher.DispatchOnceAsync(conversationId: space)); await b.Message();
         Assert.Equal("1:1:1:1", await f.Counts(space));
-        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM integration.outbox_events WHERE space_id=@id AND (published_at IS NULL OR lease_token IS NOT NULL)", space));
+        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM messaging.outbox_events WHERE space_id=@id AND (published_at IS NULL OR lease_token IS NOT NULL)", space));
     }
 
     [Fact]
@@ -102,24 +102,24 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
         var trigger = f.D.Inner.Prefix + "publish_fault";
         await using var db = await f.D.Connect();
         await using (var install = new Npgsql.NpgsqlCommand($"""
-            CREATE FUNCTION integration.{trigger}() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE FUNCTION messaging.{trigger}() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.space_id='{space}' AND NEW.published_at IS NOT NULL THEN
              RAISE EXCEPTION USING ERRCODE='58000',MESSAGE='Owned publish marker fault'; END IF; RETURN NEW; END $$;
-            CREATE TRIGGER {trigger} BEFORE UPDATE ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{trigger}();
+            CREATE TRIGGER {trigger} BEFORE UPDATE ON messaging.outbox_events FOR EACH ROW EXECUTE FUNCTION messaging.{trigger}();
             """, db)) await install.ExecuteNonQueryAsync();
         try
         {
             Assert.True(await Dispatcher.DispatchOnceAsync(conversationId: space)); var first = await b.Message();
-            Assert.Equal("1", await f.Scalar("SELECT count(*)::text FROM integration.outbox_events WHERE space_id=@id AND published_at IS NULL AND lease_token IS NULL AND last_error='DISPATCH_UNAVAILABLE' AND available_at>occurred_at AND attempt_count=1", space));
+            Assert.Equal("1", await f.Scalar("SELECT count(*)::text FROM messaging.outbox_events WHERE space_id=@id AND published_at IS NULL AND lease_token IS NULL AND last_error='DISPATCH_UNAVAILABLE' AND available_at>occurred_at AND attempt_count=1", space));
             Assert.False(await Dispatcher.DispatchOnceAsync(conversationId: space));
-            await using (var remove = new Npgsql.NpgsqlCommand($"DROP TRIGGER {trigger} ON integration.outbox_events; DROP FUNCTION integration.{trigger}();", db)) await remove.ExecuteNonQueryAsync();
-            await f.D.Sql("UPDATE integration.outbox_events SET available_at=clock_timestamp() WHERE space_id=@id", space);
+            await using (var remove = new Npgsql.NpgsqlCommand($"DROP TRIGGER {trigger} ON messaging.outbox_events; DROP FUNCTION messaging.{trigger}();", db)) await remove.ExecuteNonQueryAsync();
+            await f.D.Sql("UPDATE messaging.outbox_events SET available_at=clock_timestamp() WHERE space_id=@id", space);
             Assert.True(await Dispatcher.DispatchOnceAsync(conversationId: space)); var second = await b.Message();
             Assert.Equal(first.GetProperty("eventId").GetGuid(), second.GetProperty("eventId").GetGuid()); Assert.Equal("1:1:1:1", await f.Counts(space));
         }
         finally
         {
-            await using var remove = new Npgsql.NpgsqlCommand($"DROP TRIGGER IF EXISTS {trigger} ON integration.outbox_events; DROP FUNCTION IF EXISTS integration.{trigger}();", db);
+            await using var remove = new Npgsql.NpgsqlCommand($"DROP TRIGGER IF EXISTS {trigger} ON messaging.outbox_events; DROP FUNCTION IF EXISTS messaging.{trigger}();", db);
             await remove.ExecuteNonQueryAsync();
         }
     }

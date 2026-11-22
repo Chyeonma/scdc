@@ -17,6 +17,9 @@ services:
     image: docker.io/library/postgres:18-alpine
     environment:
       POSTGRES_DB: scdc_dm_acceptance_test
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      COMMUNITY_DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      MESSAGING_DB_PASSWORD: ${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       POSTGRES_USER: scdc_dm_test
       POSTGRES_PASSWORD: ${DM_POSTGRES_PASSWORD:?Run dm-acceptance.ps1 -Action Init first}
     ports:
@@ -29,6 +32,8 @@ services:
     volumes:
       - dm-postgres-data:/var/lib/postgresql
       - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro
+      - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro
 
   chat-service:
     build:
@@ -36,7 +41,9 @@ services:
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
+      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Authentication__Jwt__PublicKeyDirectory: /app/auth-public
       Modules__Identity__ExposeDevelopmentTokens: "true"
@@ -81,7 +88,10 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     working_dir: /workspace
     environment:
-      ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
+      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev};Pooling=false
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev};Maximum Pool Size=50
+      ConnectionStrings__TestDatabase: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=${DM_POSTGRES_PASSWORD}
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Identity__UserSearch__CursorKeyRingPath: /artifacts/user-search-keys
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.dm-integration-tests

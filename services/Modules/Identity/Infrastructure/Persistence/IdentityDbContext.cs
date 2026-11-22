@@ -249,7 +249,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     private static void ConfigureSecurityEvent(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<SecurityEvent>();
-        entity.ToTable("security_events", "audit");
+        entity.ToTable("security_events", "identity");
         entity.HasKey(item => item.Id);
         entity.Property(item => item.Id).HasColumnName("id").HasDefaultValueSql("uuidv7()");
         entity.Property(item => item.UserId).HasColumnName("user_id");
@@ -263,7 +263,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     private static void ConfigureOutbox(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<OutboxEvent>();
-        entity.ToTable("outbox_events", "integration");
+        entity.ToTable("outbox_events", "identity");
         entity.HasKey(item => item.Id);
         entity.Property(item => item.Id).HasColumnName("id").HasDefaultValueSql("uuidv7()");
         entity.Property(item => item.EventType).HasColumnName("event_type").HasMaxLength(100);

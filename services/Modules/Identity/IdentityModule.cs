@@ -26,10 +26,10 @@ public static class IdentityModule
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Database");
+        var connectionString = configuration.GetConnectionString("Identity");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("ConnectionStrings:Database must be configured.");
+            throw new InvalidOperationException("ConnectionStrings:Identity must be configured.");
         }
 
         var identitySection = configuration.GetSection(ModuleIdentityOptions.SectionName);
@@ -52,7 +52,7 @@ public static class IdentityModule
             .ValidateOnStart();
 
         services.AddDbContext<IdentityDbContext>((provider, options) =>
-            options.UseNpgsql(provider.GetRequiredService<ISharedDatabaseSession>().Connection));
+            options.UseNpgsql(provider.GetRequiredKeyedService<ISharedDatabaseSession>("Identity").Connection));
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddSingleton<ITokenService, TokenService>();
         services.AddScoped<IRegistrationService, RegistrationService>();

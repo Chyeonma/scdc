@@ -20,7 +20,7 @@ public sealed class AccountAccessGuardTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _client = _factory.CreateClient();
-        _connectionString = _factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        _connectionString = _factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_connectionString).Database);
         _source = NpgsqlDataSource.Create(_connectionString);
         var name = $"guard_{Guid.NewGuid():N}"[..25];
@@ -110,11 +110,11 @@ public sealed class AccountAccessGuardTests : IAsyncLifetime
         var id = Guid.CreateVersion7();
         await using (var scope = await new RelationalWorkScopeFactory(_source).OpenAsync(default))
         {
-            await using var command = scope.CreateCommand("INSERT INTO integration.outbox_events (id,event_type,aggregate_type,aggregate_id,payload) VALUES (@id,'Test.Rollback','test',@id,'{}')");
+            await using var command = scope.CreateCommand("INSERT INTO community.outbox_events (id,event_type,aggregate_type,aggregate_id,payload) VALUES (@id,'Test.Rollback','test',@id,'{}')");
             command.Parameters.AddWithValue("id", id);
             await command.ExecuteNonQueryAsync();
         }
-        await using var read = _source.CreateCommand("SELECT count(*) FROM integration.outbox_events WHERE id = @id");
+        await using var read = _source.CreateCommand("SELECT count(*) FROM community.outbox_events WHERE id = @id");
         read.Parameters.AddWithValue("id", id);
         Assert.Equal(0L, await read.ExecuteScalarAsync());
     }

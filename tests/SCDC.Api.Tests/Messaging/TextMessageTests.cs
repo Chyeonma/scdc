@@ -63,7 +63,7 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
         Assert.Equal("OPERATION_CONFLICT", conflict.GetProperty("errorCode").GetString());
         await f.Send(space, f.D.Inner.Actor, Guid.NewGuid(), "  a\nb  ");
         Assert.Equal("2:2:2:2", await f.Counts(space));
-        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM integration.outbox_events WHERE space_id=@id AND (payload ? 'content' OR payload ? 'body')", space));
+        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM messaging.outbox_events WHERE space_id=@id AND (payload ? 'content' OR payload ? 'body')", space));
         Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM messaging.message_edits e JOIN messaging.messages m ON m.id=e.message_id WHERE m.space_id=@id", space));
     }
 
@@ -201,10 +201,10 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
     {
         var space = await f.Open("search10");
         var original = f.D.Inner.Factory.Services.GetService(typeof(IConfiguration)) as IConfiguration;
-        var unreachable = new NpgsqlConnectionStringBuilder(original!.GetConnectionString("Database")!)
+        var unreachable = new NpgsqlConnectionStringBuilder(original!.GetConnectionString("TestDatabase")!)
             { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
         using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-            config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = unreachable.ConnectionString })));
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Identity"] = unreachable.ConnectionString })));
         using var client = host.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
             { Content = JsonContent.Create(new { clientMessageId = Guid.NewGuid(), content = "must not write" }) };
@@ -273,17 +273,17 @@ public sealed class TextMessageFixture : IAsyncLifetime
     public Task<string> Counts(Guid space) => Scalar("""
         SELECT concat((SELECT count(*) FROM messaging.messages WHERE space_id=@id),':',
         (SELECT count(*) FROM messaging.send_operations WHERE space_id=@id),':',
-        (SELECT count(*) FROM integration.outbox_events WHERE space_id=@id),':',last_message_sequence)
+        (SELECT count(*) FROM messaging.outbox_events WHERE space_id=@id),':',last_message_sequence)
         FROM messaging.spaces WHERE id=@id
         """, space);
     public async Task Fault(Guid space, bool enabled, string action = "RAISE EXCEPTION USING ERRCODE='58000', MESSAGE='Scoped acceptance outbox fault';")
     {
         await using var c = await D.Connect();
-        var query = $"DROP TRIGGER IF EXISTS {Trigger} ON integration.outbox_events; DROP FUNCTION IF EXISTS integration.{Trigger}();";
+        var query = $"DROP TRIGGER IF EXISTS {Trigger} ON messaging.outbox_events; DROP FUNCTION IF EXISTS messaging.{Trigger}();";
         if (enabled) query += $"""
-            CREATE FUNCTION integration.{Trigger}() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE FUNCTION messaging.{Trigger}() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.space_id='{space}' THEN {action} END IF; RETURN NEW; END $$;
-            CREATE TRIGGER {Trigger} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{Trigger}();
+            CREATE TRIGGER {Trigger} BEFORE INSERT ON messaging.outbox_events FOR EACH ROW EXECUTE FUNCTION messaging.{Trigger}();
             """;
         await using var sql = new NpgsqlCommand(query, c); await sql.ExecuteNonQueryAsync();
     }
@@ -311,7 +311,7 @@ public sealed class TextMessageFixture : IAsyncLifetime
         await using (var c = await D.Connect())
         {
             await using var sql = new NpgsqlCommand("""
-                DELETE FROM integration.outbox_events WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id=ANY(@ids));
+                DELETE FROM messaging.outbox_events WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id=ANY(@ids));
                 DELETE FROM messaging.send_operations WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id=ANY(@ids));
                 DELETE FROM messaging.messages WHERE space_id IN (SELECT id FROM messaging.spaces WHERE created_by_user_id=ANY(@ids));
                 """, c);

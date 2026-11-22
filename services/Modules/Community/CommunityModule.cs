@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using SCDC.BuildingBlocks.Application;
+using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.BuildingBlocks.Infrastructure.Outbox;
 using SCDC.Modules.Community.Features.Servers.Application;
@@ -36,10 +37,10 @@ public static class CommunityModule
         services.AddDataProtection().SetApplicationName($"SCDC.Community.{environmentName}");
         services.AddOptions<KeyManagementOptions>().Configure<IOptions<CommunityOptions>, ILoggerFactory>((keys, settings, logging) =>
             keys.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(settings.Value.KeyRingPath), logging));
-        services.AddSingleton(provider => NpgsqlDataSource.Create(provider.GetRequiredService<IConfiguration>().GetConnectionString("Database")
-            ?? throw new InvalidOperationException("ConnectionStrings:Database must be configured.")));
+        services.AddSingleton(provider => NpgsqlDataSource.Create(
+            ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(),"Community")));
         services.AddSingleton<RelationalWorkScopeFactory>();
-        services.AddSingleton<TransactionalOutbox>();
+        services.AddSingleton(new TransactionalOutbox("community"));
         services.AddSingleton<ServerReader>();
         services.AddSingleton<ServerCursorCodec>();
         services.AddSingleton<SearchCursorCodec>();

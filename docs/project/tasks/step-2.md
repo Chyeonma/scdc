@@ -6,7 +6,7 @@ Trạng thái: nháp
 
 Chưa đồng bộ lên Trello. Rà lại ở buổi S1-09, cập nhật theo kết quả S1-01 (giao thức giữa service) và S1-06 (thư viện JWT), rồi xóa dòng "Trạng thái: nháp" để đưa thẻ lên. Chưa ước lượng: ước lượng dựa trên thời gian thực tế của STEP-1.
 
-S2-01 hoàn tất theo [xác nhận tiến độ ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); [bảng xử lý từng phụ thuộc](../../system/database.md#s2-01-boundaries) đã được đối chiếu schema ngày 2026-11-15. Các thẻ triển khai dưới đây vẫn là nháp, đã bổ sung phạm vi outbox và audit theo khảo sát thực tế.
+S2-01 hoàn tất theo [xác nhận tiến độ ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 hoàn tất thiết kế, S2-03 hoàn tất triển khai và kiểm thử local ngày 2026-11-20. Các thẻ vẫn ở trạng thái nháp để đồng bộ Trello; trạng thái công việc ghi tại từng thẻ. Bảng hiện trạng dưới đây giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -49,6 +49,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Bổ sung S2-02: tạo bảng `access_fences` và `fence_receipts` trong từng schema owner, dùng khóa scope chuẩn hóa và epoch không lùi.
 - Xong khi: ứng dụng và test chạy với ba user; đối chiếu đủ event ID, trạng thái công việc và audit trước/sau; Compose và [hướng dẫn phát triển](../../guides/development.md) đã cập nhật.
 - Phụ thuộc: S2-01, S2-02.
+- Kết quả: **Hoàn tất triển khai — 2026-11-20; chờ Thái review.** Ba user/connection string, migration bảo toàn dữ liệu, quyền tạm, fence/receipt, Compose, CI và hướng dẫn đã cập nhật. [Hồ sơ S2-03](../../records/verification/architecture/s2-03-2026-11-20.md) ghi kiểm thử backend, migration và smoke Compose. Volume dev hiện có chưa được nâng cấp.
 
 ## S2-04 · Bỏ khóa ngoại khác schema của Community
 - Nhãn: refactor

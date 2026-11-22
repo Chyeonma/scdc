@@ -22,6 +22,9 @@ services:
     image: docker.io/library/postgres:18-alpine
     environment:
       POSTGRES_DB: scdc_gateway_test
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      COMMUNITY_DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      MESSAGING_DB_PASSWORD: ${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       POSTGRES_USER: scdc_gateway_test
       POSTGRES_PASSWORD: gateway-test-only
     healthcheck:
@@ -32,6 +35,8 @@ services:
     volumes:
       - gateway-postgres-data:/var/lib/postgresql
       - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+      - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
+      - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
 
   chat-service:
     build:
@@ -40,7 +45,9 @@ services:
     environment:
       <<: *jwt-trust
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_gateway_test;Password=gateway-test-only
+      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Modules__Identity__ExposeDevelopmentTokens: "true"
       Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest

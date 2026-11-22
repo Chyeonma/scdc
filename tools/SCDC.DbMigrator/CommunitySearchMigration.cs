@@ -15,18 +15,19 @@ public static class CommunitySearchMigration
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
-        await using (var setup = new NpgsqlCommand("""
+        var ledger = await MigrationLedger.CommunityAsync(connection, transaction, ct);
+        await using (var setup = new NpgsqlCommand($"""
             SELECT pg_advisory_xact_lock(1935893324, 1);
-            CREATE TABLE IF NOT EXISTS common.schema_migrations (
+            CREATE TABLE IF NOT EXISTS {ledger} (
                 module varchar(50) NOT NULL, version integer NOT NULL, checksum char(64) NOT NULL,
                 applied_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(module,version));
             """, connection, transaction))
             await setup.ExecuteNonQueryAsync(ct);
-        await using (var baseline = new NpgsqlCommand("SELECT checksum FROM common.schema_migrations WHERE module='community' AND version=1", connection, transaction))
+        await using (var baseline = new NpgsqlCommand($"SELECT checksum FROM {ledger} WHERE module='community' AND version=1", connection, transaction))
             if (await baseline.ExecuteScalarAsync(ct) as string != BaselineChecksum)
                 throw new MigrationPreflightException("Apply the supported Community migration 001 before migration 002.");
         var checksum = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(sql)));
-        await using (var lookup = new NpgsqlCommand("SELECT checksum FROM common.schema_migrations WHERE module='community' AND version=2", connection, transaction))
+        await using (var lookup = new NpgsqlCommand($"SELECT checksum FROM {ledger} WHERE module='community' AND version=2", connection, transaction))
         {
             var existing = await lookup.ExecuteScalarAsync(ct) as string;
             if (existing is not null)
@@ -74,7 +75,7 @@ public static class CommunitySearchMigration
         }
         await using (var migration = new NpgsqlCommand(sql, connection, transaction) { CommandTimeout = 30 })
             await migration.ExecuteNonQueryAsync(ct);
-        await using (var record = new NpgsqlCommand("INSERT INTO common.schema_migrations(module,version,checksum) VALUES('community',2,@checksum)", connection, transaction))
+        await using (var record = new NpgsqlCommand($"INSERT INTO {ledger}(module,version,checksum) VALUES('community',2,@checksum)", connection, transaction))
         {
             record.Parameters.AddWithValue("checksum", checksum);
             await record.ExecuteNonQueryAsync(ct);

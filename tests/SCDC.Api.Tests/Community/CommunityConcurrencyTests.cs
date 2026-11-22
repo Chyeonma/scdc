@@ -15,7 +15,7 @@ public sealed partial class CommunityApiTests
         public async ValueTask DisposeAsync()
         {
             await transaction.DisposeAsync();
-            await using var cleanup = new NpgsqlCommand($"DROP TRIGGER IF EXISTS {trigger} ON {(trigger.StartsWith("test_op") ? "community.operations" : "integration.outbox_events")}; DROP FUNCTION IF EXISTS integration.{function}()", connection);
+            await using var cleanup = new NpgsqlCommand($"DROP TRIGGER IF EXISTS {trigger} ON {(trigger.StartsWith("test_op") ? "community.operations" : "community.outbox_events")}; DROP FUNCTION IF EXISTS community.{function}()", connection);
             await cleanup.ExecuteNonQueryAsync();
             await connection.DisposeAsync();
         }
@@ -28,10 +28,10 @@ public sealed partial class CommunityApiTests
         var key = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, int.MaxValue);
         var condition = outbox ? $"NEW.payload->>'ownerUserId'='{_owner.UserId}'" : $"NEW.client_operation_id='{operation}'";
         await SqlAsync($"""
-            CREATE FUNCTION integration.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF {condition} THEN PERFORM pg_advisory_xact_lock({key}::bigint); END IF; RETURN NEW; END $$;
-            CREATE TRIGGER {trigger} BEFORE INSERT ON {(outbox ? "integration.outbox_events" : "community.operations")}
-            FOR EACH ROW EXECUTE FUNCTION integration.{function}();
+            CREATE TRIGGER {trigger} BEFORE INSERT ON {(outbox ? "community.outbox_events" : "community.operations")}
+            FOR EACH ROW EXECUTE FUNCTION community.{function}();
             """);
         var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
@@ -71,7 +71,7 @@ public sealed partial class CommunityApiTests
         Assert.Equal(firstId, secondId);
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.servers WHERE owner_user_id=@actor", ("actor", _owner.UserId)));
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.server_members WHERE user_id=@actor", ("actor", _owner.UserId)));
-        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id", ("id", firstId)));
+        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id", ("id", firstId)));
     }
     [Fact]
     public async Task Failure_after_entity_inserts_rolls_back_server_member_role_operation_and_event()
@@ -81,9 +81,9 @@ public sealed partial class CommunityApiTests
         var function = "test_fail_" + suffix;
         var operation = Guid.NewGuid();
         await SqlAsync($"""
-            CREATE FUNCTION integration.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.payload->>'ownerUserId'='{_owner.UserId}' THEN RAISE EXCEPTION 'Injected outbox fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$;
-            CREATE TRIGGER {trigger} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{function}();
+            CREATE TRIGGER {trigger} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{function}();
             """);
         try
         {
@@ -93,9 +93,9 @@ public sealed partial class CommunityApiTests
             Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.servers WHERE owner_user_id=@actor", ("actor", _owner.UserId)));
             Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.server_members WHERE user_id=@actor", ("actor", _owner.UserId)));
             Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.operations WHERE actor_user_id=@actor", ("actor", _owner.UserId)));
-            Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE payload->>'ownerUserId'=@actor", ("actor", _owner.UserId.ToString())));
+            Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE payload->>'ownerUserId'=@actor", ("actor", _owner.UserId.ToString())));
         }
-        finally { await SqlAsync($"DROP TRIGGER {trigger} ON integration.outbox_events; DROP FUNCTION integration.{function}()"); }
+        finally { await SqlAsync($"DROP TRIGGER {trigger} ON community.outbox_events; DROP FUNCTION community.{function}()"); }
         Assert.Equal(HttpStatusCode.Created, (await CreateAsync(operation)).StatusCode);
     }
     [Theory]
@@ -148,7 +148,7 @@ public sealed partial class CommunityApiTests
         await AssertErrorAsync(await creating, HttpStatusCode.Unauthorized, "SESSION_INVALID");
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.servers WHERE owner_user_id=@actor", ("actor", _owner.UserId)));
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.operations WHERE actor_user_id=@actor", ("actor", _owner.UserId)));
-        Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE payload->>'ownerUserId'=@actor", ("actor", _owner.UserId.ToString())));
+        Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE payload->>'ownerUserId'=@actor", ("actor", _owner.UserId.ToString())));
     }
     [Fact]
     public async Task Lock_timeout_returns_temporary_failure_without_replaying_the_mutation()

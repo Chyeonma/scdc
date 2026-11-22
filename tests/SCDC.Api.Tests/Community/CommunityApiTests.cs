@@ -24,7 +24,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _client = _factory.CreateClient();
-        _connectionString = _factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        _connectionString = _factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_connectionString).Database);
         _owner = await RegisterAsync();
         _other = await RegisterAsync();
@@ -114,7 +114,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         Assert.Equal($"/api/v1/servers/{id}", first.Headers.Location?.ToString());
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.roles WHERE server_id=@id AND name='@everyone' AND is_default AND is_system", ("id", id)));
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.member_roles WHERE server_id=@id", ("id", id)));
-        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id AND event_type='Community.ServerCreated.v1' AND published_at IS NULL", ("id", id)));
+        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id AND event_type='Community.ServerCreated.v1' AND published_at IS NULL", ("id", id)));
         await SqlAsync("UPDATE community.servers SET name='Updated title',search_name='updated title' WHERE id=@id", ("id", id));
         var replay = await CreateAsync(operation, "Nhóm Việt 👩‍💻", "Hai chủ đề\nMột cộng đồng", "public");
         Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
@@ -248,7 +248,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
             ids.Add((await JsonAsync(response)).GetProperty("id").GetGuid());
         Assert.Single(ids.Distinct());
         Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.servers WHERE owner_user_id=@actor", ("actor", _owner.UserId)));
-        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id", ("id", ids[0])));
+        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id", ("id", ids[0])));
         Assert.Equal(HttpStatusCode.Created, (await CreateAsync(operation, actor: _other)).StatusCode);
     }
     [Fact]
@@ -277,7 +277,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, (await CreateAsync(client: rotatedClient)).StatusCode);
         rotated.Operations.Keys.Remove("test");
         await AssertErrorAsync(await CreateAsync(operation, client: rotatedClient), HttpStatusCode.ServiceUnavailable, "FINGERPRINT_KEY_UNAVAILABLE");
-        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id", ("id", id)));
+        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id", ("id", id)));
     }
     [Theory]
     [InlineData("unverified", HttpStatusCode.Forbidden)]
@@ -312,7 +312,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
             COMMIT;
             """, ("id", id), ("nextOwner", _other.UserId), ("actor", _owner.UserId));
         await AssertErrorAsync(await CreateAsync(operation, visibility: visibility), status, error);
-        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id", ("id", id)));
+        Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id", ("id", id)));
     }
     [Fact]
     public async Task Missing_operation_resource_is_an_internal_consistency_error()

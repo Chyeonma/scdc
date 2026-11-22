@@ -25,7 +25,7 @@ public sealed partial class CommunityMigrationTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await using var factory = new SCDCWebApplicationFactory();
-        _admin = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        _admin = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_admin).Database);
         await using var connection = new NpgsqlConnection(_admin);
         await connection.OpenAsync();

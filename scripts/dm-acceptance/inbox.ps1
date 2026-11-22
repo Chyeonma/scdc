@@ -21,7 +21,7 @@ function Wait-Api {
 function Set-AuthorityFault {
  Assert-DmApiTarget
  # Override this acceptance API only. No credentials or production config in the override.
- $yaml="services:`n  chat-service:`n    environment:`n      ConnectionStrings__Database: Host=127.0.0.1;Port=1;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=unused;Timeout=1`n"
+ $yaml="services:`n  chat-service:`n    environment:`n      ConnectionStrings__Identity: Host=127.0.0.1;Port=1;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=unused;Timeout=1`n"
  [IO.File]::WriteAllText($faultFile,$yaml,[Text.UTF8Encoding]::new($false))
  & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') -f $faultFile up -d --no-deps --force-recreate chat-service
  if ($LASTEXITCODE -ne 0) { throw 'Fault API recreation failed. Run FaultOff.' }

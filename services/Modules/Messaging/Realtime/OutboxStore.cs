@@ -12,13 +12,13 @@ internal sealed class OutboxStore(ISharedDatabaseSession session)
         var lease = Guid.NewGuid();
         await using var command = new NpgsqlCommand("""
             WITH candidate AS (
-             SELECT id FROM integration.outbox_events
+             SELECT id FROM messaging.outbox_events
              WHERE event_type='Messaging.MessageChanged' AND aggregate_type='Message' AND space_id IS NOT NULL
               AND published_at IS NULL AND available_at<=clock_timestamp()
               AND (lease_expires_at IS NULL OR lease_expires_at<=clock_timestamp())
               AND (@space IS NULL OR space_id=@space)
              ORDER BY occurred_at,id FOR UPDATE SKIP LOCKED LIMIT 1
-            ) UPDATE integration.outbox_events o
+            ) UPDATE messaging.outbox_events o
             SET lease_token=@lease,lease_expires_at=clock_timestamp()+make_interval(secs=>@seconds),
                 attempt_count=attempt_count+1,last_error=NULL
             FROM candidate c WHERE o.id=c.id
@@ -36,7 +36,7 @@ internal sealed class OutboxStore(ISharedDatabaseSession session)
     {
         await using var owner = await session.BeginAsync(token);
         await using var command = new NpgsqlCommand("""
-            UPDATE integration.outbox_events SET
+            UPDATE messaging.outbox_events SET
              published_at=CASE WHEN @success THEN clock_timestamp() ELSE published_at END,
              available_at=CASE WHEN @success THEN available_at ELSE clock_timestamp()+make_interval(secs=>@backoff) END,
              last_error=@error,lease_token=NULL,lease_expires_at=NULL

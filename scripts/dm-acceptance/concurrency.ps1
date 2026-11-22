@@ -145,7 +145,7 @@ if($Action -in @('Hold','Inspect','Release')){
   # Terminate only this exact advisory-lock owner in the acceptance DB, then remove its random trigger.
   $trigger=[string]$gateState.trigger; $ownerPid=[int]$gateState.gatePid; $gateKey=[long]$gateState.gate
   if($trigger -notmatch '^dm_p3_gate_[a-f0-9]{32}$' -or $gateKey -lt 1000000000 -or $gateKey -ge 2000000000){throw 'Unsafe orphan cleanup metadata'}
-  $null=Sql "SELECT pg_terminate_backend(a.pid) FROM pg_stat_activity a WHERE a.pid=$ownerPid AND a.datname='scdc_dm_acceptance_test' AND a.application_name='psql' AND EXISTS(SELECT 1 FROM pg_locks l WHERE l.pid=a.pid AND l.locktype='advisory' AND l.granted AND l.classid=0 AND l.objid=$gateKey AND l.objsubid=1); SET lock_timeout='10s'; DROP TRIGGER IF EXISTS $trigger ON integration.outbox_events; DROP FUNCTION IF EXISTS integration.$trigger();"
+  $null=Sql "SELECT pg_terminate_backend(a.pid) FROM pg_stat_activity a WHERE a.pid=$ownerPid AND a.datname='scdc_dm_acceptance_test' AND a.application_name='psql' AND EXISTS(SELECT 1 FROM pg_locks l WHERE l.pid=a.pid AND l.locktype='advisory' AND l.granted AND l.classid=0 AND l.objid=$gateKey AND l.objsubid=1); SET lock_timeout='10s'; DROP TRIGGER IF EXISTS $trigger ON messaging.outbox_events; DROP FUNCTION IF EXISTS messaging.$trigger();"
   $gateState | Add-Member -NotePropertyName held -NotePropertyValue $false -Force
   $gateState | Add-Member -NotePropertyName cleaned -NotePropertyValue $true -Force
   $gateState | Add-Member -NotePropertyName reason -NotePropertyValue 'orphan-cleanup' -Force

@@ -21,9 +21,16 @@ builder.AddScdcTelemetry("scdc-monolith");
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddScoped<ISharedDatabaseSession>(provider => new SharedDatabaseSession(
-    provider.GetRequiredService<IConfiguration>().GetConnectionString("Database")
-        ?? throw new InvalidOperationException("ConnectionStrings:Database must be configured.")));
+foreach (var module in new[] { "Identity", "Community", "Messaging" })
+{
+    var connection = builder.Configuration.GetConnectionString(module);
+    if (string.IsNullOrWhiteSpace(connection))
+        throw new InvalidOperationException($"ConnectionStrings:{module} must be configured.");
+    builder.Services.AddKeyedScoped<ISharedDatabaseSession>(module, (provider, _) => new SharedDatabaseSession(
+        ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(),module)));
+}
+// Compatibility for Messaging's transaction contracts until S2-08.
+builder.Services.AddScoped(provider => provider.GetRequiredKeyedService<ISharedDatabaseSession>("Messaging"));
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.AddMessagingModule(builder.Configuration);

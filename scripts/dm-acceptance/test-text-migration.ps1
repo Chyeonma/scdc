@@ -55,7 +55,9 @@ SELECT json_build_object('legacyMessages',(SELECT count(*) FROM messaging.messag
  $proof=$upgradeProof | ConvertFrom-Json
  if ($proof.legacyMessages -ne 2 -or ($proof.sequences -join ',') -ne '1,2' -or $proof.retainedCounter -ne '42' -or $proof.unverifiableOperations -ne 2 -or $proof.oldBodyCopies -ne 0 -or $proof.outboxRows -ne 0) { throw 'Legacy migration invariant failed.' }
  $null=Invoke-ProofSql $upgrade "UPDATE messaging.messages SET content=NULL,deleted_at=created_at WHERE client_message_id='00000001-0000-4000-8000-000000000031';"
- $null=Invoke-ProofSql $fresh (Get-Content (Join-Path $paths.Repo 'database/postgres/schema.sql') -Raw -Encoding UTF8)
+ # Legacy migration proof; current topology is covered by ModuleDatabaseMigrationTests.
+ $legacyBootstrap=((Get-Content (Join-Path $paths.Repo 'database/postgres/schema.sql') -Raw -Encoding UTF8) -split '-- S2-03 bootstrap snapshot;',2)[0]+'COMMIT;'
+ $null=Invoke-ProofSql $fresh $legacyBootstrap
  $null=Invoke-ProofSql $fresh $migration
  $freshProof=Invoke-ProofSql $fresh "SELECT json_build_object('conversationSequencePresent',EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='messaging' AND table_name='messages' AND column_name='conversation_sequence' AND is_nullable='NO'),'sendOperationsPresent',to_regclass('messaging.send_operations') IS NOT NULL,'messageCount',(SELECT count(*) FROM messaging.messages))::text;"
  $current=$freshProof | ConvertFrom-Json

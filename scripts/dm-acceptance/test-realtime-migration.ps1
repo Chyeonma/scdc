@@ -32,7 +32,9 @@ INSERT INTO integration.outbox_events(id,event_type,aggregate_type,aggregate_id,
  $null=Sql $upgrade $migration; $null=Sql $upgrade $migration; $after=Sql $upgrade $observe
  if($before -ne $after){throw 'Pending event metadata changed during replay'}
  $upgradeCheck=(Sql $upgrade $check)|ConvertFrom-Json
- $null=Sql $fresh (Get-Content (Join-Path $paths.Repo 'database/postgres/schema.sql') -Raw -Encoding UTF8)
+ # Legacy migration proof; current topology is covered by ModuleDatabaseMigrationTests.
+ $legacyBootstrap=((Get-Content (Join-Path $paths.Repo 'database/postgres/schema.sql') -Raw -Encoding UTF8) -split '-- S2-03 bootstrap snapshot;',2)[0]+'COMMIT;'
+ $null=Sql $fresh $legacyBootstrap
  $null=Sql $fresh $migration; $null=Sql $fresh $migration; $freshCheck=(Sql $fresh $check)|ConvertFrom-Json
  foreach($result in @($upgradeCheck,$freshCheck)){if($result.leaseColumns -ne 2 -or !$result.dispatchIndex -or !$result.leaseConstraint -or $result.leased -ne 0){throw 'Lease schema invariant failed'}}
  $proof=@{acceptedBaseline='9de920abda42fa26b15303a8705e61f612c4ff52';pendingBefore=($before|ConvertFrom-Json);pendingAfter=($after|ConvertFrom-Json);upgrade=$upgradeCheck;fresh=$freshCheck;replaysPerDatabase=2;result='PASS'}

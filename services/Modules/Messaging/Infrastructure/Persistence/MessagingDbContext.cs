@@ -78,7 +78,7 @@ internal sealed class MessagingDbContext(DbContextOptions<MessagingDbContext> op
         operation.Property(o => o.CreatedAt).HasColumnName("created_at");
 
         var outbox = builder.Entity<MessageOutbox>();
-        outbox.ToTable("outbox_events", "integration"); outbox.HasKey(o => o.Id);
+        outbox.ToTable("outbox_events", "messaging"); outbox.HasKey(o => o.Id);
         outbox.Property(o => o.Id).HasColumnName("id").ValueGeneratedNever();
         outbox.Property(o => o.EventType).HasColumnName("event_type");
         outbox.Property(o => o.AggregateType).HasColumnName("aggregate_type");

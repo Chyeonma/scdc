@@ -16,7 +16,7 @@ function Invoke-TextSql([string]$Sql) {
  if ($LASTEXITCODE -ne 0) { throw 'Scoped acceptance SQL failed.' }
 }
 if ($Action -eq 'FaultOff') {
- Invoke-TextSql 'DROP TRIGGER IF EXISTS dm_acceptance_text_fault ON integration.outbox_events; DROP FUNCTION IF EXISTS integration.dm_acceptance_text_fault();'
+ Invoke-TextSql 'DROP TRIGGER IF EXISTS dm_acceptance_text_fault ON messaging.outbox_events; DROP FUNCTION IF EXISTS messaging.dm_acceptance_text_fault();'
  Write-Host 'Outbox insertion fault removed.'
  exit
 }
@@ -60,11 +60,11 @@ function Get-TextSnapshot {
  $query=@"
 SELECT json_build_object('conversationId',s.id,'messageCount',(SELECT count(*) FROM messaging.messages WHERE space_id=s.id),
  'operationCount',(SELECT count(*) FROM messaging.send_operations WHERE space_id=s.id),
- 'outboxCount',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id),
+ 'outboxCount',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id),
  'lastSequence',s.last_message_sequence::text,'lastMessageId',s.last_message_id,'lastActivityAt',s.last_activity_at,
  'messages',(SELECT coalesce(json_agg(json_build_object('id',m.id,'clientMessageId',m.client_message_id,'authorId',m.author_user_id,'sequence',m.conversation_sequence::text,'version',m.version::text,'utf8Bytes',octet_length(m.content)) ORDER BY m.conversation_sequence),'[]') FROM messaging.messages m WHERE m.space_id=s.id),
- 'outboxContainsBody',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id AND (payload ? 'content' OR payload ? 'body')),
- 'outboxPayloads',(SELECT coalesce(json_agg(payload),'[]') FROM integration.outbox_events WHERE space_id=s.id))::text
+ 'outboxContainsBody',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id AND (payload ? 'content' OR payload ? 'body')),
+ 'outboxPayloads',(SELECT coalesce(json_agg(payload),'[]') FROM messaging.outbox_events WHERE space_id=s.id))::text
 FROM messaging.spaces s WHERE s.id='$space';
 "@
  return (Invoke-DmReadSql $query | ConvertFrom-Json)
@@ -73,14 +73,14 @@ switch ($Action) {
  Snapshot { Get-TextSnapshot | ConvertTo-Json -Depth 10 }
  FaultOn {
   Invoke-TextSql @"
-CREATE OR REPLACE FUNCTION integration.dm_acceptance_text_fault() RETURNS trigger LANGUAGE plpgsql AS `$`$
+CREATE OR REPLACE FUNCTION messaging.dm_acceptance_text_fault() RETURNS trigger LANGUAGE plpgsql AS `$`$
 BEGIN
  IF current_database()<>'scdc_dm_acceptance_test' THEN RAISE EXCEPTION 'Test database required'; END IF;
  IF NEW.space_id='$space' THEN RAISE EXCEPTION USING ERRCODE='58000', MESSAGE='Scoped acceptance outbox insertion fault'; END IF;
  RETURN NEW;
 END; `$`$;
-DROP TRIGGER IF EXISTS dm_acceptance_text_fault ON integration.outbox_events;
-CREATE TRIGGER dm_acceptance_text_fault BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.dm_acceptance_text_fault();
+DROP TRIGGER IF EXISTS dm_acceptance_text_fault ON messaging.outbox_events;
+CREATE TRIGGER dm_acceptance_text_fault BEFORE INSERT ON messaging.outbox_events FOR EACH ROW EXECUTE FUNCTION messaging.dm_acceptance_text_fault();
 "@
   Write-Host "Fault enabled before commit for run $Run pair $ActorAlias/$PeerAlias only. Always run FaultOff."
  }

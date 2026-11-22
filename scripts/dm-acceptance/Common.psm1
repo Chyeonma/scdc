@@ -114,8 +114,14 @@ function Assert-DmApiTarget {
     $envJson=& docker inspect --format '{{json .Config.Env}}' $id
     if ($LASTEXITCODE -ne 0) { throw 'Cannot verify acceptance API target.' }
     $entries=$envJson | ConvertFrom-Json
-    $expected="ConnectionStrings__Database=Host=postgres;Port=5432;Database=$script:Database;Username=scdc_dm_test;Password=$($config.DM_POSTGRES_PASSWORD)"
-    if ($entries -cnotcontains $expected -or $entries -cnotcontains 'ASPNETCORE_ENVIRONMENT=Development') { throw 'API is not the isolated Development acceptance database.' }
+    foreach ($module in @('Identity','Community','Messaging')) {
+        $role='scdc_'+$module.ToLowerInvariant()
+        $passwordKey=$module.ToUpperInvariant()+'_DB_PASSWORD'
+        $password=if ($config.Contains($passwordKey)) { $config[$passwordKey] } else { $role+'_dev' }
+        $expected="ConnectionStrings__$module=Host=postgres;Port=5432;Database=$script:Database;Username=$role;Password=$password"
+        if ($entries -cnotcontains $expected) { throw 'API module does not target the isolated acceptance database.' }
+    }
+    if ($entries -cnotcontains 'ASPNETCORE_ENVIRONMENT=Development') { throw 'API is not Development.' }
     $portJson=& docker inspect --format '{{json .NetworkSettings.Ports}}' $id
     if ($LASTEXITCODE -ne 0) { throw 'Cannot verify acceptance API port.' }
     $ports=$portJson | ConvertFrom-Json

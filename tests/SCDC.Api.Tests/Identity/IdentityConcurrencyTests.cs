@@ -36,14 +36,14 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
             // for requests to reach PostgreSQL without relying on timing guesses.
             builder.ConfigureAppConfiguration((_, configuration) =>
             {
-                var connection = new NpgsqlConnectionStringBuilder(configuration.Build().GetConnectionString("Database"))
+                var connection = new NpgsqlConnectionStringBuilder(configuration.Build().GetConnectionString("TestDatabase"))
                 {
                     ApplicationName = _applicationName
                 };
                 _connectionString = connection.ConnectionString;
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:Database"] = _connectionString
+                    ["ConnectionStrings:Identity"] = new NpgsqlConnectionStringBuilder(configuration.Build().GetConnectionString("Identity")) { ApplicationName = _applicationName }.ConnectionString
                 });
             });
             builder.ConfigureServices(services =>
@@ -53,7 +53,7 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
                 var optionsType = typeof(DbContextOptions<>).MakeGenericType(contextType);
                 var optionsBuilder = (DbContextOptionsBuilder)Activator.CreateInstance(
                     typeof(DbContextOptionsBuilder<>).MakeGenericType(contextType))!;
-                optionsBuilder.UseNpgsql(_connectionString);
+                optionsBuilder.UseNpgsql(new NpgsqlConnectionStringBuilder(_baseFactory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Identity")) { ApplicationName = _applicationName }.ConnectionString);
                 services.Replace(ServiceDescriptor.Singleton(optionsType, optionsBuilder.Options));
                 services.AddSingleton(_gate);
                 var hasher = services.Single(item => item.ServiceType.IsGenericType
@@ -277,8 +277,8 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
         await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
         await using var cleanup = new NpgsqlCommand("""
-            DELETE FROM integration.outbox_events WHERE aggregate_id = @user_id;
-            DELETE FROM audit.security_events WHERE user_id = @user_id;
+            DELETE FROM identity.outbox_events WHERE aggregate_id = @user_id;
+            DELETE FROM identity.security_events WHERE user_id = @user_id;
             DELETE FROM identity.users WHERE id = @user_id;
             """, connection, transaction);
         cleanup.Parameters.AddWithValue("user_id", _userId.Value);

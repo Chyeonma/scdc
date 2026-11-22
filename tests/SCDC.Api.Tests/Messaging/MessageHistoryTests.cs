@@ -130,8 +130,8 @@ public sealed class MessageHistoryTests(TextMessageFixture f) : IClassFixture<Te
     {
         var space = await f.Open("search07");
         var original = f.D.Inner.Factory.Services.GetService(typeof(IConfiguration)) as IConfiguration;
-        var unreachable = new NpgsqlConnectionStringBuilder(original!.GetConnectionString("Database")!) { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
-        using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = unreachable.ConnectionString })));
+        var unreachable = new NpgsqlConnectionStringBuilder(original!.GetConnectionString("TestDatabase")!) { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
+        using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Identity"] = unreachable.ConnectionString })));
         for (var i = 0; i < 2; i++) await f.Send(space, f.D.Inner.Actor, Guid.NewGuid(), "authority outage fixture");
         var cursor = Cursor(await Page(space, "?limit=1"))!;
         using var client = host.CreateClient(); using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/direct-conversations/{space}/messages" + Before(cursor, 1));

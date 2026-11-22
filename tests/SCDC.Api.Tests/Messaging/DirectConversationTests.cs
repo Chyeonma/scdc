@@ -154,10 +154,10 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
     public async Task Database_connection_failure_in_authentication_returns_503_without_any_write()
     {
         var before = await f.OwnedSpaces();
-        var original = f.Inner.Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        var original = f.Inner.Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         var unreachable = new NpgsqlConnectionStringBuilder(original) { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
         using var isolated = f.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-            config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = unreachable.ConnectionString })));
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Identity"] = unreachable.ConnectionString })));
         using var client = isolated.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/direct-conversations");
         request.Headers.Authorization = new("Bearer", f.Inner.Actor.AccessToken);
@@ -197,6 +197,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
             await owner.CommitAsync(default);
         }
         finally { await messaging.Database.UseTransactionAsync(null); await guard.DetachAsync(default); }
+        Assert.Same(services.GetRequiredKeyedService<ISharedDatabaseSession>("Identity").Connection, identity.Database.GetDbConnection());
     }
 
     [Fact]
@@ -261,7 +262,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
 public sealed class DirectFixture : IAsyncLifetime
 {
     public UserSearchFixture Inner { get; } = new();
-    private string Connection => Inner.Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+    private string Connection => Inner.Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
     private string Name => Inner.Prefix + "pair_probe";
     private const long GateKey = 812347901;
     public Task InitializeAsync() => Inner.InitializeAsync();

@@ -18,9 +18,10 @@ public static class MessagingModule
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        _ = configuration;
+        if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Messaging")))
+            throw new InvalidOperationException("ConnectionStrings:Messaging must be configured.");
         services.AddDbContext<MessagingDbContext>((provider, options) =>
-            options.UseNpgsql(provider.GetRequiredService<ISharedDatabaseSession>().Connection));
+            options.UseNpgsql(provider.GetRequiredKeyedService<ISharedDatabaseSession>("Messaging").Connection));
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddScoped<IConversationInbox, ConversationInbox>();
         services.AddScoped<ITextMessageSender, TextMessageSender>();

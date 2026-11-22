@@ -250,7 +250,7 @@ public sealed class IdentityV1FlowTests(SCDCWebApplicationFactory factory)
     private async Task CleanupAsync(Guid? userId, string username)
     {
         var configuration = factory.Services.GetRequiredService<IConfiguration>();
-        var connectionString = configuration.GetConnectionString("Database")
+        var connectionString = configuration.GetConnectionString("TestDatabase")
             ?? throw new InvalidOperationException("Test database connection is missing.");
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -274,12 +274,12 @@ public sealed class IdentityV1FlowTests(SCDCWebApplicationFactory factory)
         await ExecuteDeleteAsync(
             connection,
             transaction,
-            "DELETE FROM integration.outbox_events WHERE aggregate_id = @user_id",
+            "DELETE FROM identity.outbox_events WHERE aggregate_id = @user_id",
             resolvedUserId.Value);
         await ExecuteDeleteAsync(
             connection,
             transaction,
-            "DELETE FROM audit.security_events WHERE user_id = @user_id",
+            "DELETE FROM identity.security_events WHERE user_id = @user_id",
             resolvedUserId.Value);
         await ExecuteDeleteAsync(
             connection,

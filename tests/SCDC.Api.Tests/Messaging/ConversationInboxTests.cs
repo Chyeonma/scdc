@@ -130,7 +130,7 @@ public sealed class ConversationInboxTests(InboxFixture f) : IClassFixture<Inbox
     {
         using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?> {
-                ["ConnectionStrings:Database"] = "Host=127.0.0.1;Port=1;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=unused;Timeout=1" })));
+                ["ConnectionStrings:Identity"] = "Host=127.0.0.1;Port=1;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=unused;Timeout=1" })));
         using var client = host.CreateClient(); using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/direct-conversations");
         request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
         using var response = await client.SendAsync(request); Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);

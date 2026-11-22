@@ -34,7 +34,7 @@ public sealed class MessageMutationTests(TextMessageFixture f) : IClassFixture<T
         var replay = await f.Send(space, f.D.Inner.Actor, operation, "original-private"); Assert.Equal(deleted.GetRawText(), replay.GetRawText());
         Assert.Equal("1:1:4:1", await f.Counts(space));
         Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM messaging.message_edits e JOIN messaging.messages m ON m.id=e.message_id WHERE m.space_id=@id", space));
-        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM integration.outbox_events WHERE space_id=@id AND (payload ? 'content' OR payload ? 'body' OR payload::text LIKE '%original-private%' OR payload::text LIKE '%edited%' OR payload::text LIKE '%last-current%')", space));
+        Assert.Equal("0", await f.Scalar("SELECT count(*)::text FROM messaging.outbox_events WHERE space_id=@id AND (payload ? 'content' OR payload ? 'body' OR payload::text LIKE '%original-private%' OR payload::text LIKE '%edited%' OR payload::text LIKE '%last-current%')", space));
     }
     [Fact]
     public async Task Author_guard_cross_space_outsider_and_disabled_peer_do_not_change_access_purpose()

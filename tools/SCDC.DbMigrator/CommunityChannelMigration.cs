@@ -17,22 +17,23 @@ public static class CommunityChannelMigration
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
+        var ledger = await MigrationLedger.CommunityAsync(connection, transaction, ct);
         async Task<object?> Scalar(string query)
         {
             await using var command = new NpgsqlCommand(query, connection, transaction);
             return await command.ExecuteScalarAsync(ct);
         }
         await Scalar("SELECT pg_advisory_xact_lock(1935893324,1)");
-        if (await Scalar("SELECT to_regclass('common.schema_migrations') IS NOT NULL") is not true)
+        if (await Scalar($"SELECT to_regclass('{ledger}') IS NOT NULL") is not true)
             throw new MigrationPreflightException("Apply Community migrations 001–003 before 004.");
         var checksums = new[] { "b434be5e002497ef204a39c38d7cb4d0783f869804824e130779e74d8f8adab4",
             "fe07dcc516bfce7eedf257c8fb42d7baa615c716aba9034de9f4e9cebe40ccff",
             "9c109521897297c26a2f1b920194b8ef725b2828be98d1ffb3134f8896e1069d" };
         for (var index = 0; index < checksums.Length; index++)
-            if (await Scalar($"SELECT checksum FROM common.schema_migrations WHERE module='community' AND version={index + 1}") as string != checksums[index])
+            if (await Scalar($"SELECT checksum FROM {ledger} WHERE module='community' AND version={index + 1}") as string != checksums[index])
                 throw new MigrationPreflightException("Apply supported Community migrations 001–003 before 004.");
         var checksum = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(sql)));
-        if (await Scalar("SELECT checksum FROM common.schema_migrations WHERE module='community' AND version=4") is string existing)
+        if (await Scalar($"SELECT checksum FROM {ledger} WHERE module='community' AND version=4") is string existing)
         {
             if (existing != checksum) throw new MigrationPreflightException("Migration 004 checksum differs from the applied version.");
             await transaction.CommitAsync(ct); return false;
@@ -86,7 +87,7 @@ public static class CommunityChannelMigration
         if (await Scalar("SELECT server_id FROM community_channel_migration_map WHERE active GROUP BY server_id,name_key HAVING count(*)>1 LIMIT 1") is Guid conflict)
             throw new MigrationPreflightException($"Server {conflict}: channel name keys collide; no names changed.");
         await using (var migration = new NpgsqlCommand(sql, connection, transaction) { CommandTimeout = 30 }) await migration.ExecuteNonQueryAsync(ct);
-        await using (var record = new NpgsqlCommand("INSERT INTO common.schema_migrations(module,version,checksum) VALUES('community',4,@checksum)", connection, transaction))
+        await using (var record = new NpgsqlCommand($"INSERT INTO {ledger}(module,version,checksum) VALUES('community',4,@checksum)", connection, transaction))
         { record.Parameters.AddWithValue("checksum", checksum); await record.ExecuteNonQueryAsync(ct); }
         await transaction.CommitAsync(ct); return true;
     }

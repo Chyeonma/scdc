@@ -223,7 +223,7 @@ public sealed class UserSearchFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Factory = MakeFactory(); Client = Factory.CreateClient();
-        _connection = Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        _connection = Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_connection).Database);
         await Register("owner", "Owner " + Prefix);
         await Register("bao", "Bảo " + Prefix);
@@ -301,8 +301,8 @@ public sealed class UserSearchFixture : IAsyncLifetime
         {
             await using var c = new NpgsqlConnection(_connection); await c.OpenAsync();
             await using var command = new NpgsqlCommand("""
-                DELETE FROM integration.outbox_events WHERE aggregate_id=ANY(@ids);
-                DELETE FROM audit.security_events WHERE user_id=ANY(@ids);
+                DELETE FROM identity.outbox_events WHERE aggregate_id=ANY(@ids);
+                DELETE FROM identity.security_events WHERE user_id=ANY(@ids);
                 DELETE FROM identity.users WHERE id=ANY(@ids);
                 """, c);
             command.Parameters.AddWithValue("ids", Users.Values.Select(x => x.Id).ToArray());

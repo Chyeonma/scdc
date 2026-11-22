@@ -44,7 +44,9 @@ services:
       Telemetry__Enabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_METRIC_EXPORT_INTERVAL: "5000"
-      ConnectionStrings__Database: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev
+      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Modules__Identity__SigningKeyId: identity-local-v1
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
@@ -135,6 +137,9 @@ services:
     image: docker.io/library/postgres:18-alpine
     environment:
       POSTGRES_DB: scdc_chat
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      COMMUNITY_DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      MESSAGING_DB_PASSWORD: ${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       POSTGRES_USER: scdc
       POSTGRES_PASSWORD: scdc_dev
     ports:
@@ -147,6 +152,8 @@ services:
     volumes:
       - scdc-postgres-data:/var/lib/postgresql
       - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+      - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
+      - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
       - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro,z
 
 volumes:

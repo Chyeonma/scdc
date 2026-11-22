@@ -2,7 +2,7 @@
 
 Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước chung, cách chạy migration, và các quyết định cho v1 (tách database theo service, công cụ migration, chuyển dữ liệu từ MVP).
 
-**Trạng thái:** MVP dùng PostgreSQL 18, một database, chia schema theo module. Các quyết định v1 (D02, D48 đến D52) đã chốt nhưng chưa có code.
+**Trạng thái:** sau S2-03, monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; quyền chéo tạm được liệt kê ở [triển khai S2-03](#s2-03-implementation). Tách database vật lý thuộc STEP-3.
 
 ## MVP hiện tại
 
@@ -12,13 +12,10 @@ Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước c
 
 | Schema | Thuộc về |
 |---|---|
-| `identity` | Identity: người dùng, hồ sơ, mật khẩu, phiên, token |
-| `community` | Community: server, thành viên, phòng, vai trò, ACL, lời mời |
-| `messaging` | Messaging: không gian chat, người tham gia, tin, thao tác |
-| `integration` | Outbox và inbox của module phát sinh sự kiện |
-| `audit` | Sự kiện bảo mật và quản lý |
+| `identity` | Identity: người dùng, hồ sơ, mật khẩu, phiên, token, security audit, outbox/inbox và ledger |
+| `community` | Community: server, thành viên, phòng, vai trò, ACL, lời mời, outbox/inbox, ledger và fence |
+| `messaging` | Messaging: không gian chat, người tham gia, tin, thao tác, outbox/inbox, ledger và fence |
 | `moderation` | Bảng nền; nghiệp vụ chưa thuộc v1 |
-| `common` | Hàm và trigger dùng chung |
 
 ```mermaid
 erDiagram
@@ -30,7 +27,7 @@ erDiagram
     USER ||--o{ MESSAGE : authors
 ```
 
-Sơ đồ chỉ thể hiện quan hệ nghiệp vụ, không thay cho khóa ngoại trong SQL. DM có bảng người tham gia riêng. Module chỉ đọc dữ liệu của mình; xem [ranh giới](architecture.md#boundaries).
+Sơ đồ chỉ thể hiện quan hệ nghiệp vụ, không thay cho khóa ngoại trong SQL. DM có bảng người tham gia riêng. Đích STEP-2 là module chỉ đọc dữ liệu của mình; hiện còn quyền chéo tạm S2-03. Xem [ranh giới](architecture.md#boundaries).
 
 ## Quy ước
 
@@ -73,7 +70,7 @@ Tên trong bảng chỉ mô tả vai trò, chưa phải tên cấu hình.
 
 - Service không đọc hay ghi bảng của service khác.
 - Transaction và guard dùng chung của MVP không dùng được giữa các service.
-- Khóa ngoại giữa Identity, Community, Messaging và quan hệ phòng với không gian chat phải thay bằng hợp đồng nhất quán; chưa chọn cơ chế. Yêu cầu về quyền và thu hồi không được hạ.
+- Khóa ngoại giữa Identity, Community, Messaging và quan hệ phòng với không gian chat phải thay bằng hợp đồng nhất quán theo [S2-02](access-revocation.md#s2-02-protocol). Yêu cầu về quyền và thu hồi không được hạ.
 - **Ngoại lệ:** Identity công bố trạng thái phiên tối thiểu trong Redis; service khác chỉ được đọc ([D30](access-revocation.md#v1-session-validation)). Điều này không cho phép đọc database của service khác.
 
 Bố trí máy chủ: hai instance PostgreSQL ([D03](environments.md#v1-postgres-instances)), chạy trên máy hiện có ([D25](environments.md#v1-postgres-placement)), mỗi instance một container do Compose quản lý ([D26](environments.md#v1-infrastructure-deployment)).
@@ -247,7 +244,7 @@ Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và p
 
 ### Outbox, inbox, audit và hạ tầng chung
 
-`integration.outbox_events` hiện là **một bảng dùng bởi cả Identity, Community và Messaging**. Nguồn xác minh là mapping trong [IdentityDbContext](../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [MessagingDbContext](../../services/Modules/Messaging/Infrastructure/Persistence/MessagingDbContext.cs) và writer [TransactionalOutbox](../../services/SCDC.BuildingBlocks/Infrastructure/Outbox/TransactionalOutbox.cs) của Community. [OutboxStore](../../services/Modules/Messaging/Realtime/OutboxStore.cs) chỉ nhận `Messaging.MessageChanged`; nó không phát sự kiện Identity hoặc Community.
+Tại baseline S2-01, `integration.outbox_events` là **một bảng dùng bởi cả Identity, Community và Messaging**. S2-03 đã đổi các mapping trong [IdentityDbContext](../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [MessagingDbContext](../../services/Modules/Messaging/Infrastructure/Persistence/MessagingDbContext.cs) và writer [TransactionalOutbox](../../services/SCDC.BuildingBlocks/Infrastructure/Outbox/TransactionalOutbox.cs) của Community. [OutboxStore](../../services/Modules/Messaging/Realtime/OutboxStore.cs) chỉ nhận `Messaging.MessageChanged`; nó không phát sự kiện Identity hoặc Community.
 
 | Đối tượng | Owner và cách tách | Thẻ |
 |---|---|---|
@@ -264,6 +261,29 @@ Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và p
 
 Khi lên STEP-3, các bảng owner-local đi cùng database owner; có thể dùng lại tên schema kỹ thuật bên trong từng database riêng. Không có database Integration hay Audit dùng chung. S2-03 phải đối chiếu số dòng và event ID trước/sau, giữ trạng thái công việc; S2-11 xác nhận ba role không đọc được bảng của nhau và các đường cũ vẫn chạy.
 
+<a id="s2-03-implementation"></a>
+
+### S2-03 — Kết nối và dữ liệu theo owner
+
+Ba khóa cấu hình bắt buộc là `ConnectionStrings:Identity`, `ConnectionStrings:Community`, `ConnectionStrings:Messaging`, tương ứng `scdc_identity`, `scdc_community`, `scdc_messaging`. User runtime có DML trong schema mình, không DDL/ledger; audit Identity chỉ đọc/thêm. Community và Messaging có `access_fences` với khóa scope không NULL và epoch dương không lùi, cùng `fence_receipts` chỉ đọc/thêm. Identity là authority, các bảng tiến trình của Identity làm ở S2-06.
+
+[Migration S2-03](../../database/postgres/migrations/20261120_s2-03_module_databases.sql) chuyển dữ liệu theo bảng xử lý trên, kiểm tra đầy đủ outbox/inbox, chuyển nguyên relation audit/ledger và giữ checksum 001–004. Consumer inbox có dữ liệu phải có map owner đã review. Không dùng `CASCADE` để loại schema cũ; gặp đối tượng chưa xử lý thì rollback. Bootstrap mới bao gồm cùng migration; runner ghi/check checksum trong ledger từng owner, nhận kết nối quản trị `ConnectionStrings:Migration`.
+
+Quyền tạm của [module-roles.sql](../../database/postgres/module-roles.sql), cấp từ 2026-11-20 và gỡ tại S2-11 sau khi S2-07/08/09 thay đường cũ:
+
+| Bên dùng | Đối tượng ngoài schema | Quyền và lý do |
+|---|---|---|
+| Community, Messaging | `identity.users`, `auth_sessions`, `user_emails`, `user_security_states` | SELECT để guard tài khoản/phiên trong transaction cũ |
+| Messaging | `identity.user_profiles` | SELECT để tạo summary lịch sử |
+| Community, Messaging | `identity.users.id` | UPDATE cột ID để được khóa dòng FOR SHARE |
+| Messaging | `identity.auth_sessions.id` | UPDATE cột ID để được khóa phiên FOR SHARE |
+| Community | `messaging.spaces` | INSERT để tạo channel; SELECT hai cột `id`, `space_type` và UPDATE `id` cho khóa của deferred DM trigger |
+| Community | `messaging.assert_direct_conversation_membership(uuid)` | EXECUTE do trigger kiểm tra trước khi commit channel space |
+
+Quyền UPDATE trên cột ID cũng cho phép thay ID; đây là quyền ghi chéo tạm thật và phải gỡ, không mô tả như chỉ đọc. PostgreSQL yêu cầu UPDATE trên ít nhất một cột cho các kiểu khóa dòng này ([tài liệu PostgreSQL 18](https://www.postgresql.org/docs/18/sql-select.html)). Các FK/view và transaction chéo còn tồn tại đến task tương ứng. Bảng fence hiện là hạ tầng SQL, chưa bật permit/fence RPC hoặc Redis.
+
+Cách dựng mới, nâng cấp volume và chạy test: [hướng dẫn phát triển](../guides/development.md#s2-03-upgrade). Bằng chứng: [hồ sơ S2-03](../records/verification/architecture/s2-03-2026-11-20.md).
+
 ### Điều kiện chuyển sang triển khai
 
 1. Dùng danh sách phụ thuộc đã chốt ở S2-01 và trạng thái hiện tại trong [STEP-2](../project/tasks/step-2.md).
@@ -275,7 +295,7 @@ Khi lên STEP-3, các bảng owner-local đi cùng database owner; có thể dù
 
 - Bảng xử lý STEP-2 và hợp đồng S2-02 đã có; DDL, quyền chi tiết và thứ tự migration được triển khai tại S2-03 đến S2-11. Tên database triển khai STEP-3 và cơ chế chuyển dữ liệu cụ thể tiếp tục được thiết kế theo gói (D02).
 - Engine, thư viện, tên và vị trí project, container, CLI, cách đóng gói phần kiểm tra trước, quyền SQL, cơ chế transaction và khóa, CI/CD (D48 đến D50).
-- Cách tiếp nhận lịch sử migration cũ; kế hoạch tách dữ liệu MVP.
+- Tách vật lý lịch sử migration và dữ liệu MVP ở STEP-3; S2-03 đã giữ ledger 001–004 trong Community.
 - Mapping schema và dữ liệu, xử lý khóa và phiên, ledger, công cụ và trình tự chuyển (D51, D52). Thời gian bảo trì cần đo trên dữ liệu đại diện.
 - Công cụ backup và sổ bảo vệ độc lập: sau v1.
 

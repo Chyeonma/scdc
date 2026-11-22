@@ -114,7 +114,7 @@ public sealed class SharedJwtTests(SampleWebApplicationFactory sample) : IClassF
     {
         await using var identity = new SCDCWebApplicationFactory();
         using var client = identity.CreateClient();
-        var connection = identity.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!;
+        var connection = identity.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(connection).Database);
         var name = "jwt_" + Guid.NewGuid().ToString("N")[..16];
         var registered = await client.PostAsJsonAsync("/api/v1/auth/register", new

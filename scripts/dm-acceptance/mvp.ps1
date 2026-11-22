@@ -62,12 +62,12 @@ if($Action -eq 'Snapshot'){
  Invoke-DmReadSql @"
 SELECT json_build_object('conversationId',s.id,'counter',s.last_message_sequence::text,
  'messages',(SELECT count(*) FROM messaging.messages WHERE space_id=s.id),'operations',(SELECT count(*) FROM messaging.send_operations WHERE space_id=s.id),
- 'outbox',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id),'createOutbox',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id AND aggregate_version=1),
- 'pending',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id AND published_at IS NULL),
- 'bodyCopies',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id AND (payload ? 'content' OR payload ? 'body')),
+ 'outbox',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id),'createOutbox',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id AND aggregate_version=1),
+ 'pending',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id AND published_at IS NULL),
+ 'bodyCopies',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id AND (payload ? 'content' OR payload ? 'body')),
  'editHistory',(SELECT count(*) FROM messaging.message_edits e JOIN messaging.messages m ON m.id=e.message_id WHERE m.space_id=s.id),
  'rows',(SELECT coalesce(json_agg(json_build_object('id',m.id,'clientMessageId',m.client_message_id,'sequence',m.conversation_sequence::text,'version',m.version::text,'deleted',m.deleted_at IS NOT NULL) ORDER BY m.conversation_sequence),'[]') FROM messaging.messages m WHERE m.space_id=s.id),
- 'events',(SELECT coalesce(json_agg(json_build_object('id',o.id,'messageId',o.aggregate_id,'version',o.aggregate_version,'published',o.published_at IS NOT NULL,'attempts',o.attempt_count,'leaseToken',o.lease_token,'leaseExpiresAt',o.lease_expires_at,'lastError',o.last_error) ORDER BY o.occurred_at,o.id),'[]') FROM integration.outbox_events o WHERE o.space_id=s.id))::text FROM messaging.spaces s WHERE s.id='$space';
+ 'events',(SELECT coalesce(json_agg(json_build_object('id',o.id,'messageId',o.aggregate_id,'version',o.aggregate_version,'published',o.published_at IS NOT NULL,'attempts',o.attempt_count,'leaseToken',o.lease_token,'leaseExpiresAt',o.lease_expires_at,'lastError',o.last_error) ORDER BY o.occurred_at,o.id),'[]') FROM messaging.outbox_events o WHERE o.space_id=s.id))::text FROM messaging.spaces s WHERE s.id='$space';
 "@;exit
 }
 $auth=Connect-DmActor $Alias $Run ('MVP-'+$Action)

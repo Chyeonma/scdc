@@ -74,11 +74,11 @@ if($Action -eq 'Snapshot'){
 SELECT json_build_object('conversationId',s.id,'counter',s.last_message_sequence::text,
  'messages',(SELECT count(*) FROM messaging.messages WHERE space_id=s.id),
  'operations',(SELECT count(*) FROM messaging.send_operations WHERE space_id=s.id),
- 'outbox',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id),
- 'pending',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id AND published_at IS NULL),
- 'bodyCopies',(SELECT count(*) FROM integration.outbox_events WHERE space_id=s.id AND (payload ? 'content' OR payload ? 'body')),
+ 'outbox',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id),
+ 'pending',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id AND published_at IS NULL),
+ 'bodyCopies',(SELECT count(*) FROM messaging.outbox_events WHERE space_id=s.id AND (payload ? 'content' OR payload ? 'body')),
  'rows',(SELECT coalesce(json_agg(json_build_object('id',m.id,'clientMessageId',m.client_message_id,'sequence',m.conversation_sequence::text,'version',m.version::text,'deleted',m.deleted_at IS NOT NULL) ORDER BY m.conversation_sequence),'[]') FROM messaging.messages m WHERE m.space_id=s.id),
- 'events',(SELECT coalesce(json_agg(json_build_object('id',o.id,'messageId',o.aggregate_id,'published',o.published_at IS NOT NULL,'attempts',o.attempt_count,'leaseToken',o.lease_token,'leaseExpiresAt',o.lease_expires_at,'lastError',o.last_error)),'[]') FROM integration.outbox_events o WHERE o.space_id=s.id))::text FROM messaging.spaces s WHERE s.id='$space';
+ 'events',(SELECT coalesce(json_agg(json_build_object('id',o.id,'messageId',o.aggregate_id,'published',o.published_at IS NOT NULL,'attempts',o.attempt_count,'leaseToken',o.lease_token,'leaseExpiresAt',o.lease_expires_at,'lastError',o.last_error)),'[]') FROM messaging.outbox_events o WHERE o.space_id=s.id))::text FROM messaging.spaces s WHERE s.id='$space';
 "@; exit
 }
 if($Action -eq 'Current'){
@@ -89,7 +89,7 @@ if($Action -eq 'Current'){
  Write-Host 'Owned technical current-state fixture changed. Not an edit/delete production endpoint; operation/outbox body unchanged.'; exit
 }
 if($EventId -eq [guid]::Empty){throw 'Provide actual eventId from Snapshot.'}; $eid=$EventId.ToString()
-$owned=(Invoke-DmReadSql "SELECT count(*) FROM integration.outbox_events o JOIN messaging.messages m ON m.id=o.aggregate_id AND m.space_id=o.space_id JOIN messaging.spaces s ON s.id=o.space_id WHERE o.id='$eid' AND o.space_id='$space' AND m.author_user_id='$actorId' AND s.created_by_user_id='$actorId';").Trim()
+$owned=(Invoke-DmReadSql "SELECT count(*) FROM messaging.outbox_events o JOIN messaging.messages m ON m.id=o.aggregate_id AND m.space_id=o.space_id JOIN messaging.spaces s ON s.id=o.space_id WHERE o.id='$eid' AND o.space_id='$space' AND m.author_user_id='$actorId' AND s.created_by_user_id='$actorId';").Trim()
 if($owned -ne '1'){throw 'Event does not belong to this run/actor/conversation'}
 $null=New-Item -ItemType Directory -Path $control -Force
 $hold=Join-Path $control ('hold-'+$eid); $claimed=Join-Path $control ('claimed-'+$eid+'.json')
@@ -97,5 +97,5 @@ switch($Action){
  HoldClaim {[IO.File]::WriteAllText($hold,'Local owned event barrier',[Text.UTF8Encoding]::new($false)); Write-Host 'Claim barrier armed before publish; Resume dispatcher to reach it.'}
  ClaimStatus {if(!(Test-Path -LiteralPath $claimed)){throw 'Claim marker not ready'}; Get-Content $claimed -Raw -Encoding UTF8}
  ReleaseClaim {if(Test-Path -LiteralPath $hold){Remove-Item -LiteralPath $hold}; Write-Host 'Owned claim barrier released.'}
- Requeue {$null=Sql "UPDATE integration.outbox_events SET published_at=NULL,available_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,last_error=NULL WHERE id='$eid' AND space_id='$space';";Write-Host 'Owned event requeued with same ID. No writer POST/message/operation created.'}
+ Requeue {$null=Sql "UPDATE messaging.outbox_events SET published_at=NULL,available_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,last_error=NULL WHERE id='$eid' AND space_id='$space';";Write-Host 'Owned event requeued with same ID. No writer POST/message/operation created.'}
 }

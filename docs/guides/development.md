@@ -4,7 +4,7 @@
 
 Cách cài đặt, chạy, cấu hình và kiểm thử SCDC trên máy phát triển.
 
-**Cập nhật:** 2026-11-17, hướng dẫn dựng môi trường S1-08 cho gateway, service mẫu, JWT và giám sát. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
+**Cập nhật:** 2026-11-20, bổ sung database user và migration S2-03 cho hướng dẫn dựng môi trường S1-08 cho gateway, service mẫu, JWT và giám sát. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
 
 Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình và dữ liệu mẫu chỉ dùng cho môi trường phát triển.
 
@@ -239,7 +239,9 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 
 | Khóa | Giá trị local / vai trò |
 |---|---|
-| `ConnectionStrings:Database` | `Host=localhost;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev` khi API chạy local; host `postgres` trong Compose |
+| `ConnectionStrings:Identity` | Database `scdc_chat`, user `scdc_identity`, mật khẩu local `scdc_identity_dev` |
+| `ConnectionStrings:Community` | Cùng database, user `scdc_community`, mật khẩu local `scdc_community_dev` |
+| `ConnectionStrings:Messaging` | Cùng database, user `scdc_messaging`, mật khẩu local `scdc_messaging_dev` |
 | `Authentication:Jwt:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient`, dùng chung cho bên cấp và bên xác minh |
 | `Authentication:Jwt:PublicKeyDirectory` / `KeyIds` | Thư mục public key SPKI và danh sách ID tin cậy; file `<kid>.pub.pem`, nạp khi khởi động |
 | `Modules:Identity:PrivateKeyPath` / `SigningKeyId` | File private key PKCS#8 chỉ cấp cho Identity và key ID đang ký. Compose tự khởi tạo trong volume bền qua `identity-keygen` |
@@ -250,7 +252,7 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Compose tự tạo khóa qua job `messaging-keygen`, giữ trong volume `scdc-messaging-keys` |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
-Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Database`.
+Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Identity`. Host là `localhost` khi chạy API trên máy, `postgres` trong Compose. Mỗi pool mặc định tối đa 20 kết nối; có thể đặt `Maximum Pool Size` trong connection string. Ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD` ghi đè mật khẩu local trong Compose; giữ đồng bộ với role đã cấp. Tài khoản `scdc` chỉ dùng quản trị/migration.
 
 Nguồn: [appsettings.json](../../services/SCDC.Api/appsettings.json), [cấu hình Development](../../services/SCDC.Api/appsettings.Development.json), [Vite config](../../clients/WebClient/vite.config.js).
 
@@ -293,11 +295,11 @@ Frontend quản lý phiên trong [api.js](../../clients/WebClient/src/api.js): c
 
 ## 4. Database và dữ liệu mẫu
 
-Database trên máy: `scdc_chat`, user `scdc`, mật khẩu `scdc_dev`, cổng 5432, tắt SSL. Các schema xem [database](../system/database.md).
+Database trên máy: `scdc_chat`, cổng 5432, tắt SSL. API dùng ba user riêng ở [cấu hình](#configuration); tài khoản quản trị local là `scdc` / `scdc_dev`. Các schema xem [database](../system/database.md).
 
 - `schema.sql` tạo schema, ràng buộc, index, trigger, view.
 - `seed.sql` có dữ liệu mẫu; mật khẩu và token trong đó chỉ minh họa, không đăng nhập được. Tạo tài khoản mới qua API.
-- Compose gắn hai file vào `/docker-entrypoint-initdb.d/`; chúng **chỉ chạy khi volume mới**. Sửa SQL không cập nhật volume đã có dữ liệu. Không dùng script này như migration.
+- Compose chạy schema, seed và script cấp quyền [init-module-roles.sh](../../database/postgres/init-module-roles.sh) trong `/docker-entrypoint-initdb.d/`; chúng **chỉ chạy khi volume mới**. Sửa SQL không cập nhật volume đã có dữ liệu. Không dùng script này như migration.
 
 Các view để quan sát: `identity.v_user_accounts`, `identity.v_active_sessions`, `messaging.v_space_overview`, `messaging.v_message_timeline`. Ví dụ:
 
@@ -305,7 +307,9 @@ Các view để quan sát: `identity.v_user_accounts`, `identity.v_active_sessio
 SELECT * FROM identity.v_user_accounts ORDER BY username;
 SELECT * FROM identity.v_active_sessions;
 SELECT * FROM messaging.v_space_overview ORDER BY last_activity_at DESC;
-SELECT * FROM integration.outbox_events ORDER BY occurred_at;
+SELECT * FROM identity.outbox_events ORDER BY occurred_at;
+SELECT * FROM community.outbox_events ORDER BY occurred_at;
+SELECT * FROM messaging.outbox_events ORDER BY occurred_at;
 ```
 
 Schema và seed có cả bảng cho tính năng chưa làm. Dữ liệu thử cho từng tính năng ghi trong trang tính năng; chạy test tích hợp trên database riêng.
@@ -451,7 +455,17 @@ Chờ `pg_isready` báo "accepting connections" (gọi lại nếu chưa sẵn s
   < database/postgres/schema.sql
 ```
 
-Schema đã gồm ledger 001 đến 004. Không cần seed; tài khoản thử tạo qua API.
+Schema đã gồm ledger 001 đến 004 và S2-03. Cấp ba role cho database thử vừa tạo:
+
+```bash
+"$SCDC_CONTAINER_ENGINE" exec -i \
+  -e IDENTITY_DB_PASSWORD=scdc_identity_dev \
+  -e COMMUNITY_DB_PASSWORD=scdc_community_dev \
+  -e MESSAGING_DB_PASSWORD=scdc_messaging_dev scdc-community-docs-db \
+  psql -X -U scdc -d scdc_community_docs_test < database/postgres/module-roles.sql
+```
+
+Không cần seed; tài khoản thử tạo qua API. Role API không được tạo database; fixture dùng tài khoản quản trị riêng.
 
 **Cảnh báo:** `schema.sql` có DROP SCHEMA. Database có dữ liệu cần giữ phải dùng [phần nâng cấp](#migration), không dùng lệnh trên.
 
@@ -464,7 +478,10 @@ Schema đã gồm ledger 001 đến 004. Không cần seed; tài khoản thử t
 Đặt trong terminal dùng để build/test/chạy API:
 
 ```bash
-export ConnectionStrings__Database='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc;Password=scdc_docs_test_only'
+export ConnectionStrings__TestDatabase='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc;Password=scdc_docs_test_only'
+export ConnectionStrings__Identity='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc_identity;Password=scdc_identity_dev;Pooling=false'
+export ConnectionStrings__Community='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc_community;Password=scdc_community_dev'
+export ConnectionStrings__Messaging='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc_messaging;Password=scdc_messaging_dev;Maximum Pool Size=50'
 export SCDC_TEST_JWT_DIR="$(mktemp -d /tmp/scdc-community-jwt.XXXXXX)"
 export Modules__Identity__PrivateKeyPath="$SCDC_TEST_JWT_DIR/private.pem"
 export Authentication__Jwt__PublicKeyDirectory="$SCDC_TEST_JWT_DIR/public"
@@ -501,6 +518,7 @@ dotnet test SCDC.slnx --configuration Release --no-build --no-restore -m:1 \
   --results-directory artifacts/community-local/backend
 ```
 
+- Cấu hình thử ở trên tắt pooling của Identity và dành tối đa 50 kết nối Messaging để chạy ca giữ 40 transaction đồng thời; API local thông thường giữ mặc định 20 mỗi pool.
 - Tên database phải kết thúc bằng `_test`; không trỏ bộ test vào database ứng dụng.
 - Test migration tự tạo và xóa database fixture (có kiểm tra trước, rollback, checksum). Chạy test không nâng cấp database ứng dụng.
 - File TRX là kết quả của lần chạy này, không thay số liệu trong hồ sơ cũ.
@@ -570,11 +588,13 @@ Trước khi chạy migration:
 
 1. Dùng connection string riêng cho database cần nâng cấp.
 2. Chạy kiểm tra trước, dừng các writer cũ, chuẩn bị kế hoạch rollback ứng dụng (về bản còn tương thích schema).
-3. Đọc ledger `common.schema_migrations` và [thiết kế migration](../features/community/mechanics.md#schema-migration). Không sửa SQL hay checksum đã áp.
+3. Đọc ledger `community.schema_migrations` (trước S2-03 là `common.schema_migrations`) và [thiết kế migration](../features/community/mechanics.md#schema-migration). Không sửa SQL hay checksum đã áp.
 
 Ví dụ cho database cũ chưa áp 001 đến 004 (dùng `tools/SCDC.DbMigrator`):
 
 ```bash
+# Tài khoản quản trị của đúng DB cần nâng cấp; không dùng role API.
+export ConnectionStrings__Migration='Host=127.0.0.1;Port=5432;Database=scdc_chat;Username=scdc;Password=scdc_dev'
 dotnet run --project tools/SCDC.DbMigrator -- \
   database/postgres/migrations/001-community-create-view.sql \
   /absolute/path/reviewed-server-map.json
@@ -594,6 +614,34 @@ dotnet run --project tools/SCDC.DbMigrator -- \
 - Bước kiểm tra trước sẽ từ chối nếu mapping thiếu, thừa, trùng hoặc có trạng thái không hỗ trợ. Sửa dữ liệu bằng thay đổi đã review rồi chạy lại; không dùng `schema.sql` để sửa.
 - Chỉ triển khai writer mới khi ledger và migration đã hợp lệ.
 - Đây không phải quy trình phát hành production đã được duyệt.
+
+<a id="s2-03-upgrade"></a>
+
+**Nâng cấp S2-03 sau khi đã áp 001–004:**
+
+1. Dừng API và worker, giữ PostgreSQL chạy; lưu backup bằng `pg_dump` để có đường khôi phục. Không dùng `schema.sql` trên volume này.
+2. Đặt `ConnectionStrings__Migration` bằng tài khoản quản trị của DB cần nâng cấp rồi chạy:
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/20261120_s2-03_module_databases.sql
+```
+
+Migration chuyển outbox theo tiền tố Identity/Community/Messaging, giữ legacy `MessageCreated` tại Messaging, chuyển nguyên bảng audit và ledger, bố trí helper theo owner. Toàn bộ chạy trong một transaction; so sánh đầy đủ các dòng outbox/inbox trước khi bỏ bảng cũ. Event chưa rõ owner sẽ làm rollback. Nếu inbox có dữ liệu, truyền thêm file JSON đã review, ví dụ `{"consumer-name":"messaging"}`; consumer thiếu mapping làm rollback. Chạy lại cùng SQL là no-op; SQL khác checksum bị từ chối.
+
+3. Cấp role và cập nhật cấu hình. Với Compose local, nạp lại cấu hình PostgreSQL rồi chạy script cấp quyền (chỉ chạy sau migration):
+
+```bash
+docker compose up -d postgres
+docker compose exec -T postgres sh /docker-entrypoint-initdb.d/003-module-roles.sh
+make build
+make up
+make check
+```
+
+Dùng `podman compose` và `ENGINE=podman` nếu chọn Podman. Script cấp quyền đọc ba biến mật khẩu từ container, chạy lại được và cũng đặt lại mật khẩu theo các biến đó. Nếu kết nối bằng PostgreSQL ngoài Compose, đặt ba biến mật khẩu rồi chạy `psql -X -f database/postgres/module-roles.sql` bằng tài khoản quản trị. API bắt buộc đủ ba connection string; `ConnectionStrings:Database` không còn được dùng. Test thêm `ConnectionStrings:TestDatabase` cho fixture; CLI chỉ đọc `ConnectionStrings:Migration`.
+
+4. Đối chiếu ledger của cả ba schema, số dòng/event ID/trạng thái lease, audit và chạy API nghiệp vụ. [Hồ sơ S2-03](../records/verification/architecture/s2-03-2026-11-20.md) ghi bằng chứng và quyền chéo tạm. Schema mới không tương thích writer cũ; muốn quay về writer cũ phải dừng writer mới và khôi phục backup đã kiểm tra. Không có down migration tự động.
 
 Ví dụ server map (`reviewed-server-map.json`):
 

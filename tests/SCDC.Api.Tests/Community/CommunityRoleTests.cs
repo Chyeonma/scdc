@@ -17,7 +17,7 @@ public sealed partial class CommunityApiTests
             new{membershipId=membership.GetProperty("membershipId").GetGuid(),expectedVersion=membership.GetProperty("version").GetString(),roleIds=roles},client);
     private Task<HttpResponseMessage> MemberRoleGetAsync(Guid server,Actor? target=null)
         =>SendAsync(HttpMethod.Get,$"/api/v1/servers/{server}/members/{(target??_other).UserId}/roles",_owner);
-    private Task<object?> AccessEventsAsync(Guid server)=>SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id AND event_type='Community.AccessChanged.v1'",("id",server));
+    private Task<object?> AccessEventsAsync(Guid server)=>SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id AND event_type='Community.AccessChanged.v1'",("id",server));
     [Fact]
     public async Task Roles_crud_assignment_union_noops_and_delete_update_current_permissions_atomically()
     {
@@ -50,7 +50,7 @@ public sealed partial class CommunityApiTests
         var final=await JsonAsync(await SendAsync(HttpMethod.Get,$"/api/v1/servers/{server}",_other));
         Assert.Equal(new[]{"manage_channel_access"},final.GetProperty("effectivePermissions").EnumerateArray().Select(p=>p.GetString()));
         Assert.Equal(5L,await AccessEventsAsync(server));
-        Assert.Equal(0L,await SqlAsync("SELECT count(*) FROM integration.outbox_events WHERE aggregate_id=@id AND event_type='Community.AccessChanged.v1' AND published_at IS NOT NULL",("id",server)));
+        Assert.Equal(0L,await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE aggregate_id=@id AND event_type='Community.AccessChanged.v1' AND published_at IS NOT NULL",("id",server)));
     }
     [Fact]
     public async Task Read_catalog_permission_never_grants_role_writer_or_exposes_roster_email()
@@ -167,7 +167,7 @@ public sealed partial class CommunityApiTests
     {
         var suffix=Guid.NewGuid().ToString("N");var trigger="test_access_"+suffix;var function="test_access_gate_"+suffix;
         var key=System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000,int.MaxValue);
-        await SqlAsync($"CREATE FUNCTION integration.{function}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN PERFORM pg_advisory_xact_lock({key}::bigint); END IF; RETURN NEW; END $$; CREATE TRIGGER {trigger} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{function}()");
+        await SqlAsync($"CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN PERFORM pg_advisory_xact_lock({key}::bigint); END IF; RETURN NEW; END $$; CREATE TRIGGER {trigger} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{function}()");
         var connection=new NpgsqlConnection(_connectionString);await connection.OpenAsync();var transaction=await connection.BeginTransactionAsync();
         await using var acquire=new NpgsqlCommand("SELECT pg_advisory_xact_lock(@key::bigint)",connection,transaction);acquire.Parameters.AddWithValue("key",key);await acquire.ExecuteNonQueryAsync();
         return new(connection,transaction,trigger,function,key);
@@ -221,9 +221,9 @@ public sealed partial class CommunityApiTests
     public async Task Outbox_fault_and_expired_lease_roll_back_role_operation_and_versions()
     {
         var server=(await JsonAsync(await CreateAsync())).GetProperty("id").GetGuid();var op=Guid.NewGuid();var name="fail_role_"+Guid.NewGuid().ToString("N");
-        await SqlAsync($"CREATE FUNCTION integration.{name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Injected role fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {name} BEFORE INSERT ON integration.outbox_events FOR EACH ROW EXECUTE FUNCTION integration.{name}()");
+        await SqlAsync($"CREATE FUNCTION community.{name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Injected role fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {name} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{name}()");
         try{Assert.Equal(HttpStatusCode.InternalServerError,(await RoleCreateAsync(server,operation:op)).StatusCode);}
-        finally{await SqlAsync($"DROP TRIGGER {name} ON integration.outbox_events; DROP FUNCTION integration.{name}()");}
+        finally{await SqlAsync($"DROP TRIGGER {name} ON community.outbox_events; DROP FUNCTION community.{name}()");}
         Assert.Equal(0L,await AccessEventsAsync(server));Assert.Equal(1,await SqlAsync("SELECT access_version FROM community.servers WHERE id=@id",("id",server)));
         Assert.Equal(0L,await SqlAsync("SELECT count(*) FROM community.operations WHERE kind='create_role' AND scope_id=@id",("id",server)));
         var clock=new CommunityKeyTests.MutableClock(DateTimeOffset.UtcNow);
