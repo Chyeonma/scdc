@@ -21,7 +21,7 @@ Thông số dưới đây dùng cho stack Compose Development:
 | User API | `scdc_identity`, `scdc_community`, `scdc_messaging` |
 | SSL mode | `disable` |
 
-Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`, `moderation`.
+Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`. S2-05 chỉ loại Moderation khi cả hai bảng rỗng; gặp dữ liệu thì migration dừng và giữ nguyên database.
 
 ## SQL và migration
 
@@ -29,12 +29,13 @@ Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`, `
 - [module-roles.sql](module-roles.sql): cấp ba role runtime và liệt kê quyền tạm; Compose gọi qua [init-module-roles.sh](init-module-roles.sh). Mật khẩu local mặc định là `<tên_role>_dev`; có thể đặt ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD`.
 - [seed.sql](seed.sql): dữ liệu minh họa, password/token không dùng đăng nhập.
 - [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/development.md#migration).
+- Sau S2-03, chạy S2-04 và S2-05 theo [hướng dẫn ranh giới schema](../../docs/guides/development.md#s2-04-s2-05-upgrade). Hai migration độc lập, không sửa dữ liệu nghiệp vụ; bootstrap mới đã gồm cả hai.
 
 Compose chỉ chạy script init khi volume mới được khởi tạo. Sửa SQL không cập nhật volume có sẵn. Dùng [database thử riêng](../../docs/guides/development.md#local-environment) cho suite tích hợp.
 
 ## Truy vấn quan sát
 
-Các view hỗ trợ đọc tài khoản, phiên, space và timeline. Chạy trên DB local hoặc DB thử phù hợp:
+Identity giữ view nội bộ để đọc tài khoản/phiên. Hai view Messaging đọc chéo đã bỏ ở S2-05; quan sát bằng bảng Messaging hoặc API nghiệp vụ:
 
 ```sql
 SELECT * FROM identity.v_user_accounts ORDER BY username;
@@ -50,13 +51,13 @@ SELECT
 FROM identity.refresh_tokens
 ORDER BY session_id, created_at;
 
-SELECT *
-FROM messaging.v_space_overview
+SELECT id, space_type, last_message_sequence, last_activity_at
+FROM messaging.spaces
 ORDER BY last_activity_at DESC;
 
-SELECT *
-FROM messaging.v_message_timeline
-ORDER BY sequence_no;
+SELECT id, space_id, conversation_sequence, version, deleted_at
+FROM messaging.messages
+ORDER BY space_id, conversation_sequence;
 
 SELECT *
 FROM messaging.outbox_events

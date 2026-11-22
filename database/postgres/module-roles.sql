@@ -26,7 +26,13 @@ END $$;
 REVOKE UPDATE,DELETE ON identity.security_events FROM scdc_identity;
 -- These inspection views still read other modules and are removed in S2-05.
 -- Keep them for administrators without granting a view-owner privilege bypass.
-REVOKE ALL ON messaging.v_space_overview,messaging.v_message_timeline FROM scdc_messaging;
+DO $$ DECLARE view_name text; BEGIN
+    FOREACH view_name IN ARRAY ARRAY['v_space_overview','v_message_timeline'] LOOP
+        IF to_regclass('messaging.'||view_name) IS NOT NULL THEN
+            EXECUTE format('REVOKE ALL ON messaging.%I FROM scdc_messaging',view_name);
+        END IF;
+    END LOOP;
+END $$;
 REVOKE DELETE ON community.access_fences FROM scdc_community;
 REVOKE DELETE ON messaging.access_fences FROM scdc_messaging;
 REVOKE UPDATE,DELETE ON community.fence_receipts FROM scdc_community;

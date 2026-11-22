@@ -42,7 +42,8 @@ internal sealed class AccountPairAccessGuard(IdentityDbContext db, ISharedDataba
             && s.User.Emails.Any(e => e.IsPrimary && e.VerifiedAt != null), cancellationToken);
         if (!actorValid) return new(null, null, false, new("Common.Unauthorized"));
         var people = await summaries.ReadAsync(new[] { request.ActorId, request.PeerId }, cancellationToken);
-        if (!people.TryGetValue(request.ActorId, out var actor)) return new(null, null, false, new("Common.Unauthorized"));
+        if (!people.TryGetValue(request.ActorId, out var actor) || actor.Availability is not null)
+            return new(null, null, false, new("Common.Unauthorized"));
         people.TryGetValue(request.PeerId, out var peer);
         return new(actor, peer, peer is not null && peer.Availability is null, null);
     }

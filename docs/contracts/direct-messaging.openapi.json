@@ -898,7 +898,7 @@
               "available",
               "unavailable"
             ],
-            "description": "Optional historical projection; unavailable gives no suspension reason/email. Search only active eligible users. DEC-104."
+            "description": "Optional historical projection; unavailable gives no suspension reason/email. Search only active eligible users. DEC-104. Missing account/profile preserves the ID with username=unavailable, displayName=Người dùng không khả dụng and availability=unavailable; a placeholder never grants write access."
           }
         },
         "required": [

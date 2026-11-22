@@ -11,6 +11,14 @@ try
     // This is an administrator/migrator connection, never a runtime module login.
     var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Migration")
         ?? throw new InvalidOperationException("ConnectionStrings__Migration must be configured.");
+    if (Path.GetFileName(args[0]) is SchemaBoundaryMigration.CommunityFile or SchemaBoundaryMigration.MessagingFile)
+    {
+        if (args.Length != 1)
+            throw new MigrationPreflightException("S2-04/S2-05 do not accept a data map.");
+        var changed = await SchemaBoundaryMigration.ApplyAsync(connection, args[0], await File.ReadAllTextAsync(args[0]));
+        Console.WriteLine(changed ? "Schema-boundary migration applied." : "Schema-boundary migration already applied with matching checksum.");
+        return 0;
+    }
     if (Path.GetFileName(args[0]) == "20261120_s2-03_module_databases.sql")
     {
         var inboxMap = args.Length == 2

@@ -2,7 +2,7 @@
 
 Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước chung, cách chạy migration, và các quyết định cho v1 (tách database theo service, công cụ migration, chuyển dữ liệu từ MVP).
 
-**Trạng thái:** sau S2-03, monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; quyền chéo tạm được liệt kê ở [triển khai S2-03](#s2-03-implementation). Tách database vật lý thuộc STEP-3.
+**Trạng thái:** sau S2-03/04/05, monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; schema đích không còn FK hoặc view đọc chéo. Transaction/quyền chéo tạm vẫn theo [S2-03](#s2-03-implementation). Tách database vật lý thuộc STEP-3.
 
 ## MVP hiện tại
 
@@ -15,7 +15,6 @@ Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước c
 | `identity` | Identity: người dùng, hồ sơ, mật khẩu, phiên, token, security audit, outbox/inbox và ledger |
 | `community` | Community: server, thành viên, phòng, vai trò, ACL, lời mời, outbox/inbox, ledger và fence |
 | `messaging` | Messaging: không gian chat, người tham gia, tin, thao tác, outbox/inbox, ledger và fence |
-| `moderation` | Bảng nền; nghiệp vụ chưa thuộc v1 |
 
 ```mermaid
 erDiagram
@@ -280,9 +279,21 @@ Quyền tạm của [module-roles.sql](../../database/postgres/module-roles.sql)
 | Community | `messaging.spaces` | INSERT để tạo channel; SELECT hai cột `id`, `space_type` và UPDATE `id` cho khóa của deferred DM trigger |
 | Community | `messaging.assert_direct_conversation_membership(uuid)` | EXECUTE do trigger kiểm tra trước khi commit channel space |
 
-Quyền UPDATE trên cột ID cũng cho phép thay ID; đây là quyền ghi chéo tạm thật và phải gỡ, không mô tả như chỉ đọc. PostgreSQL yêu cầu UPDATE trên ít nhất một cột cho các kiểu khóa dòng này ([tài liệu PostgreSQL 18](https://www.postgresql.org/docs/18/sql-select.html)). Các FK/view và transaction chéo còn tồn tại đến task tương ứng. Bảng fence hiện là hạ tầng SQL, chưa bật permit/fence RPC hoặc Redis.
+Quyền UPDATE trên cột ID cũng cho phép thay ID; đây là quyền ghi chéo tạm thật và phải gỡ, không mô tả như chỉ đọc. PostgreSQL yêu cầu UPDATE trên ít nhất một cột cho các kiểu khóa dòng này ([tài liệu PostgreSQL 18](https://www.postgresql.org/docs/18/sql-select.html)). S2-04/S2-05 đã bỏ FK/view chéo; transaction và quyền tạm còn tới task tương ứng. Bảng fence hiện là hạ tầng SQL, chưa bật permit/fence RPC hoặc Redis.
 
 Cách dựng mới, nâng cấp volume và chạy test: [hướng dẫn phát triển](../guides/development.md#s2-03-upgrade). Bằng chứng: [hồ sơ S2-03](../records/verification/architecture/s2-03-2026-11-20.md).
+
+<a id="s2-04-s2-05-implementation"></a>
+
+### S2-04/S2-05 — Bỏ ràng buộc dữ liệu giữa module
+
+[S2-04](../../database/postgres/migrations/20261122_s2-04_drop-community-fk.sql) bỏ đúng 9 FK Community đã liệt kê trong baseline S2-01. [S2-05](../../database/postgres/migrations/20261122_s2-05_drop-messaging-fk-views.sql) bỏ đúng 16 FK Messaging, 7 FK của Moderation, hai view đọc chéo và hai bảng Moderation rỗng. Không thay cột hoặc dữ liệu nghiệp vụ; giữ các FK nội bộ, unique cặp DM, constraint membership/epoch, trigger và lịch sử thao tác.
+
+Hai migration có ledger riêng, chạy được theo cả hai thứ tự sau S2-03; dùng phiên bản `community/2026112204` và `messaging/2026112205`. SQL và kiểm tra rỗng chạy cùng transaction, giữ khóa tới commit. Moderation có dữ liệu, FK khác danh sách, đối tượng lạ hoặc phụ thuộc view chưa xử lý đều làm rollback. Không dùng `CASCADE` để loại đối tượng chưa biết.
+
+Community giữ membership/owner ID khi không còn người dùng và trả `user=null` trong roster theo quyền hiện tại. DM giữ ID, lịch sử, cặp hội thoại và tác giả; account/profile không tìm thấy nhận placeholder `unavailable`. Placeholder không cấp quyền cho actor hoặc tương tác mới với peer. Quyền của người còn hoạt động đối với DM đã có, lịch sử, replay và sửa/xóa tin của mình giữ nguyên.
+
+Bootstrap mới đã gồm hai migration; volume hiện hữu phải dùng [CLI nâng cấp](../guides/development.md#s2-04-s2-05-upgrade). [Hồ sơ S2-04/S2-05](../records/verification/architecture/s2-04-s2-05-2026-11-22.md) ghi dữ liệu đối chiếu và kết quả kiểm thử. Chưa nâng cấp volume dev trong lần triển khai này.
 
 ### Điều kiện chuyển sang triển khai
 

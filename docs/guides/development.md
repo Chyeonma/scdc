@@ -301,12 +301,13 @@ Database trên máy: `scdc_chat`, cổng 5432, tắt SSL. API dùng ba user riê
 - `seed.sql` có dữ liệu mẫu; mật khẩu và token trong đó chỉ minh họa, không đăng nhập được. Tạo tài khoản mới qua API.
 - Compose chạy schema, seed và script cấp quyền [init-module-roles.sh](../../database/postgres/init-module-roles.sh) trong `/docker-entrypoint-initdb.d/`; chúng **chỉ chạy khi volume mới**. Sửa SQL không cập nhật volume đã có dữ liệu. Không dùng script này như migration.
 
-Các view để quan sát: `identity.v_user_accounts`, `identity.v_active_sessions`, `messaging.v_space_overview`, `messaging.v_message_timeline`. Ví dụ:
+Hai view nội bộ Identity vẫn dùng để quan sát. Hai view Messaging đọc chéo đã bỏ ở S2-05; quan sát bằng bảng nội bộ hoặc API nghiệp vụ. Ví dụ:
 
 ```sql
 SELECT * FROM identity.v_user_accounts ORDER BY username;
 SELECT * FROM identity.v_active_sessions;
-SELECT * FROM messaging.v_space_overview ORDER BY last_activity_at DESC;
+SELECT id, space_type, last_message_sequence FROM messaging.spaces;
+SELECT id, space_id, conversation_sequence, version FROM messaging.messages ORDER BY space_id, conversation_sequence;
 SELECT * FROM identity.outbox_events ORDER BY occurred_at;
 SELECT * FROM community.outbox_events ORDER BY occurred_at;
 SELECT * FROM messaging.outbox_events ORDER BY occurred_at;
@@ -642,6 +643,27 @@ make check
 Dùng `podman compose` và `ENGINE=podman` nếu chọn Podman. Script cấp quyền đọc ba biến mật khẩu từ container, chạy lại được và cũng đặt lại mật khẩu theo các biến đó. Nếu kết nối bằng PostgreSQL ngoài Compose, đặt ba biến mật khẩu rồi chạy `psql -X -f database/postgres/module-roles.sql` bằng tài khoản quản trị. API bắt buộc đủ ba connection string; `ConnectionStrings:Database` không còn được dùng. Test thêm `ConnectionStrings:TestDatabase` cho fixture; CLI chỉ đọc `ConnectionStrings:Migration`.
 
 4. Đối chiếu ledger của cả ba schema, số dòng/event ID/trạng thái lease, audit và chạy API nghiệp vụ. [Hồ sơ S2-03](../records/verification/architecture/s2-03-2026-11-20.md) ghi bằng chứng và quyền chéo tạm. Schema mới không tương thích writer cũ; muốn quay về writer cũ phải dừng writer mới và khôi phục backup đã kiểm tra. Không có down migration tự động.
+
+<a id="s2-04-s2-05-upgrade"></a>
+
+**Nâng cấp S2-04 và S2-05:**
+
+Sau S2-03, dừng writer và dùng `ConnectionStrings__Migration` của đúng database cần nâng cấp. Giữ backup đã kiểm tra trước khi đổi schema. Chạy từng migration, không dùng `schema.sql` trên volume có dữ liệu:
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/20261122_s2-04_drop-community-fk.sql
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/20261122_s2-05_drop-messaging-fk-views.sql
+```
+
+S2-04 bỏ 8 FK Community → Identity và 1 FK channel → Messaging space. S2-05 bỏ 16 FK Messaging → Identity, hai view đọc chéo và 7 FK/tables rỗng của Moderation. Hai lệnh chạy độc lập sau S2-03, đổi thứ tự được. Ledger ghi `community/2026112204` và `messaging/2026112205`; chạy lại cùng checksum là no-op.
+
+Nếu `moderation.actions` hoặc `moderation.message_reports` có dữ liệu, S2-05 rollback toàn bộ: giữ bảng, FK, view và ledger để chuẩn bị kế hoạch bảo toàn dữ liệu riêng. Không xóa dữ liệu để ép migration qua. FK khác danh sách đã chốt, đối tượng Moderation lạ hoặc view có phụ thuộc chưa xử lý cũng làm rollback. Các khóa được giữ tới commit để không bỏ sót bản ghi ghi đồng thời.
+
+Schema mới giữ ID, NULL, version, thời điểm, nội dung và trạng thái operation/outbox. Các FK nội bộ, bất biến owner/member và cặp DM vẫn được bảo vệ. Khi Identity không còn account/profile, lịch sử DM dùng placeholder có ID cũ và `availability=unavailable`; actor hoặc peer không được cấp quyền ghi từ placeholder. Community giữ membership/owner ID và trả `user=null` khi không tìm được người dùng.
+
+Sau migration, chạy lại script cấp quyền và API theo bước S2-03. Script cấp quyền tương thích cả trước và sau khi bỏ view. Quyền chéo và transaction cũ còn cần cho S2-06 đến S2-11; không thu hồi sớm. [Hồ sơ S2-04/S2-05](../records/verification/architecture/s2-04-s2-05-2026-11-22.md) ghi kiểm thử dữ liệu và các ca lỗi. Không có down migration tự động.
 
 Ví dụ server map (`reviewed-server-map.json`):
 

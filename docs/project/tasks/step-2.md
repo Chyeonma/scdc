@@ -2,9 +2,9 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-03 hoàn tất; S2-04 đến S2-12 chưa làm. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-05 hoàn tất; S2-06 đến S2-12 chưa làm. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
-S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công còn lại. Bảng dưới giữ snapshot trước triển khai.
+S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Còn khoảng 18,5–31 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -54,16 +54,16 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Người làm: Vg · Review: Sáng
 - Đầu ra: migration SQL (D49) bỏ 8 khóa ngoại sang `identity.users` và khóa ngoại `community.channels` → `messaging.spaces`. Code xử lý được ID người dùng không còn tồn tại (xem [vòng đời dữ liệu](../../system/data-lifecycle.md)).
 - Xong khi: migration chạy được trên database thử có dữ liệu MVP; test Community qua.
-- Phụ thuộc: S2-01.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 1–2 ngày công.
+- Phụ thuộc: S2-01, S2-03 (nền ledger và user riêng).
+- Kết quả: **Hoàn tất triển khai — 2026-11-22**. [Hồ sơ S2-04/S2-05](../../records/verification/architecture/s2-04-s2-05-2026-11-22.md): migration bảo toàn dữ liệu, bootstrap và CLI cập nhật, 317/317 test backend đạt. Volume dev hiện có chưa được nâng cấp.
 
 ## S2-05 · Bỏ khóa ngoại và view khác schema của Messaging
 - Nhãn: refactor
 - Người làm: Sáng · Review: Vg
 - Đầu ra: migration bỏ 16 khóa ngoại sang `identity.users` và hai view đọc chéo; bỏ 7 FK của `moderation`, preflight và loại bảng rỗng theo S2-01. Nếu Moderation có dữ liệu, dừng để duyệt cách bảo toàn trước khi loại bảng.
 - Xong khi: migration chạy được trên dữ liệu MVP; test DM qua.
-- Phụ thuộc: S2-01.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 1–2 ngày công.
+- Phụ thuộc: S2-01, S2-03 (nền ledger và user riêng).
+- Kết quả: **Hoàn tất triển khai — 2026-11-22**. [Hồ sơ S2-04/S2-05](../../records/verification/architecture/s2-04-s2-05-2026-11-22.md): migration bảo toàn dữ liệu, bootstrap và CLI cập nhật, 317/317 test backend đạt. Volume dev hiện có chưa được nâng cấp.
 
 ## S2-06 · Phiên kiểm tra qua Redis
 - Nhãn: tech

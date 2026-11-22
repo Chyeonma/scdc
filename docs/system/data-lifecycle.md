@@ -108,6 +108,7 @@ Thời hạn gắn với **loại dữ liệu** và **sự kiện bắt đầu t
 - Khóa tài khoản: thu hồi mọi phiên và token, tăng stamp, ngắt chat và media trong 5 giây. Hồ sơ, tin và tư cách thành viên không bị xóa.
 - Gửi lại một tin đã commit (đúng khóa và nội dung) chỉ đọc lại kết quả nếu người gửi còn quyền; người kia bị khóa không ảnh hưởng. Khóa mới thì bị chặn như gửi mới.
 - **Hiển thị tác giả trong lịch sử:** `IHistoricalUserSummaryReader` trả ID, username, tên hiển thị và trạng thái `unavailable` cho người đã là tác giả hay người tham gia trong phạm vi được phép xem. (`IUserDirectory` chỉ trả người đang hoạt động nên không đủ.) Không trả lỗi làm mất cả trang tin; không đưa lý do khóa hay email vào. Tìm người và mở DM mới vẫn chỉ dùng người đang hoạt động.
+- Sau S2-04/S2-05, tham chiếu ngoài module không còn FK: nếu account hoặc profile thực sự không tìm thấy, lịch sử DM giữ ID và trả `username=unavailable`, `displayName=Người dùng không khả dụng`, `availability=unavailable`. Đây chỉ là dữ liệu hiển thị, không cấp quyền cho actor/peer. Community giữ nguyên membership và owner ID; danh sách thành viên trả `user=null`, không tự xóa hoặc chuyển chủ.
 - Khóa không tự chuyển chủ server, xóa server, hay thu hồi lời mời; mở khóa không phục hồi quyền. Chủ server bị khóa vẫn là chủ trong DB nhưng không thao tác được. Trường hợp chủ không thể quay lại cần quy trình riêng; người vận hành không được tự chuyển chủ.
 
 <a id="deletion"></a>

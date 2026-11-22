@@ -14,7 +14,12 @@ internal sealed class HistoricalUserSummaryReader(IdentityDbContext db) : IHisto
                 Available = u.Status == UserStatus.Active && u.DeletedAt == null
                     && u.Emails.Any(e => e.IsPrimary && e.VerifiedAt != null) })
             .ToListAsync(cancellationToken);
-        return rows.ToDictionary(u => u.Id,
+        var summaries = rows.ToDictionary(u => u.Id,
             u => new UserSummary(u.Id, u.Username, u.DisplayName, u.Available ? null : "unavailable"));
+        // Only callers that already established membership/history use this reader.
+        // A missing account/profile must not erase history or make a peer eligible.
+        foreach (var id in ids.Distinct())
+            summaries.TryAdd(id, new UserSummary(id, "unavailable", "Người dùng không khả dụng", "unavailable"));
+        return summaries;
     }
 }
