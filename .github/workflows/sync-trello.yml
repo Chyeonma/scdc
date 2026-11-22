@@ -12,6 +12,22 @@ on:
       - 'scripts/sync_trello.py'
       - '.github/workflows/sync-trello.yml'
   workflow_dispatch:
+    inputs:
+      complete:
+        description: 'Mã task đã hoàn tất, cách nhau bằng dấu phẩy; để trống nếu chỉ đồng bộ nội dung'
+        required: false
+        type: string
+        default: ''
+      done_list:
+        description: 'Tên chính xác của cột hoàn tất trên Trello'
+        required: false
+        type: string
+        default: 'Hoàn tất'
+      preview:
+        description: 'Chỉ đọc bảng và xem trước, không ghi Trello'
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: sync-trello
@@ -24,6 +40,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Test sync tool
+        run: python3 -m unittest discover -s scripts/tests -p 'test_sync_trello.py'
+
       - name: Sync cards
         env:
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
@@ -31,4 +50,9 @@ jobs:
           TRELLO_BOARD_ID: ${{ vars.TRELLO_BOARD_ID || secrets.TRELLO_BOARD_ID }}
           TRELLO_LIST_ID: ${{ vars.TRELLO_LIST_ID || secrets.TRELLO_LIST_ID }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          TRELLO_COMPLETE_CODES: ${{ inputs.complete }}
+          TRELLO_DONE_LIST: ${{ inputs.done_list || 'Hoàn tất' }}
+          TRELLO_PREVIEW: ${{ inputs.preview && 'true' || 'false' }}
+          # S1-07 được giữ riêng cho Media theo chỉ đạo ngày 2026-11-22.
+          TRELLO_EXCLUDE_CODES: S1-07
         run: python3 scripts/sync_trello.py

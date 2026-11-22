@@ -225,8 +225,8 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 
 | Bước | Mục tiêu | Phụ trách chính | Xong khi | Kết quả |
 |---|---|---|---|---|
-| [STEP-1](#step-1) | Khung chạy: gateway, Compose, CI, giám sát; thử LiveKit | Cả nhóm; Vg điều phối, Thái thử LiveKit | Ai cũng tự dựng được môi trường; lần theo được request lỗi; một phiên âm thanh thật | S1-01 đến S1-06 và S1-08 hoàn tất theo [xác nhận ngày 2026-11-17](../records/planning/progress-2026-11-17.md). Còn S1-07 (LiveKit) và S1-09 (demo, tổng kết). |
-| [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | S2-01 hoàn tất; S2-02 hoàn tất thiết kế; [S2-03](../records/verification/architecture/s2-03-2026-11-20.md) hoàn tất triển khai và kiểm thử local ngày 2026-11-20, chờ review. Còn quyền, FK/view và transaction chéo theo task tiếp theo. Thẻ Trello vẫn nháp. |
+| [STEP-1](#step-1) | Khung chạy chung: gateway, Compose, CI, giám sát | Cả nhóm; Vg điều phối | Dựng lại môi trường; lần theo request qua trace; CI và demo đạt | **Hoàn tất phạm vi chung — 2026-11-22.** [S1-09](../records/verification/environment/s1-09-2026-11-22.md): demo 14/14, CI 299 backend và 77 frontend đạt. S1-07 giữ riêng cho Media, không chặn bước sau. |
+| [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | S2-01 đến S2-03 hoàn tất, đã vào `main` tại `9d6d375`; bỏ chờ review theo chỉ đạo ngày 2026-11-22. Task đã công bố để đồng bộ Trello. Còn S2-04 đến S2-12, [ước lượng sơ bộ](../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) 20,5–35 ngày công. |
 | [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | — |
 | [STEP-4](#step-4) | Tính năng mới trên kiến trúc mới: tin phòng, phòng thoại, hoàn thiện Community | Theo service | Đạt [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion) | — |
 
@@ -242,9 +242,9 @@ Mục tiêu: hạ tầng chạy được trước khi đụng vào nghiệp vụ
 - Docker Compose dựng toàn bộ bằng một lệnh ([môi trường](../system/environments.md)); CI build và chạy test trên mỗi pull request.
 - OpenTelemetry Collector và OpenObserve ([D33–D35](../system/observability.md)): log và trace của một request đi qua gateway và service.
 - Khung thư viện dùng chung `SCDC.Shared.Core` ([D45](../system/backend.md#v1-code-layout)), bắt đầu bằng phần kiểm tra JWT.
-- Song song: Thái thử LiveKit tự host, một phiên âm thanh thật giữa hai trình duyệt (V1-MEDIA-01).
+- S1-07: Thái thử LiveKit và một phiên âm thanh thật giữa hai trình duyệt (V1-MEDIA-01), giữ riêng trong Media. Theo chỉ đạo ngày 2026-11-22, task này không chặn kết thúc phần nền dùng chung.
 
-**Xong khi:** mỗi người tự dựng lại môi trường từ máy chưa cài gì theo [hướng dẫn phát triển](../guides/development.md); lần theo được một request lỗi qua trace; CI chặn được pull request làm hỏng test; LiveKit chạy được một phiên âm thanh.
+**Xong khi:** dựng lại được stack riêng theo [hướng dẫn phát triển](../guides/development.md); lần theo được request qua trace; build/test CI và demo đạt. Bỏ bước review theo chỉ đạo; nghiệm thu phiên âm thanh thuộc S1-07 riêng của Media. Bằng chứng và thời gian tại [tổng kết S1-09](../records/verification/environment/s1-09-2026-11-22.md).
 
 <a id="step-2"></a>
 

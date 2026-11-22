@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Đồng bộ một chiều thẻ từ docs/project/tasks/*.md lên Trello.
 
-Repo giữ NỘI DUNG thẻ (tiêu đề, mô tả). Trello giữ cột trạng thái, người được
-gán, hạn, bình luận: script không bao giờ đổi các phần đó, không xóa hay lưu
-trữ thẻ.
+Mặc định chỉ đồng bộ NỘI DUNG thẻ. Chỉ --complete mới chuyển các mã được chỉ
+định sang cột hoàn tất; --exclude bỏ qua toàn bộ thẻ. Không đổi người gán,
+hạn, bình luận, không xóa hay lưu trữ thẻ. --preview chỉ đọc Trello.
 
 Định dạng file:
     # STEP-1 — Tên bước          <- mã đầu tiên của H1 thành nhãn (label) Trello
@@ -56,6 +56,7 @@ STEP_HEADING = re.compile(r"^#\s+([A-Z][A-Z0-9]*-[0-9A-Z]+)\b")
 NAME_PREFIX = re.compile(r"^\[([^\]]+)\]")
 DRAFT_LINE = re.compile(r"^\W*Trạng thái\W*:?\W*\s*nháp\b", re.IGNORECASE)
 LABEL_LINE = re.compile(r"^\s*[-*]\s*(?:Nhãn|Labels?)\s*:\s*(.*)$", re.IGNORECASE)
+COMPLETE_LINE = re.compile(r"^- Kết quả:\s+\*\*Hoàn tất\b", re.MULTILINE)
 FOOTER = "\n\n---\n_Nội dung thẻ đồng bộ từ `{path}`; sửa trong repo, sửa ở đây sẽ bị ghi đè. Cột, người gán, hạn và bình luận quản lý trên Trello._"
 
 
@@ -90,7 +91,9 @@ def parse(path: Path, repo_url: str | None) -> list[dict]:
         card["labels"] = list(dict.fromkeys(wanted))
         card["step"] = step
         card["name"] = f"[{card['code']}] {card['title']}"
-        card["desc"] = "\n".join(card.pop("body")).strip() + FOOTER.format(path=source)
+        body = "\n".join(card.pop("body")).strip()
+        card["complete"] = bool(COMPLETE_LINE.search(body))
+        card["desc"] = body + FOOTER.format(path=source)
     codes = [c["code"] for c in cards]
     dup = {c for c in codes if codes.count(c) > 1}
     if dup:
@@ -118,9 +121,47 @@ class Trello:
             fail(f"Trello {method} {path} lỗi {err.code}: {detail}")
 
 
+def parse_codes(value: str) -> set[str]:
+    result = {code.strip() for code in value.split(",") if code.strip()}
+    if any(not re.fullmatch(r"[A-Z][A-Z0-9]*-[A-Z0-9-]+", code) for code in result):
+        fail("Danh sách mã task không hợp lệ; dùng mã cách nhau bằng dấu phẩy.")
+    return result
+
+
+def index_cards(cards: list[dict], required: set[str]) -> dict[str, dict]:
+    indexed = {}
+    for card in cards:
+        if m := NAME_PREFIX.match(card["name"]):
+            code = m.group(1)
+            if code in indexed and code in required:
+                fail(f"Có nhiều thẻ Trello cho {code}; dừng trước khi đổi trạng thái.")
+            indexed.setdefault(code, card)
+    return indexed
+
+
+def done_column(lists: list[dict], name: str) -> dict:
+    matches = [item for item in lists if item["name"].strip().casefold() == name.strip().casefold()]
+    if len(matches) != 1:
+        fail(f"Cần đúng một cột hoàn tất tên '{name}'. Cột đang mở: " + ", ".join(item["name"] for item in lists))
+    return matches[0]
+
+
+def card_state(card: dict) -> tuple:
+    return (card["id"], card["name"], card["desc"], card["idList"], card.get("closed"), tuple(sorted(card["idLabels"])))
+
+
+def states_for(cards: list[dict], code: str) -> list[tuple]:
+    return sorted(card_state(card) for card in cards
+                  if (match := NAME_PREFIX.match(card["name"])) and match.group(1) == code)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dry-run", action="store_true", help="chỉ in thẻ đọc được, không gọi Trello")
+    ap.add_argument("--preview", action="store_true", default=os.environ.get("TRELLO_PREVIEW") == "true", help="đọc Trello và in kế hoạch, không ghi")
+    ap.add_argument("--complete", default=os.environ.get("TRELLO_COMPLETE_CODES", ""), help="các mã đã hoàn tất trong repo, cách nhau bằng dấu phẩy")
+    ap.add_argument("--exclude", default=os.environ.get("TRELLO_EXCLUDE_CODES", ""), help="các mã giữ nguyên trên Trello")
+    ap.add_argument("--done-list", default=os.environ.get("TRELLO_DONE_LIST", "Hoàn tất"), help="tên chính xác của cột hoàn tất")
     ap.add_argument("files", nargs="*", type=Path, help="mặc định: docs/project/tasks/*.md")
     args = ap.parse_args()
 
@@ -137,10 +178,21 @@ def main() -> None:
         print(f"Bỏ qua {f.name}: đang là nháp ({len(parse(f.resolve(), repo_url))} thẻ)")
     files = [f for f in files if f not in drafts]
     cards = [c for f in files for c in parse(f.resolve(), repo_url)]
+    completed, excluded = parse_codes(args.complete), parse_codes(args.exclude)
+    if completed & excluded:
+        fail("Task vừa yêu cầu hoàn tất vừa bị loại trừ: " + ", ".join(sorted(completed & excluded)))
+    cards = [card for card in cards if card["code"] not in excluded]
+    available = {card["code"]: card for card in cards}
+    if invalid := sorted(code for code in completed if code not in available or not available[code]["complete"]):
+        fail("Task chưa có kết quả hoàn tất trong nguồn đang đồng bộ: " + ", ".join(invalid))
+    if excluded:
+        print("Giữ nguyên toàn bộ thẻ: " + ", ".join(sorted(excluded)))
 
     if args.dry_run:
         for c in cards:
             print(f"{c['name']}  [{', '.join(c['labels'])}]")
+        if completed:
+            print(f"Chuyển {len(completed)} task sang '{args.done_list}': " + ", ".join(sorted(completed)))
         print(f"{len(cards)} thẻ từ {len(files)} file")
         return
 
@@ -151,17 +203,30 @@ def main() -> None:
     t = Trello(env["TRELLO_KEY"], env["TRELLO_TOKEN"])
     # TRELLO_BOARD_ID có thể là mã rút gọn trong link (trello.com/b/<mã>); một số
     # API (tạo nhãn) chỉ nhận ID đầy đủ 24 ký tự, nên đổi sang ID đầy đủ trước.
-    info = t.call("GET", f"/boards/{env['TRELLO_BOARD_ID']}", fields="id,name")
+    info = t.call("GET", f"/boards/{env['TRELLO_BOARD_ID']}", fields="id,name,url")
     board = info["id"]
     lst = t.call("GET", f"/lists/{env['TRELLO_LIST_ID']}", fields="idBoard,name")
     if lst["idBoard"] != board:
         fail(f"Cột TRELLO_LIST_ID ({lst['name']}) không thuộc bảng {info['name']}")
     print(f"Bảng: {info['name']} · cột nhận thẻ mới: {lst['name']}")
 
-    existing = {}
-    for card in t.call("GET", f"/boards/{board}/cards/all", fields="name,desc,idLabels,closed"):
-        if m := NAME_PREFIX.match(card["name"]):
-            existing.setdefault(m.group(1), card)
+    fields = "name,desc,idLabels,closed,idList"
+    before = t.call("GET", f"/boards/{board}/cards/all", fields=fields)
+    existing = index_cards(before, completed | excluded)
+    target = None
+    if completed or args.preview:
+        lists = t.call("GET", f"/boards/{board}/lists", filter="open", fields="name")
+        print("Cột đang mở: " + ", ".join(item["name"] for item in lists))
+        if completed:
+            target = done_column(lists, args.done_list)
+    if args.preview:
+        for c in cards:
+            old = existing.get(c["code"])
+            action = "cập nhật" if old else "tạo"
+            status = f" → {target['name']}" if c["code"] in completed else ""
+            print(f"Dự kiến {action} {c['name']}{status}")
+        print(f"Chỉ xem trước: {len(cards)} task, {len(completed)} task hoàn tất; chưa ghi Trello.")
+        return
 
     labels: dict[str, str] = {}
     for label in t.call("GET", f"/boards/{board}/labels", fields="name", limit="1000"):
@@ -182,12 +247,15 @@ def main() -> None:
                 missing_labels.setdefault(name, []).append(card["code"])
         return ids
 
-    created = updated = same = 0
+    created = updated = same = moved = 0
     for c in cards:
         lids = label_ids(c)
         old = existing.get(c["code"])
         if old is None:
             params = {"idList": env["TRELLO_LIST_ID"], "name": c["name"], "desc": c["desc"], "pos": "bottom"}
+            if c["code"] in completed:
+                params["idList"] = target["id"]
+                moved += 1
             if lids:
                 params["idLabels"] = ",".join(lids)
             t.call("POST", "/cards", **params)
@@ -195,6 +263,9 @@ def main() -> None:
             print(f"tạo   {c['name']}")
             continue
         changes = {}
+        if c["code"] in completed and old["idList"] != target["id"]:
+            changes["idList"] = target["id"]
+            moved += 1
         if old["name"] != c["name"]:
             changes["name"] = c["name"]
         if old["desc"].strip() != c["desc"].strip():
@@ -214,11 +285,23 @@ def main() -> None:
         msg = f"Nhãn '{name}' không có trên bảng, bỏ qua cho {', '.join(codes)}. Tạo nhãn trên Trello hoặc sửa tên trong file."
         print(f"::warning title=Sync Trello::{msg}" if os.environ.get("GITHUB_ACTIONS") else f"Cảnh báo: {msg}")
 
-    synced = {c["code"] for c in cards}
+    if completed or excluded:
+        after = t.call("GET", f"/boards/{board}/cards/all", fields=fields)
+        verified = index_cards(after, completed | excluded)
+        for code in sorted(completed):
+            if code not in verified or verified[code]["idList"] != target["id"]:
+                fail(f"Đối chiếu {code} thất bại: chưa ở cột hoàn tất.")
+            print(f"Xác nhận {code}: {target['name']}")
+        for code in sorted(excluded):
+            if states_for(before, code) != states_for(after, code):
+                fail(f"Thẻ {code} đã thay đổi trong lúc đồng bộ; cần kiểm tra lại.")
+            print(f"Xác nhận {code}: giữ nguyên")
+    synced = {c["code"] for c in cards} | excluded
     gone = sorted(code for code in existing if re.fullmatch(r"S\d+-\d+", code) and code not in synced)
     if gone:
         print("Có trên Trello nhưng không còn trong repo (không tự xóa): " + ", ".join(gone))
-    print(f"Xong: tạo {created}, sửa {updated}, giữ nguyên {same}")
+    print(f"Xong: tạo {created}, sửa {updated}, giữ nguyên {same}, chuyển hoàn tất {moved}; đối chiếu {len(completed)} task hoàn tất.")
+    print(f"Bảng Trello: {info.get('url', '')}")
 
 
 if __name__ == "__main__":

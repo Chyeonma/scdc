@@ -4,8 +4,8 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 
 | File | Bước |
 |---|---|
-| [step-1.md](step-1.md) | STEP-1 — Khung chạy |
-| [step-2.md](step-2.md) | STEP-2 — Tách ranh giới trong monolith (nháp, chưa đồng bộ) |
+| [step-1.md](step-1.md) | STEP-1 — Phạm vi chung hoàn tất; S1-07 giữ riêng cho Media |
+| [step-2.md](step-2.md) | STEP-2 — Đã công bố; S2-01 đến S2-03 hoàn tất, S2-04 đến S2-12 chưa làm |
 | [step-3.md](step-3.md) | STEP-3 — Tách từng service (nháp, chưa đồng bộ) |
 | [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (nháp, chưa đồng bộ) |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |
@@ -17,7 +17,7 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 | Tiêu đề, mô tả: người làm đề xuất, đầu ra, tiêu chí xong, phụ thuộc; thêm nhãn | Cột trạng thái, người được gán, hạn, bình luận, checklist; gỡ nhãn |
 
 - Đồng bộ **một chiều** từ repo lên Trello. Sửa mô tả thẻ trên Trello sẽ bị ghi đè ở lần đồng bộ sau; muốn đổi nội dung thì sửa file và push.
-- Script **không** chuyển cột, không gán người, không đổi hạn, không xóa hay lưu trữ thẻ. Thẻ bị bỏ khỏi file chỉ được liệt kê trong log để người dùng tự xử lý.
+- Mặc định script **không** chuyển cột; không gán người, không đổi hạn, không xóa hay lưu trữ thẻ. Chỉ thao tác thủ công với danh sách `complete` mới chuyển các task đã có kết quả hoàn tất trong repo. Thẻ bị bỏ khỏi file chỉ được liệt kê trong log.
 - Thẻ mới vào cột cấu hình ở `TRELLO_LIST_ID` (nên là cột "Backlog"), có nhãn theo bước (ví dụ `STEP-1`).
 - Thẻ được nhận ra bằng tiền tố `[S1-01]` trong tên. **Không xóa tiền tố này trên Trello**, nếu không lần sau sẽ tạo thẻ mới.
 
@@ -52,6 +52,24 @@ Chạy thử trên máy, không gọi Trello:
 ```bash
 python3 scripts/sync_trello.py --dry-run
 ```
+
+## Đồng bộ trạng thái khi được yêu cầu
+
+Workflow `Sync tasks to Trello` giữ nguyên toàn bộ S1-07 theo chỉ đạo ngày 2026-11-22, kể cả mô tả, nhãn và cột; việc Media này không chặn S1-09. Khi push task lên `main`, workflow tự đồng bộ nội dung các thẻ khác. Nó không tự suy trạng thái từ mô tả để di chuyển thẻ.
+
+Để chuyển các task đã hoàn tất sang đúng cột, chạy workflow thủ công. `complete` là danh sách mã cách nhau bằng dấu phẩy, `done_list` là tên cột hiện có trên bảng. Nên đọc kế hoạch trước:
+
+```bash
+gh workflow run sync-trello.yml --ref main \
+  -f complete='S1-01,S1-02,S1-03,S1-04,S1-05,S1-06,S1-08,S1-09,S2-01,S2-02,S2-03' \
+  -f done_list='Hoàn tất' -f preview=true
+```
+
+Đối chiếu log để biết tên cột thực tế; dùng cùng lệnh với `preview=false` để thực hiện. Nếu chưa biết tên cột, để `complete` trống và `preview=true`; workflow sẽ liệt kê các cột đang mở mà không ghi dữ liệu.
+
+Script từ chối task chưa hoàn tất trong nguồn, task bị loại trừ, mã thẻ trùng trên Trello hoặc tên cột không duy nhất. Sau khi ghi, script đọc lại để xác nhận các mã yêu cầu đã ở cột hoàn tất và S1-07 giữ nguyên. Chạy lại không tạo thẻ trùng hoặc di chuyển lại thẻ đã đúng cột. Không thay người được gán, hạn, bình luận hoặc trạng thái lưu trữ.
+
+Kiểm tra công cụ bằng `python3 -m unittest discover -s scripts/tests -p 'test_sync_trello.py'`. Cách cập nhật thẻ dựa trên [API Trello chính thức](https://developer.atlassian.com/cloud/trello/rest/api-group-cards/).
 
 ## Cài đặt một lần (người quản trị repo)
 

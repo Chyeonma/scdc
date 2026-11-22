@@ -2,7 +2,7 @@
 
 Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của **nội dung** thẻ (tiêu đề, người làm đề xuất, đầu ra, tiêu chí xong, phụ thuộc). Cột trạng thái, người được gán, hạn và bình luận quản lý trên Trello. Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** S1-01 đến S1-06 và S1-08 hoàn tất theo [xác nhận tiến độ ngày 2026-11-17](../../records/planning/progress-2026-11-17.md). Còn S1-07 và S1-09.
+**Trạng thái:** hoàn tất phạm vi chung ngày 2026-11-22: S1-01 đến S1-06, S1-08 và S1-09. S1-07 giữ nguyên, thuộc Media riêng và không chặn tổng kết STEP-1 theo chỉ đạo của người dùng. [Hồ sơ S1-09](../../records/verification/environment/s1-09-2026-11-22.md) ghi demo, CI, thời gian và ước lượng STEP-2.
 
 ## S1-01 · Họp thống nhất lộ trình
 - Nhãn: docs
@@ -74,7 +74,7 @@ Thẻ Trello của [STEP-1](../planning.md#step-1). File này là nguồn của 
 ## S1-09 · Demo và tổng kết STEP-1
 - Nhãn: docs
 - Người làm: Vg · Cả nhóm tham gia
-- Đầu ra: demo request đi qua gateway, trace, CI, LiveKit; ghi thời gian thực tế của STEP-1.
+- Đầu ra: demo request đi qua gateway, trace và CI; tổng kết kết quả, thời gian thực tế của STEP-1 và ước lượng STEP-2. LiveKit theo S1-07 riêng, không nằm trong lần tổng kết này.
 - Xong khi: planning.md ghi ngày xong và link bằng chứng ở cột "Kết quả"; có ước lượng sơ bộ cho STEP-2.
-- Phụ thuộc: tất cả thẻ trên.
-- Kết quả: **Chưa hoàn tất** — chờ S1-07 để demo và tổng kết STEP-1.
+- Phụ thuộc: S1-01 đến S1-06 và S1-08. Bỏ bước review theo chỉ đạo của người dùng ngày 2026-11-22.
+- Kết quả: **Hoàn tất — 2026-11-22**. [Hồ sơ S1-09](../../records/verification/environment/s1-09-2026-11-22.md): demo mới 14/14 kiểm tra đạt trên `9d6d375`, CI GitHub đạt 299 backend và 77 frontend; đã ghi thời gian và ước lượng sơ bộ STEP-2. S1-07 giữ nguyên.

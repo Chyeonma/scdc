@@ -41,7 +41,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Người làm: Thái · Review: Vg
 - Đầu ra: service mới theo cây v1, database Media riêng, Media Hub SignalR riêng (D11), kết nối LiveKit đã thử ở S1-07; kiểm tra JWT bằng thư viện chung.
 - Xong khi: chạy qua gateway; Hub nhận kết nối có xác thực; tắt Media không ảnh hưởng chat.
-- Phụ thuộc: STEP-1 xong; hợp đồng phiên từ STEP-2.
+- Phụ thuộc: phạm vi chung STEP-1 xong; S1-07 của riêng Media và hợp đồng phiên từ STEP-2. S1-07 không chặn các service khác.
 
 ## S3-06 · 3b: Gọi riêng (V1-MEDIA-02)
 - Nhãn: feat
