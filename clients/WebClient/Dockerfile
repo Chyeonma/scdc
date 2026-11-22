@@ -5,6 +5,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+ARG VITE_MEDIA_ENABLED=false
+ENV VITE_MEDIA_ENABLED=$VITE_MEDIA_ENABLED
 RUN npm run build
 
 FROM docker.io/library/nginx:alpine AS final

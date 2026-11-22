@@ -54,7 +54,16 @@ const gateway = {
   use: { baseURL: process.env.SCDC_GATEWAY_URL, viewport: { width: 1280, height: 800 }, trace: 'off' },
 };
 
-const PROJECTS = [community, ...dm, gateway];
+const media = {
+  name: 'media', testMatch: ['media.spec.js'], timeout: 90_000,
+  outputDir: path.join(root, 'artifacts/media/browser'),
+  use: { baseURL: process.env.SCDC_MEDIA_URL || 'http://localhost:3000',
+    viewport: { width: 1280, height: 800 }, trace: 'off',
+    launchOptions: { executablePath: process.env.SCDC_BROWSER_EXECUTABLE || undefined,
+      args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] },
+    permissions: ['camera', 'microphone'] },
+};
+const PROJECTS = [community, ...dm, gateway, media];
 
 // Đọc project được chọn từ dòng lệnh để kiểm tra môi trường và đặt file kết quả JSON.
 function selectedProjects(argv) {

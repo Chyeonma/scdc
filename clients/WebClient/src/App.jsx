@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { sessionStore, getMe } from './api.js';
 import { ServerRail } from './components/ServerRail.jsx';
 import { SubSidebar } from './components/SubSidebar.jsx';
@@ -15,6 +15,8 @@ import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
 import { CommunityRoles } from './community/CommunityRoles.jsx';
 import { CommunityChannels } from './community/CommunityChannels.jsx';
 import { readPending } from './community/pendingCreate.js';
+import { useMediaCall, mediaEnabled } from './media/useMediaCall.js';
+const MediaCall = lazy(() => import('./media/MediaCall.jsx').then(module => ({ default: module.MediaCall })));
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
@@ -24,6 +26,7 @@ export default function App() {
 
 function Application({ session }) {
   const actorId = session?.user?.id;
+  const media = useMediaCall(actorId);
   const list = useCommunityList(actorId);
   const inbox = useConversationInbox(actorId);
   const [route, setRoute] = useState(window.location.hash);
@@ -142,7 +145,9 @@ function Application({ session }) {
     {isHomeActive && <main className="main-chat">
       <ChatHeader title={activeDm?.user?.displayName || 'Tin nhắn trực tiếp'}
         topic={activeDm?.user ? `@${activeDm.user.username}` : ''} icon="@"
-        connectionState={connectionState} isDirectMessage={true} />
+        connectionState={connectionState} isDirectMessage={true}
+        onCall={mediaEnabled ? () => media.start(activeDm.user.id) : undefined}
+        canCall={!!activeDm?.user?.id && media.ready && !media.busy && !media.pending && (!media.call || media.call.status === 'ended')} />
       <DmChat key={actorId} actorId={actorId} author={currentUser || session.user}
         conversation={activeDm} onCommitted={inbox.refresh} onConnectionState={setConnectionState} />
     </main>}
@@ -166,5 +171,6 @@ function Application({ session }) {
 
     {showCreateDm && <CreateDmModal onClose={() => setShowCreateDm(false)} onOpened={handleOpenedDm} />}
     {toastView}
+    {mediaEnabled && <Suspense fallback={null}><MediaCall media={media} actorId={actorId} /></Suspense>}
   </div>;
 }

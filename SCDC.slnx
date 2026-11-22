@@ -18,7 +18,14 @@
   <Folder Name="/services/Shared/">
     <Project Path="services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
   </Folder>
+  <Folder Name="/services/Media/">
+    <Project Path="services/Media/SCDC.Media.Api/SCDC.Media.Api.csproj" />
+    <Project Path="services/Media/SCDC.Media.Application/SCDC.Media.Application.csproj" />
+    <Project Path="services/Media/SCDC.Media.Domain/SCDC.Media.Domain.csproj" />
+    <Project Path="services/Media/SCDC.Media.Infrastructure/SCDC.Media.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SCDC.Media.Tests/SCDC.Media.Tests.csproj" />
     <Project Path="tests/SCDC.Api.Tests/SCDC.Api.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">

@@ -38,7 +38,7 @@ async function switchAccount(page, user) {
 
 test('real login → empty list → private create → detail → list → reload, with no mock channels or hub', async ({ page, request }) => {
   const hubs = [];
-  page.on('request', (event) => { if (event.url().includes('/hubs/')) hubs.push(event.url()); });
+  page.on('request', (event) => { if (event.url().includes('/hubs/chat')) hubs.push(event.url()); });
   await signIn(page, request);
   await expect(page.getByRole('heading', { name: 'Bạn chưa tham gia cộng đồng nào' })).toBeVisible();
   const dialog = await openCreate(page);

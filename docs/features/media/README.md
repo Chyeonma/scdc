@@ -2,7 +2,7 @@
 
 Người dùng có thể gọi riêng cho một người, hoặc vào phòng thoại trong server để nói chuyện nhóm, bật camera và chia sẻ màn hình. Gọi nhóm ngoài server không thuộc v1.
 
-**Trạng thái:** đã thiết kế, chưa có code backend. Âm thanh và video truyền qua LiveKit tự host.
+**Trạng thái:** nhánh này có bản triển khai cuộc gọi riêng 1–1 bằng Media service và LiveKit tự host. Xem [cách chạy, API đã triển khai và giới hạn](local-direct-calls.md). Phòng thoại và các bảo đảm nâng cao của thiết kế v1 vẫn chưa hoàn tất.
 
 **Người phụ trách:** Thái (xem [phân công](../../project/planning.md#team)). Phạm vi Media trên mobile chưa chốt, xem [Mobile](../../experience/mobile.md).
 

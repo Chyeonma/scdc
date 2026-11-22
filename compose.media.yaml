@@ -1,0 +1,68 @@
+# Local single-node direct calls. Combine with compose.yaml; no SFU signaling/admin port is published.
+services:
+  media-postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_media
+      POSTGRES_USER: scdc_media
+      POSTGRES_PASSWORD: ${MEDIA_DB_PASSWORD:?Run python3 scripts/init_media_env.py}
+    volumes:
+      - scdc-media-data:/var/lib/postgresql
+      - ./database/media/001-direct-calls.sql:/docker-entrypoint-initdb.d/001-direct-calls.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -U scdc_media -d scdc_media]
+      start_period: 30s
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    command: [--config, /etc/livekit.yaml, --node-ip, "${LIVEKIT_NODE_IP:-127.0.0.1}"]
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?Run python3 scripts/init_media_env.py}: ${LIVEKIT_API_SECRET:?Run python3 scripts/init_media_env.py}"
+    volumes:
+      - ./ops/media/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7881:7881/tcp"
+      - "50000-50020:50000-50020/udp"
+    restart: unless-stopped
+
+  media-service:
+    build:
+      context: ./services
+      dockerfile: Media/SCDC.Media.Api/Dockerfile
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      ConnectionStrings__Media: Host=media-postgres;Database=scdc_media;Username=scdc_media;Password=${MEDIA_DB_PASSWORD:?Run python3 scripts/init_media_env.py}
+      Identity__BaseUrl: http://chat-service:8080/
+      LiveKit__BaseUrl: http://livekit:7880/
+      LiveKit__ApiKey: ${LIVEKIT_API_KEY:?Run python3 scripts/init_media_env.py}
+      LiveKit__ApiSecret: ${LIVEKIT_API_SECRET:?Run python3 scripts/init_media_env.py}
+    volumes:
+      - scdc-identity-public-keys:/app/auth-public:ro
+    depends_on:
+      media-postgres:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+      identity-keygen:
+        condition: service_completed_successfully
+      chat-service:
+        condition: service_started
+    restart: unless-stopped
+
+  web-client:
+    build:
+      args:
+        VITE_MEDIA_ENABLED: "true"
+    depends_on:
+      media-service:
+        condition: service_started
+
+volumes:
+  scdc-media-data:

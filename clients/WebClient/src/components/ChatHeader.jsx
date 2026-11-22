@@ -15,6 +15,8 @@ export function ChatHeader({
   onSearchChange,
   isDirectMessage = false,
   statusDot = null,
+  onCall,
+  canCall = false,
 }) {
   return (
     <header className="chat-header">
@@ -34,6 +36,8 @@ export function ChatHeader({
 
       {/* Action Toolbar */}
       <div className="chat-header__actions">
+        {isDirectMessage && onCall && <button type="button" className="media-call-button"
+          onClick={onCall} disabled={!canCall} aria-label="Gọi thoại / video" title="Gọi thoại / video">Gọi</button>}
         {/* Realtime Connection Status Pill */}
         {!isDirectMessage && <span
           className={`connection-pill connection-pill--${connectionState}`}
