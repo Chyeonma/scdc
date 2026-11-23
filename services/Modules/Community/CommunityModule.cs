@@ -19,6 +19,8 @@ using SCDC.Contracts.Community;
 using SCDC.Modules.Community.Infrastructure;
 using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Modules.Community.Infrastructure.Paging;
+using SCDC.BuildingBlocks.Infrastructure.Authentication;
+using SCDC.Contracts.Identity;
 
 namespace SCDC.Modules.Community;
 
@@ -30,6 +32,7 @@ public static class CommunityModule
         string environmentName)
     {
         var section = configuration.GetSection(CommunityOptions.SectionName);
+        services.AddSingleton<IIdentityFenceOwner>(new PostgresIdentityFenceOwner(configuration, AccessOwner.Community));
         services.AddOptions<CommunityOptions>().Bind(section)
             .Validate(value => !string.IsNullOrWhiteSpace(value.KeyRingPath) && Path.IsPathFullyQualified(value.KeyRingPath), "Modules:Community:KeyRingPath must be an absolute persistent directory.")
             .Validate(value => value.Operations.IsValid(), "Community HMAC keys must be base64 secrets containing at least 32 bytes; configure an active key.")
@@ -38,7 +41,7 @@ public static class CommunityModule
         services.AddOptions<KeyManagementOptions>().Configure<IOptions<CommunityOptions>, ILoggerFactory>((keys, settings, logging) =>
             keys.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(settings.Value.KeyRingPath), logging));
         services.AddSingleton(provider => NpgsqlDataSource.Create(
-            ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(),"Community")));
+            ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(), "Community")));
         services.AddSingleton<RelationalWorkScopeFactory>();
         services.AddSingleton(new TransactionalOutbox("community"));
         services.AddSingleton<ServerReader>();

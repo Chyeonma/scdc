@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SCDC.Modules.Identity.Application;
+using SCDC.Contracts.Identity;
 
 namespace SCDC.Api.Controllers.Identity;
 
@@ -8,8 +9,16 @@ namespace SCDC.Api.Controllers.Identity;
 public sealed class AuthController(
     IRegistrationService registrationService,
     IAuthenticationService authenticationService,
-    IUserAccountService userAccountService) : ApiControllerBase
+    IUserAccountService userAccountService,
+    IRevocationStatusReader revocations) : ApiControllerBase
 {
+    [Authorize]
+    [HttpGet("revocations/{operationId:guid}")]
+    public async Task<IActionResult> GetRevocation(Guid operationId, CancellationToken cancellationToken)
+    {
+        var status = await revocations.ReadAsync(operationId, User.GetUserId(), cancellationToken);
+        return status is null ? NotFound() : Ok(new { status.OperationId, status.Phase, version = status.Version.ToString(System.Globalization.CultureInfo.InvariantCulture), status.CleanupPending });
+    }
     [AllowAnonymous]
     [HttpPost("register")]
     [ProducesResponseType<RegistrationResponse>(StatusCodes.Status201Created)]

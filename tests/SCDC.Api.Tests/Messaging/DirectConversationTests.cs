@@ -151,13 +151,11 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
     }
 
     [Fact]
-    public async Task Database_connection_failure_in_authentication_returns_503_without_any_write()
+    public async Task Redis_connection_failure_in_authentication_returns_503_without_any_write()
     {
         var before = await f.OwnedSpaces();
-        var original = f.Inner.Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
-        var unreachable = new NpgsqlConnectionStringBuilder(original) { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
         using var isolated = f.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-            config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Identity"] = unreachable.ConnectionString })));
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["Authentication:Sessions:Endpoint"] = "127.0.0.1:1" })));
         using var client = isolated.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/direct-conversations");
         request.Headers.Authorization = new("Bearer", f.Inner.Actor.AccessToken);
@@ -165,7 +163,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
         using var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("AUTHORITY_UNAVAILABLE", body.GetProperty("errorCode").GetString());
+        Assert.Equal("ACCESS_CHECK_UNAVAILABLE", body.GetProperty("errorCode").GetString());
         Assert.Equal(before, await f.OwnedSpaces());
     }
 
@@ -267,7 +265,13 @@ public sealed class DirectFixture : IAsyncLifetime
     private const long GateKey = 812347901;
     public Task InitializeAsync() => Inner.InitializeAsync();
     public async Task<NpgsqlConnection> Connect() { var c = new NpgsqlConnection(Connection); await c.OpenAsync(); return c; }
-    public async Task Sql(string sql, Guid id) { await using var c = await Connect(); await using var command = new NpgsqlCommand(sql, c); command.Parameters.AddWithValue("id", id); await command.ExecuteNonQueryAsync(); }
+    public async Task Sql(string sql, Guid id)
+    {
+        await using var c = await Connect(); await using var command = new NpgsqlCommand(sql, c);
+        command.Parameters.AddWithValue("id", id); await command.ExecuteNonQueryAsync();
+        if (sql.Contains("identity.", StringComparison.Ordinal))
+            await Inner.Factory.Services.GetRequiredService<SCDC.Modules.Identity.Infrastructure.Services.SessionPublisher>().SynchronizeAsync(default);
+    }
     public async Task<JsonElement> Open(UserSearchFixture.ActorData actor, Guid peer, int expected = 200)
     {
         using var response = await Inner.Send("/api/v1/direct-conversations", actor, new { peerUserId = peer });

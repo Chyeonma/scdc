@@ -59,7 +59,7 @@ export function UserSettingsModal({
       onUserUpdated?.(updatedUser);
       notify?.('success', 'Đã cập nhật hồ sơ thành công.');
     } catch (err) {
-      notify?.('error', err.message || 'Không thể cập nhật hồ sơ.');
+      notify?.(err.status === 202 ? 'warning' : 'error', err.message || 'Không thể cập nhật hồ sơ.');
     } finally {
       setSavingProfile(false);
     }
@@ -84,7 +84,7 @@ export function UserSettingsModal({
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      notify?.('error', err.message || 'Đổi mật khẩu thất bại.');
+      notify?.(err.status === 202 ? 'warning' : 'error', err.message || 'Đổi mật khẩu thất bại.');
     } finally {
       setSavingPassword(false);
     }
@@ -96,7 +96,7 @@ export function UserSettingsModal({
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       notify?.('success', 'Đã thu hồi phiên đăng nhập.');
     } catch (err) {
-      notify?.('error', err.message || 'Không thể thu hồi phiên.');
+      notify?.(err.status === 202 ? 'warning' : 'error', err.message || 'Không thể thu hồi phiên.');
     }
   }
 
@@ -107,7 +107,7 @@ export function UserSettingsModal({
       notify?.('success', 'Đã đăng xuất toàn bộ thiết bị.');
       onClose();
     } catch (err) {
-      notify?.('error', err.message);
+      notify?.(err.status === 202 ? 'warning' : 'error', err.message);
     }
   }
 

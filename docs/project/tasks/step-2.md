@@ -2,9 +2,9 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-05 hoàn tất; S2-06 đến S2-12 chưa làm. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-06 hoàn tất; S2-07 đến S2-12 chưa làm. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
-S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Còn khoảng 18,5–31 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
+S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-06 còn khoảng 13,5–23 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -47,7 +47,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Bổ sung S2-02: tạo bảng `access_fences` và `fence_receipts` trong từng schema owner, dùng khóa scope chuẩn hóa và epoch không lùi.
 - Xong khi: ứng dụng và test chạy với ba user; đối chiếu đủ event ID, trạng thái công việc và audit trước/sau; Compose và [hướng dẫn phát triển](../../guides/development.md) đã cập nhật.
 - Phụ thuộc: S2-01, S2-02.
-- Kết quả: **Hoàn tất — 2026-11-20; đã vào main ngày 2026-11-22.** Commit `9d6d375`; [CI GitHub đạt](https://github.com/Chyeonma/scdc/actions/runs/45001598412) 299 backend và 77 frontend. [Hồ sơ S2-03](../../records/verification/architecture/s2-03-2026-11-20.md) ghi migration, quyền tạm và smoke Compose. Bỏ bước review theo chỉ đạo; volume dev hiện có chưa được nâng cấp.
+- Kết quả: **Hoàn tất — 2026-11-20; đã vào main ngày 2026-11-22.** Commit `9d6d375`; [CI GitHub đạt](https://github.com/Chyeonma/scdc/actions/runs/45001598412) 299 backend và 77 frontend. [Hồ sơ S2-03](../../records/verification/architecture/s2-03-2026-11-20.md) ghi migration, quyền tạm và smoke Compose. Bỏ bước review theo chỉ đạo; [volume dev đã nâng cấp ngày 2026-11-23](../../records/verification/authentication/s2-06-2026-11-23.md#dev-volume).
 
 ## S2-04 · Bỏ khóa ngoại khác schema của Community
 - Nhãn: refactor
@@ -55,7 +55,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: migration SQL (D49) bỏ 8 khóa ngoại sang `identity.users` và khóa ngoại `community.channels` → `messaging.spaces`. Code xử lý được ID người dùng không còn tồn tại (xem [vòng đời dữ liệu](../../system/data-lifecycle.md)).
 - Xong khi: migration chạy được trên database thử có dữ liệu MVP; test Community qua.
 - Phụ thuộc: S2-01, S2-03 (nền ledger và user riêng).
-- Kết quả: **Hoàn tất triển khai — 2026-11-22**. [Hồ sơ S2-04/S2-05](../../records/verification/architecture/s2-04-s2-05-2026-11-22.md): migration bảo toàn dữ liệu, bootstrap và CLI cập nhật, 317/317 test backend đạt. Volume dev hiện có chưa được nâng cấp.
+- Kết quả: **Hoàn tất triển khai — 2026-11-22**. [Hồ sơ S2-04/S2-05](../../records/verification/architecture/s2-04-s2-05-2026-11-22.md): migration bảo toàn dữ liệu, bootstrap và CLI cập nhật, 317/317 test backend đạt. [Volume dev đã nâng cấp ngày 2026-11-23](../../records/verification/authentication/s2-06-2026-11-23.md#dev-volume).
 
 ## S2-05 · Bỏ khóa ngoại và view khác schema của Messaging
 - Nhãn: refactor
@@ -63,7 +63,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: migration bỏ 16 khóa ngoại sang `identity.users` và hai view đọc chéo; bỏ 7 FK của `moderation`, preflight và loại bảng rỗng theo S2-01. Nếu Moderation có dữ liệu, dừng để duyệt cách bảo toàn trước khi loại bảng.
 - Xong khi: migration chạy được trên dữ liệu MVP; test DM qua.
 - Phụ thuộc: S2-01, S2-03 (nền ledger và user riêng).
-- Kết quả: **Hoàn tất triển khai — 2026-11-22**. [Hồ sơ S2-04/S2-05](../../records/verification/architecture/s2-04-s2-05-2026-11-22.md): migration bảo toàn dữ liệu, bootstrap và CLI cập nhật, 317/317 test backend đạt. Volume dev hiện có chưa được nâng cấp.
+- Kết quả: **Hoàn tất triển khai — 2026-11-22**. [Hồ sơ S2-04/S2-05](../../records/verification/architecture/s2-04-s2-05-2026-11-22.md): migration bảo toàn dữ liệu, bootstrap và CLI cập nhật, 317/317 test backend đạt. [Volume dev đã nâng cấp ngày 2026-11-23](../../records/verification/authentication/s2-06-2026-11-23.md#dev-volume).
 
 ## S2-06 · Phiên kiểm tra qua Redis
 - Nhãn: tech
@@ -72,7 +72,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Bổ sung S2-02: Identity cấp permit theo mục đích, lưu tiến trình thu hồi/ACK, phối hợp deny Redis trước final commit; bootstrap và version/generation chống phục hồi phiên cũ.
 - Xong khi: ChatHub, outbox và đăng ký realtime dùng bản mới; thu hồi phiên vẫn ngắt kết nối DM; test mất Redis cho kết quả đúng theo thiết kế.
 - Phụ thuộc: S1-06, S2-02, S2-03.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 5–8 ngày công.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-23**. [Hồ sơ S2-06](../../records/verification/authentication/s2-06-2026-11-23.md): Redis ACL, HTTP/Hub/outbox, permit Identity, coordinator bền và phục hồi; **336/336 backend**, **79/79 frontend**, build đạt. Volume dev đã nâng cấp S2-03 đến S2-06, bảo toàn dữ liệu và lịch sử; backup khôi phục thử đạt. Smoke gateway/WebSocket thật và restart Redis/API đạt; mất Redis ngắt kết nối trong 725 ms trên dev. Guard transaction cũ giữ tới S2-07/08.
 
 ## S2-07 · Community không dùng transaction của Identity
 - Nhãn: refactor

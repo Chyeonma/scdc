@@ -78,6 +78,44 @@ public sealed partial class CommunityMigrationTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ModuleDatabase_archives_legacy_identity_ledger_and_rejects_unknown_shape(bool unknown)
+    {
+        await ModuleLegacyAsync();
+        await ExecuteAsync("""
+            CREATE TABLE identity.schema_migrations(id text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT clock_timestamp());
+            INSERT INTO identity.schema_migrations VALUES('001_identity_email','2026-10-05 12:32:54Z');
+            CREATE FUNCTION common.utf16_length_identity_legacy(value text) RETURNS integer
+            LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT AS $$
+                SELECT coalesce(sum(CASE WHEN ascii(substr(value, position, 1)) > 65535 THEN 2 ELSE 1 END),0)::integer
+                FROM generate_series(1,char_length(value)) AS position
+            $$;
+            ALTER TABLE identity.user_profiles ADD CONSTRAINT ck_legacy_profile_utf16
+                CHECK(common.utf16_length_identity_legacy(display_name) BETWEEN 1 AND 64);
+            """);
+        var before=await SnapshotAsync("identity.schema_migrations");
+        var helperOid=await BoundaryScalarAsync("SELECT 'common.utf16_length_identity_legacy(text)'::regprocedure::oid::bigint");
+        var constraint=await SnapshotAsync("(SELECT oid,conname FROM pg_constraint WHERE conname='ck_legacy_profile_utf16')");
+        var sql=await ReadAsync(ModuleMigration);
+        if(unknown)
+        {
+            await ExecuteAsync("ALTER TABLE identity.schema_migrations ADD COLUMN unexpected integer");
+            await Assert.ThrowsAsync<MigrationPreflightException>(()=>ModuleDatabaseMigration.ApplyAsync(_connectionString,sql));
+            Assert.Equal(before,await SnapshotAsync("(SELECT id,applied_at FROM identity.schema_migrations)"));
+            Assert.Equal("[]",await SnapshotAsync("(SELECT to_regclass('identity.legacy_schema_migrations') AS archived WHERE to_regclass('identity.legacy_schema_migrations') IS NOT NULL)"));
+            return;
+        }
+        Assert.True(await ModuleDatabaseMigration.ApplyAsync(_connectionString,sql));
+        Assert.Equal(before,await SnapshotAsync("identity.legacy_schema_migrations"));
+        Assert.Equal(helperOid,await BoundaryScalarAsync("SELECT 'identity.utf16_length_identity_legacy(text)'::regprocedure::oid::bigint"));
+        Assert.Equal(constraint,await SnapshotAsync("(SELECT oid,conname FROM pg_constraint WHERE conname='ck_legacy_profile_utf16')"));
+        Assert.Equal(2,await BoundaryScalarAsync("SELECT identity.utf16_length_identity_legacy('🙂')::bigint"));
+        Assert.False(await ModuleDatabaseMigration.ApplyAsync(_connectionString,sql));
+        Assert.Equal(before,await SnapshotAsync("identity.legacy_schema_migrations"));
+    }
+
+    [Theory]
     [InlineData("event")]
     [InlineData("inbox")]
     [InlineData("object")]

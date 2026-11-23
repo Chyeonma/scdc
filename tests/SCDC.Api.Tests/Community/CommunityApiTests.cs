@@ -81,7 +81,11 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         await using var command = new NpgsqlCommand(sql, connection) { CommandTimeout = 10 };
         foreach (var (key, value) in parameters)
             command.Parameters.AddWithValue(key, value);
-        return await command.ExecuteScalarAsync();
+        var result = await command.ExecuteScalarAsync();
+        // Administrative fixtures must publish their direct SQL changes explicitly.
+        if (sql.Contains("identity.", StringComparison.Ordinal) && !sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            await _factory.Services.GetRequiredService<SCDC.Modules.Identity.Infrastructure.Services.SessionPublisher>().SynchronizeAsync(default);
+        return result;
     }
     private static async Task AssertErrorAsync(HttpResponseMessage response, HttpStatusCode status, string code)
     {

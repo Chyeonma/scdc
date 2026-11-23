@@ -30,7 +30,7 @@ Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình 
 
 ## 1. Chuẩn bị và khởi chạy
 
-**Cần có:** Git, Make, Docker với Compose hoặc Podman với Compose provider, OpenSSL và curl. Clone repo rồi mở terminal tại thư mục chứa `Makefile` và `compose.yaml`. Các lệnh dưới dùng Bash, zsh hoặc WSL; Windows dùng Linux containers và bật WSL integration nếu chọn Docker Desktop.
+**Cần có:** Git, Make, Docker với Compose hoặc Podman với Compose provider, Python 3, OpenSSL và curl. Clone repo rồi mở terminal tại thư mục chứa `Makefile` và `compose.yaml`. Các lệnh dưới dùng Bash, zsh hoặc WSL; Windows dùng Linux containers và bật WSL integration nếu chọn Docker Desktop.
 
 Backend và frontend được build trong image. .NET SDK 10 và Node.js 24 chỉ cần khi debug hoặc kiểm thử trực tiếp trên máy; Python 3 cần cho các công cụ kiểm thử và tài liệu.
 
@@ -630,6 +630,10 @@ dotnet run --project tools/SCDC.DbMigrator -- \
 
 Migration chuyển outbox theo tiền tố Identity/Community/Messaging, giữ legacy `MessageCreated` tại Messaging, chuyển nguyên bảng audit và ledger, bố trí helper theo owner. Toàn bộ chạy trong một transaction; so sánh đầy đủ các dòng outbox/inbox trước khi bỏ bảng cũ. Event chưa rõ owner sẽ làm rollback. Nếu inbox có dữ liệu, truyền thêm file JSON đã review, ví dụ `{"consumer-name":"messaging"}`; consumer thiếu mapping làm rollback. Chạy lại cùng SQL là no-op; SQL khác checksum bị từ chối.
 
+Volume cũ có thể còn `identity.schema_migrations` với hai cột `id text` và `applied_at timestamptz`. CLI nhận diện cấu trúc này và đổi tên nguyên bảng thành `identity.legacy_schema_migrations` trong cùng transaction, giữ lịch sử và timestamp; ledger mới dùng module/version/checksum. Cấu trúc khác bị từ chối để kiểm tra trước. Script cấp quyền không cho runtime đọc/ghi ledger lưu trữ này. Không sửa SQL/checksum S2-03 đã áp.
+
+Nếu constraint profile cũ dùng `common.utf16_length_identity_legacy(text)`, CLI chuyển nguyên hàm sang Identity, giữ OID và constraint. Các đối tượng khác ngoài phạm vi vẫn làm transaction rollback khi bỏ schema cũ.
+
 3. Cấp role và cập nhật cấu hình. Với Compose local, nạp lại cấu hình PostgreSQL rồi chạy script cấp quyền (chỉ chạy sau migration):
 
 ```bash
@@ -704,3 +708,30 @@ Xóa thư mục keyring tạm (tạo bằng `mktemp`) nếu không cần nữa. 
 ```bash
 python3 scripts/check_docs.py
 ```
+
+<a id="s2-06-upgrade"></a>
+
+## Nâng cấp S2-06 — Redis xác thực
+
+Cần Python 3 cho `make init`. Lệnh tạo credential Redis tại `$HOME/.local/share/scdc/redis-secrets` (thư mục 0700); đặt `SCDC_REDIS_SECRET_DIR` để chọn nơi khác ngoài repo. File được mount riêng bằng Compose secrets, không đưa mật khẩu vào `.env`, URL hoặc lệnh chạy. Chạy lại giữ nguyên credential. Không xóa hoặc thay credential khi đang chạy; xoay khóa cần đồng bộ ACL, file của ứng dụng và khởi động lại theo kế hoạch.
+
+Trên máy bật SELinux, `make init` dùng `chcon` gán nhãn `container_file_t` cho ba file secret để các container đọc được bind mount. Thư mục host vẫn giữ quyền 0700; không cần tắt SELinux hoặc tắt label của container.
+
+Volume PostgreSQL hiện hữu phải được nâng cấp offline; bootstrap `schema.sql` chỉ dành cho volume mới:
+
+1. Dừng ứng dụng và mọi writer. Nếu chưa có S2-03/04/05, làm theo các hướng dẫn nâng cấp tương ứng trước.
+2. Dùng connection migrator/quản trị qua `ConnectionStrings__Migration` và chạy:
+
+   ```bash
+   dotnet run --project tools/SCDC.DbMigrator -- database/postgres/migrations/20261123_s2-06_identity_access.sql
+   ```
+
+3. Chạy lại `database/postgres/module-roles.sql` theo hướng dẫn cấp ba role để cấp quyền cho bảng/sequence mới. Runtime tiếp tục không có DDL hoặc quyền ledger.
+4. `make init`, `make build`, `make up`; dùng cùng `ENGINE=podman` và các tham số env/project nếu môi trường dùng Podman.
+5. Chờ `make check`: `/api/v1/health/access` phải 200. Thử đăng nhập, refresh, gửi/nhận DM, thu hồi phiên và khởi động lại.
+
+Migration có ledger/checksum Identity, chạy lại là no-op nếu checksum khớp. Giữ dữ liệu nghiệp vụ; chỉ thêm scope/journal và bootstrap floor cho hai owner. Không có down migration tự động. Giữ schema bổ sung khi quay lại ứng dụng cũ chỉ là khả năng tương thích cấu trúc, chưa thay bằng chứng rollback đã kiểm tra.
+
+Chạy backend local cần Redis thật, ví dụ `Authentication__Sessions__Endpoint=127.0.0.1:6379`, credential username/file tương ứng khi bật ACL. CI dùng Redis riêng không publish ra ngoài runner. Không trỏ fixture vào database phát triển: tên database thử chính phải kết thúc `_test`, user setup cần quyền tạo/xóa database fixture. Các ca Redis access tự dùng database và prefix riêng.
+
+Khi Redis lỗi, HTTP cần đăng nhập trả 503 và Hub ngừng phát; giữ phiên, không tự gửi lại mutation. Lệnh thu hồi đã nhận có thể trả 202 và được worker tiếp tục. Dùng operation ID/GET để đối chiếu, không kết luận rollback chỉ vì request hết thời gian. Sau Redis restart, readiness chỉ mở sau khi rebuild từ PostgreSQL hiện tại, không từ snapshot quyền cũ.

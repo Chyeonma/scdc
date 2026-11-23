@@ -126,18 +126,16 @@ public sealed class MessageHistoryTests(TextMessageFixture f) : IClassFixture<Te
     }
 
     [Fact]
-    public async Task History_auth_database_failure_returns_503_and_no_body()
+    public async Task History_session_store_failure_returns_503_and_no_body()
     {
         var space = await f.Open("search07");
-        var original = f.D.Inner.Factory.Services.GetService(typeof(IConfiguration)) as IConfiguration;
-        var unreachable = new NpgsqlConnectionStringBuilder(original!.GetConnectionString("TestDatabase")!) { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
-        using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Identity"] = unreachable.ConnectionString })));
+        using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["Authentication:Sessions:Endpoint"] = "127.0.0.1:1" })));
         for (var i = 0; i < 2; i++) await f.Send(space, f.D.Inner.Actor, Guid.NewGuid(), "authority outage fixture");
         var cursor = Cursor(await Page(space, "?limit=1"))!;
         using var client = host.CreateClient(); using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/direct-conversations/{space}/messages" + Before(cursor, 1));
         request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
         using var response = await client.SendAsync(request); Assert.Equal(503, (int)response.StatusCode);
-        Assert.Equal("AUTHORITY_UNAVAILABLE", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
+        Assert.Equal("ACCESS_CHECK_UNAVAILABLE", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
     }
 
     [Fact]

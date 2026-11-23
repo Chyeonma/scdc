@@ -69,6 +69,7 @@ public sealed class ChatHub(ConversationRegistry registry, IServiceScopeFactory 
             if (!(await scope.ServiceProvider.GetRequiredService<IAuthenticatedSessionReader>().ReadAsync(actor, Context.ConnectionAborted)).Allowed)
                 throw Problem(401, "Common.Unauthorized");
         }
+        catch (AccessCheckException e) { throw Problem(503, e.Code); }
         catch (Exception e) when (DatabaseAvailability.IsUnavailable(e)) { throw Problem(503, "AUTHORITY_UNAVAILABLE"); }
     }
     private static Guid Parse(JsonElement p)
@@ -80,7 +81,10 @@ public sealed class ChatHub(ConversationRegistry registry, IServiceScopeFactory 
     }
     public static HubException Problem(int status, string code) => new(JsonSerializer.Serialize(new
     {
-        type = "about:blank", title = status == 401 ? "Unauthorized" : status == 404 ? "Not Found" : status == 400 ? "Bad Request" : "Service Unavailable",
-        status, detail = "The requested subscription is not available.", errorCode = code
+        type = "about:blank",
+        title = status == 401 ? "Unauthorized" : status == 404 ? "Not Found" : status == 400 ? "Bad Request" : "Service Unavailable",
+        status,
+        detail = "The requested subscription is not available.",
+        errorCode = code
     }));
 }

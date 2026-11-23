@@ -69,6 +69,15 @@ public sealed class OutboxDispatcher(IServiceScopeFactory scopes, ConversationRe
                     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token, entry.Aborted);
                     deadline.CancelAfter(TimeSpan.FromSeconds(2));
                     await using var scope = scopes.CreateAsyncScope();
+                    // Redis admission is mandatory even while S2-08 still uses the old DB guard.
+                    var currentSession = await scope.ServiceProvider.GetRequiredService<IAuthenticatedSessionReader>().ReadAsync(entry.Actor, deadline.Token);
+                    if (!currentSession.Allowed)
+                    {
+                        entry.Spaces.Clear(); entry.Closed = true;
+                        try { await hub.Clients.Client(entry.Id).SendAsync("AccessRevoked", new { scope = currentSession.Reason == "account_unavailable" ? "user" : "session", conversationId = (Guid?)null, reason = currentSession.Reason }, deadline.Token); }
+                        finally { entry.Abort(); }
+                        continue;
+                    }
                     var access = await scope.ServiceProvider.GetRequiredService<ConversationAccess>().DeliverAsync(
                         entry.Actor, claim.SpaceId, claim.MessageId, message => hub.Clients.Client(entry.Id).SendAsync("MessageChanged",
                             new { eventId = claim.Id, conversationId = claim.SpaceId, message }, deadline.Token), deadline.Token);

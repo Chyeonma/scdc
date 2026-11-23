@@ -24,6 +24,29 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test('Redis 503 during refresh preserves the session and prevents reusing the uncertain token, including after reload', async () => {
+  const app = browser(); let requests = 0;
+  const fetch = async () => { requests++; return response(503, { errorCode: 'ACCESS_CHECK_UNAVAILABLE' }); };
+  const tab = await app.openTab(fetch);
+  await assert.rejects(tab.getAccessToken(), error => error.status === 503);
+  assert.equal(tab.sessionStore.getSnapshot().refreshToken, 'refresh-1');
+  assert.equal(tab.sessionStore.getSnapshot().refreshOutcomeUnknown, true);
+  await assert.rejects(tab.getAccessToken(), error => error.status === 503);
+  const reloaded = await app.openTab(fetch);
+  await assert.rejects(reloaded.getAccessToken(), error => error.status === 503);
+  assert.equal(requests, 1);
+});
+
+test('accepted revocation is surfaced as pending without reporting completion or replaying the mutation', async () => {
+  let requests = 0;
+  const tab = await browser(rotatedSession).openTab(async () => {
+    requests++;
+    return response(202, { operationId: 'pending-operation', phase: 'fencing', statusPath: '/api/v1/auth/revocations/pending-operation' });
+  });
+  await assert.rejects(tab.revokeSession('session'), error => error.status === 202 && error.problem.operationId === 'pending-operation');
+  assert.equal(requests, 1);
+});
+
 test('cancellation during token preflight prevents a queued send after refresh completes', async () => {
   const started = deferred(), refresh = deferred(), controller = new AbortController(); let calls = 0;
   const tab = await browser().openTab(async url => {

@@ -138,7 +138,7 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
         foreach (var operation in new[] { id, Guid.NewGuid() })
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
-                { Content = JsonContent.Create(new { clientMessageId = operation, content = "original" }) };
+            { Content = JsonContent.Create(new { clientMessageId = operation, content = "original" }) };
             request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
             using var response = await client.SendAsync(request);
             Assert.Equal(503, (int)response.StatusCode);
@@ -172,22 +172,28 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
             foreach (var key in new[] { "old", "new" })
             {
                 using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-                    config.AddInMemoryCollection(new Dictionary<string, string?> { ["Modules:Messaging:FingerprintKeyDirectory"] = directory,
-                        ["Modules:Messaging:ActiveFingerprintKeyId"] = key })));
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["Modules:Messaging:FingerprintKeyDirectory"] = directory,
+                        ["Modules:Messaging:ActiveFingerprintKeyId"] = key
+                    })));
                 using var client = host.CreateClient();
                 using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
-                    { Content = JsonContent.Create(new { clientMessageId = id, content = "original" }) };
+                { Content = JsonContent.Create(new { clientMessageId = id, content = "original" }) };
                 request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
                 using var response = await client.SendAsync(request); Assert.Equal(200, (int)response.StatusCode);
             }
             Assert.Equal("old", await f.Scalar("SELECT key_id FROM messaging.send_operations WHERE space_id=@id", space));
             File.Delete(Path.Combine(directory, "old.key"));
             using var missing = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-                config.AddInMemoryCollection(new Dictionary<string, string?> { ["Modules:Messaging:FingerprintKeyDirectory"] = directory,
-                    ["Modules:Messaging:ActiveFingerprintKeyId"] = "new" })));
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Modules:Messaging:FingerprintKeyDirectory"] = directory,
+                    ["Modules:Messaging:ActiveFingerprintKeyId"] = "new"
+                })));
             using var missingClient = missing.CreateClient();
             using var retry = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
-                { Content = JsonContent.Create(new { clientMessageId = id, content = "original" }) };
+            { Content = JsonContent.Create(new { clientMessageId = id, content = "original" }) };
             retry.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
             using var unavailable = await missingClient.SendAsync(retry); Assert.Equal(503, (int)unavailable.StatusCode);
             Assert.Equal("FINGERPRINT_KEY_UNAVAILABLE", (await unavailable.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
@@ -197,20 +203,17 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
     }
 
     [Fact]
-    public async Task Send_auth_database_failure_is_503_and_ineligible_actor_is_401()
+    public async Task Send_session_store_failure_is_503_and_ineligible_actor_is_401()
     {
         var space = await f.Open("search10");
-        var original = f.D.Inner.Factory.Services.GetService(typeof(IConfiguration)) as IConfiguration;
-        var unreachable = new NpgsqlConnectionStringBuilder(original!.GetConnectionString("TestDatabase")!)
-            { Host = "127.0.0.1", Port = 1, Timeout = 1, Pooling = false };
         using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-            config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Identity"] = unreachable.ConnectionString })));
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["Authentication:Sessions:Endpoint"] = "127.0.0.1:1" })));
         using var client = host.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
-            { Content = JsonContent.Create(new { clientMessageId = Guid.NewGuid(), content = "must not write" }) };
+        { Content = JsonContent.Create(new { clientMessageId = Guid.NewGuid(), content = "must not write" }) };
         request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
         using var response = await client.SendAsync(request); Assert.Equal(503, (int)response.StatusCode);
-        Assert.Equal("AUTHORITY_UNAVAILABLE", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
+        Assert.Equal("ACCESS_CHECK_UNAVAILABLE", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
         var actor = f.D.Inner.Users["search10"];
         await f.D.Sql("UPDATE identity.user_emails SET verified_at=NULL WHERE user_id=@id AND is_primary", actor.Id);
         await f.Send(space, actor, Guid.NewGuid(), "unverified", 401);
@@ -258,7 +261,7 @@ public sealed class TextMessageFixture : IAsyncLifetime
     public async Task<JsonElement> SendRaw(Guid space, UserSearchFixture.ActorData? actor, string raw, int expected)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
-            { Content = new StringContent(raw, Encoding.UTF8, "application/json") };
+        { Content = new StringContent(raw, Encoding.UTF8, "application/json") };
         if (actor is not null) request.Headers.Authorization = new("Bearer", actor.AccessToken);
         using var response = await D.Inner.Client.SendAsync(request);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();

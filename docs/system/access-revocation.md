@@ -2,7 +2,7 @@
 
 Khi một người bị đăng xuất, bị khóa tài khoản, rời server hay mất quyền xem phòng, hệ thống phải cắt mọi đường truy cập của họ: request HTTP mới, thao tác ghi, kết nối chat và media đang mở. Trang này mô tả yêu cầu thời gian, trách nhiệm của từng service, và thiết kế v1 khi các service tách rời nhau.
 
-**Trạng thái:** MVP đã có thu hồi cho DM (một ứng dụng duy nhất). Thiết kế triển khai S2-02 đã có [bên dưới](#s2-02-protocol); các adapter, migration và kiểm chứng runtime thuộc S2-03 đến S2-11.
+**Trạng thái:** S2-06 đã triển khai Redis, permit Identity và coordinator thu hồi trong process; kết quả kiểm chứng tại [hồ sơ S2-06](../records/verification/authentication/s2-06-2026-11-23.md). MVP đã có thu hồi cho DM (một ứng dụng duy nhất). Thiết kế triển khai S2-02 đã có [bên dưới](#s2-02-protocol); các adapter, migration và kiểm chứng runtime thuộc S2-03 đến S2-11.
 
 Cách tính quyền xem [quyền truy cập Community](../features/community/access-control.md); vòng đời phiên xem [tài khoản](../features/accounts/README.md).
 
@@ -345,3 +345,21 @@ Nếu Apply lấy khóa trước writer thì writer rollback vì epoch cũ. Nế
 ---
 
 Nguồn: DEC-083, DEC-099 (thời hạn 5 giây), [DEC-123](../records/decisions/README.md#dec-123) (D05), [DEC-124](../records/decisions/README.md#dec-124) (D06), [DEC-126](../records/decisions/README.md#dec-126) (D07), [DEC-148](../records/decisions/README.md#dec-148) (D30), [DEC-149](../records/decisions/README.md#dec-149) (D31), DEC-156 (backup sau v1). Các phương án đã cân nhắc ghi trong hồ sơ quyết định.
+
+<a id="s2-06-runtime"></a>
+
+## S2-06 — Triển khai kiểm tra phiên và Identity coordinator
+
+Redis 8.2.11 chạy một bản trong Compose, AOF `appendfsync always`, 128 MB với `noeviction`; container giới hạn 256 MB. StackExchange.Redis 3.2.0 đặt trong BuildingBlocks infrastructure; Shared.Core tiếp tục thuần .NET. Credential reader/writer riêng, file qua Compose secrets; ACL chỉ cho Identity ghi và reader chạy script đọc. Redis này phục vụ xác thực, không làm broker/backplane/LiveKit.
+
+Mỗi account là một hash `scdc:auth:user:<uuid>` chứa `generation`, `version` và snapshot JSON của trạng thái account, stamp, email đã xác minh, epoch và các phiên. Đọc một snapshot giúp kiểm tra account/session nhất quán. Không chứa mật khẩu, token, email, hồ sơ hay nội dung chat. `identity.session_publications` là journal version bền, được trigger cập nhật cùng thay đổi account, session, email, security state và scope; xóa account để lại tombstone.
+
+Identity đọc generation trước snapshot DB. Lua so sánh version bigint bằng chuỗi thập phân để không mất độ chính xác trên 2^53; generation cũ hoặc version thấp bị từ chối. Bootstrap dùng advisory lock theo prefix, sequence generation bền trong Identity, nạp và đối chiếu journal theo lô 128 account trước khi mở ready. Reader so `run_id` ngay trong script, nên ready marker được Redis phục hồi từ process cũ không được dùng. Ready chỉ sống 2 giây, publisher đối chiếu mỗi 500 ms; hết hạn hoặc lỗi thì chặn truy cập. `/api/v1/health/access` trả 200 khi kho phiên sẵn sàng, còn lại 503.
+
+Đăng nhập/refresh chỉ trả token sau commit DB, công bố Redis và kiểm tra lại phiên. Refresh giữ session và hạn cũ; frontend không tự dùng lại refresh token nếu kết quả công bố không rõ. Dữ liệu thiếu, đang rebuild hoặc kết nối hỏng trả `503 ACCESS_CHECK_UNAVAILABLE`; scope đang xử lý trả `503 ACCESS_PENDING`. Không dùng DB Identity dự phòng cho reader.
+
+`identity.access_scopes`, `access_changes`, `access_change_acks` giữ epoch, ý định và receipt. Hai adapter owner thật dùng connection của Community/Messaging để cài floor và receipt trong transaction cục bộ; ACK sau commit, không có owner Media. Registry hiện cố định generation 1 và hai owner; thêm owner/đổi generation phải qua bootstrap offline trước khi nhận traffic.
+
+Logout, logout-all, thu hồi một phiên, refresh-token reuse, đổi và reset mật khẩu tạo ý định dưới khóa user; password chỉ lưu hash đã tính tại Identity. Worker tiếp tục bằng danh tính hệ thống sau khi phiên yêu cầu bị chặn. Thu hồi giữ `FENCING` nếu thiếu owner hoặc Redis; HTTP chờ tối đa 5 giây rồi trả 202 với operation ID và đường GET `/api/v1/auth/revocations/{operationId}`. GET chỉ đọc tiến trình của account đang xác thực. Sau đủ receipt và Redis deny, transaction cuối đổi trạng thái phiên/mật khẩu, epoch, audit và outbox cùng lúc. Worker dùng lease 10 giây, CAS theo lease/version và retry 1–30 giây với jitter; không timeout rồi bỏ ý định.
+
+**Chuyển tiếp tới S2-07/08:** đường ghi Community/DM còn giữ guard khóa user/phiên cũ; transaction cuối của Identity vẫn lấy khóa user tương ứng. Vì vậy bản này chạy được với writer cũ trong khi permit/fence được chuẩn bị cho writer mới. S2-06 không gỡ quyền DB chéo hoặc chứng minh mọi writer đã dùng permit; các việc đó thuộc S2-07/08/10/11. Outbox đã kiểm tra Redis trước phát; Hub và watchdog dùng reader mới. Các fixture SQL quản trị phải công bố journal trước khi kiểm tra hành vi HTTP; thao tác SQL trực tiếp không thay giao thức thu hồi được xác nhận qua API.

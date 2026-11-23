@@ -20,6 +20,9 @@ DO $$ DECLARE owner text; app_role text; BEGIN
         EXECUTE format('REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA %I FROM PUBLIC',owner);
         EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO %I',owner,app_role);
         EXECUTE format('REVOKE ALL ON %I.schema_migrations FROM %I',owner,app_role);
+        IF owner='identity' AND to_regclass('identity.legacy_schema_migrations') IS NOT NULL THEN
+            EXECUTE format('REVOKE ALL ON identity.legacy_schema_migrations FROM %I',app_role);
+        END IF;
         -- Future migrations must grant rights explicitly; no runtime DDL/default grants.
     END LOOP;
 END $$;
@@ -37,6 +40,13 @@ REVOKE DELETE ON community.access_fences FROM scdc_community;
 REVOKE DELETE ON messaging.access_fences FROM scdc_messaging;
 REVOKE UPDATE,DELETE ON community.fence_receipts FROM scdc_community;
 REVOKE UPDATE,DELETE ON messaging.fence_receipts FROM scdc_messaging;
+
+DO $$ BEGIN
+    IF to_regclass('identity.access_scopes') IS NOT NULL THEN
+        REVOKE DELETE ON identity.access_scopes,identity.access_changes,identity.session_publications FROM scdc_identity;
+        REVOKE UPDATE,DELETE ON identity.access_change_acks FROM scdc_identity;
+    END IF;
+END $$;
 
 -- Temporary S2-03 grants. Remove only after the replacement flows pass S2-11.
 GRANT USAGE ON SCHEMA identity TO scdc_community,scdc_messaging;

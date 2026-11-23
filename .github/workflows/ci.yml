@@ -30,7 +30,17 @@ jobs:
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
       # Integration tests explicitly dispatch events; avoid a competing worker.
       Modules__Messaging__Dispatcher__Enabled: "false"
+      Authentication__Sessions__Endpoint: 127.0.0.1:6379
     services:
+      redis:
+        image: docker.io/library/redis:8.2.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 20
       postgres:
         image: docker.io/library/postgres:18-alpine
         env:

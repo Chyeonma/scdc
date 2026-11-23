@@ -7,6 +7,8 @@ ENV_FILE ?= .env
 PYTHON ?= python3
 FROM ?= main
 TO ?=
+SCDC_REDIS_SECRET_DIR ?= $(HOME)/.local/share/scdc/redis-secrets
+export SCDC_REDIS_SECRET_DIR
 
 export SCDC_ENV_FILE = $(ENV_FILE)
 export SCDC_DOCS_FROM = $(FROM)
@@ -37,6 +39,7 @@ help:
 	  '  Hướng dẫn: docs/guides/development.md'
 
 init:
+	$(PYTHON) scripts/init_redis_secrets.py "$$SCDC_REDIS_SECRET_DIR" --label-for-containers
 	@set -eu; \
 	  if [ -e "$$SCDC_ENV_FILE" ]; then \
 	    printf 'Giữ cấu hình hiện có: %s\n' "$$SCDC_ENV_FILE"; \
@@ -64,6 +67,7 @@ check:
 	    http://localhost:3000/healthz \
 	    http://localhost:3000/health \
 	    http://localhost:3000/api/v1/health \
+	    http://localhost:3000/api/v1/health/access \
 	    http://localhost:5080/healthz; do \
 	    printf 'Kiểm tra %s\n' "$$scdc_url"; \
 	    curl --fail --silent --show-error --output /dev/null \

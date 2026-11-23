@@ -129,12 +129,14 @@ public sealed class ConversationInboxTests(InboxFixture f) : IClassFixture<Inbox
     public async Task Authority_failure_in_auth_middleware_is_503_without_mock_inbox()
     {
         using var host = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-            config.AddInMemoryCollection(new Dictionary<string, string?> {
-                ["ConnectionStrings:Identity"] = "Host=127.0.0.1;Port=1;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=unused;Timeout=1" })));
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Authentication:Sessions:Endpoint"] = "127.0.0.1:1"
+            })));
         using var client = host.CreateClient(); using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/direct-conversations");
         request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
         using var response = await client.SendAsync(request); Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>(); Assert.Equal("AUTHORITY_UNAVAILABLE", body.GetProperty("errorCode").GetString());
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(); Assert.Equal("ACCESS_CHECK_UNAVAILABLE", body.GetProperty("errorCode").GetString());
         Assert.False(body.TryGetProperty("items", out _));
     }
     private static Guid[] Ids(JsonElement page) => UserSearchFixture.Ids(page);

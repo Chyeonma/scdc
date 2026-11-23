@@ -94,6 +94,10 @@ async function refreshSession(failedAccessToken) {
       // Another tab may have rotated or cleared the session while we waited for the lock.
       syncStoredSession();
       if (!session?.refreshToken || session.accessToken !== failedAccessToken) return session;
+      if (session.refreshOutcomeUnknown) {
+        throw new ApiError('Chưa xác định được kết quả làm mới phiên. Vui lòng đăng nhập lại.', 503,
+          { errorCode: 'OPERATION_OUTCOME_UNKNOWN' });
+      }
 
       const previousSession = session;
       try {
@@ -106,6 +110,9 @@ async function refreshSession(failedAccessToken) {
           throw await readError(response);
         }
         const tokens = await response.json();
+        if (response.status === 202) {
+          throw new ApiError('Yêu cầu thu hồi phiên đang được xử lý.', 202, tokens);
+        }
         syncStoredSession();
         // Do not restore a session after logout or overwrite a newer login.
         if (session?.refreshToken === previousSession.refreshToken) {
@@ -115,7 +122,13 @@ async function refreshSession(failedAccessToken) {
       } catch (error) {
         syncStoredSession();
         if (session?.refreshToken !== previousSession.refreshToken) return session;
-        emitSession(null);
+        if (error instanceof ApiError && (error.status === 503 || error.status === 202)) {
+          // Rotation may have committed before Redis publication failed. Preserve the session,
+          // but never automatically send that refresh token again, including after reload.
+          emitSession({ ...previousSession, refreshOutcomeUnknown: true });
+        } else {
+          emitSession(null);
+        }
         throw error;
       }
     };
@@ -133,6 +146,10 @@ async function refreshSession(failedAccessToken) {
 
 export async function getAccessToken() {
   syncStoredSession();
+  if (session?.refreshOutcomeUnknown) {
+    throw new ApiError('Chưa xác định được kết quả làm mới phiên. Vui lòng đăng nhập lại.', 503,
+      { errorCode: 'OPERATION_OUTCOME_UNKNOWN' });
+  }
   if (!session) {
     return '';
   }
@@ -205,6 +222,9 @@ export async function api(path, options = {}) {
 
   const value = await response.json();
   checkActor();
+  if (response.status === 202 && value?.phase === 'fencing') {
+    throw new ApiError('Yêu cầu đã được tiếp nhận và đang xử lý. Chưa xác nhận hoàn tất.', 202, value);
+  }
   return value;
 }
 
@@ -254,6 +274,7 @@ export async function resetPassword(token, newPassword) {
 export async function changePassword(currentPassword, newPassword) {
   return api('/auth/change-password', {
     method: 'POST',
+    retry: false,
     body: { currentPassword, newPassword },
   });
 }
@@ -265,6 +286,7 @@ export async function getSessions() {
 export async function revokeSession(sessionId) {
   return api(`/auth/sessions/${sessionId}`, {
     method: 'DELETE',
+    retry: false,
   });
 }
 
@@ -285,7 +307,7 @@ export async function logout() {
 
 export async function logoutAll() {
   try {
-    await api('/auth/logout-all', { method: 'POST' });
+    await api('/auth/logout-all', { method: 'POST', retry: false });
   } finally {
     emitSession(null);
   }

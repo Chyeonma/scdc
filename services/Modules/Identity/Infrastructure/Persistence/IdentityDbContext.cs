@@ -28,7 +28,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
         return base.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task LockUserAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task LockUserAsync(Guid userId, CancellationToken cancellationToken, bool allowPending = false)
     {
         if (Database.CurrentTransaction is null)
         {
@@ -43,6 +43,10 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
             WHERE id = {userId}
             FOR NO KEY UPDATE
             """).ToListAsync(cancellationToken);
+        if (!allowPending && await Database.SqlQuery<Guid>($"""
+            SELECT operation_id AS "Value" FROM identity.access_changes WHERE user_id={userId} AND phase=0
+            """).AnyAsync(cancellationToken))
+            throw new SCDC.Contracts.Identity.AccessCheckException("ACCESS_PENDING");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

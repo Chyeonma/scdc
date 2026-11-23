@@ -5,6 +5,22 @@ x-jwt-trust: &jwt-trust
   Authentication__Jwt__KeyIds__0: identity-local-v1
 
 services:
+  auth-redis:
+    image: docker.io/library/redis:8.2.11-alpine
+    command: ["redis-server", "--aclfile", "/run/secrets/redis_acl", "--appendonly", "yes", "--appendfsync", "always", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    secrets:
+      - redis_acl
+      - redis_reader_password
+    volumes:
+      - scdc-auth-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$(cat /run/secrets/redis_reader_password) redis-cli --user scdc_reader ping | grep -q PONG"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+    mem_limit: 256m
+    restart: unless-stopped
+
   messaging-keygen:
     build:
       context: .
@@ -41,6 +57,11 @@ services:
     environment:
       <<: *jwt-trust
       ASPNETCORE_ENVIRONMENT: Development
+      Authentication__Sessions__Endpoint: auth-redis:6379
+      Authentication__Sessions__ReaderUser: scdc_reader
+      Authentication__Sessions__WriterUser: scdc_writer
+      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
+      Authentication__Sessions__WriterPasswordFile: /run/secrets/redis_writer_password
       Telemetry__Enabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_METRIC_EXPORT_INTERVAL: "5000"
@@ -65,7 +86,12 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
+      auth-redis:
+        condition: service_healthy
     restart: unless-stopped
+    secrets:
+      - redis_reader_password
+      - redis_writer_password
     volumes:
       - identity-user-search-keys:/app/.dm-keys/user-search
       - scdc-community-keys:/app/community-keys
@@ -157,6 +183,7 @@ services:
       - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro,z
 
 volumes:
+  scdc-auth-redis:
   scdc-postgres-data:
   identity-user-search-keys:
   scdc-community-keys:
@@ -164,3 +191,11 @@ volumes:
   scdc-openobserve-data:
   scdc-identity-private-keys:
   scdc-identity-public-keys:
+
+secrets:
+  redis_acl:
+    file: ${SCDC_REDIS_SECRET_DIR:-${HOME}/.local/share/scdc/redis-secrets}/users.acl
+  redis_reader_password:
+    file: ${SCDC_REDIS_SECRET_DIR:-${HOME}/.local/share/scdc/redis-secrets}/reader.password
+  redis_writer_password:
+    file: ${SCDC_REDIS_SECRET_DIR:-${HOME}/.local/share/scdc/redis-secrets}/writer.password

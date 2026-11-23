@@ -10,7 +10,8 @@ namespace SCDC.Modules.Identity.Infrastructure.Services;
 internal sealed class UserAccountService(
     IdentityDbContext dbContext,
     IPasswordHasher<User> passwordHasher,
-    TimeProvider timeProvider) : IUserAccountService
+    TimeProvider timeProvider,
+    IdentityRevocations revocations) : IUserAccountService
 {
     private const string PasswordAlgorithm = "aspnetcore-identity-v3";
 
@@ -90,49 +91,10 @@ internal sealed class UserAccountService(
             return Result.Failure(IdentityErrors.PasswordUnchanged);
         }
 
-        var now = timeProvider.GetUtcNow();
-        user.PasswordCredential.PasswordHash = passwordHasher.HashPassword(user, command.NewPassword);
-        user.PasswordCredential.HashAlgorithm = PasswordAlgorithm;
-        user.PasswordCredential.PasswordVersion++;
-        user.PasswordCredential.PasswordChangedAt = now;
-        user.PasswordCredential.RequiresChange = false;
-        user.PasswordCredential.UpdatedAt = now;
-        user.SecurityState.SecurityStamp = Guid.NewGuid();
-        user.SecurityState.FailedLoginCount = 0;
-        user.SecurityState.LockedUntil = null;
-        user.SecurityState.UpdatedAt = now;
-        user.UpdatedAt = now;
-
-        foreach (var session in user.Sessions)
-        {
-            IdentityData.RevokeSession(session, now, "password_changed");
-        }
-
-        var resetTokens = await dbContext.AccountTokens
-            .Where(token => token.UserId == user.Id
-                && token.Purpose == AccountTokenPurpose.ResetPassword
-                && token.ConsumedAt == null)
-            .ToListAsync(cancellationToken);
-        foreach (var token in resetTokens)
-        {
-            token.ConsumedAt = now;
-        }
-
-        dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
-            user.Id,
-            "password_changed",
-            command.Context,
-            now,
-            new { session_id = command.SessionId }));
-        dbContext.OutboxEvents.Add(IdentityData.Outbox(
-            "Identity.PasswordChanged",
-            user.Id,
-            user.Version,
-            now,
-            new { user_id = user.Id, reason = "password_changed" }));
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        var hash = passwordHasher.HashPassword(user, command.NewPassword);
+        await revocations.AcceptAndCompleteAsync(dbContext, user.Id,
+            new("password_changed", "password_changed", user.Sessions.Where(s => s.RevokedAt == null).Select(s => s.Id).ToArray(),
+                command.Context, PasswordHash: hash, RequestSessionId: command.SessionId), transaction, cancellationToken);
         return Result.Success();
     }
 

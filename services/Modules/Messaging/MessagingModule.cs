@@ -9,6 +9,8 @@ using SCDC.Modules.Messaging.Infrastructure.Services;
 using SCDC.Modules.Messaging.Realtime;
 using SCDC.Contracts.Messaging;
 using SCDC.Modules.Messaging.Infrastructure;
+using SCDC.BuildingBlocks.Infrastructure.Authentication;
+using SCDC.Contracts.Identity;
 
 namespace SCDC.Modules.Messaging;
 
@@ -18,6 +20,7 @@ public static class MessagingModule
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSingleton<IIdentityFenceOwner>(new PostgresIdentityFenceOwner(configuration, AccessOwner.Messaging));
         if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Messaging")))
             throw new InvalidOperationException("ConnectionStrings:Messaging must be configured.");
         services.AddDbContext<MessagingDbContext>((provider, options) =>

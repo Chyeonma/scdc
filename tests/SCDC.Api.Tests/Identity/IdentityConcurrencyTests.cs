@@ -124,8 +124,20 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
         }
 
         var lateLogin = await pendingLogin;
-        Assert.Equal(HttpStatusCode.OK, lateLogin.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await change!).StatusCode);
+        if (lateLogin.StatusCode != HttpStatusCode.OK)
+        {
+            var error=await lateLogin.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True((lateLogin.StatusCode==HttpStatusCode.ServiceUnavailable && error.GetProperty("errorCode").GetString()=="ACCESS_PENDING")
+                || (lateLogin.StatusCode==HttpStatusCode.Conflict && error.GetProperty("errorCode").GetString()=="ACCESS_CHANGED"));
+            // Redis publication may observe the accepted reset before returning a token.
+            // The login is then rejected, and every session in its captured set must still be revoked.
+            await using var connection=new NpgsqlConnection(_connectionString); await connection.OpenAsync();
+            await using var active=new NpgsqlCommand("SELECT count(*) FROM identity.auth_sessions WHERE user_id=@user AND revoked_at IS NULL",connection);
+            active.Parameters.AddWithValue("user",_userId!.Value);
+            Assert.Equal(0L,await active.ExecuteScalarAsync());
+            return;
+        }
         var lateSession = await lateLogin.Content.ReadFromJsonAsync<JsonElement>();
         var me = await AuthorizedAsync(HttpMethod.Get, "/api/v1/users/me", lateSession);
         Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
@@ -179,7 +191,14 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
         var token = await RequestResetAsync();
         var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => ResetPasswordAsync(token)));
         Assert.Single(responses, item => item.StatusCode == HttpStatusCode.NoContent);
-        Assert.Equal(3, responses.Count(item => item.StatusCode == HttpStatusCode.BadRequest));
+        foreach (var response in responses.Where(item => item.StatusCode != HttpStatusCode.NoContent))
+        {
+            Assert.True(response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.ServiceUnavailable);
+            if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                Assert.Equal("ACCESS_PENDING", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
+        }
+        // An accepted reset blocks competitors during fencing. Once committed, the token stays consumed.
+        Assert.Equal(HttpStatusCode.BadRequest, (await ResetPasswordAsync(token)).StatusCode);
     }
 
     [Theory]
@@ -208,7 +227,11 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
         }
 
         Assert.Equal(HttpStatusCode.NoContent, (await change).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await login!).StatusCode);
+        var concurrent = await login!;
+        Assert.True(concurrent.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.ServiceUnavailable);
+        if (concurrent.StatusCode == HttpStatusCode.ServiceUnavailable)
+            Assert.Equal("ACCESS_PENDING", (await concurrent.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errorCode").GetString());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.PostAsJsonAsync("/api/v1/auth/login", new { login = _username, password = InitialPassword })).StatusCode);
     }
 
     private async Task WaitForBlockedRequestsAsync(int expected, Task? operation = null)

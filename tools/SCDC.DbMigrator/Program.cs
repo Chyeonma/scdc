@@ -11,6 +11,13 @@ try
     // This is an administrator/migrator connection, never a runtime module login.
     var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Migration")
         ?? throw new InvalidOperationException("ConnectionStrings__Migration must be configured.");
+    if (Path.GetFileName(args[0]) == IdentityAccessMigration.FileName)
+    {
+        if (args.Length != 1) throw new MigrationPreflightException("S2-06 does not accept a data map.");
+        var changed = await IdentityAccessMigration.ApplyAsync(connection, await File.ReadAllTextAsync(args[0]));
+        Console.WriteLine(changed ? "S2-06 applied." : "S2-06 already applied with matching checksum.");
+        return 0;
+    }
     if (Path.GetFileName(args[0]) is SchemaBoundaryMigration.CommunityFile or SchemaBoundaryMigration.MessagingFile)
     {
         if (args.Length != 1)
@@ -22,9 +29,9 @@ try
     if (Path.GetFileName(args[0]) == "20261120_s2-03_module_databases.sql")
     {
         var inboxMap = args.Length == 2
-            ? JsonSerializer.Deserialize<Dictionary<string,string>>(await File.ReadAllTextAsync(args[1]))
+            ? JsonSerializer.Deserialize<Dictionary<string, string>>(await File.ReadAllTextAsync(args[1]))
             : null;
-        var changed = await ModuleDatabaseMigration.ApplyAsync(connection,await File.ReadAllTextAsync(args[0]),inboxMap);
+        var changed = await ModuleDatabaseMigration.ApplyAsync(connection, await File.ReadAllTextAsync(args[0]), inboxMap);
         Console.WriteLine(changed ? "S2-03 applied to Identity, Community and Messaging." : "S2-03 already applied with matching checksums.");
         return 0;
     }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SCDC.Api.Errors;
 using SCDC.BuildingBlocks.Application;
+using SCDC.Contracts.Identity;
 
 namespace SCDC.Api.Controllers;
 
@@ -10,6 +11,10 @@ public sealed class HealthController(
     IEnumerable<IModuleDescriptor> modules,
     TimeProvider timeProvider) : ControllerBase
 {
+    [HttpGet("access")]
+    public async Task<IActionResult> Access([FromServices] ISessionStoreReadiness readiness, CancellationToken cancellationToken) =>
+        await readiness.IsReadyAsync(cancellationToken) ? Ok(new { status = "ready" }) : StatusCode(503, new { status = "unavailable" });
+
     [HttpGet]
     [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]

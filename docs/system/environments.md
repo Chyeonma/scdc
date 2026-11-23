@@ -236,7 +236,7 @@ Identity vẫn là bên duy nhất ghi; service khác chỉ đọc; không gọi
 - **D21:** backplane khi mở rộng; lịch triển khai.
 - **D22:** số bản Gateway; domain, TLS công khai; cache; readiness; DNS.
 - **D24:** số node, network mode, TURN, Redis của LiveKit, proxy, kiểm soát vào phòng.
-- **D32:** số bản, TLS, ACL, thông tin đăng nhập, lưu trữ bền, eviction, HA; schema và phối hợp với PostgreSQL theo D30.
+- **D32:** S2-06 đã chọn một bản Redis 8.2.11, ACL reader/writer, file secret, AOF always, noeviction và readiness/generation ([runtime](access-revocation.md#s2-06-runtime)). Còn TLS, HA, số đo tài nguyên và cấu hình bản công khai.
 - **D36:** đường dẫn, định dạng, UID và GID, bảo vệ file, CA, vòng đời khóa và chứng chỉ, nạp lại khi đổi, sao lưu; ma trận quyền.
 - **D38:** công cụ và phiên bản, OAuth, runner, bộ đệm trên máy, lịch, dung lượng dành riêng, thời hạn giữ.
 

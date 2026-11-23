@@ -51,7 +51,7 @@ Backend hiện chạy trong một ứng dụng API. [Kiến trúc v1](docs/syste
 
 ## Khởi chạy
 
-Cần Git, Make, Docker hoặc Podman với Compose, OpenSSL và curl. Chạy từ gốc repo trong Bash, zsh hoặc WSL:
+Cần Git, Make, Python 3, Docker hoặc Podman với Compose, OpenSSL và curl. Chạy từ gốc repo trong Bash, zsh hoặc WSL:
 
 ```bash
 make setup

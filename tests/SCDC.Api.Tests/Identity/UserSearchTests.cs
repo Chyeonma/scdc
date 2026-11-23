@@ -216,9 +216,18 @@ public sealed class UserSearchFixture : IAsyncLifetime
     public WebApplicationFactory<ApiProgram> MakeFactory() => _baseFactory.WithWebHostBuilder(builder =>
     {
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
-        { ["Modules:Identity:UserSearch:CursorKeyRingPath"] = _keyPath,
-          ["Modules:Identity:UserSearch:ApplicationName"] = Prefix }));
-        builder.ConfigureServices(services => services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock)));
+        {
+            ["Modules:Identity:UserSearch:CursorKeyRingPath"] = _keyPath,
+            ["Modules:Identity:UserSearch:ApplicationName"] = Prefix
+        }));
+        builder.ConfigureServices(services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock));
+            // Cursor expiry moves independently of the JWT transport clock in this fixture.
+            services.Replace(ServiceDescriptor.Singleton<IAuthenticatedSessionReader>(provider =>
+                new SCDC.BuildingBlocks.Infrastructure.Authentication.RedisSessionReader(
+                    provider.GetRequiredService<SCDC.BuildingBlocks.Infrastructure.Authentication.RedisSessionConnection>(), TimeProvider.System)));
+        });
     });
     public async Task InitializeAsync()
     {
@@ -247,6 +256,7 @@ public sealed class UserSearchFixture : IAsyncLifetime
         command.Parameters.AddWithValue("deleted", Users["deleted"].Id);
         command.Parameters.AddWithValue("unverified", Users["unverified"].Id);
         await command.ExecuteNonQueryAsync();
+        await Factory.Services.GetRequiredService<SCDC.Modules.Identity.Infrastructure.Services.SessionPublisher>().SynchronizeAsync(default);
     }
     private async Task Register(string alias, string displayName, bool verified = true)
     {

@@ -36,6 +36,38 @@ public static class ModuleDatabaseMigration
                 return false;
             }
         }
+        // Older dev volumes have a pre-module Identity ledger (id/applied_at).
+        // Keep that relation intact; the checksummed S2-03 SQL creates the new ledger.
+        await using (var legacy = new NpgsqlCommand("SELECT to_regclass('identity.schema_migrations') IS NOT NULL",connection,transaction))
+        {
+            if (await legacy.ExecuteScalarAsync(ct) is true)
+            {
+                await using var shape = new NpgsqlCommand("""
+                    SELECT count(*)=2 AND bool_and(
+                        (column_name='id' AND data_type='text' AND is_nullable='NO') OR
+                        (column_name='applied_at' AND data_type='timestamp with time zone' AND is_nullable='NO'))
+                    FROM information_schema.columns
+                    WHERE table_schema='identity' AND table_name='schema_migrations'
+                    """,connection,transaction);
+                if (await shape.ExecuteScalarAsync(ct) is not true)
+                    throw new MigrationPreflightException("Unknown legacy Identity ledger shape; review it before S2-03.");
+                await using var archive = new NpgsqlCommand("""
+                    LOCK TABLE identity.schema_migrations IN ACCESS EXCLUSIVE MODE;
+                    ALTER TABLE identity.schema_migrations RENAME TO legacy_schema_migrations;
+                    """,connection,transaction);
+                await archive.ExecuteNonQueryAsync(ct);
+            }
+        }
+        // A legacy profile constraint still references this helper by OID.
+        // Moving it preserves that constraint while allowing common to be retired.
+        await using (var helper = new NpgsqlCommand("SELECT to_regprocedure('common.utf16_length_identity_legacy(text)') IS NOT NULL",connection,transaction))
+        {
+            if (await helper.ExecuteScalarAsync(ct) is true)
+            {
+                await using var move = new NpgsqlCommand("ALTER FUNCTION common.utf16_length_identity_legacy(text) SET SCHEMA identity",connection,transaction);
+                await move.ExecuteNonQueryAsync(ct);
+            }
+        }
         await using (var map = new NpgsqlCommand("CREATE TEMP TABLE module_inbox_map(consumer_name text PRIMARY KEY,owner text NOT NULL CHECK(owner IN ('identity','community','messaging'))) ON COMMIT DROP",connection,transaction))
             await map.ExecuteNonQueryAsync(ct);
         foreach (var (consumer,owner) in inboxOwners)

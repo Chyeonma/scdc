@@ -7,6 +7,14 @@ x-jwt-trust: &jwt-trust
   Authentication__Jwt__PublicKeyDirectory: /app/auth-public
   Authentication__Jwt__KeyIds__0: identity-local-v1
 services:
+  auth-redis:
+    image: docker.io/library/redis:8.2.11-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
   identity-keygen:
     build:
       context: .
@@ -45,6 +53,7 @@ services:
     environment:
       <<: *jwt-trust
       ASPNETCORE_ENVIRONMENT: Development
+      Authentication__Sessions__Endpoint: auth-redis:6379
       ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
       ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
       ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
@@ -60,6 +69,8 @@ services:
       identity-keygen:
         condition: service_completed_successfully
       postgres:
+        condition: service_healthy
+      auth-redis:
         condition: service_healthy
     volumes:
       - gateway-identity-keys:/app/.dm-keys/user-search

@@ -6,6 +6,7 @@ using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure.Persistence;
 using SCDC.Modules.Identity.Infrastructure.Security;
+using SCDC.Contracts.Identity;
 
 namespace SCDC.Modules.Identity.Infrastructure.Services;
 
@@ -14,7 +15,10 @@ internal sealed class AuthenticationService(
     IPasswordHasher<User> passwordHasher,
     ITokenService tokenService,
     IOptions<IdentityOptions> options,
-    TimeProvider timeProvider) : IAuthenticationService
+    TimeProvider timeProvider,
+    SessionPublisher publisher,
+    IdentityRevocations revocations,
+    IAuthenticatedSessionReader sessionReader) : IAuthenticationService
 {
     private const string PasswordAlgorithm = "aspnetcore-identity-v3";
     private readonly IdentityOptions _options = options.Value;
@@ -107,6 +111,8 @@ internal sealed class AuthenticationService(
         user.SecurityState.UpdatedAt = now;
 
         var sessionExpiresAt = now.AddDays(_options.SessionDays);
+        // PostgreSQL stores microseconds. Return the same deadline that refresh will read later.
+        sessionExpiresAt = sessionExpiresAt.AddTicks(-(sessionExpiresAt.Ticks % 10));
         var session = new AuthSession
         {
             Id = Guid.CreateVersion7(),
@@ -140,7 +146,11 @@ internal sealed class AuthenticationService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return Result.Success(CreateAuthResponse(user, session, rawRefreshToken.Value));
+        await publisher.PublishUserAsync(user.Id, cancellationToken);
+        var response = CreateAuthResponse(user, session, rawRefreshToken.Value);
+        if (!(await sessionReader.ReadAsync(new(user.Id, session.Id, user.SecurityState.SecurityStamp, response.AccessTokenExpiresAt), cancellationToken)).Allowed)
+            throw new AccessCheckException("ACCESS_CHANGED");
+        return Result.Success(response);
     }
 
     public async Task<Result<AuthResponse>> RefreshAsync(
@@ -185,15 +195,8 @@ internal sealed class AuthenticationService(
 
         if (currentToken.UsedAt is not null || currentToken.ReplacedByTokenId is not null)
         {
-            IdentityData.RevokeSession(session, now, "refresh_token_reuse");
-            dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
-                session.UserId,
-                "refresh_token_reuse_detected",
-                command.Context,
-                now,
-                new { session_id = session.Id, refresh_token_id = currentToken.Id }));
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await revocations.AcceptAndCompleteAsync(dbContext, session.UserId,
+                new("refresh_token_reuse", "refresh_token_reuse_detected", [session.Id], command.Context), transaction, cancellationToken);
             return Result.Failure<AuthResponse>(IdentityErrors.RefreshTokenReuse);
         }
 
@@ -234,8 +237,11 @@ internal sealed class AuthenticationService(
         currentToken.ReplacedByTokenId = nextToken.Id;
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-
-        return Result.Success(CreateAuthResponse(session.User, session, rawRefreshToken.Value));
+        await publisher.PublishUserAsync(session.UserId, cancellationToken);
+        var response = CreateAuthResponse(session.User, session, rawRefreshToken.Value);
+        if (!(await sessionReader.ReadAsync(new(session.UserId, session.Id, session.User.SecurityState.SecurityStamp, response.AccessTokenExpiresAt), cancellationToken)).Allowed)
+            throw new AccessCheckException("ACCESS_CHANGED");
+        return Result.Success(response);
     }
 
     public async Task<Result> LogoutAsync(
@@ -261,16 +267,8 @@ internal sealed class AuthenticationService(
             return Result.Success();
         }
 
-        var now = timeProvider.GetUtcNow();
-        IdentityData.RevokeSession(token.Session, now, "user_logout");
-        dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
-            token.Session.UserId,
-            "logout",
-            command.Context,
-            now,
-            new { session_id = token.SessionId }));
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await revocations.AcceptAndCompleteAsync(dbContext, token.Session.UserId,
+            new("user_logout", "logout", [token.SessionId], command.Context), transaction, cancellationToken);
         return Result.Success();
     }
 
@@ -285,21 +283,8 @@ internal sealed class AuthenticationService(
             .Include(session => session.RefreshTokens)
             .Where(session => session.UserId == userId && session.RevokedAt == null)
             .ToListAsync(cancellationToken);
-        var now = timeProvider.GetUtcNow();
-
-        foreach (var session in sessions)
-        {
-            IdentityData.RevokeSession(session, now, "user_logout_all");
-        }
-
-        dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
-            userId,
-            "logout_all",
-            context,
-            now,
-            new { session_count = sessions.Count }));
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await revocations.AcceptAndCompleteAsync(dbContext, userId,
+            new("user_logout_all", "logout_all", sessions.Select(s => s.Id).ToArray(), context), transaction, cancellationToken);
         return Result.Success();
     }
 
@@ -349,15 +334,9 @@ internal sealed class AuthenticationService(
 
         if (session.RevokedAt is null)
         {
-            var now = timeProvider.GetUtcNow();
-            IdentityData.RevokeSession(session, now, "user_revoked_session");
-            dbContext.SecurityEvents.Add(IdentityData.SecurityEvent(
-                userId,
-                "session_revoked",
-                context,
-                now,
-                new { session_id = session.Id }));
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await revocations.AcceptAndCompleteAsync(dbContext, userId,
+                new("user_revoked_session", "session_revoked", [session.Id], context), transaction, cancellationToken);
+            return Result.Success();
         }
 
         await transaction.CommitAsync(cancellationToken);

@@ -17,6 +17,7 @@ using SCDC.Modules.Identity.Infrastructure.Security;
 using SCDC.Modules.Identity.Infrastructure.Services;
 using ModuleIdentityOptions = SCDC.Modules.Identity.Infrastructure.IdentityOptions;
 using SCDC.Shared.Core.Authentication;
+using SCDC.BuildingBlocks.Infrastructure.Authentication;
 
 namespace SCDC.Modules.Identity;
 
@@ -62,7 +63,17 @@ public static class IdentityModule
         services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
         services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
         services.AddScoped<IAccountPairAccessGuard, AccountPairAccessGuard>();
-        services.AddScoped<IAuthenticatedSessionReader, AuthenticatedSessionReader>();
+        services.AddSingleton(provider => new RedisSessionConnection(provider.GetRequiredService<IConfiguration>(), "Reader"));
+        services.AddSingleton<RedisSessionReader>();
+        services.AddSingleton<IAuthenticatedSessionReader>(provider => provider.GetRequiredService<RedisSessionReader>());
+        services.AddSingleton<ISessionStoreReadiness>(provider => provider.GetRequiredService<RedisSessionReader>());
+        services.AddSingleton<SessionPublisher>();
+        services.AddSingleton<IdentityRevocations>();
+        services.AddSingleton<IRevocationStatusReader>(provider => provider.GetRequiredService<IdentityRevocations>());
+        services.AddHostedService<IdentityAccessWorker>();
+        foreach (var owner in new[] { AccessOwner.Community, AccessOwner.Messaging })
+            services.AddKeyedScoped<IIdentityPermitIssuer>(owner, (provider, _) => new IdentityPermitIssuer(
+                provider.GetRequiredService<IConfiguration>(), owner, provider.GetRequiredService<TimeProvider>()));
         services.AddScoped<IHistoricalUserSummaryReader, HistoricalUserSummaryReader>();
         services.AddScoped<UserSearchKeyInitializer>();
         var searchKeyRing = configuration["Modules:Identity:UserSearch:CursorKeyRingPath"]
@@ -134,26 +145,16 @@ public static class IdentityModule
             return;
         }
 
-        var dbContext = context.HttpContext.RequestServices.GetRequiredService<IdentityDbContext>();
-        var timeProvider = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
-        var now = timeProvider.GetUtcNow();
         // REST owners distinguish an authenticated account from permission denial.
         // Hub negotiation must reject an ineligible account before opening a connection.
         var isChatHandshake = context.HttpContext.Request.Path.StartsWithSegments("/hubs/chat");
-        var isActive = await dbContext.AuthSessions
-            .AsNoTracking()
-            .AnyAsync(session => session.Id == sessionId
-                && session.UserId == userId
-                && session.RevokedAt == null
-                && session.ExpiresAt > now
-                && session.User.Status == UserStatus.Active
-                && session.User.DeletedAt == null
-                && (!isChatHandshake || session.User.Emails.Any(email => email.IsPrimary && email.VerifiedAt != null))
-                && session.User.SecurityState != null
-                && session.User.SecurityState.SecurityStamp == securityStamp,
-                context.HttpContext.RequestAborted);
+        var expiry = context.Principal?.FindFirst("exp")?.Value;
+        if (!long.TryParse(expiry, out var seconds)) { context.Fail("Expiration is missing."); return; }
+        var access = await context.HttpContext.RequestServices.GetRequiredService<IAuthenticatedSessionReader>()
+            .ReadAsync(new(userId, sessionId, securityStamp, DateTimeOffset.FromUnixTimeSeconds(seconds)),
+                context.HttpContext.RequestAborted, isChatHandshake);
 
-        if (!isActive)
+        if (!access.Allowed)
         {
             context.Fail("The session is no longer active.");
         }

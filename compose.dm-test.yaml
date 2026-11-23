@@ -2,6 +2,14 @@
 # Never combine this file with compose.yaml; seed.sql is intentionally absent.
 name: scdc-dm-acceptance
 services:
+  auth-redis:
+    image: docker.io/library/redis:8.2.11-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
   identity-keygen:
     build:
       context: .
@@ -41,6 +49,7 @@ services:
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Authentication__Sessions__Endpoint: auth-redis:6379
       ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
       ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
       ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
@@ -62,6 +71,8 @@ services:
       - "127.0.0.1:${DM_API_PORT:-15026}:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      auth-redis:
         condition: service_healthy
       identity-keygen:
         condition: service_completed_successfully
@@ -85,9 +96,12 @@ services:
 
   backend-tests:
     profiles: ["tools"]
-    image: mcr.microsoft.com/dotnet/sdk:10.0
+    build:
+      context: .
+      dockerfile: tests/SCDC.Api.Tests/Dockerfile
     working_dir: /workspace
     environment:
+      Authentication__Sessions__Endpoint: auth-redis:6379
       ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev};Pooling=false
       ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
       ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_dm_acceptance_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev};Maximum Pool Size=50
@@ -106,6 +120,8 @@ services:
       - dm-test-nuget:/root/.nuget/packages
     depends_on:
       postgres:
+        condition: service_healthy
+      auth-redis:
         condition: service_healthy
     command: ["dotnet", "test", "SCDC.slnx", "--configuration", "Release", "--artifacts-path", "/artifacts", "--results-directory", "/artifacts/test-results", "--logger", "trx;LogFileName=dm-acceptance.trx"]
 

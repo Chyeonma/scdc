@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC access and channel coordination — target S2-02",
     "version": "1.0.0",
-    "description": "Thiết kế mục tiêu, chưa có controller hoặc RPC host. Giao thức và quyền tại access-revocation.md và Community channels.md; không mô tả endpoint MVP đã triển khai."
+    "description": "S2-06 đã triển khai GET tiến trình thu hồi Identity; các endpoint Community và host RPC còn là mục tiêu S2-02. Chi tiết tại access-revocation.md và Community channels.md."
   },
   "security": [
     {
@@ -15,7 +15,7 @@
       "get": {
         "operationId": "getOwnRevocation",
         "description": "Phiên hiện tại hợp lệ, operation thuộc chính tài khoản gọi. Được dùng phiên đăng nhập mới để đối chiếu sau logout; không trả dữ liệu tài khoản khác.",
-        "x-scdc-target-only": true,
+        "x-scdc-target-only": false,
         "parameters": [
           {
             "name": "operationId",
