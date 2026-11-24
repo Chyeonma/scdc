@@ -221,7 +221,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 - **Sau mỗi bước, hệ thống vẫn chạy và demo được.** Không có giai đoạn "đang tách dở".
 - **Mỗi lần tách một service.**
 - **Bước 1 cả nhóm làm chung** để mọi người cùng hiểu hạ tầng; từ bước 2 mỗi người theo service của mình ([phân công](#team)).
-- **Trang này chỉ ghi bước, thứ tự, lý do và tiêu chí xong.** Việc cụ thể, người làm, hạn và trạng thái nằm trên Trello; mỗi thẻ ghi mã bước (STEP-1 đến 4). Thẻ thuộc lộ trình viết trong [docs/project/tasks](tasks/README.md) và tự đồng bộ lên Trello. Bước sau được viết trước dưới dạng nháp; việc làm được ngay, không phụ thuộc kiến trúc, nằm ở [việc làm sớm](tasks/step-4-early.md). Khi một bước đạt tiêu chí, ghi ngày và link bằng chứng vào cột "Kết quả".
+- **Trang này chỉ ghi bước, thứ tự, lý do và tiêu chí xong.** Việc cụ thể, người làm, hạn và trạng thái nằm trên Trello; mỗi thẻ ghi mã bước (STEP-1 đến 4). Thẻ thuộc lộ trình viết trong [docs/project/tasks](tasks/README.md) và tự đồng bộ lên Trello. STEP-3/STEP-4 đã công bố backlog ngày 2026-11-24; mỗi thẻ ghi phần chuẩn bị làm được ngay và phụ thuộc triển khai/nghiệm thu. Việc giao diện giả và rà tài liệu độc lập nằm ở [việc làm sớm](tasks/step-4-early.md). File chưa được công bố vẫn giữ dạng nháp. Khi một bước đạt tiêu chí, ghi ngày và link bằng chứng vào cột "Kết quả".
 
 | Bước | Mục tiêu | Phụ trách chính | Xong khi | Kết quả |
 |---|---|---|---|---|
@@ -396,7 +396,7 @@ Các gói PREP thuộc giai đoạn chuẩn bị MVP, giữ lại để tham kh�
 
 ## Công việc Community
 
-**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); thẻ Trello tương ứng ở [step-4.md](tasks/step-4.md) (cùng mã), trạng thái theo dõi trên Trello. Cột "Phụ thuộc" và "Đầu ra" còn viết theo cơ chế transaction chung của MVP; phải cập nhật theo thiết kế của [STEP-2](#step-2) trước khi làm.
+**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); thẻ Trello tương ứng ở [step-4.md](tasks/step-4.md) (cùng mã), đã công bố backlog ngày 2026-11-24. Các thẻ ghi phần chuẩn bị làm được ngay và phần triển khai chờ STEP-3. Ghi tin dùng transaction Messaging riêng với permit/fence của STEP-2; xóa phòng giữa service phải có giao thức theo owner, không dùng transaction chung của MVP.
 
 COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ [MVP](../releases/mvp.md#community-scope) sang v1. COM-W08 đến 13 hoàn thiện các nhánh khác. Mã COM-W chỉ là tên công việc, không thay mã UC, AC, TC. Trạng thái thật xem [Community](../features/community/README.md) và [tin phòng](../features/messaging/channel-messaging.md). Người phụ trách tự chia nhiệm vụ Trello và làm khi đủ [điều kiện](workflow.md#readiness).
 
@@ -420,7 +420,7 @@ COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ
 
 | Mã | Ca sử dụng | Điều kiện xong | Phụ trách |
 |---|---|---|---|
-| COM-W08 | UC-COM-19 xóa phòng | Xóa phòng và không gian cùng transaction; chống trùng, outbox; chặn HTTP và Hub; chứng minh tranh gửi và xóa ([phòng](../features/community/channels.md)) | Vg + Sáng |
+| COM-W08 | UC-COM-19 xóa phòng | Thiết kế/triển khai giao thức xóa theo owner giữa Community, Messaging và Media; quyết định và tiến độ bền, epoch/tombstone, xác nhận thu hồi, thử lại/phục hồi; chặn HTTP, Hub và Media; chứng minh tranh gửi/vào phòng và xóa ([phòng](../features/community/channels.md)). Chuẩn bị giao thức được ngay; nghiệm thu chờ các service/tính năng liên quan | Vg + Sáng |
 | COM-W09 | UC-COM-04, 05, 07, 08 thông tin server, cách tham gia, duyệt | Ghi server và yêu cầu nguyên tử; chuyển sang riêng tư kết thúc yêu cầu đang chờ; quyền người duyệt; chứng minh CAS, duyệt, hủy, tham gia đồng thời | Vg |
 | COM-W10 | UC-COM-09 đến 13 lời mời | Token, lượt dùng, hiệu lực theo người tạo, mời đích danh, epoch; chứng minh lượt cuối, thu hồi và nhận đồng thời | Vg |
 | COM-W11 | UC-COM-14, 15 chuyển chủ và rời | Chủ, tư cách, epoch, dọn ACL nguyên tử; chủ không tự rời; epoch cũ; thu hồi HTTP và realtime | Vg + Sáng |
