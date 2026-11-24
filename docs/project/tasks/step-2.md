@@ -2,7 +2,7 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-11 đã triển khai; S2-12 chưa hoàn tất. Kết quả S2-11 và CI theo hồ sơ bên dưới. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-11 hoàn tất triển khai và kiểm thử; S2-12 chưa hoàn tất. Kết quả S2-11 và CI theo hồ sơ bên dưới. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
 S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) giữ ước lượng lịch sử trước S2-04/S2-05. Sau S2-11 còn S2-12, khoảng 0,5–1 ngày công. Bảng dưới giữ snapshot trước triển khai.
 
@@ -113,7 +113,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: test khi bên kia không trả lời, sự kiện đến hai lần, sai thứ tự, mất Redis; đo thời gian thu hồi quyền DM (yêu cầu 5 giây). Bỏ các quyền đọc chéo tạm thời của S2-03.
 - Xong khi: mỗi user database chỉ có quyền trên schema của mình mà test vẫn qua; có số đo thời gian thu hồi.
 - Phụ thuộc: S2-10.
-- Kết quả: **Hoàn tất triển khai — 2026-11-25**. [Hồ sơ S2-11](../../records/verification/architecture/s2-11-2026-11-25.md): thu hồi quyền schema/bảng/cột/sequence/hàm chéo, kiểm tra baseline và rollback role script; sửa timeout trước advisory lock, deadline watchdog và ngân sách lệch đồng hồ. Nhóm tập trung đạt 29/29; 32 WebSocket bị tác động ngắt trong 482–2.532 ms, không có payload sau ngắt. Một lượt toàn backend đạt 395/395; đã bổ sung bước readiness cho fixture sau các lỗi khởi tạo/đổi host. Bộ mã cuối chạy lại toàn suite và CI bắt buộc trước merge. Volume dev chưa nâng khỏi S2-06; hướng dẫn nâng S2-07/S2-09 trước khi áp quyền mới đã cập nhật.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-25**. [Hồ sơ S2-11](../../records/verification/architecture/s2-11-2026-11-25.md): thu hồi quyền schema/bảng/cột/sequence/hàm chéo, kiểm tra baseline và rollback role script; sửa timeout trước advisory lock, deadline watchdog và ngân sách lệch đồng hồ. Bộ mã cuối đạt **396/396 backend**, **30/30 test công cụ**, build Release và kiểm tra tài liệu đạt. 32 WebSocket bị tác động ngắt trong **501–2.510 ms**, không có payload sau ngắt. Fixture chờ endpoint readiness trước luồng nghiệp vụ; các ca chủ động làm Redis lỗi tiếp tục kiểm tra 503. CI bắt buộc trước merge. Volume dev chưa nâng khỏi S2-06; hướng dẫn nâng S2-07/S2-09 trước khi áp quyền mới đã cập nhật.
 
 ## S2-12 · Demo và tổng kết STEP-2
 - Nhãn: docs
