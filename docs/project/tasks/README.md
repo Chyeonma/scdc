@@ -10,6 +10,22 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 | [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (nháp, chưa đồng bộ) |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |
 
+## Task có thể bắt đầu
+
+Rà ngày **2026-11-24**: S2-01 đến S2-09 đã vào `main`; S2-10 đã triển khai và kiểm thử trên nhánh `refactor/s2-10-module-contracts`, chờ merge qua [PR #38](https://github.com/Chyeonma/scdc/pull/38). Sau khi merge S2-10, có **7 task đủ phụ thuộc để bắt đầu**, gồm S2-11 và sáu việc làm sớm. Trong lúc chờ merge, sáu việc làm sớm vẫn nhận được theo phạm vi trên thẻ. Người nhận chuẩn bị ước lượng, dữ liệu thử và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
+
+| Task | Người làm đề xuất | Phần có thể làm ngay |
+|---|---|---|
+| S2-11 | Sáng | Sau khi merge S2-10: kiểm thử lỗi, thu hẹp quyền database và đo thời gian thu hồi |
+| E4-01 | Thái | Đối chiếu, tích hợp hoặc ghi lý do bỏ nhánh worker email trước S3-04 |
+| E4-02 | Người còn công suất; Sáng kiểm tra | Giao diện tin phòng với dữ liệu giả |
+| E4-03 | Người còn công suất; Thái kiểm tra | Prototype gọi riêng, phòng thoại và thiết bị với dữ liệu giả |
+| E4-04 | Người còn công suất; Vg kiểm tra | Giao diện lời mời và duyệt tham gia với dữ liệu giả |
+| E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
+| E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
+
+Ưu tiên S2-11 sau khi merge S2-10 trước khi người phụ trách nhận việc làm sớm. S2-12 chờ S2-11. Các task STEP-3 vẫn là nháp: tách service chờ kết thúc STEP-2; nhánh Media còn chờ S1-07 và hợp đồng phiên tương ứng. Backend STEP-4 chờ STEP-3. Chưa công bố các task này chỉ vì đã có bản mô tả.
+
 ## Ai giữ phần nào
 
 | Repo (file này) | Trello |

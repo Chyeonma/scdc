@@ -113,6 +113,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: test khi bên kia không trả lời, sự kiện đến hai lần, sai thứ tự, mất Redis; đo thời gian thu hồi quyền DM (yêu cầu 5 giây). Bỏ các quyền đọc chéo tạm thời của S2-03.
 - Xong khi: mỗi user database chỉ có quyền trên schema của mình mà test vẫn qua; có số đo thời gian thu hồi.
 - Phụ thuộc: S2-10.
+- Khả năng bắt đầu: **Có thể làm sau khi merge S2-10 — 2026-11-24**. Hợp đồng cũ đã được dọn và kiểm thử trên nhánh S2-10; chờ mã vào `main` qua PR trước khi thu hẹp toàn bộ quyền DB và kiểm chứng trên nền mới.
 - Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 3–5 ngày công.
 
 ## S2-12 · Demo và tổng kết STEP-2
@@ -121,4 +122,5 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: demo DM và Community chạy với ba user database tách quyền; ghi bằng chứng vào cột "Kết quả" của [lộ trình](../planning.md#roadmap); ước lượng STEP-3.
 - Xong khi: đạt tiêu chí xong của [STEP-2](../planning.md#step-2).
 - Phụ thuộc: tất cả thẻ trên.
+- Khả năng bắt đầu: **Chờ S2-11 — 2026-11-24**. Demo tổng kết phải dùng mã S2-10 đã merge và kiểm thử với quyền database được thu hẹp ở S2-11; không dùng kết quả S2-09 thay cho nghiệm thu STEP-2.
 - Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 0,5–1 ngày công.
