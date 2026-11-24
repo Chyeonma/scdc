@@ -115,7 +115,7 @@ public sealed partial class CommunityApiTests
         var before = await AccessEventsAsync(server); var access = await SqlAsync("SELECT access_version FROM community.servers WHERE id=@server", ("server", server));
         var function = "fail_channel_" + Guid.NewGuid().ToString("N");
         await SqlAsync($"CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='Community.AccessChanged.v1' AND NEW.aggregate_id='{server}' THEN RAISE EXCEPTION 'Channel fault' USING ERRCODE='23514'; END IF; RETURN NEW; END $$; CREATE TRIGGER {function} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{function}()");
-        try { Assert.Equal(HttpStatusCode.InternalServerError, (await (mutation == "create" ? ChannelCreateAsync(server, operation: op) : AclPutAsync(server, channel, "deny"))).StatusCode); }
+        try { Assert.Equal(mutation == "create" ? HttpStatusCode.Conflict : HttpStatusCode.InternalServerError, (await (mutation == "create" ? ChannelCreateAsync(server, operation: op) : AclPutAsync(server, channel, "deny"))).StatusCode); }
         finally { await SqlAsync($"DROP TRIGGER {function} ON community.outbox_events; DROP FUNCTION community.{function}()"); }
         Assert.Equal(before, await AccessEventsAsync(server)); Assert.Equal(access, await SqlAsync("SELECT access_version FROM community.servers WHERE id=@server", ("server", server)));
         if (mutation == "create")
@@ -126,25 +126,21 @@ public sealed partial class CommunityApiTests
         }
         else Assert.Equal("1", (await JsonAsync(await AclAsync(server, channel))).GetProperty("accessVersion").GetString());
     }
-    private sealed class FailingChannelLifecycle(IChatSpaceLifecycle inner) : IChatSpaceLifecycle
-    {
-        public async Task CreateChannelAsync(Guid id, Guid actor, DateTimeOffset now, DbTransaction transaction, CancellationToken ct)
-        { await inner.CreateChannelAsync(id, actor, now, transaction, ct); throw new InvalidOperationException("Synthetic lifecycle fault after space insert."); }
-    }
     [Fact]
     public async Task Lifecycle_failure_and_expired_commit_lease_do_not_leave_orphaned_spaces()
     {
         var server = (await JsonAsync(await CreateAsync())).GetProperty("id").GetGuid();
-        using var source = _factory.Services.CreateScope(); var original = source.ServiceProvider.GetRequiredService<IChatSpaceLifecycle>();
-        using var faulty = _factory.WithWebHostBuilder(b => b.ConfigureServices(s => { s.RemoveAll<IChatSpaceLifecycle>(); s.AddSingleton<IChatSpaceLifecycle>(new FailingChannelLifecycle(original)); }));
+        var original = ProvisionOwner;
+        var faults = new ProvisionFaults(original) { Prepare = async (request, ct) => { await original.PrepareAsync(request, ct); throw new ProvisionConflictException("Owner reply conflicted after space insert."); } };
+        using var faulty = _factory.WithWebHostBuilder(b => b.ConfigureServices(s => { s.RemoveAllKeyed<IChannelProvisioning>(AccessOwner.Community); s.AddKeyedSingleton<IChannelProvisioning>(AccessOwner.Community, faults); }));
         using var faultClient = faulty.CreateClient();
-        Assert.Equal(HttpStatusCode.InternalServerError, (await ChannelCreateAsync(server, client: faultClient)).StatusCode);
+        await AssertErrorAsync(await ChannelCreateAsync(server, client: faultClient), HttpStatusCode.Conflict, "CHANNEL_CREATION_CANCELLED");
         var clock = new CommunityKeyTests.MutableClock(DateTimeOffset.UtcNow);
         using var expiring = _factory.WithWebHostBuilder(b => b.ConfigureServices(s => { s.RemoveAll<TimeProvider>(); s.AddSingleton<TimeProvider>(clock); })); using var client = expiring.CreateClient();
         await using (var gate = await AccessGateAsync(server))
         {
             var creating = ChannelCreateAsync(server, client: client); await WaitForGateAsync(gate); clock.Advance(TimeSpan.FromDays(31)); await gate.ReleaseAsync();
-            await AssertErrorAsync(await creating, HttpStatusCode.Unauthorized, "SESSION_INVALID");
+            await AssertErrorAsync(await creating, HttpStatusCode.Conflict, "CHANNEL_CREATION_CANCELLED");
         }
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM messaging.spaces WHERE created_by_user_id=@user AND space_type=3", ("user", _owner.UserId)));
         Assert.Equal(0L, await AccessEventsAsync(server));

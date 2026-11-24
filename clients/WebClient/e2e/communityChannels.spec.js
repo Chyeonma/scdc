@@ -69,7 +69,7 @@ test('mobile real create/edit and everyone deny with personal allow persist and 
   expect((await snapshot.json()).memberOverrides[0].userId).toBe(target.session.user.id);
 });
 
-test('lost committed create response survives reload and replays the exact operation once', async ({ page, request }) => {
+test('lost committed create response survives reload and reconciles with GET without another POST', async ({ page, request }) => {
   const { server } = await managed(page, request); const bodies = [];
   await page.route(`**/servers/${server.id}/channels`, async (route) => {
     if (route.request().method() !== 'POST') { await route.continue(); return; }
@@ -82,10 +82,72 @@ test('lost committed create response survives reload and replays the exact opera
   await expect(createForm(page).getByLabel('Tên phòng mới', { exact: true })).toHaveValue('Phòng chưa xác nhận');
   await expect(createForm(page).getByLabel('Tên phòng mới', { exact: true })).toBeDisabled();
   await page.route(`**/servers/${server.id}/channels`, async (route) => { if (route.request().method() === 'POST') bodies.push(route.request().postDataJSON()); await route.continue(); });
-  const replay = page.waitForResponse((event) => event.request().method() === 'POST' && event.url().endsWith(`/servers/${server.id}/channels`));
-  await createForm(page).getByRole('button', { name: 'Thử lại tạo phòng', exact: true }).click(); expect((await replay).status()).toBe(200);
-  expect(bodies).toHaveLength(2); expect(bodies[1]).toEqual(bodies[0]);
+  const lookup = page.waitForResponse((event) => event.request().method() === 'GET' && event.url().endsWith(`/servers/${server.id}/channel-operations/${bodies[0].clientOperationId}`));
+  await createForm(page).getByRole('button', { name: 'Kiểm tra tạo phòng', exact: true }).click(); expect((await lookup).status()).toBe(200);
   await expect(page.locator('.community-channel')).toHaveCount(1); await expect(createForm(page).getByLabel('Tên phòng mới', { exact: true })).toHaveValue('');
+  expect(bodies).toHaveLength(1);
+});
+
+test('cancelled creation keeps input and an explicit retry generates a new operation key', async ({ page, request }) => {
+  const { server } = await managed(page, request); const bodies = [];
+  await page.route(`**/servers/${server.id}/channels`, async (route) => {
+    if (route.request().method() !== 'POST') { await route.continue(); return; }
+    bodies.push(route.request().postDataJSON());
+    if (bodies.length === 1) {
+      await route.fulfill({ status: 409, contentType: 'application/problem+json', body: JSON.stringify({ errorCode: 'CHANNEL_CREATION_CANCELLED', detail: 'Cancelled after deadline.' }) });
+    } else await route.continue();
+  });
+  await createForm(page).getByLabel('Tên phòng mới', { exact: true }).fill('Thử lại sau khi hủy');
+  await createForm(page).getByRole('button', { name: 'Tạo phòng', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('đã hủy');
+  await expect(createForm(page).getByLabel('Tên phòng mới', { exact: true })).toHaveValue('Thử lại sau khi hủy');
+  await expect(createForm(page).getByLabel('Tên phòng mới', { exact: true })).toBeEnabled();
+  await createForm(page).getByRole('button', { name: 'Tạo phòng', exact: true }).click();
+  await expect(page.locator('.community-channel')).toHaveCount(1);
+  expect(bodies).toHaveLength(2);
+  expect(bodies[1].clientOperationId).not.toBe(bodies[0].clientOperationId);
+  expect(bodies[1].name).toBe(bodies[0].name);
+});
+
+test('a missing operation lookup stays read-only and only explicit resend reuses the saved body', async ({ page, request }) => {
+  const { server } = await managed(page, request); const bodies = [];
+  await page.route(`**/servers/${server.id}/channels`, async (route) => {
+    if (route.request().method() !== 'POST') { await route.continue(); return; }
+    bodies.push(route.request().postDataJSON());
+    if (bodies.length === 1) await route.abort('failed');
+    else await route.continue();
+  });
+  await createForm(page).getByLabel('Tên phòng mới', { exact: true }).fill('Yêu cầu chưa tới');
+  await createForm(page).getByRole('button', { name: 'Tạo phòng', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Chưa xác nhận được');
+  await createForm(page).getByRole('button', { name: 'Kiểm tra tạo phòng', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Chưa tìm thấy kết quả');
+  expect(bodies).toHaveLength(1);
+  await createForm(page).getByRole('button', { name: 'Gửi lại yêu cầu đã lưu', exact: true }).click();
+  await expect(page.locator('.community-channel')).toHaveCount(1);
+  expect(bodies).toHaveLength(2); expect(bodies[1]).toEqual(bodies[0]);
+});
+
+test('unknown creation survives reload and checking a preparing operation never replays its mutation', async ({ page, request }) => {
+  const { server } = await managed(page, request); const bodies = []; let lookups = 0;
+  await page.route(`**/servers/${server.id}/channels`, async (route) => {
+    if (route.request().method() !== 'POST') { await route.continue(); return; }
+    bodies.push(route.request().postDataJSON());
+    await route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ errorCode: 'OPERATION_OUTCOME_UNKNOWN', detail: 'Check the accepted operation.' }) });
+  });
+  await page.route(`**/servers/${server.id}/channel-operations/*`, async (route) => {
+    lookups++;
+    expect(route.request().method()).toBe('GET');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ operationId: randomUUID(), clientOperationId: bodies[0].clientOperationId, phase: 'preparing', version: '1', cleanupPending: false }) });
+  });
+  await createForm(page).getByLabel('Tên phòng mới', { exact: true }).fill('Đang đối chiếu');
+  await createForm(page).getByRole('button', { name: 'Tạo phòng', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Chưa xác nhận được');
+  await page.reload();
+  await createForm(page).getByRole('button', { name: 'Kiểm tra tạo phòng', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Chưa xác nhận được');
+  await expect(createForm(page).getByLabel('Tên phòng mới', { exact: true })).toBeDisabled();
+  expect(bodies).toHaveLength(1); expect(lookups).toBe(1);
 });
 
 test('real concurrent metadata edit requires GET reconciliation and another explicit save', async ({ page, request }) => {

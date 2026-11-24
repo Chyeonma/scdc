@@ -757,6 +757,26 @@ Thay đổi role/ACL làm mất quyền có thể trả 202 cùng `operationId`,
 
 Worker tiếp tục sau restart, nhận ACK thật từ Community/Messaging rồi xin lại permit của đúng session gốc trước final commit. Nếu actor mất phiên/quyền hoặc expectedVersion không còn đúng, policy dự kiến bị hủy; các floor đã cài vẫn giữ, scope mở lại ở epoch mới. Thử ACK thất lạc, owner lỗi, đăng xuất actor khi pending và recovery trước khi mở traffic mới. Bằng chứng tại [hồ sơ S2-07](../records/verification/architecture/s2-07-2026-11-23.md).
 
+<a id="s2-09-upgrade"></a>
+
+## Nâng cấp S2-09 — Tạo phòng bằng transaction riêng
+
+Baseline là S2-07; không cần chờ S2-08. Volume còn ở S2-06 phải áp dụng S2-07 trước. Dừng API, worker và mọi writer; giữ bản sao dữ liệu đã kiểm tra theo quy trình nâng cấp offline. Không chạy `schema.sql` vào volume có dữ liệu.
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/20261124_s2-09_channel_provisioning.sql
+```
+
+CLI dùng `ConnectionStrings__Migration` của đúng database, ghi checksum `2026112409` vào ledger Community và Messaging trong cùng transaction. Chạy lại là no-op nếu checksum khớp; hai ledger lệch nhau hoặc checksum khác thì dừng. Migration giữ ID, fingerprint/key/version cũ, timestamp và dữ liệu nghiệp vụ; tiếp nhận phòng chữ cũ thành COMPLETED/READY mà không phát lại sự kiện tạo phòng. DM không nằm trong bảng provision phòng.
+
+Chạy lại `database/postgres/module-roles.sql` để cấp quyền bảng/hàm mới. Runtime không được DELETE hai bảng `channel_provisions`: dấu hủy phải còn sau cleanup. Quyền chéo tạm còn lại được xử lý ở S2-11. Build và chạy API/WebClient cùng phiên bản; giao diện cũ không có luồng đối chiếu và đổi khóa sau hủy. Không tự rollback về writer tạo phòng cũ hoặc chạy down migration; phải dừng writer và xác minh tương thích dữ liệu trước khi chọn phương án rollback.
+
+Community giữ tên phòng trong PREPARING, không đưa phòng vào list/detail. RPC adapter trong process có deadline 2 giây và chỉ chạy ngoài transaction Community; Messaging tự mở connection/transaction của mình. Sau 5 giây chưa hoàn tất, request/worker tranh chốt CANCELLED; chỉ báo `409 CHANNEL_CREATION_CANCELLED` khi quyết định hủy đã commit. Owner chưa dọn được thì `cleanupPending` vẫn còn và worker tiếp tục. Lease worker 6 giây, hết lease có thể nhận lại sau restart. Worker lấy theo `next_attempt_at`; Confirm/Cancel lỗi có backoff tối đa 30 giây để công việc cũ không chiếm hết lượt của thao tác mới.
+
+Khi POST mất phản hồi hoặc trả `503 OPERATION_OUTCOME_UNKNOWN`, giữ nguyên khóa/nội dung và GET `/api/v1/servers/{serverId}/channel-operations/{clientOperationId}`. GET chỉ đọc trạng thái, không tiếp tục công việc. COMPLETED thì đọc phòng hiện tại; CANCELLED thì thao tác thử lại dùng khóa mới; PREPARING thì tiếp tục đối chiếu. Không suy rằng 404 nghĩa POST chưa tới.
+
+Theo dõi `community.channel_provisions`: `phase` 0/1/2 là PREPARING/COMPLETED/CANCELLED; `delivery_pending` biểu thị Confirm/Cancel chưa được owner xác nhận. Đối chiếu log theo operation ID khi work bị hoãn. Không sửa phase hay xóa dấu hủy thủ công. Confirm chậm có thể được thay bằng `ChannelReadyPermit` hiện tại do Community cấp; Messaging vẫn kiểm floor Identity, membership, ACL, lifecycle và hạn trước commit. Permit kích hoạt space không thay quyền cho từng lần đọc/gửi/đăng ký sau này.
 
 <a id="s2-08-upgrade"></a>
 

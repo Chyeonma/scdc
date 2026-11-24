@@ -1,19 +1,15 @@
 using System.Globalization;
 using SCDC.Modules.Community.Infrastructure.Access;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Application.Text;
 using SCDC.BuildingBlocks.Infrastructure.Outbox;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Messaging;
 using SCDC.Modules.Community.Features.Permissions.Application;
 using SCDC.Modules.Community.Features.Permissions.Infrastructure;
 using SCDC.Modules.Community.Infrastructure;
-using SCDC.Modules.Community.Infrastructure.Idempotency;
 using SCDC.Modules.Community.Infrastructure.Paging;
 using SCDC.Modules.Community.Infrastructure.Persistence;
 
@@ -21,8 +17,8 @@ namespace SCDC.Modules.Community.Features.Channels.Application;
 
 internal sealed class ChannelService(RelationalWorkScopeFactory scopes, CommunityManagementGuard management,
     CommunityPolicyCoordinator coordinator, CommunityChannelGuard guard, ChannelReader reader, ConfigurationCursorCodec cursors,
-    IChatSpaceLifecycle spaces, IOptionsMonitor<CommunityOptions> options, TransactionalOutbox outbox,
-    TimeProvider clock, ILogger<ChannelService> logger) : IChannelService
+    ChannelProvisionCoordinator provisions, TransactionalOutbox outbox,
+    ILogger<ChannelService> logger) : IChannelService
 {
     public Task<Result<ChannelPage>> ListAsync(AccountActor actor, Guid server, int limit, string? cursor, CancellationToken ct) => ExecuteAsync(async () =>
     {
@@ -52,39 +48,10 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
             throw Invalid("clientOperationId", "A UUIDv4 with RFC variant is required.");
         var name = Name(command.Name); var topic = Topic(command.Topic);
         if (command.Kind is not (null or "text")) throw Invalid("kind", "This package supports text channels only.");
-        var permit=await management.PrepareAsync(actor,server,true,ct,IdentityPurpose.ChannelCreate);
-        await using var scope = await scopes.OpenAsync(ct);
-        var lease = await management.AcquireAsync(scope, actor, server, true, false, ct, permit, "manage_channels");
-        await using (var query = scope.CreateCommand("SELECT resource_id,fingerprint,key_id,fingerprint_version FROM community.operations WHERE actor_user_id=@actor AND kind='create_channel' AND scope_id=@server AND client_operation_id=@op"))
-        {
-            query.Parameters.AddWithValue("actor", actor.UserId); query.Parameters.AddWithValue("server", server); query.Parameters.AddWithValue("op", command.ClientOperationId);
-            Guid? resource = null; byte[]? fingerprint = null; string? key = null; short version = 1;
-            await using (var rows = await query.ExecuteReaderAsync(ct))
-                if (await rows.ReadAsync(ct)) { resource = rows.GetGuid(0); fingerprint = rows.GetFieldValue<byte[]>(1); key = rows.GetString(2); version = rows.GetInt16(3); }
-            if (resource is Guid existing)
-            {
-                var hash = OperationFingerprint.ComputeChannel(options.CurrentValue.Operations.GetKey(key!), actor.UserId, server, command.ClientOperationId, name, topic, 1, version);
-                if (!CryptographicOperations.FixedTimeEquals(hash, fingerprint!)) throw PermissionFailure.Conflict("OPERATION_CONFLICT", "Operation key was used with different data.");
-                var current = await reader.StateAsync(scope, server, existing, false, ct)
-                    ?? throw PermissionFailure.Conflict("OPERATION_RESOURCE_REMOVED", "The channel created by this operation was removed.");
-                if (!(await reader.EvaluateAsync(scope, actor.UserId, server, current, lease, ct)).CanView) throw PermissionFailure.Missing();
-                await management.EnsureAsync(scope,lease.Account,ct); await scope.CommitAsync(ct);
-                return new CreateChannelResult(current.View, false);
-            }
-        }
-        Capacity(lease);
-        var id = Guid.CreateVersion7(); var now = clock.GetUtcNow(); var keys = options.CurrentValue.Operations;
-        var hashNew = OperationFingerprint.ComputeChannel(keys.GetKey(keys.ActiveKeyId), actor.UserId, server, command.ClientOperationId, name, topic, 1);
-        await spaces.CreateChannelAsync(id, actor.UserId, now, scope.Transaction, ct);
-        await Write(scope, "INSERT INTO community.channels(space_id,server_id,name,name_key,topic,kind,default_view,created_at,updated_at) VALUES(@id,@server,@name,@key,@topic,1,1,@now,@now)", ct,
-            ("id", id), ("server", server), ("name", name), ("key", UnicodeTextPolicy.NormalizeNameKey(name)), ("topic", (object?)topic ?? DBNull.Value), ("now", now));
-        await Write(scope, "INSERT INTO community.operations(actor_user_id,kind,scope_id,client_operation_id,fingerprint_version,key_id,fingerprint,resource_id) VALUES(@actor,'create_channel',@server,@op,1,@key,@hash,@id)", ct,
-            ("actor", actor.UserId), ("server", server), ("op", command.ClientOperationId), ("key", keys.ActiveKeyId), ("hash", hashNew), ("id", id));
-        await Changed(scope, server, id, lease, "channel_created", 1, ct);
-        var created = await reader.StateAsync(scope, server, id, false, ct) ?? throw new InvalidOperationException("Created channel missing.");
-        await management.EnsureAsync(scope,lease.Account,ct); await scope.CommitAsync(ct);
-        return new CreateChannelResult(created.View, true);
+        return await provisions.CreateAsync(actor, server, command with { Name = name, Topic = topic, Kind = "text" }, ct);
     });
+    public Task<Result<ChannelCreationStatus>> CreationStatusAsync(AccountActor actor, Guid server, Guid clientOperationId, CancellationToken ct) => ExecuteAsync(async () =>
+        await provisions.ReadStatusAsync(actor, server, clientOperationId, ct) ?? throw PermissionFailure.Missing());
     public Task<Result<ChannelView>> UpdateAsync(AccountActor actor, Guid server, Guid channel, UpdateChannelCommand command, CancellationToken ct) => ExecuteAsync(async () =>
     {
         var expected = Version(command.ExpectedVersion, "expectedVersion");
@@ -99,6 +66,7 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
         if (name == current.View.Name && topic == current.View.Topic)
         { await management.EnsureAsync(scope,lease.Server.Account,ct); await scope.CommitAsync(ct); return current.View; }
         Capacity(lease.Server, current.Version);
+        await ChannelProvisionCoordinator.CheckNameAsync(scope, server, UnicodeTextPolicy.NormalizeNameKey(name), channel, ct);
         await Write(scope, "UPDATE community.channels SET name=@name,name_key=@key,topic=@topic WHERE space_id=@channel", ct,
             ("name", name), ("key", UnicodeTextPolicy.NormalizeNameKey(name)), ("topic", (object?)topic ?? DBNull.Value), ("channel", channel));
         await Changed(scope, server, channel, lease.Server, "channel_updated", current.AccessVersion, ct);

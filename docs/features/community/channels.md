@@ -396,6 +396,10 @@ sequenceDiagram
 
 POST vẫn 201/200 khi hoàn tất; đã hủy trả `409 CHANNEL_CREATION_CANCELLED`; chưa rõ trả `503 OPERATION_OUTCOME_UNKNOWN` với status URL. Không trả 202 để cho phép tạo phòng tiếp tục vô hạn. GET trả phase, version, cleanupPending và resource ID khi được phép; 404 không chứng minh request chưa tới. Gửi lại cùng khóa phải kiểm tra fingerprint và quyền; đã hủy thì cùng khóa vẫn kết thúc, Retry mới dùng khóa/channel ID mới. Cleanup cũ không lọc theo tên nên không xóa lần tạo mới.
 
+**Runtime S2-09:** coordinator và worker Community lưu reservation, quyết định và việc gửi Confirm/Cancel; adapter Messaging chỉ được resolve bằng key Community và tự mở transaction owner. Cả tạo mới và đổi tên phòng kiểm tra tên đang được giữ chỗ. Deadline quyết định 5 giây, RPC 2 giây, transaction owner 1 giây; worker nhận lại lease hết hạn sau restart. Hai bảng provision giữ dấu hủy và chống đổi quyết định terminal; runtime không được DELETE. Migration tiếp nhận phòng chữ cũ với mapping bền, giữ nguyên fingerprint/key và lịch sử outbox.
+
+Confirm chậm: `IChannelReadyPermitIssuer` chỉ cấp proof khi operation đã COMPLETED và actor còn xem được phòng; proof gắn operation, fingerprint, permit Identity cho Messaging và scope Community hiện tại. Messaging kiểm floor Identity/membership/ACL/lifecycle và hạn trước khi kích hoạt đúng space PREPARED. Đây là adapter nội bộ để đường tin phòng dùng sau này; chưa có API tin phòng hay RPC qua mạng. Space đang chuẩn bị không qua được DM/Hub hiện hữu; trigger owner cũng chặn ghi message/member/outbox vào space chưa ready. Hướng dẫn nâng cấp tại [S2-09](../../guides/development.md#s2-09-upgrade).
+
 | Mã | Tình huống | Kết quả mong đợi |
 |---|---|---|
 | TC-S2-02-16 | Prepare commit mất ACK; Community restart | Đối chiếu cùng ID, một space; không công bố từ kết quả chưa rõ |
@@ -415,7 +419,7 @@ POST vẫn 201/200 khi hoàn tất; đã hủy trả `409 CHANNEL_CREATION_CANCE
 - Sửa thông tin: giữ version đã đọc; xung đột hay timeout thì GET đối chiếu trước khi lưu lại.
 - Đổi người dùng, server hay phòng đang chọn thì hủy các lần đọc cũ và bỏ dữ liệu quản lý; 401, 403, 404 thì đóng thông tin cũ.
 - Không hiện tin hay ô soạn tin khi chưa có API tin.
-- Chờ ngắn, hủy, dọn (D17, D19) và tra cứu (D18) của v1 chưa làm.
+- S2-09 đã triển khai chờ ngắn, hủy/dọn và GET đối chiếu: reload giữ tham chiếu; kiểm tra thao tác cũ không tự POST; sau hủy giữ dữ liệu nhập và tạo khóa mới khi người dùng bấm Tạo phòng.
 
 Giao diện sửa quyền: [trình sửa ACL](access-control.md#acl-editor-ui). Server luôn kiểm tra lại quyền dưới khóa.
 
@@ -468,7 +472,7 @@ Phụ thuộc chung: [kế hoạch](../../project/planning.md#community-work-ite
 
 - Xóa phòng nguyên tử và tranh chấp gửi với xóa; lịch sử và ghi tin phòng dùng guard; Hub và thu hồi.
 - Phòng thoại phụ thuộc Media và bằng chứng ngắt riêng.
-- **v1 tạo phòng:** thiết kế schema, giao thức, hủy/dọn, deadline, lỗi, tra cứu và `.proto` đã có ở [S2-02](#s2-02-channel-protocol); triển khai và kiểm chứng tại S2-09. Giao thức xóa phòng giữa service và Media vẫn thuộc các gói tính năng tương ứng.
+- **v1 tạo phòng:** adapter trong process, schema, migration, hủy/dọn, deadline, lỗi và GET đối chiếu đã triển khai ở [S2-09](#s2-02-channel-protocol); giao thức qua mạng thuộc STEP-3. Giao thức xóa phòng giữa service và Media vẫn thuộc các gói tính năng tương ứng.
 - Kiểm thử v1 phải gồm: thành công tranh với hủy; mất phản hồi sau commit; lệnh đến muộn sau khi đã dọn; khởi động lại giữa lúc dọn; Thử lại sau khi hủy.
 
 ---

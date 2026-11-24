@@ -38,6 +38,9 @@ public sealed class ChannelsController(IChannelService channels) : ApiController
         Response.Headers.Location = $"/api/v1/servers/{serverId}/channels/{result.Value.Channel.Id}";
         return result.Value.Created ? StatusCode(201, result.Value.Channel) : Ok(result.Value.Channel);
     }
+    [HttpGet("~/api/v1/servers/{serverId:guid}/channel-operations/{clientOperationId:guid}")]
+    public async Task<ActionResult<ChannelCreationStatus>> CreationStatus(Guid serverId, Guid clientOperationId, CancellationToken ct)
+        => FromResult(await channels.CreationStatusAsync(Actor, serverId, clientOperationId, ct));
     [HttpPatch("{channelId:guid}")]
     [RequestSizeLimit(16_384)]
     public async Task<ActionResult<ChannelView>> Update(Guid serverId, Guid channelId, UpdateChannelRequest request, CancellationToken ct)

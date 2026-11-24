@@ -338,7 +338,7 @@ Nếu Apply lấy khóa trước writer thì writer rollback vì epoch cũ. Nế
 
 ## Còn mở
 
-- S2-03/06/07 đã có DDL, Redis, permit Identity và coordinator Identity/Community cùng bằng chứng runtime. S2-08/09/10 tiếp tục thay writer Messaging, provision phòng và hợp đồng; S2-11 kiểm chứng toàn registry, tranh chấp và thời gian thu hồi.
+- S2-03/06/07 đã có DDL, Redis, permit Identity và coordinator Identity/Community cùng bằng chứng runtime. S2-08 đã chuyển writer DM; S2-09 đã triển khai provision phòng bằng transaction owner riêng. S2-10 dọn hợp đồng; S2-11 kiểm chứng toàn registry, tranh chấp và thời gian thu hồi.
 - Phiên bản Redis, persistence, tài nguyên, HA, bảo vệ kết nối và cấp credential được chọn trong S2-06; không làm thay đổi quy tắc fail closed hoặc thứ tự công bố phiên.
 - Lease/provider và bằng chứng ngắt LiveKit thuộc gói Media; không bật Media trong registry trước khi thực thi được hàng rào và thời hạn 5 giây.
 
@@ -383,7 +383,6 @@ Sau đủ ACK, worker xin permit `RESUMING_ACCEPTED_OPERATION` cho đúng sessio
 
 S2-07 chưa chuyển transaction tạo Messaging space sang luồng provision (S2-09), chưa thay guard DM (S2-08), chưa host RPC/gỡ hợp đồng cũ (S2-10), chưa thu hẹp toàn bộ grant tạm hoặc bật Media (S2-11/Media). Adapter `IChannelAccessGuard` nhận transaction cũ không còn được đăng ký; hiện không có caller production, channel nội bộ dùng guard cục bộ với permit đã lấy trước transaction. Không tuyên bố đã bật giao thức mới trên mọi owner khi các đường đó chưa được chuyển đổi.
 
-
 <a id="s2-08-runtime"></a>
 
 ## Runtime S2-08 — Permit và transaction Messaging
@@ -393,3 +392,11 @@ Sáu đường DM lấy permit Identity trước khi mở `MessagingSession` n�
 Hạn JWT đã xác minh đi vào command. Admission kiểm owner, purpose, resource/operation, generation, đủ scope, epoch và ngân sách còn ít nhất 1,5 giây. RPC có deadline 2 giây; transaction dùng lock timeout 500 ms, statement/transaction timeout 1 giây và kiểm cuối bằng `clock_timestamp()` với biên 250 ms. Lỗi hoặc thiếu thông tin trả lỗi tạm/xung đột, không bỏ qua gate.
 
 Hồ sơ chỉ phục vụ DTO qua scope Identity độc lập với deadline 2 giây: ghi lấy trước transaction; history/inbox đóng transaction trước lookup. Realtime còn xin permit mới và kiểm lại fence, tư cách và current DTO sau lookup, giữ local fence trong handoff có cancellation/deadline 500 ms. Outbox tiếp tục kiểm Redis riêng cho từng recipient. [Hồ sơ S2-08](../records/verification/architecture/s2-08-2026-11-24.md) ghi test quyền DB, lỗi/cạnh tranh, dm-mvp và thời gian thu hồi; S2-11 tiếp tục kiểm chứng tải/lệch đồng hồ và thu hẹp grant toàn hệ thống.
+
+<a id="s2-09-runtime"></a>
+
+## Runtime S2-09 — Provision phòng
+
+Community giữ operation và tên phòng trước Prepare; mọi lời gọi owner đều ngoài transaction Community. Trước COMPLETED, coordinator xin lại permit của session gốc rồi khóa fence, server và operation để kiểm membership, quyền hiện tại và deadline 5 giây. CAS quyết định, metadata và outbox commit cùng lúc. Quá hạn hoặc mất điều kiện thì chốt CANCELLED; quyết định đã chốt không đảo lại. Worker tiếp tục Confirm/Cancel sau restart, giữ nguyên operation/fingerprint và dấu hủy; job lỗi có backoff để không chặn operation mới.
+
+Messaging tự commit PREPARED/READY/CANCELLED, khóa lifecycle floor và không dùng transaction Community. Prepare/Confirm muộn không làm sống lại operation đã hủy hoặc space đã xóa. Khi Confirm chậm, proof readiness do Community cấp sau COMPLETED gắn permit Identity cho Messaging và scope membership/ACL/lifecycle hiện tại; owner kiểm floor và hạn trong transaction trước khi kích hoạt space. Proof này không cấp quyền cho mọi lần đọc/gửi về sau. [Hồ sơ S2-09](../records/verification/architecture/s2-09-2026-11-24.md) và [giao thức tạo phòng](../features/community/channels.md#s2-02-channel-protocol) ghi phạm vi/bằng chứng; tin phòng, RPC qua mạng và Media chưa nằm trong runtime này.

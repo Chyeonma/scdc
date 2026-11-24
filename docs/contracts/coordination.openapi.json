@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC access and channel coordination — target S2-02",
     "version": "1.0.0",
-    "description": "S2-06 triển khai GET thu hồi Identity. S2-07 triển khai policy fencing, membership header và GET tiến trình Community; provision phòng và host RPC còn là mục tiêu S2-02. Chi tiết tại access-revocation.md và Community channels.md."
+    "description": "S2-06 triển khai GET thu hồi Identity. S2-07 triển khai policy fencing, membership header và GET tiến trình Community. S2-09 triển khai provision phòng trong process và GET đối chiếu; host RPC qua mạng thuộc STEP-3."
   },
   "security": [
     {
@@ -150,7 +150,6 @@
       "get": {
         "operationId": "getOwnChannelOperation",
         "description": "Chỉ operation create_channel của actor hiện tại. Pending/cancelled cần membership hiện tại và quyền tạo phòng; completed cần quyền xem phòng. GET không tạo, gia hạn hoặc kích hoạt worker. Không tìm thấy không chứng minh POST chưa tới.",
-        "x-scdc-target-only": true,
         "parameters": [
           {
             "name": "serverId",
@@ -215,7 +214,8 @@
             }
           }
         },
-        "summary": "Đối chiếu thao tác tạo phòng của mình"
+        "summary": "Đối chiếu thao tác tạo phòng của mình",
+        "x-scdc-implementation": "implemented"
       }
     },
     "/api/v1/servers/{serverId}/channels": {

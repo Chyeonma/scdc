@@ -4,6 +4,7 @@ using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Contracts.Identity;
 using SCDC.Contracts.Community;
+using SCDC.Contracts.Messaging;
 
 namespace SCDC.Api.Errors;
 
@@ -24,6 +25,16 @@ internal sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
+        if (exception is ChannelOutcomeUnknownException unknown)
+        {
+            var path = $"/api/v1/servers/{unknown.ServerId:D}/channel-operations/{unknown.ClientOperationId:D}";
+            var error = Error.ServiceUnavailable("OPERATION_OUTCOME_UNKNOWN", "Channel creation could not be confirmed. Check the original operation.");
+            httpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            httpContext.Response.Headers.Location = path;
+            var problem = ApiProblemDetailsFactory.Create(httpContext, ApiErrorDefaults.FromError(error), error.Description);
+            problem.Extensions["statusUrl"] = path;
+            return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext { HttpContext = httpContext, ProblemDetails = problem });
+        }
         if(exception is CommunityChangePendingException pending)
         {
             var path=$"/api/v1/servers/{pending.ServerId:D}/access-operations/{pending.OperationId:D}";

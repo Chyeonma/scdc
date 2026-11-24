@@ -22,6 +22,11 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
         })));
         builder.ConfigureServices(services =>
         {
+            // Requests drive provisioning deterministically. Recovery tests explicitly
+            // start the worker; unrelated factory instances must not steal fault fixtures.
+            foreach (var descriptor in services.Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+                && d.ImplementationType == typeof(SCDC.Modules.Community.Infrastructure.ChannelProvisionWorker)).ToArray())
+                services.Remove(descriptor);
             services
                 .AddControllers()
                 .AddApplicationPart(typeof(TestResponseController).Assembly);

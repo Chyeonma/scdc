@@ -2,9 +2,9 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-08 hoàn tất triển khai và kiểm thử; S2-09 đến S2-12 chưa hoàn tất. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-09 hoàn tất triển khai và kiểm thử; S2-10 đến S2-12 chưa hoàn tất. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
-S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-08 còn khoảng 7,5–13 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
+S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-09 còn khoảng 4,5–8 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -96,8 +96,8 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Người làm: Vg · Review: Sáng
 - Đầu ra: `ChannelService` không gọi `IChatSpaceLifecycle` trong transaction của Community; dùng luồng chuẩn bị, xác nhận, hủy của D14–D19 (dạng chạy trong một ứng dụng).
 - Xong khi: tạo phòng chạy đúng; các ca mất phản hồi, gửi lại, hủy giữa chừng có test.
-- Phụ thuộc: S2-02, S2-03, S2-04, S2-05, S2-06.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 3–5 ngày công.
+- Phụ thuộc: S2-02, S2-03, S2-04, S2-05, S2-06, S2-07; không chờ S2-08.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-09](../../records/verification/architecture/s2-09-2026-11-24.md): transaction owner riêng, reservation, quyết định bền và worker phục hồi; **374/374 backend** ở lượt cuối chạy collection tuần tự, **82/82 frontend**, **14/14 browser phòng**; CLI bảo toàn dữ liệu/field cũ của 53 bảng. Mã nguồn và hồ sơ cùng commit S2-09; volume dev vẫn ở S2-06.
 
 ## S2-10 · Dọn hợp đồng giữa module
 - Nhãn: refactor

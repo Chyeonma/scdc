@@ -44,7 +44,7 @@ public static class MessagingModule
         services.AddSingleton<OutboxDispatcher>();
         services.AddHostedService(provider => provider.GetRequiredService<OutboxDispatcher>());
         services.AddHostedService<SubscriptionReconciler>();
-        services.AddScoped<IChatSpaceLifecycle, ChatSpaceLifecycle>();
+        services.AddKeyedSingleton<IChannelProvisioning, ChannelProvisioning>(AccessOwner.Community);
         services.AddSingleton<IModuleDescriptor, MessagingModuleDescriptor>();
         return services;
     }

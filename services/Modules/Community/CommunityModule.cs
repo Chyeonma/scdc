@@ -59,6 +59,9 @@ public static class CommunityModule
         services.AddSingleton<CommunityPolicyCoordinator>();
         services.AddSingleton<ICommunityChangeStatusReader>(p=>p.GetRequiredService<CommunityPolicyCoordinator>());
         services.AddHostedService<CommunityAccessWorker>();
+        services.AddSingleton<ChannelProvisionCoordinator>();
+        services.AddScoped<IChannelReadyPermitIssuer, ChannelReadyPermitIssuer>();
+        services.AddHostedService<ChannelProvisionWorker>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IServerService, ServerService>();
         services.AddScoped<IMembershipService, MembershipService>();

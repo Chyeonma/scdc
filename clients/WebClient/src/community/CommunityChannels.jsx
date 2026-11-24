@@ -1,6 +1,6 @@
 import { readPendingPolicy, savePendingPolicy, clearPendingPolicy } from './pendingPolicy.js';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getAccessChange, getServer, getChannels, getChannel, createChannel, updateChannel, getChannelAccess, replaceChannelAccess, getRoles, getMembers } from './api.js';
+import { getAccessChange, getServer, getChannels, getChannel, getChannelOperation, createChannel, updateChannel, getChannelAccess, replaceChannelAccess, getRoles, getMembers } from './api.js';
 import { validateChannelInput } from './text.js';
 import { operationId } from './pendingCreate.js';
 import { readPendingChannel, savePendingChannel, clearPendingChannel } from './pendingChannel.js';
@@ -94,13 +94,15 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
         setNotice({ text: 'Yêu cầu đã được tiếp nhận và đang xử lý. Kiểm tra tiến trình trước khi lưu thay đổi tiếp.' });
         return;
       }
-      const known = body && (error.status === 400 || error.problem?.errorCode === 'NAME_CONFLICT');
+      const cancelled = error.problem?.errorCode === 'CHANNEL_CREATION_CANCELLED';
+      const known = body && (error.status === 400 || error.problem?.errorCode === 'NAME_CONFLICT' || cancelled);
       if (known) {
         try { clearPendingChannel(window.sessionStorage, actorId, serverId, body.clientOperationId); setPendingState({ body: null }); }
         catch (failure) { setPendingState({ body, error: failure }); }
         setErrors(error.problem?.errors || {});
       } else if (!body) setUncertain(true);
-      setNotice({ error: true, text: body && !known ? 'Chưa xác nhận được kết quả tạo phòng. Yêu cầu được giữ để thử lại cùng dữ liệu.'
+      setNotice({ error: true, text: cancelled ? 'Yêu cầu tạo phòng đã hủy. Dữ liệu nhập được giữ lại; bấm Tạo phòng để thử bằng yêu cầu mới.'
+        : body && !known ? 'Chưa xác nhận được kết quả tạo phòng. Hãy kiểm tra yêu cầu đã lưu trước khi tạo yêu cầu khác.'
         : !body ? 'Hãy kiểm tra kết quả hiện tại trước khi lưu lại.' : error.message,
       detail: timedOut ? 'Kết nối đã quá thời gian chờ.' : error.message });
       if ([401, 403, 404].includes(error.status)) { setData({ ...empty(), loading: false, error }); setDetail(null); }
@@ -109,10 +111,31 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
       if (!disposed.current) setBusy(false);
     }
   }
+  async function reconcileCreation(body, signal, allowReplay = false) {
+    let status;
+    try { status = await getChannelOperation(actorId, serverId, body.clientOperationId, signal); }
+    catch (error) {
+      // A persisted draft may precede the first POST. Only this explicit action
+      // may resend it, with its original fingerprint, key and membership header.
+      if (error.status === 404) {
+        if (allowReplay) return createChannel(actorId, serverId, body, signal, data.server?.myMembership?.membershipId);
+        throw Object.assign(new Error('Chưa tìm thấy kết quả. Bạn có thể chủ động gửi lại yêu cầu đã lưu.'), {
+          status: 503, problem: { errorCode: 'OPERATION_OUTCOME_UNKNOWN' },
+        });
+      }
+      throw error;
+    }
+    if (status.phase === 'completed' && status.resourceId) return getChannel(actorId, serverId, status.resourceId, signal);
+    const cancelled = status.phase === 'cancelled';
+    throw Object.assign(new Error(cancelled ? 'Yêu cầu đã hủy.' : 'Yêu cầu vẫn đang được đối chiếu. Hãy kiểm tra lại sau.'), {
+      status: cancelled ? 409 : 503,
+      problem: { errorCode: cancelled ? 'CHANNEL_CREATION_CANCELLED' : 'OPERATION_OUTCOME_UNKNOWN' },
+    });
+  }
   function submit(event) {
     event.preventDefault();
     if (!allowed || !canCreate || pendingState.error || mutation.current) return;
-    if (pending) { perform((signal) => createChannel(actorId, serverId, pending, signal, data.server?.myMembership?.membershipId), pending); return; }
+    if (pending) { perform((signal) => reconcileCreation(pending, signal), pending); return; }
     const checked = validateChannelInput({ name, topic }); setErrors(checked.errors);
     if (Object.keys(checked.errors).length) return;
     let body;
@@ -175,14 +198,16 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
         </article>)}</div>
         {data.nextCursor && <button className="btn btn--secondary" onClick={more} disabled={!allowed}>Xem thêm phòng</button>}
         {canCreate && <form className="community-channel-create" onSubmit={submit} noValidate>
-          <h2>Tạo phòng văn bản</h2>{pending && <p role="status">Có yêu cầu tạo chưa được xác nhận. Thử lại dùng cùng tên/chủ đề đã gửi.</p>}
+          <h2>Tạo phòng văn bản</h2>{pending && <p role="status">Có yêu cầu tạo chưa được xác nhận. Kiểm tra kết quả của yêu cầu đã lưu.</p>}
           <label htmlFor="community-channel-create-name">Tên phòng mới</label>
           <input id="community-channel-create-name" value={name} onChange={(event) => setName(event.target.value)} disabled={!allowed || Boolean(pending) || Boolean(pendingState.error)} aria-invalid={Boolean(errors.name)} />
           {errors.name && <p role="alert">{errors.name.join(' ')}</p>}
           <label htmlFor="community-channel-create-topic">Chủ đề phòng mới</label>
           <textarea id="community-channel-create-topic" value={topic} onChange={(event) => setTopic(event.target.value)} disabled={!allowed || Boolean(pending) || Boolean(pendingState.error)} aria-invalid={Boolean(errors.topic)} />
           {errors.topic && <p role="alert">{errors.topic.join(' ')}</p>}
-          <button className="btn btn--primary" disabled={!allowed || Boolean(pendingState.error)} type="submit">{busy ? 'Đang lưu…' : pending ? 'Thử lại tạo phòng' : 'Tạo phòng'}</button>
+          <button className="btn btn--primary" disabled={!allowed || Boolean(pendingState.error)} type="submit">{busy ? 'Đang lưu…' : pending ? 'Kiểm tra tạo phòng' : 'Tạo phòng'}</button>
+          {pending && <button className="btn btn--secondary" disabled={!allowed || Boolean(pendingState.error)} type="button"
+            onClick={() => perform((signal) => reconcileCreation(pending, signal, true), pending)}>Gửi lại yêu cầu đã lưu</button>}
         </form>}
       </section>
       <section className="community-section community-channel-detail">

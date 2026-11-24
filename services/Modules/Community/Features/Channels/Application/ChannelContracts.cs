@@ -18,12 +18,15 @@ public sealed record UpdateChannelCommand(string? ExpectedVersion, bool HasName,
 public sealed record ReplaceChannelAccessCommand(string? ExpectedAccessVersion, string? DefaultView,
     IReadOnlyList<RoleOverride>? RoleOverrides, IReadOnlyList<MemberOverride>? MemberOverrides);
 public sealed record CreateChannelResult(ChannelView Channel, bool Created);
+public sealed record ChannelCreationStatus(Guid OperationId, Guid ClientOperationId, string Phase, string Version, bool CleanupPending,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? ResourceId);
 
 public interface IChannelService
 {
     Task<Result<ChannelPage>> ListAsync(AccountActor actor, Guid server, int limit, string? cursor, CancellationToken ct);
     Task<Result<ChannelView>> GetAsync(AccountActor actor, Guid server, Guid channel, CancellationToken ct);
     Task<Result<CreateChannelResult>> CreateAsync(AccountActor actor, Guid server, CreateChannelCommand command, CancellationToken ct);
+    Task<Result<ChannelCreationStatus>> CreationStatusAsync(AccountActor actor, Guid server, Guid clientOperationId, CancellationToken ct);
     Task<Result<ChannelView>> UpdateAsync(AccountActor actor, Guid server, Guid channel, UpdateChannelCommand command, CancellationToken ct);
     Task<Result<ChannelAccess>> AccessAsync(AccountActor actor, Guid server, Guid channel, CancellationToken ct);
     Task<Result<ChannelAccess>> ReplaceAccessAsync(AccountActor actor, Guid server, Guid channel, ReplaceChannelAccessCommand command, CancellationToken ct);

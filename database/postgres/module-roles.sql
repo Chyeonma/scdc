@@ -56,6 +56,12 @@ DO $$ BEGIN
 END $$;
 
 -- Temporary S2-03 grants. Remove only after the replacement flows pass S2-11.
+DO $$ BEGIN
+    IF to_regclass('community.channel_provisions') IS NOT NULL THEN
+        REVOKE DELETE ON community.channel_provisions FROM scdc_community;
+        REVOKE DELETE ON messaging.channel_provisions FROM scdc_messaging;
+    END IF;
+END $$;
 GRANT USAGE ON SCHEMA identity TO scdc_community,scdc_messaging;
 GRANT SELECT ON identity.users,identity.auth_sessions,identity.user_emails,identity.user_security_states
     TO scdc_community,scdc_messaging;

@@ -30,6 +30,7 @@ Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`. S
 - [seed.sql](seed.sql): dữ liệu minh họa, password/token không dùng đăng nhập.
 - [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/development.md#migration).
 - Sau S2-03, chạy S2-04 và S2-05 theo [hướng dẫn ranh giới schema](../../docs/guides/development.md#s2-04-s2-05-upgrade). Hai migration độc lập, không sửa dữ liệu nghiệp vụ; bootstrap mới đã gồm cả hai.
+- S2-09 sau S2-07 thêm tiến trình tạo phòng riêng của Community/Messaging; [hướng dẫn nâng cấp offline](../../docs/guides/development.md#s2-09-upgrade). Chạy lại role script sau migration; giữ dấu hủy sau cleanup, không DELETE hai bảng provision bằng runtime.
 
 Compose chỉ chạy script init khi volume mới được khởi tạo. Sửa SQL không cập nhật volume có sẵn. Dùng [database thử riêng](../../docs/guides/development.md#local-environment) cho suite tích hợp.
 

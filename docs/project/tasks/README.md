@@ -5,7 +5,7 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 | File | Bước |
 |---|---|
 | [step-1.md](step-1.md) | STEP-1 — Phạm vi chung hoàn tất; S1-07 giữ riêng cho Media |
-| [step-2.md](step-2.md) | STEP-2 — Đã công bố; S2-01 đến S2-07 hoàn tất triển khai, S2-08 đến S2-12 chưa làm |
+| [step-2.md](step-2.md) | STEP-2 — Đã công bố; S2-01 đến S2-09 hoàn tất triển khai, S2-10 đến S2-12 chưa làm |
 | [step-3.md](step-3.md) | STEP-3 — Tách từng service (nháp, chưa đồng bộ) |
 | [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (nháp, chưa đồng bộ) |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |

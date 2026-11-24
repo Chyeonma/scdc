@@ -59,6 +59,9 @@ export function getChannel(actorId, serverId, channelId, signal) {
 export function createChannel(actorId, serverId, body, signal, actorMembershipId) {
   return api(channelPath(serverId), { actorId, method: 'POST', body, signal, retry: false, actorMembershipId });
 }
+export function getChannelOperation(actorId, serverId, clientOperationId, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/channel-operations/${encodeURIComponent(clientOperationId)}`, { actorId, signal });
+}
 export function updateChannel(actorId, serverId, channelId, body, signal, actorMembershipId) {
   return api(channelPath(serverId, channelId), { actorId, method: 'PATCH', body, signal, retry: false, actorMembershipId });
 }
