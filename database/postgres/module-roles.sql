@@ -11,9 +11,36 @@ ALTER ROLE scdc_identity PASSWORD :'identity_password';
 ALTER ROLE scdc_community PASSWORD :'community_password';
 ALTER ROLE scdc_messaging PASSWORD :'messaging_password';
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-DO $$ DECLARE owner text; app_role text; BEGIN
+-- S2-11 requires the replacement writers and their schema before removing legacy access.
+DO $$ BEGIN
+    IF to_regclass('identity.access_scopes') IS NULL
+        OR to_regclass('community.access_scopes') IS NULL
+        OR to_regclass('community.channel_provisions') IS NULL
+        OR to_regclass('messaging.channel_provisions') IS NULL THEN
+        RAISE EXCEPTION 'Apply S2-06, S2-07 and S2-09 before the S2-11 role script';
+    END IF;
+    IF NOT EXISTS(SELECT 1 FROM community.schema_migrations WHERE module='community' AND version=2026112307)
+        OR NOT EXISTS(SELECT 1 FROM community.schema_migrations WHERE module='community' AND version=2026112409)
+        OR NOT EXISTS(SELECT 1 FROM messaging.schema_migrations WHERE module='messaging' AND version=2026112409) THEN
+        RAISE EXCEPTION 'S2-11 requires matching S2-07/S2-09 ledgers';
+    END IF;
+END $$;
+DO $$ DECLARE owner text; app_role text; other_owner text; BEGIN
     FOREACH owner IN ARRAY ARRAY['identity','community','messaging'] LOOP
         app_role:='scdc_'||owner;
+        -- S2-11: also revoke privileges already installed by earlier role scripts.
+        -- Table-level REVOKE includes grants on individual columns (such as UPDATE(id)).
+        FOREACH other_owner IN ARRAY ARRAY['identity','community','messaging'] LOOP
+            IF other_owner<>owner THEN
+                EXECUTE format('REVOKE ALL ON SCHEMA %I FROM %I',other_owner,app_role);
+                EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA %I FROM %I',other_owner,app_role);
+                EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA %I FROM %I',other_owner,app_role);
+                EXECUTE format('REVOKE ALL ON ALL FUNCTIONS IN SCHEMA %I FROM %I',other_owner,app_role);
+            END IF;
+        END LOOP;
+        EXECUTE format('REVOKE ALL ON SCHEMA %I FROM PUBLIC',owner);
+        EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA %I FROM PUBLIC',owner);
+        EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA %I FROM PUBLIC',owner);
         EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I',owner,app_role);
         EXECUTE format('GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA %I TO %I',owner,app_role);
         EXECUTE format('GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA %I TO %I',owner,app_role);
@@ -55,24 +82,10 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- Temporary S2-03 grants. Remove only after the replacement flows pass S2-11.
 DO $$ BEGIN
     IF to_regclass('community.channel_provisions') IS NOT NULL THEN
         REVOKE DELETE ON community.channel_provisions FROM scdc_community;
         REVOKE DELETE ON messaging.channel_provisions FROM scdc_messaging;
     END IF;
 END $$;
-GRANT USAGE ON SCHEMA identity TO scdc_community,scdc_messaging;
-GRANT SELECT ON identity.users,identity.auth_sessions,identity.user_emails,identity.user_security_states
-    TO scdc_community,scdc_messaging;
-GRANT SELECT ON identity.user_profiles TO scdc_messaging;
--- PostgreSQL row locks require UPDATE on at least one column. No business-field updates.
-GRANT UPDATE(id) ON identity.users TO scdc_community,scdc_messaging;
-GRANT UPDATE(id) ON identity.auth_sessions TO scdc_messaging;
-GRANT USAGE ON SCHEMA messaging TO scdc_community;
-GRANT INSERT ON messaging.spaces TO scdc_community;
--- The deferred DM invariant trigger also runs on channel-space inserts. It reads
--- id/type and attempts a row lock before returning for space_type=3.
-GRANT SELECT(id,space_type),UPDATE(id) ON messaging.spaces TO scdc_community;
-GRANT EXECUTE ON FUNCTION messaging.assert_direct_conversation_membership(uuid) TO scdc_community;
 COMMIT;

@@ -135,6 +135,7 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
         using var isolated = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?> { ["Modules:Messaging:FingerprintKeyDirectory"] = "/no-such-text-test-key-directory" })));
         using var client = isolated.CreateClient();
+        await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         foreach (var operation in new[] { id, Guid.NewGuid() })
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
@@ -178,6 +179,7 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
                         ["Modules:Messaging:ActiveFingerprintKeyId"] = key
                     })));
                 using var client = host.CreateClient();
+                await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
                 using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
                 { Content = JsonContent.Create(new { clientMessageId = id, content = "original" }) };
                 request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
@@ -192,6 +194,7 @@ public sealed class TextMessageTests(TextMessageFixture f) : IClassFixture<TextM
                     ["Modules:Messaging:ActiveFingerprintKeyId"] = "new"
                 })));
             using var missingClient = missing.CreateClient();
+            await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(missingClient);
             using var retry = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
             { Content = JsonContent.Create(new { clientMessageId = id, content = "original" }) };
             retry.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);

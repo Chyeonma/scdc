@@ -1,16 +1,24 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Configuration;
+using SCDC.BuildingBlocks.Infrastructure.Authentication;
+using SCDC.Contracts.Identity;
+using SCDC.Modules.Identity.Infrastructure.Services;
 using SCDC.Modules.Messaging.Realtime;
+using Xunit.Abstractions;
 
 namespace SCDC.Api.Tests.Messaging;
 
 [Collection("DM database")]
-public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextMessageFixture>
+public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper output) : IClassFixture<TextMessageFixture>
 {
     private OutboxDispatcher Dispatcher => f.D.Inner.Factory.Services.GetRequiredService<OutboxDispatcher>();
 
@@ -171,6 +179,101 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
         }
     }
 
+    [Theory]
+    [InlineData("revocation")]
+    [InlineData("redis")]
+    [InlineData("authority")]
+    [InlineData("stalled-reader")]
+    public async Task Full_registry_cuts_off_within_five_seconds_under_authority_or_store_failure(string mode)
+    {
+        var alias = mode switch { "revocation" => "search16", "redis" => "search17", "authority" => "search18", _ => "search19" };
+        var space = await f.Open(alias); var actor = f.D.Inner.Users[alias];
+        var settings = f.D.Inner.Factory.Services.GetRequiredService<IConfiguration>();
+        var unavailable = new ConfigurationBuilder().AddConfiguration(settings).AddInMemoryCollection(
+            new Dictionary<string, string?> { ["Authentication:Sessions:Endpoint"] = "127.0.0.1:1" }).Build();
+        using var failedConnection = new RedisSessionConnection(unavailable, "Reader");
+        var fault = new AccessFault(actor.Id,
+            f.D.Inner.Factory.Services.GetRequiredService<IAuthenticatedSessionReader>(),
+            new RedisSessionReader(failedConnection, TimeProvider.System));
+        using var app = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<IAuthenticatedSessionReader>(fault));
+            services.RemoveAllKeyed<IIdentityPermitIssuer>(AccessOwner.Messaging);
+            services.AddKeyedScoped<IIdentityPermitIssuer>(AccessOwner.Messaging, (provider, _) =>
+                new FaultingPermit(new IdentityPermitIssuer(provider.GetRequiredService<IConfiguration>(), AccessOwner.Messaging, TimeProvider.System), fault));
+        }));
+        using var client = app.CreateClient();
+        await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
+        var connections = new List<SocketClient>();
+        try
+        {
+            for (var i = 0; i < 32; i++)
+            {
+                var socket = await SocketClient.Connect(app.Server, actor.AccessToken); connections.Add(socket);
+                await socket.Subscribe(space);
+            }
+            await using var unaffected = await SocketClient.Connect(app.Server, f.D.Inner.Actor.AccessToken);
+            await unaffected.Subscribe(space);
+            await f.Send(space, f.D.Inner.Actor, Guid.NewGuid(), "queued-before-cutoff");
+            var timer = Stopwatch.StartNew(); // Before the HTTP request brackets every revocation commit conservatively.
+            if (mode == "revocation")
+            {
+                using var response = await f.D.Inner.Send("/api/v1/auth/logout", actor, new { refreshToken = actor.RefreshToken });
+                Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            }
+            else fault.Mode = mode;
+            await Task.WhenAll(connections.Select(socket => socket.Closed)).WaitAsync(TimeSpan.FromSeconds(5));
+            var cutoff = timer.Elapsed;
+            Assert.True(cutoff < TimeSpan.FromSeconds(5), $"{mode}: {cutoff.TotalMilliseconds:F0} ms");
+            Assert.All(connections, socket => Assert.Empty(socket.Events));
+            await app.Services.GetRequiredService<OutboxDispatcher>().DispatchOnceAsync(conversationId: space);
+            Assert.All(connections, socket => Assert.Empty(socket.Events));
+            if (mode != "redis")
+            {
+                Assert.False(unaffected.Closed.IsCompleted);
+                await unaffected.Message();
+            }
+            if (mode is "redis" or "authority" or "revocation")
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/direct-conversations/{space}/messages")
+                { Content = JsonContent.Create(new { clientMessageId = Guid.NewGuid(), content = "must-not-write" }) };
+                request.Headers.Authorization = new("Bearer", actor.AccessToken);
+                using var denied = await client.SendAsync(request);
+                Assert.Equal(mode == "revocation" ? HttpStatusCode.Unauthorized : HttpStatusCode.ServiceUnavailable, denied.StatusCode);
+                Assert.Equal("1:1:1:1", await f.Counts(space));
+            }
+            output.WriteLine($"S2-11 mode={mode} connections=32 cutoff_ms={cutoff.TotalMilliseconds:F0} payloads_after_cutoff=0");
+        }
+        finally
+        {
+            fault.Release();
+            foreach (var connection in connections) await connection.DisposeAsync();
+        }
+    }
+
+    private sealed class AccessFault(Guid user, IAuthenticatedSessionReader healthy, IAuthenticatedSessionReader failed) : IAuthenticatedSessionReader
+    {
+        public volatile string Mode = "healthy";
+        private readonly TaskCompletionSource<SessionAccess> stalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool StallsPermit(PermitRequest request) => Mode == "authority" && request.Actor.UserId == user;
+        public Task<SessionAccess> ReadAsync(AuthenticatedSession actor, CancellationToken ct, bool requireVerifiedEmail = true)
+        {
+            if (Mode == "redis") return failed.ReadAsync(actor, ct, requireVerifiedEmail);
+            if (Mode == "stalled-reader" && actor.UserId == user) return stalled.Task;
+            return healthy.ReadAsync(actor, ct, requireVerifiedEmail);
+        }
+        public void Release() => stalled.TrySetResult(new(false, "session_revoked"));
+    }
+
+    private sealed class FaultingPermit(IIdentityPermitIssuer inner, AccessFault fault) : IIdentityPermitIssuer
+    {
+        public async Task<IdentityPermit> AcquireAsync(PermitRequest request, CancellationToken ct)
+        {
+            if (fault.StallsPermit(request)) await Task.Delay(Timeout.Infinite, ct);
+            return await inner.AcquireAsync(request, ct);
+        }
+    }
+
     private sealed class SocketClient : IAsyncDisposable
     {
         private readonly WebSocket socket;
@@ -179,12 +282,15 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
         private readonly Channel<JsonElement> messages = Channel.CreateUnbounded<JsonElement>();
         private readonly Channel<JsonElement> revocations = Channel.CreateUnbounded<JsonElement>();
         private readonly TaskCompletionSource handshake = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task Closed => closed.Task;
         private readonly Task pump; private int serial;
         public ConcurrentQueue<JsonElement> Events { get; } = new();
         private SocketClient(WebSocket socket) { this.socket = socket; pump = Pump(); }
-        public static async Task<SocketClient> Connect(TextMessageFixture fixture, string token)
+        public static Task<SocketClient> Connect(TextMessageFixture fixture, string token) => Connect(fixture.D.Inner.Factory.Server, token);
+        public static async Task<SocketClient> Connect(Microsoft.AspNetCore.TestHost.TestServer server, string token)
         {
-            var transport = fixture.D.Inner.Factory.Server.CreateWebSocketClient();
+            var transport = server.CreateWebSocketClient();
             var socket = await transport.ConnectAsync(new Uri("ws://localhost/hubs/chat?access_token=" + Uri.EscapeDataString(token)), default);
             var client = new SocketClient(socket); await client.Send(new { protocol = "json", version = 1 });
             await client.handshake.Task.WaitAsync(TimeSpan.FromSeconds(5)); return client;
@@ -230,8 +336,9 @@ public sealed class RealtimeHubTests(TextMessageFixture f) : IClassFixture<TextM
                 }
             }
             catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-            catch (WebSocketException) when (stop.IsCancellationRequested) { }
+            catch (WebSocketException) { }
             catch (ObjectDisposedException) when (stop.IsCancellationRequested) { }
+            finally { closed.TrySetResult(); }
         }
         public async ValueTask DisposeAsync() { stop.Cancel(); socket.Abort(); socket.Dispose(); await pump; stop.Dispose(); }
     }

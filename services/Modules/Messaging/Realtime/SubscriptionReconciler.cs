@@ -31,7 +31,7 @@ internal sealed class SubscriptionReconciler(IServiceScopeFactory scopes, Conver
                         entry.Spaces.Clear(); entry.Closed = true; entry.Abort(); return;
                     }
                     await using var scope = scopes.CreateAsyncScope();
-                    var session = await scope.ServiceProvider.GetRequiredService<IAuthenticatedSessionReader>().ReadAsync(entry.Actor, deadline.Token);
+                    var session = await scope.ServiceProvider.GetRequiredService<IAuthenticatedSessionReader>().ReadAsync(entry.Actor, deadline.Token).WaitAsync(deadline.Token);
                     if (!session.Allowed)
                     {
                         entry.Spaces.Clear(); entry.Closed = true;
@@ -42,7 +42,7 @@ internal sealed class SubscriptionReconciler(IServiceScopeFactory scopes, Conver
                     foreach (var space in entry.Spaces.ToArray())
                     {
                         await using var check = scopes.CreateAsyncScope();
-                        var access = await check.ServiceProvider.GetRequiredService<ConversationAccess>().AuthorizeAsync(entry.Actor, space, deadline.Token);
+                        var access = await check.ServiceProvider.GetRequiredService<ConversationAccess>().AuthorizeAsync(entry.Actor, space, deadline.Token).WaitAsync(deadline.Token);
                         if (access.IsSuccess) continue;
                         if (access.Error.Code == "AUTHORITY_UNAVAILABLE") throw new InvalidOperationException();
                         entry.Spaces.Remove(space);
