@@ -6,8 +6,10 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 |---|---|
 | [step-1.md](step-1.md) | STEP-1 — Phạm vi chung hoàn tất; S1-07 giữ riêng cho Media |
 | [step-2.md](step-2.md) | STEP-2 — Đã công bố; S2-01 đến S2-10 hoàn tất triển khai, S2-11 và S2-12 chưa làm |
-| [step-3.md](step-3.md) | STEP-3 — 12 task đã công bố backlog; 5 task có phần chuẩn bị làm được ngay |
-| [step-4.md](step-4.md) | STEP-4 — 15 task đã công bố backlog; 4 task có phần chuẩn bị làm được ngay |
+| [step-3.md](step-3.md) | STEP-3 — 7 task còn chờ, giữ nháp |
+| [step-3-ready.md](step-3-ready.md) | STEP-3 — 5 task có phần bắt đầu ngay, đồng bộ Trello |
+| [step-4.md](step-4.md) | STEP-4 — 11 task còn chờ, giữ nháp |
+| [step-4-ready.md](step-4-ready.md) | STEP-4 — 4 task có phần chuẩn bị ngay, đồng bộ Trello |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |
 
 ## Task có thể bắt đầu
@@ -24,7 +26,7 @@ Rà ngày **2026-11-24**: S2-01 đến S2-10 đã vào `main`; S2-10 qua [PR #38
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên S2-11 trước khi người phụ trách nhận việc làm sớm. S2-12 chờ S2-11. STEP-3 và STEP-4 đã công bố backlog theo yêu cầu; các thẻ ghi rõ phần làm ngay và phần chờ. Tách service thật chờ kết thúc STEP-2; tích hợp Media còn chờ S1-07 và hợp đồng phiên tương ứng. Backend STEP-4 chờ STEP-3.
+Ưu tiên S2-11 trước khi người phụ trách nhận việc làm sớm. S2-12 chờ S2-11. STEP-3 và STEP-4 chỉ công bố 9 thẻ có phần bắt đầu được ngay trong hai file `step-3-ready.md`, `step-4-ready.md`; 18 thẻ còn chờ giữ nháp. Tách service thật chờ kết thúc STEP-2; tích hợp Media còn chờ S1-07 và hợp đồng phiên tương ứng. Backend STEP-4 chờ STEP-3.
 
 ## Phần S3/S4 có thể bắt đầu ngay
 
@@ -42,7 +44,7 @@ Các phần dưới đây là công việc chuẩn bị trong thẻ hiện có, 
 | COM-W09 | Vg | Ma trận trạng thái và fixture cho duyệt, hủy, tham gia, đổi riêng tư |
 | COM-W10 | Vg | Hợp đồng và fixture cho lời mời, hết hạn/lượt, thu hồi và tranh chấp |
 
-Các task S3/S4 còn lại ghi **Chờ** cùng mã phụ thuộc trong mô tả. Sáu task E4 vẫn giữ phạm vi giao diện giả/rà tài liệu để tránh làm trùng backend hoặc nối API thật.
+Các task S3/S4 còn lại giữ **nháp**, ghi **Chờ** cùng mã phụ thuộc trong mô tả và chưa đồng bộ Trello. Sáu task E4 vẫn giữ phạm vi giao diện giả/rà tài liệu để tránh làm trùng backend hoặc nối API thật.
 
 ## Ai giữ phần nào
 
