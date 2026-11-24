@@ -121,8 +121,8 @@ Bảng `calls` ở [gọi riêng](direct-calls.md#contracts), `sources` ở [ngu
 Người dùng Identity (theo byte UUID) → server, phòng Community (nếu là phòng thoại) → hạn mức toàn hệ thống → hạn mức phòng → `user_claims` (theo byte UUID) → cuộc gọi, lượt tham gia, nguồn, thao tác → outbox.
 
 - Mọi đường ghi Media dùng cùng thứ tự. Tra ID trước transaction chỉ là gợi ý; đọc lại sau khi có khóa.
-- Guard Identity và Community giữ khóa dòng tới commit qua transaction dùng chung ([kiến trúc](../../system/architecture.md#boundaries)).
-- [IAccountAccessGuard.AcquireAsync](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) và [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) đã có; Media chưa dùng.
+- Media phải lấy permit Identity và Community trước transaction riêng, kiểm fence và hạn permit tới commit theo [thu hồi truy cập](../../system/access-revocation.md#v1-authorization-coordination).
+- Hợp đồng guard nhận transaction của MVP đã bỏ ở S2-10. [Các hợp đồng hiện hành](../../system/backend.md#s2-10-contracts) không truyền connection hay transaction giữa module; Media chưa có runtime để dùng.
 
 Bước tạo và nhận cuộc gọi: [gọi riêng](direct-calls.md#contracts). Vào phòng: [phòng thoại](voice-rooms.md#contracts).
 

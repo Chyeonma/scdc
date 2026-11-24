@@ -8,6 +8,8 @@ public sealed record CommunityScope(short Kind, Guid UserId, Guid ServerId, Guid
 public sealed record CommunityFenceBatch(Guid OperationId, Guid BatchId, long RoutingGeneration,
     IReadOnlyList<CommunityScope> Scopes);
 public sealed record CommunityFenceReceipt(AccessOwner Owner, CommunityFenceBatch Batch);
+/// <summary>Owner-local commit and durable, replayable receipt. Repeat the same operation/batch with
+/// unchanged scopes after an unknown outcome; changed content conflicts. Callers impose a two-second deadline.</summary>
 public interface ICommunityFenceOwner
 {
     AccessOwner Owner { get; }

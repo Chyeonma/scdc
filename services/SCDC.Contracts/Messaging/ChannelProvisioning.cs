@@ -9,6 +9,9 @@ public sealed record ChannelDecision(Guid OperationId, Guid ChannelId, byte[] Fi
 public enum ProvisionPhase { Prepared, Ready, Cancelled }
 public sealed record ProvisionStatus(Guid OperationId, Guid ChannelId, ProvisionPhase Phase,
     long DecisionVersion, bool CleanupPending = false);
+/// <summary>Each call uses the owner's connection and transaction. Callers impose a two-second deadline;
+/// after timeout they retain the operation/channel/fingerprint and reconcile or retry the same command.
+/// Duplicate commands do not recreate a space or regress a terminal decision; changed identity/content conflicts.</summary>
 public interface IChannelProvisioning
 {
     Task<ProvisionStatus> PrepareAsync(PrepareChannel request, CancellationToken ct);

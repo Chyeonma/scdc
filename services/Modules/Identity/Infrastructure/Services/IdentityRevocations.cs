@@ -109,8 +109,14 @@ internal sealed class IdentityRevocations(IConfiguration configuration, IService
                 foreach (var owner in fenceOwners)
                 {
                     var batch = new IdentityFenceBatch(operation, operation, 1, Array.AsReadOnly(accepted.Scopes));
-                    var receipt = await owner.ApplyAsync(batch, ct);
-                    if (receipt.Owner != owner.Owner || receipt.Batch != batch) throw new AccessCheckException();
+                    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    deadline.CancelAfter(TimeSpan.FromSeconds(2));
+                    IdentityFenceReceipt receipt;
+                    try { receipt = await owner.ApplyAsync(batch, deadline.Token).WaitAsync(deadline.Token); }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new AccessCheckException(); }
+                    if (receipt.Owner != owner.Owner || receipt.Batch.OperationId != batch.OperationId
+                        || receipt.Batch.BatchId != batch.BatchId || receipt.Batch.RoutingGeneration != batch.RoutingGeneration
+                        || !receipt.Batch.Scopes.SequenceEqual(batch.Scopes)) throw new AccessCheckException();
                     await using var ack = new NpgsqlCommand("""
                     INSERT INTO identity.access_change_acks(operation_id,batch_id,owner,routing_generation,installed_scopes)
                     VALUES(@operation,@operation,@owner,1,@scopes::jsonb) ON CONFLICT DO NOTHING
@@ -172,13 +178,14 @@ internal sealed class IdentityRevocations(IConfiguration configuration, IService
         }
         catch
         {
+            using var retryBudget = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             await using var retry = new NpgsqlCommand("""
                 UPDATE identity.access_changes SET lease_token=NULL,lease_until=NULL,attempt_count=attempt_count+1,version=version+1,
                 next_attempt_at=clock_timestamp()+make_interval(secs=>LEAST(30,power(2,LEAST(attempt_count,5))) * (0.8+random()*0.4))
                 WHERE operation_id=@operation AND phase=0 AND lease_token=@lease
                 """, connection);
             retry.Parameters.AddWithValue("operation", operation); retry.Parameters.AddWithValue("lease", lease);
-            await retry.ExecuteNonQueryAsync(CancellationToken.None);
+            await retry.ExecuteNonQueryAsync(retryBudget.Token);
             throw;
         }
     }

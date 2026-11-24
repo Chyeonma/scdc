@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using SCDC.Contracts.Persistence;
+using Microsoft.EntityFrameworkCore;
+using SCDC.Modules.Identity.Infrastructure.Persistence;
+using SCDC.Modules.Messaging.Infrastructure.Persistence;
 using SCDC.DbMigrator;
 using SCDC.Api.Tests.Infrastructure;
 
@@ -193,8 +195,13 @@ public sealed class ModuleDatabasePermissionsTests
         foreach(var owner in new[]{"Identity","Community","Messaging"})
         {
             await using var scope=factory.Services.CreateAsyncScope();
-            var session=scope.ServiceProvider.GetRequiredKeyedService<ISharedDatabaseSession>(owner);
-            var connection=(NpgsqlConnection)session.Connection;
+            var connection=owner switch
+            {
+                "Identity" => (NpgsqlConnection)scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.GetDbConnection(),
+                "Messaging" => (NpgsqlConnection)scope.ServiceProvider.GetRequiredService<MessagingSession>().Connection,
+                _ => scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>().CreateConnection()
+            };
+            await using var ownedConnection=owner=="Community"?connection:null;
             await connection.OpenAsync();
             async Task<object?> Query(string sql) { await using var c=new NpgsqlCommand(sql,connection);return await c.ExecuteScalarAsync(); }
             Assert.Equal("scdc_"+owner.ToLowerInvariant(),await Query("SELECT current_user"));

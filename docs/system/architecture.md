@@ -2,7 +2,7 @@
 
 Trang này mô tả kiến trúc hiện tại (MVP), ranh giới dữ liệu giữa các module, và kiến trúc mục tiêu v1 cùng danh sách các quyết định đã chốt. Người mới đọc nên bắt đầu từ [tóm tắt v1](#summary).
 
-**Trạng thái:** code là MVP, một ứng dụng API (modular monolith), đối chiếu commit `900e226` ngày 2026-10-13 ([MVP](../releases/mvp.md), [hồ sơ tích hợp](../records/verification/messaging/merge-2026-10-13.md)). Kiến trúc microservice v1 đã chốt hướng nhưng **chưa chuyển code**.
+**Trạng thái:** backend vẫn là một ứng dụng API (modular monolith). Trên nền MVP `900e226`, STEP-1 đã thêm gateway, CI và giám sát; S2-03 đến S2-10 đã tách database user, outbox, Redis, transaction và hợp đồng theo owner. Bốn service nghiệp vụ chưa được tách; xem [lộ trình](../project/planning.md#roadmap).
 
 <a id="ownership"></a>
 
@@ -16,27 +16,31 @@ Phân công người xem [kế hoạch](../project/planning.md#team); trang này
 
 <a id="current"></a>
 
-## Hiện tại (MVP)
+## Hiện tại (sau S2-10)
 
 ```mermaid
 %%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 45, "rankSpacing": 70}, "theme": "dark", "themeVariables": {"background": "#0f172a", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#64748b", "lineColor": "#94a3b8", "textColor": "#e2e8f0", "edgeLabelBackground": "#1e293b", "clusterBkg": "#141e2e", "clusterBorder": "#475569"}, "themeCSS": "& { background-color: #0f172a; }"}}%%
 flowchart LR
-    Web[WebClient · React 19 / Vite] -->|HTTP /api/v1 · SignalR /hubs/chat| Api[SCDC.Api · .NET 10]
+    Web[WebClient · React 19 / Vite] --> Gateway[Nginx]
+    Gateway -->|HTTP /api/v1 · SignalR /hubs/chat| Api[SCDC.Api · .NET 10]
     Api --> Identity[Identity]
     Api --> Community[Community]
     Api --> Messaging[Messaging]
     Identity --> Pg[(PostgreSQL 18)]
     Community --> Pg
     Messaging --> Pg
-    Community -->|Contracts · lifecycle| Messaging
+    Community -->|Contracts · provision| Messaging
+    Identity -->|Công bố phiên| Redis[(Redis)]
+    Api -->|Kiểm tra phiên| Redis
     classDef app fill:#172b46,stroke:#60a5fa,color:#dbeafe
     classDef data fill:#12352e,stroke:#34d399,color:#d1fae5
-    class Web,Api,Identity,Community,Messaging app
-    class Pg data
+    class Web,Gateway,Api,Identity,Community,Messaging app
+    class Pg,Redis data
 ```
 
-- WebClient gọi API qua HTTP `/api/v1` và SignalR `/hubs/chat`.
-- API (cùng ChatHub và worker outbox) chạy Identity, Community, Messaging trên một PostgreSQL.
+- Nginx phục vụ WebClient và chuyển HTTP `/api/v1`, SignalR `/hubs/chat` tới API.
+- API cùng ChatHub, worker outbox, thu hồi quyền và provision chạy Identity, Community, Messaging trên một PostgreSQL, với ba schema, database user và connection string riêng. Gọi liên module qua adapter trong process, transaction theo owner.
+- Identity công bố phiên vào Redis; API và realtime kiểm tra trạng thái hiện tại qua Redis. Telemetry đi qua Collector tới OpenObserve.
 - Chưa có: worker email (đang ở nhánh `feat/identity`, xem [email](../features/accounts/email-links.md#status)), Media. Health endpoint chưa kiểm tra DB.
 
 Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.yaml), [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs). Cấu hình xem [môi trường](environments.md); cách chạy xem [hướng dẫn phát triển](../guides/development.md).
@@ -47,9 +51,9 @@ Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.
 
 | Module | Trách nhiệm | Schema và hợp đồng |
 |---|---|---|
-| Identity | Danh tính, hồ sơ, mật khẩu, xác minh, phiên | `identity`; `IUserDirectory`, `IAccountAccessGuard` |
-| Community | Server, thành viên, lời mời, phòng, quyền | `community`; `IChannelAccessGuard` |
-| Messaging | DM, tin phòng, lịch sử, chống trùng, realtime | `messaging`; `IChatSpaceLifecycle`, `IRealtimeAccessRevoker` |
+| Identity | Danh tính, hồ sơ, mật khẩu, xác minh, phiên | `identity`; lookup công khai, `IIdentityPermitIssuer`, Redis |
+| Community | Server, thành viên, lời mời, phòng, quyền | `community`; guard nội bộ, `ICommunityFenceOwner`, permit readiness |
+| Messaging | DM, nền tin phòng, lịch sử, chống trùng, realtime | `messaging`; `IChannelProvisioning`, fence và receipt cục bộ |
 | Media (v1) | Cuộc gọi, phòng thoại, lượt tham gia, nguồn phát, hạn mức | Còn đề xuất; xem [Media](../features/media/README.md) |
 
 **Quy tắc:**
@@ -57,9 +61,9 @@ Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.
 - Mỗi module chỉ đọc ghi dữ liệu của mình. Gọi module khác qua [SCDC.Contracts](../../services/SCDC.Contracts); không tham chiếu code cài đặt, không JOIN bảng của module khác.
 - View SQL để quan sát không thay được hợp đồng nghiệp vụ. Tiền tố API hay vị trí tài liệu không quyết định module nào sở hữu dữ liệu.
 - Có interface không có nghĩa đã có bên dùng hay đã chạy đủ; xem trạng thái ở từng trang tính năng.
-- MVP được dùng transaction chung trong một ứng dụng. Khi tách service, phải thay bằng hợp đồng mạng và chính sách nhất quán. Chi tiết: [backend](backend.md), [database](database.md), [Community](../features/community/mechanics.md), [thu hồi truy cập](access-revocation.md).
+- S2-10 đã bỏ hợp đồng transaction chung của MVP; mỗi owner tự giữ transaction. Host gRPC và mTLS tiếp tục ở STEP-3. Chi tiết: [hợp đồng giữa module](backend.md#s2-10-contracts), [database](database.md), [Community](../features/community/mechanics.md), [thu hồi truy cập](access-revocation.md).
 
-Khảo sát S2-01 đã đối chiếu 32 FK xuyên schema, 2 view và các hợp đồng đang dùng; [bảng xử lý từng phụ thuộc](database.md#s2-01-boundaries) phân rõ owner và thẻ thực hiện. Audit đang thuộc Identity; outbox hiện là bảng dùng bởi ba module. Các thay đổi ranh giới runtime sẽ triển khai trong STEP-2 sau review.
+Khảo sát S2-01 đã đối chiếu 32 FK xuyên schema, 2 view và các hợp đồng; [bảng xử lý từng phụ thuộc](database.md#s2-01-boundaries) giữ đầu vào lịch sử. S2-03 đã chuyển audit về Identity và tách outbox theo owner; S2-04/05 bỏ FK và view chéo, S2-07 đến S2-10 thay và gỡ hợp đồng transaction. S2-11 còn thu hẹp grant tạm và kiểm chứng lỗi, tải, thời gian thu hồi trước khi tổng kết STEP-2.
 
 <a id="future"></a>
 <a id="target"></a>
@@ -104,7 +108,7 @@ Mười điểm chính của v1; sơ đồ tại [sơ đồ v1](#v1-components),
 
 **Lý do:** phát hành và mở rộng từng nhóm nghiệp vụ riêng. **Đổi lại:** thêm hợp đồng mạng, lỗi một phần, kiểm thử tích hợp giữa service.
 
-Hệ quả: [IAccountAccessGuard](../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) hiện nhận transaction của bên gọi và giữ khóa Identity; phải thiết kế lại khi tách. Community với Messaging, Community với Media cũng cần hợp đồng quyền và vòng đời. Một lần kiểm tra JWT hay gọi API không giữ được quyền tới commit; hướng thay thế là hàng rào ghi ([D05](access-revocation.md#v1-authorization-coordination)).
+Hệ quả: guard transaction chung của MVP đã được thay bằng permit và hàng rào ghi ở S2-07 đến S2-09; S2-10 gỡ các hợp đồng cũ theo [ranh giới hiện hành](backend.md#s2-10-contracts). Community với Messaging, Community với Media vẫn cần hợp đồng quyền và vòng đời. Một lần kiểm tra JWT hay gọi API không giữ được quyền tới commit; owner phải kiểm fence trong transaction riêng ([D05](access-revocation.md#v1-authorization-coordination)).
 
 ### Các quyết định theo nhóm
 

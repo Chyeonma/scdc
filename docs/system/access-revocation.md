@@ -338,7 +338,7 @@ Nếu Apply lấy khóa trước writer thì writer rollback vì epoch cũ. Nế
 
 ## Còn mở
 
-- S2-03/06/07 đã có DDL, Redis, permit Identity và coordinator Identity/Community cùng bằng chứng runtime. S2-08 đã chuyển writer DM; S2-09 đã triển khai provision phòng bằng transaction owner riêng. S2-10 dọn hợp đồng; S2-11 kiểm chứng toàn registry, tranh chấp và thời gian thu hồi.
+- S2-03/06/07 đã có DDL, Redis, permit Identity và coordinator Identity/Community cùng bằng chứng runtime. S2-08 đã chuyển writer DM; S2-09 đã triển khai provision phòng bằng transaction owner riêng; S2-10 đã [gỡ hợp đồng transaction cũ và chốt deadline/ACK](backend.md#s2-10-contracts). S2-11 kiểm chứng toàn registry, tranh chấp và thời gian thu hồi.
 - Phiên bản Redis, persistence, tài nguyên, HA, bảo vệ kết nối và cấp credential được chọn trong S2-06; không làm thay đổi quy tắc fail closed hoặc thứ tự công bố phiên.
 - Lease/provider và bằng chứng ngắt LiveKit thuộc gói Media; không bật Media trong registry trước khi thực thi được hàng rào và thời hạn 5 giây.
 

@@ -7,9 +7,9 @@ using SCDC.Api.Tests.Infrastructure;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
 
-namespace SCDC.Api.Tests.Community;
+namespace SCDC.Api.Tests.Identity;
 
-public sealed class AccountAccessGuardTests : IAsyncLifetime
+public sealed class IdentityPermitTests : IAsyncLifetime
 {
     private readonly SCDCWebApplicationFactory _factory = new();
     private HttpClient _client = null!;
@@ -39,16 +39,16 @@ public sealed class AccountAccessGuardTests : IAsyncLifetime
         var payload = body.GetProperty("accessToken").GetString()!.Split('.')[1].Replace('-', '+').Replace('_', '/');
         using var claims = JsonDocument.Parse(Convert.FromBase64String(payload.PadRight((payload.Length + 3) / 4 * 4, '=')));
         _actor = new(claims.RootElement.GetProperty("sub").GetGuid(), claims.RootElement.GetProperty("sid").GetGuid(),
-            claims.RootElement.GetProperty("sst").GetGuid());
+            claims.RootElement.GetProperty("sst").GetGuid(), DateTimeOffset.FromUnixTimeSeconds(claims.RootElement.GetProperty("exp").GetInt64()));
     }
 
     [Theory]
-    [InlineData("revoked", AccountAccessStatus.InvalidSession)]
-    [InlineData("stamp", AccountAccessStatus.InvalidSession)]
-    [InlineData("expired", AccountAccessStatus.InvalidSession)]
-    [InlineData("unverified", AccountAccessStatus.AccountDenied)]
-    [InlineData("inactive", AccountAccessStatus.AccountDenied)]
-    public async Task Guard_rechecks_current_account_and_session(string change, AccountAccessStatus expected)
+    [InlineData("revoked", "Common.Unauthorized")]
+    [InlineData("stamp", "Common.Unauthorized")]
+    [InlineData("expired", "Common.Unauthorized")]
+    [InlineData("unverified", "ACCOUNT_ACCESS_DENIED")]
+    [InlineData("inactive", "Common.Unauthorized")]
+    public async Task Permit_rechecks_current_account_and_session(string change, string expected)
     {
         var sql = change switch
         {
@@ -62,47 +62,34 @@ public sealed class AccountAccessGuardTests : IAsyncLifetime
         mutate.Parameters.AddWithValue("user", _actor.UserId);
         mutate.Parameters.AddWithValue("session", _actor.SessionId);
         await mutate.ExecuteNonQueryAsync();
-        await using var scope = await new RelationalWorkScopeFactory(_source).OpenAsync(default);
         using var services = _factory.Services.CreateScope();
-        var check = await services.ServiceProvider.GetRequiredService<IAccountAccessGuard>().AcquireAsync(_actor, scope.Transaction, default);
-        Assert.Equal(expected, check.Status);
+        var issuer = services.ServiceProvider.GetRequiredKeyedService<IIdentityPermitIssuer>(AccessOwner.Community);
+        var failure = await Assert.ThrowsAsync<AccessCheckException>(() => issuer.AcquireAsync(Request(), default));
+        Assert.Equal(expected, failure.Code);
     }
 
     [Fact]
-    public async Task Guard_holds_security_writer_until_transaction_finishes()
+    public async Task Permit_releases_identity_locks_and_reacquisition_keeps_the_same_epochs()
     {
-        await using var scope = await new RelationalWorkScopeFactory(_source).OpenAsync(default);
         using var services = _factory.Services.CreateScope();
-        var check = await services.ServiceProvider.GetRequiredService<IAccountAccessGuard>().AcquireAsync(_actor, scope.Transaction, default);
-        Assert.True(check.IsAllowedAt(DateTimeOffset.UtcNow));
+        var issuer = services.ServiceProvider.GetRequiredKeyedService<IIdentityPermitIssuer>(AccessOwner.Community);
+        var request = Request();
+        var first = await issuer.AcquireAsync(request, default);
+        Assert.Equal(AccessOwner.Community, first.Owner);
+        Assert.True(first.ExpiresAt > DateTimeOffset.UtcNow);
 
-        var writerName = $"guard-writer-{Guid.NewGuid():N}";
-        await using var connection = new NpgsqlConnection(new NpgsqlConnectionStringBuilder(_connectionString)
-        { ApplicationName = writerName }.ConnectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
         await using var writer = new NpgsqlCommand("SELECT id FROM identity.users WHERE id = @user FOR NO KEY UPDATE", connection)
-        { CommandTimeout = 10 };
+        { CommandTimeout = 2 };
         writer.Parameters.AddWithValue("user", _actor.UserId);
-        var pending = writer.ExecuteScalarAsync();
-        try
-        {
-            var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-            var blocked = false;
-            while (DateTimeOffset.UtcNow < deadline && !pending.IsCompleted)
-            {
-                await using var probe = _source.CreateCommand("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE application_name = @name AND wait_event_type = 'Lock')");
-                probe.Parameters.AddWithValue("name", writerName);
-                if (await probe.ExecuteScalarAsync() is true) { blocked = true; break; }
-                await Task.Delay(20);
-            }
-            Assert.True(blocked, "The competing Identity writer must wait for the guard's transaction.");
-        }
-        finally
-        {
-            await scope.CommitAsync(default);
-        }
-        Assert.Equal(_actor.UserId, await pending);
+        Assert.Equal(_actor.UserId, await writer.ExecuteScalarAsync());
+        var next = await issuer.AcquireAsync(request, default);
+        Assert.Equal(first.Scopes, next.Scopes);
     }
+
+    private PermitRequest Request() => new(new(_actor.UserId, _actor.SessionId, _actor.SecurityStamp, _actor.AccessExpiresAt),
+        IdentityPurpose.CommunityWrite, _actor.UserId, Guid.NewGuid());
 
     [Fact]
     public async Task Uncommitted_work_scope_rolls_back_its_writes()
