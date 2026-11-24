@@ -5,28 +5,28 @@ using Microsoft.EntityFrameworkCore;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Persistence;
+using SCDC.Modules.Messaging.Infrastructure.Access;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Domain;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
-internal sealed class MessageMutator(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountPairAccessGuard guard, TimeProvider clock) : IMessageMutator
+internal sealed class MessageMutator(MessagingDbContext db, MessagingSession session,
+    MessagingIdentityAccess access, MessagingProfiles profiles, TimeProvider clock) : IMessageMutator
 {
     public async Task<Result<MessageResponse>> MutateAsync(MutateMessage command, CancellationToken token)
     {
         try
         {
+            var permit = await access.AcquireAsync(new(command.ActorId, command.SessionId, command.SecurityStamp, command.AccessExpiresAt),
+                command.Delete ? IdentityPurpose.DmDeleteOwn : IdentityPurpose.DmEditOwn, command.ConversationId, token);
+            var people = await profiles.ReadAsync(new[] { command.ActorId }, token);
             await using var owner = await session.BeginAsync(token);
             try
             {
                 await db.Database.UseTransactionAsync(session.Transaction, token);
-                // Author mutations retain access when the peer is disabled. Lock only the actor,
-                // in the same Identity -> session -> space order used by readers/writers.
-                var access = await guard.LockPairAsync(new(command.ActorId, command.SessionId, command.SecurityStamp, command.ActorId), token);
-                if (access.Failure != null) return Fail(Error.Unauthorized("Common.Unauthorized", "The current session is not available."));
+                await access.AdmitAsync(db, permit, token);
                 var pair = await db.DirectConversations.AsNoTracking().SingleOrDefaultAsync(p => p.SpaceId == command.ConversationId, token);
                 if (pair == null || pair.UserLowId != command.ActorId && pair.UserHighId != command.ActorId) return Missing();
                 await db.Database.SqlQuery<Guid>($"SELECT id AS \"Value\" FROM messaging.spaces WHERE id={command.ConversationId} FOR UPDATE").ToListAsync(token);
@@ -60,21 +60,34 @@ internal sealed class MessageMutator(MessagingDbContext db, ISharedDatabaseSessi
                         message.Content = content;
                         if (command.Delete) message.DeletedAt = now;
                         else message.EditedAt = now;
-                        db.MessageOutbox.Add(new MessageOutbox { Id = Guid.CreateVersion7(), AggregateId = message.Id,
-                            AggregateVersion = message.Version, SpaceId = message.SpaceId, OccurredAt = now, AvailableAt = now,
-                            Payload = JsonSerializer.Serialize(new { messageId = message.Id, conversationId = message.SpaceId,
-                                version = message.Version.ToString(CultureInfo.InvariantCulture) }) });
+                        db.MessageOutbox.Add(new MessageOutbox
+                        {
+                            Id = Guid.CreateVersion7(),
+                            AggregateId = message.Id,
+                            AggregateVersion = message.Version,
+                            SpaceId = message.SpaceId,
+                            OccurredAt = now,
+                            AvailableAt = now,
+                            Payload = JsonSerializer.Serialize(new
+                            {
+                                messageId = message.Id,
+                                conversationId = message.SpaceId,
+                                version = message.Version.ToString(CultureInfo.InvariantCulture)
+                            })
+                        });
                         await db.SaveChangesAsync(token);
                     }
                 }
-                var response = new MessageResponse(message.Id, message.SpaceId, access.Actor!, message.ClientMessageId,
+                var response = new MessageResponse(message.Id, message.SpaceId, people[command.ActorId], message.ClientMessageId,
                     message.ConversationSequence.ToString(CultureInfo.InvariantCulture), message.Version.ToString(CultureInfo.InvariantCulture),
                     message.DeletedAt == null ? message.Content : null, message.CreatedAt, message.EditedAt, message.DeletedAt);
+                await access.EnsureAsync(db, permit, token);
                 await owner.CommitAsync(token); return Result.Success(response);
             }
-            finally { await db.Database.UseTransactionAsync(null, CancellationToken.None); await guard.DetachAsync(CancellationToken.None); }
+            finally { await db.Database.UseTransactionAsync(null, CancellationToken.None); }
         }
-        catch (Exception e) when (DatabaseAvailability.IsUnavailable(e)) { return Unavailable(); }
+        catch (MessagingAccessFailure e) { return Fail(e.Error); }
+        catch (Exception e) when (MessagingFailures.Temporary(e)) { return Unavailable(); }
     }
     private static Result<MessageResponse> Fail(Error e) => Result.Failure<MessageResponse>(e);
     private static Result<MessageResponse> Missing() => Fail(Error.NotFound("RESOURCE_NOT_FOUND", "The requested message is not available."));

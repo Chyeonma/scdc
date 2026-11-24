@@ -29,7 +29,7 @@ internal sealed class IdentityPermitIssuer(IConfiguration configuration, AccessO
         {
             await using var guard = new NpgsqlCommand("SELECT id FROM identity.users WHERE id=@user FOR SHARE", connection, transaction);
             guard.Parameters.AddWithValue("user", user);
-            if (await guard.ExecuteScalarAsync(ct) is null) throw new AccessCheckException("Common.Unauthorized");
+            if (await guard.ExecuteScalarAsync(ct) is null) throw new AccessCheckException(user == request.Actor.UserId ? "Common.Unauthorized" : "RESOURCE_NOT_FOUND");
         }
         await using (var session = new NpgsqlCommand("""
             SELECT s.expires_at,EXISTS(SELECT 1 FROM identity.user_emails e WHERE e.user_id=u.id AND e.is_primary AND e.verified_at IS NOT NULL)
@@ -37,23 +37,26 @@ internal sealed class IdentityPermitIssuer(IConfiguration configuration, AccessO
             JOIN identity.user_security_states security ON security.user_id=u.id
             WHERE s.user_id=@user AND s.id=@session AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp()
             AND u.status=1 AND u.deleted_at IS NULL AND (NOT @require_stamp OR security.security_stamp=@stamp)
+            AND (NOT @require_profile OR EXISTS(SELECT 1 FROM identity.user_profiles p WHERE p.user_id=u.id))
             """, connection, transaction))
         {
             session.Parameters.AddWithValue("user", request.Actor.UserId); session.Parameters.AddWithValue("session", request.Actor.SessionId);
             session.Parameters.AddWithValue("stamp", request.Actor.SecurityStamp);
             session.Parameters.AddWithValue("require_stamp", !resuming);
+            session.Parameters.AddWithValue("require_profile", dm);
             DateTime expiry;
-            await using(var row=await session.ExecuteReaderAsync(ct))
+            await using (var row = await session.ExecuteReaderAsync(ct))
             {
-                if(!await row.ReadAsync(ct)||row.GetDateTime(0)<=clock.GetUtcNow().UtcDateTime)throw new AccessCheckException("Common.Unauthorized");
-                expiry=row.GetDateTime(0);
-                if(!row.GetBoolean(1))throw new AccessCheckException("ACCOUNT_ACCESS_DENIED");
+                if (!await row.ReadAsync(ct) || row.GetDateTime(0) <= clock.GetUtcNow().UtcDateTime) throw new AccessCheckException("Common.Unauthorized");
+                expiry = row.GetDateTime(0);
+                if (!row.GetBoolean(1)) throw new AccessCheckException("ACCOUNT_ACCESS_DENIED");
             }
             if (request.Actor.AccessExpiresAt <= clock.GetUtcNow()) throw new AccessCheckException("Common.Unauthorized");
             if (needsPeer)
             {
                 await using var peer = new NpgsqlCommand("""
                     SELECT EXISTS(SELECT 1 FROM identity.users u WHERE u.id=@peer AND u.status=1 AND u.deleted_at IS NULL
+                    AND EXISTS(SELECT 1 FROM identity.user_profiles p WHERE p.user_id=u.id)
                     AND EXISTS(SELECT 1 FROM identity.user_emails e WHERE e.user_id=u.id AND e.is_primary AND e.verified_at IS NOT NULL))
                     """, connection, transaction);
                 peer.Parameters.AddWithValue("peer", request.PeerId!.Value);

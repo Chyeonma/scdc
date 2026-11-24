@@ -198,7 +198,11 @@ public sealed class UserSearchTests(UserSearchFixture fixture) : IClassFixture<U
 public sealed class UserSearchFixture : IAsyncLifetime
 {
     public sealed record ActorData(Guid Id, string Username, string AccessToken, string RefreshToken,
-        Guid SessionId = default, Guid SecurityStamp = default);
+        Guid SessionId = default, Guid SecurityStamp = default)
+    {
+        public DateTimeOffset AccessExpiresAt => string.IsNullOrEmpty(AccessToken) ? DateTimeOffset.MinValue :
+            DateTimeOffset.FromUnixTimeSeconds(new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(AccessToken).Payload.Expiration!.Value);
+    }
     public sealed class SearchClock : TimeProvider
     {
         public bool CursorFuture { get; set; }
@@ -223,6 +227,11 @@ public sealed class UserSearchFixture : IAsyncLifetime
         builder.ConfigureServices(services =>
         {
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock));
+            services.RemoveAllKeyed<IIdentityPermitIssuer>(AccessOwner.Messaging);
+            services.AddKeyedScoped<IIdentityPermitIssuer>(AccessOwner.Messaging, (provider, _) =>
+                new SCDC.Modules.Identity.Infrastructure.Services.IdentityPermitIssuer(provider.GetRequiredService<IConfiguration>(), AccessOwner.Messaging, TimeProvider.System));
+            services.Replace(ServiceDescriptor.Scoped<SCDC.Modules.Messaging.Infrastructure.Access.MessagingIdentityAccess>(provider =>
+                new(provider.GetRequiredKeyedService<IIdentityPermitIssuer>(AccessOwner.Messaging), TimeProvider.System)));
             // Cursor expiry moves independently of the JWT transport clock in this fixture.
             services.Replace(ServiceDescriptor.Singleton<IAuthenticatedSessionReader>(provider =>
                 new SCDC.BuildingBlocks.Infrastructure.Authentication.RedisSessionReader(

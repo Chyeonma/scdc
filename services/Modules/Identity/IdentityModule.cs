@@ -62,7 +62,6 @@ public static class IdentityModule
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
         services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
-        services.AddScoped<IAccountPairAccessGuard, AccountPairAccessGuard>();
         services.AddSingleton(provider => new RedisSessionConnection(provider.GetRequiredService<IConfiguration>(), "Reader"));
         services.AddSingleton<RedisSessionReader>();
         services.AddSingleton<IAuthenticatedSessionReader>(provider => provider.GetRequiredService<RedisSessionReader>());

@@ -7,14 +7,14 @@ using Microsoft.EntityFrameworkCore;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Persistence;
+using SCDC.Modules.Messaging.Infrastructure.Access;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
-internal sealed class MessageHistory(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountPairAccessGuard guard, IHistoricalUserSummaryReader summaries, [FromKeyedServices("Messaging.Cursors")] IDataProtectionProvider protection,
+internal sealed class MessageHistory(MessagingDbContext db, MessagingSession session,
+    MessagingIdentityAccess access, MessagingProfiles profiles, [FromKeyedServices("Messaging.Cursors")] IDataProtectionProvider protection,
     TimeProvider clock) : IMessageHistory
 {
     private readonly IDataProtector protector = protection.CreateProtector("Messaging.History.v1");
@@ -28,14 +28,13 @@ internal sealed class MessageHistory(MessagingDbContext db, ISharedDatabaseSessi
             return Fail(Error.Validation("Common.ValidationFailed", "Use limit 1–100 and one history direction; through requires a protected after cursor."));
         try
         {
+            var permit = await access.AcquireAsync(new(request.ActorId, request.SessionId, request.SecurityStamp, request.AccessExpiresAt), IdentityPurpose.DmRead,
+                request.ConversationId, cancellationToken);
             await using var owner = await session.BeginAsync(cancellationToken);
             try
             {
                 await db.Database.UseTransactionAsync(session.Transaction, cancellationToken);
-                // Read access only requires the actor to be eligible. An unavailable peer keeps their history.
-                var access = await guard.LockPairAsync(new(request.ActorId, request.SessionId,
-                    request.SecurityStamp, request.ActorId), cancellationToken);
-                if (access.Failure is not null) return Fail(Error.Unauthorized("Common.Unauthorized", "The current session is not available."));
+                await access.AdmitAsync(db, permit, cancellationToken);
                 var pair = await db.DirectConversations.AsNoTracking().SingleOrDefaultAsync(p => p.SpaceId == request.ConversationId, cancellationToken);
                 if (pair is null || pair.UserLowId != request.ActorId && pair.UserHighId != request.ActorId) return NotFound();
                 // Writers hold FOR UPDATE until commit. This lock waits for a held writer before reading H,
@@ -71,12 +70,26 @@ internal sealed class MessageHistory(MessagingDbContext db, ISharedDatabaseSessi
                 else if (cursor is not null) query = query.Where(m => m.ConversationSequence < position);
                 query = forward ? query.OrderBy(m => m.ConversationSequence) : query.OrderByDescending(m => m.ConversationSequence);
                 // Nullable projections fail closed for incompatible legacy rows rather than silently skipping them.
-                var rows = await query.Take(request.Limit + 1).Select(m => new { m.Id, m.SpaceId,
-                    AuthorId = (Guid?)m.AuthorUserId, ClientId = (Guid?)m.ClientMessageId,
-                    m.ConversationSequence, m.Version, m.Content, m.CreatedAt, m.EditedAt, m.DeletedAt }).ToListAsync(cancellationToken);
+                var rows = await query.Take(request.Limit + 1).Select(m => new
+                {
+                    m.Id,
+                    m.SpaceId,
+                    AuthorId = (Guid?)m.AuthorUserId,
+                    ClientId = (Guid?)m.ClientMessageId,
+                    m.ConversationSequence,
+                    m.Version,
+                    m.Content,
+                    m.CreatedAt,
+                    m.EditedAt,
+                    m.DeletedAt
+                }).ToListAsync(cancellationToken);
                 var page = rows.Take(request.Limit).OrderBy(m => m.ConversationSequence).ToArray();
                 if (page.Any(m => m.AuthorId is null || m.ClientId is null)) return Unavailable();
-                var people = await summaries.ReadAsync(page.Select(m => m.AuthorId!.Value).Distinct().ToArray(), cancellationToken);
+                await access.EnsureAsync(db, permit, cancellationToken);
+                await owner.CommitAsync(cancellationToken);
+                await db.Database.UseTransactionAsync(null, CancellationToken.None);
+                await owner.DisposeAsync();
+                var people = await profiles.ReadAsync(page.Select(m => m.AuthorId!.Value).Distinct().ToArray(), cancellationToken);
                 if (page.Any(m => !people.ContainsKey(m.AuthorId!.Value))) return Unavailable();
                 var items = page.Select(m => new MessageResponse(m.Id, m.SpaceId, people[m.AuthorId!.Value], m.ClientId!.Value,
                     m.ConversationSequence.ToString(CultureInfo.InvariantCulture), m.Version.ToString(CultureInfo.InvariantCulture),
@@ -86,12 +99,12 @@ internal sealed class MessageHistory(MessagingDbContext db, ISharedDatabaseSessi
                 var more = rows.Count > request.Limit;
                 var next = more ? Protect(forward ? "after" : "before", forward ? page[^1].ConversationSequence : page[0].ConversationSequence) : null;
                 var resume = request.Before is null && (!forward || !more) ? Protect("resume", frontier) : null;
-                await owner.CommitAsync(cancellationToken);
                 return Result.Success(new MessagePage(items, next, more, frontier.ToString(CultureInfo.InvariantCulture), resume));
             }
-            finally { await db.Database.UseTransactionAsync(null, CancellationToken.None); await guard.DetachAsync(default); }
+            finally { await db.Database.UseTransactionAsync(null, CancellationToken.None); }
         }
-        catch (Exception exception) when (DatabaseAvailability.IsUnavailable(exception)) { return Unavailable(); }
+        catch (MessagingAccessFailure e) { return Result.Failure<MessagePage>(e.Error); }
+        catch (Exception exception) when (MessagingFailures.Temporary(exception)) { return Unavailable(); }
     }
     private static Result<MessagePage> Fail(Error error) => Result.Failure<MessagePage>(error);
     private static Result<MessagePage> BadCursor() => Fail(Error.Validation("CURSOR_INVALID", "The history cursor is invalid or expired; reload history."));

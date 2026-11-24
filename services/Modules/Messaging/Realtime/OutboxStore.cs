@@ -1,10 +1,10 @@
 using Npgsql;
-using SCDC.Contracts.Persistence;
+using SCDC.Modules.Messaging.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Messaging.Realtime;
 
 internal sealed record OutboxClaim(Guid Id, Guid SpaceId, Guid MessageId, Guid LeaseToken, int Attempt, DateTimeOffset LeaseExpiresAt);
-internal sealed class OutboxStore(ISharedDatabaseSession session)
+internal sealed class OutboxStore(MessagingSession session)
 {
     public async Task<OutboxClaim?> ClaimAsync(int leaseSeconds, Guid? spaceId, CancellationToken token)
     {

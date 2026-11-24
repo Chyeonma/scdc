@@ -8,14 +8,14 @@ using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Persistence;
+using SCDC.Modules.Messaging.Infrastructure.Access;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
-internal sealed class ConversationInbox(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountPairAccessGuard guard, IHistoricalUserSummaryReader summaries, [FromKeyedServices("Messaging.Cursors")] IDataProtectionProvider protection,
+internal sealed class ConversationInbox(MessagingDbContext db, MessagingSession session,
+    MessagingIdentityAccess access, MessagingProfiles profiles, [FromKeyedServices("Messaging.Cursors")] IDataProtectionProvider protection,
     TimeProvider clock) : IConversationInbox
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Messaging.Conversations.v1");
@@ -28,14 +28,13 @@ internal sealed class ConversationInbox(MessagingDbContext db, ISharedDatabaseSe
             return Result.Failure<DirectConversationPage>(Error.Validation("Common.ValidationFailed", "Use a page size from 1 to 50."));
         try
         {
+            var permit = await access.AcquireAsync(new(request.ActorId, request.SessionId, request.SecurityStamp, request.AccessExpiresAt), IdentityPurpose.DmRead,
+                request.ActorId, cancellationToken);
             await using var owner = await session.BeginAsync(cancellationToken);
             try
             {
                 await db.Database.UseTransactionAsync(session.Transaction, cancellationToken);
-                var access = await guard.LockPairAsync(new(request.ActorId, request.SessionId,
-                    request.SecurityStamp, request.ActorId), cancellationToken);
-                if (access.Failure is not null)
-                    return Result.Failure<DirectConversationPage>(Error.Unauthorized("Common.Unauthorized", "The current session is not available."));
+                await access.AdmitAsync(db, permit, cancellationToken);
                 var now = clock.GetUtcNow();
                 Cursor? cursor = null;
                 if (request.Cursor is not null)
@@ -48,12 +47,12 @@ internal sealed class ConversationInbox(MessagingDbContext db, ISharedDatabaseSe
                         || cursor.Position is null || cursor.Position.Id == Guid.Empty) return BadCursor();
                 }
                 var query = from member in db.SpaceMembers.AsNoTracking()
-                    join space in db.Spaces.AsNoTracking() on member.SpaceId equals space.Id
-                    join pair in db.DirectConversations.AsNoTracking() on space.Id equals pair.SpaceId
-                    where member.UserId == request.ActorId && member.MembershipStatus == 1 && member.LeftAt == null
-                        && space.SpaceType == 1 && space.Status != 3 && space.DeletedAt == null
-                        && (pair.UserLowId == request.ActorId || pair.UserHighId == request.ActorId)
-                    select new { Space = space, Pair = pair };
+                            join space in db.Spaces.AsNoTracking() on member.SpaceId equals space.Id
+                            join pair in db.DirectConversations.AsNoTracking() on space.Id equals pair.SpaceId
+                            where member.UserId == request.ActorId && member.MembershipStatus == 1 && member.LeftAt == null
+                                && space.SpaceType == 1 && space.Status != 3 && space.DeletedAt == null
+                                && (pair.UserLowId == request.ActorId || pair.UserHighId == request.ActorId)
+                            select new { Space = space, Pair = pair };
                 if (cursor is not null)
                 {
                     var position = cursor.Position;
@@ -78,7 +77,11 @@ internal sealed class ConversationInbox(MessagingDbContext db, ISharedDatabaseSe
                         .ToListAsync(cancellationToken);
                     page = page.Where(x => stillVisible.Contains(x.Space.Id)).ToArray();
                 }
-                var people = await summaries.ReadAsync(page.SelectMany(x => new[] { x.Pair.UserLowId, x.Pair.UserHighId }).Distinct().ToArray(), cancellationToken);
+                await access.EnsureAsync(db, permit, cancellationToken);
+                await owner.CommitAsync(cancellationToken);
+                await db.Database.UseTransactionAsync(null, CancellationToken.None);
+                await owner.DisposeAsync();
+                var people = await profiles.ReadAsync(page.SelectMany(x => new[] { x.Pair.UserLowId, x.Pair.UserHighId }).Distinct().ToArray(), cancellationToken);
                 var items = new List<DirectConversationResponse>();
                 foreach (var row in page)
                 {
@@ -94,12 +97,12 @@ internal sealed class ConversationInbox(MessagingDbContext db, ISharedDatabaseSe
                     next = _protector.Protect(JsonSerializer.Serialize(new Cursor(1, request.ActorId, request.Limit,
                         "direct-inbox", new(last.LastActivityAt, last.Id), cursor?.ExpiresAt ?? now.AddHours(24))));
                 }
-                await owner.CommitAsync(cancellationToken);
                 return Result.Success(new DirectConversationPage(items, next));
             }
-            finally { await db.Database.UseTransactionAsync(null, CancellationToken.None); await guard.DetachAsync(default); }
+            finally { await db.Database.UseTransactionAsync(null, CancellationToken.None); }
         }
-        catch (Exception exception) when (DatabaseAvailability.IsUnavailable(exception)) { return Unavailable(); }
+        catch (MessagingAccessFailure e) { return Result.Failure<DirectConversationPage>(e.Error); }
+        catch (Exception exception) when (MessagingFailures.Temporary(exception)) { return Unavailable(); }
     }
     private static Result<DirectConversationPage> BadCursor() => Result.Failure<DirectConversationPage>(
         Error.Validation("CURSOR_INVALID", "The inbox cursor is invalid or expired; restart the list."));

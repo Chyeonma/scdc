@@ -14,13 +14,13 @@ public sealed class DirectConversationsController(IDirectConversationService ser
     [ProducesResponseType<MessageResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<MessageResponse>> Edit(Guid conversationId, Guid messageId, EditMessageRequest request,
         CancellationToken token) => FromResult(await mutator.MutateAsync(new(User.GetUserId(), User.GetSessionId(),
-            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, messageId, request.ExpectedVersion, request.Content, false), token));
+            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, messageId, request.ExpectedVersion, request.Content, false, User.GetAccessExpiresAt()), token));
 
     [HttpDelete("{conversationId:guid}/messages/{messageId:guid}")]
     [ProducesResponseType<MessageResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<MessageResponse>> Delete(Guid conversationId, Guid messageId, [FromQuery, Required] string expectedVersion,
         CancellationToken token) => FromResult(await mutator.MutateAsync(new(User.GetUserId(), User.GetSessionId(),
-            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, messageId, expectedVersion, null, true), token));
+            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, messageId, expectedVersion, null, true, User.GetAccessExpiresAt()), token));
     [HttpGet("{conversationId:guid}/messages")]
     [ProducesResponseType<MessagePage>(StatusCodes.Status200OK)]
     public async Task<ActionResult<MessagePage>> History(Guid conversationId, [FromQuery, Range(1, 100)] int limit = 50,
@@ -31,7 +31,7 @@ public sealed class DirectConversationsController(IDirectConversationService ser
         if (Request.Query.ContainsKey("after")) after = Request.Query["after"].ToString();
         if (Request.Query.ContainsKey("through")) through = Request.Query["through"].ToString();
         return FromResult(await history.ReadAsync(new(User.GetUserId(), User.GetSessionId(),
-            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, limit, before, after, through), cancellationToken));
+            Guid.Parse(User.FindFirst("sst")!.Value), conversationId, limit, before, after, through, User.GetAccessExpiresAt()), cancellationToken));
     }
     [HttpGet]
     [ProducesResponseType<DirectConversationPage>(StatusCodes.Status200OK)]
@@ -43,7 +43,7 @@ public sealed class DirectConversationsController(IDirectConversationService ser
     {
         if (Request.Query.TryGetValue("cursor", out var supplied)) cursor = supplied.ToString();
         return FromResult(await inbox.ListAsync(new(User.GetUserId(), User.GetSessionId(),
-            Guid.Parse(User.FindFirst("sst")!.Value), limit, cursor), cancellationToken));
+            Guid.Parse(User.FindFirst("sst")!.Value), limit, cursor, User.GetAccessExpiresAt()), cancellationToken));
     }
 
     [HttpPost("{conversationId:guid}/messages")]
@@ -51,7 +51,7 @@ public sealed class DirectConversationsController(IDirectConversationService ser
     public async Task<ActionResult<MessageResponse>> Send(Guid conversationId, SendMessageRequest request,
         CancellationToken cancellationToken) => FromResult(await sender.SendAsync(new(
             User.GetUserId(), User.GetSessionId(), Guid.Parse(User.FindFirst("sst")!.Value), conversationId,
-            request.ClientMessageId!.Value, request.Content), cancellationToken));
+            request.ClientMessageId!.Value, request.Content, User.GetAccessExpiresAt()), cancellationToken));
 
     [HttpPost]
     [ProducesResponseType<DirectConversationResponse>(StatusCodes.Status200OK)]
@@ -61,7 +61,7 @@ public sealed class DirectConversationsController(IDirectConversationService ser
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<DirectConversationResponse>> Open(OpenDirectConversationRequest request,
         CancellationToken cancellationToken) => FromResult(await service.OpenAsync(new OpenDirectConversation(
-            User.GetUserId(), User.GetSessionId(), Guid.Parse(User.FindFirst("sst")!.Value), request.PeerUserId!.Value), cancellationToken));
+            User.GetUserId(), User.GetSessionId(), Guid.Parse(User.FindFirst("sst")!.Value), request.PeerUserId!.Value, User.GetAccessExpiresAt()), cancellationToken));
 }
 
 public sealed record OpenDirectConversationRequest([Required] Guid? PeerUserId);

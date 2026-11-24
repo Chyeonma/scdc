@@ -382,3 +382,14 @@ Sau đủ ACK, worker xin permit `RESUMING_ACCEPTED_OPERATION` cho đúng sessio
 202 trả tham chiếu bền, GET status chỉ đọc và kiểm tra quyền hiện tại; không lộ command/scopes/policy dự kiến. Header actor và lưu tham chiếu qua reload triển khai cùng WebClient/OpenAPI. Chi tiết vận hành tại [nâng cấp S2-07](../guides/development.md#s2-07-upgrade).
 
 S2-07 chưa chuyển transaction tạo Messaging space sang luồng provision (S2-09), chưa thay guard DM (S2-08), chưa host RPC/gỡ hợp đồng cũ (S2-10), chưa thu hẹp toàn bộ grant tạm hoặc bật Media (S2-11/Media). Adapter `IChannelAccessGuard` nhận transaction cũ không còn được đăng ký; hiện không có caller production, channel nội bộ dùng guard cục bộ với permit đã lấy trước transaction. Không tuyên bố đã bật giao thức mới trên mọi owner khi các đường đó chưa được chuyển đổi.
+
+
+<a id="s2-08-runtime"></a>
+
+## Runtime S2-08 — Permit và transaction Messaging
+
+Sáu đường DM lấy permit Identity trước khi mở `MessagingSession` nội bộ. Context Identity không dùng connection/transaction Messaging; local fence ACCOUNT/SESSION được khóa theo thứ tự chuẩn đến commit. Mở/gửi mới cần ACCOUNT peer, còn mở cuộc đã có, history/inbox, replay và sửa/xóa tin của mình chỉ kiểm actor. Gợi ý conversation/operation ngoài transaction phải kiểm lại dưới khóa owner; không dùng DM_READ/DM_REPLAY để tạo dữ liệu mới.
+
+Hạn JWT đã xác minh đi vào command. Admission kiểm owner, purpose, resource/operation, generation, đủ scope, epoch và ngân sách còn ít nhất 1,5 giây. RPC có deadline 2 giây; transaction dùng lock timeout 500 ms, statement/transaction timeout 1 giây và kiểm cuối bằng `clock_timestamp()` với biên 250 ms. Lỗi hoặc thiếu thông tin trả lỗi tạm/xung đột, không bỏ qua gate.
+
+Hồ sơ chỉ phục vụ DTO qua scope Identity độc lập với deadline 2 giây: ghi lấy trước transaction; history/inbox đóng transaction trước lookup. Realtime còn xin permit mới và kiểm lại fence, tư cách và current DTO sau lookup, giữ local fence trong handoff có cancellation/deadline 500 ms. Outbox tiếp tục kiểm Redis riêng cho từng recipient. [Hồ sơ S2-08](../records/verification/architecture/s2-08-2026-11-24.md) ghi test quyền DB, lỗi/cạnh tranh, dm-mvp và thời gian thu hồi; S2-11 tiếp tục kiểm chứng tải/lệch đồng hồ và thu hẹp grant toàn hệ thống.

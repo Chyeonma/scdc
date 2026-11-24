@@ -2,9 +2,9 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-07 hoàn tất triển khai và kiểm thử; S2-08 đến S2-12 chưa làm. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-08 hoàn tất triển khai và kiểm thử; S2-09 đến S2-12 chưa hoàn tất. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
-S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-07 còn khoảng 10,5–18 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
+S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-08 còn khoảng 7,5–13 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -81,7 +81,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Bổ sung S2-02: Community lưu policy dự kiến và ACK; tính phạm vi quyền hiệu lực, actor membership header và revalidation trước final commit; cập nhật client tương ứng.
 - Xong khi: test Community qua, kể cả các ca tài khoản bị khóa giữa chừng.
 - Phụ thuộc: S2-02, S2-03, S2-06.
-- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-23; commit ngày 2026-11-24**. [Hồ sơ S2-07](../../records/verification/architecture/s2-07-2026-11-23.md): Community lấy permit trước transaction, fence cục bộ, policy dự kiến/ACK và revalidation session gốc; header membership actor và UI 202/reload. **349/349 backend**, **82/82 frontend**, **52/52 browser Community**; CLI bảo toàn 50 bảng nghiệp vụ. Chưa push; volume dev hiện hữu vẫn ở S2-06. Tạo Messaging space bằng transaction cũ giữ tới S2-09.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-23; commit ngày 2026-11-24**. [Hồ sơ S2-07](../../records/verification/architecture/s2-07-2026-11-23.md): Community lấy permit trước transaction, fence cục bộ, policy dự kiến/ACK và revalidation session gốc; header membership actor và UI 202/reload. **349/349 backend**, **82/82 frontend**, **52/52 browser Community**; CLI bảo toàn 50 bảng nghiệp vụ. Commit `432f870` trên `main`; volume dev hiện hữu vẫn ở S2-06. Tạo Messaging space bằng transaction cũ giữ tới S2-09.
 
 ## S2-08 · Messaging không dùng transaction của Identity
 - Nhãn: refactor
@@ -89,7 +89,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: 6 file Messaging đang dùng `IAccountPairAccessGuard` và `ISharedDatabaseSession` (gửi, sửa, lịch sử, hộp thư, mở hội thoại, ConversationAccess) chuyển sang thiết kế S2-02. `IHistoricalUserSummaryReader` không còn đọc qua kết nối chung.
 - Xong khi: toàn bộ test DM và Playwright `dm-mvp` qua.
 - Phụ thuộc: S2-02, S2-03, S2-06.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 3–5 ngày công.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-08](../../records/verification/architecture/s2-08-2026-11-24.md): sáu đường DM dùng permit/fence và transaction Messaging riêng; lookup hồ sơ độc lập, realtime kiểm lại sau lookup. **365/365 backend**, **82/82 frontend**, **14/14 Playwright dm-mvp**; thu hồi phiên qua UI 1.223 ms. Mã nguồn và hồ sơ cùng commit S2-08; volume dev hiện hữu vẫn ở S2-06.
 
 ## S2-09 · Tạo phòng không dùng transaction chung
 - Nhãn: refactor

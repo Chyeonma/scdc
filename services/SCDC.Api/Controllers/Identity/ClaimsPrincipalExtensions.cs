@@ -10,6 +10,9 @@ internal static class ClaimsPrincipalExtensions
     public static Guid GetSessionId(this ClaimsPrincipal principal) =>
         GetRequiredGuidClaim(principal, "sid");
 
+    public static DateTimeOffset GetAccessExpiresAt(this ClaimsPrincipal principal) =>
+        DateTimeOffset.FromUnixTimeSeconds(long.Parse(principal.FindFirst("exp")!.Value, System.Globalization.CultureInfo.InvariantCulture));
+
     private static Guid GetRequiredGuidClaim(ClaimsPrincipal principal, string claimType)
     {
         var value = principal.FindFirst(claimType)?.Value;

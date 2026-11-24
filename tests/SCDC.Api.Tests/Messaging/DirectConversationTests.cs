@@ -77,6 +77,12 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
     public async Task Forty_barrier_requests_force_unique_conflicts_and_leave_only_winning_space()
     {
         var a = f.Inner.Actor; var b = f.Inner.Users["search01"];
+        // Existing fence rows allow concurrent readers. First-time fence insertion is deliberately serialized.
+        foreach (var actor in new[] { a, b })
+        {
+            using var warm = await f.Inner.Send("/api/v1/direct-conversations", actor);
+            Assert.Equal(HttpStatusCode.OK, warm.StatusCode);
+        }
         var before = await f.OwnedSpaces();
         await using var gate = await f.Gate(a.Id, b.Id);
         var barrier = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -132,7 +138,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
     }
 
     [Fact]
-    public async Task Guard_rechecks_security_stamp_session_owner_and_expiry_inside_shared_transaction()
+    public async Task Permit_rechecks_security_stamp_session_owner_and_expiry_before_local_transaction()
     {
         var a = f.Inner.Actor; var b = f.Inner.Users["search05"];
         foreach (var command in new[] {
@@ -168,34 +174,28 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
     }
 
     [Fact]
-    public async Task Both_contexts_enlist_same_physical_connection_and_transaction()
+    public async Task Messaging_keeps_a_local_connection_and_never_enlists_the_identity_context()
     {
-        await using var scope = f.Inner.Factory.Services.CreateAsyncScope();
-        var services = scope.ServiceProvider;
-        var shared = services.GetRequiredService<ISharedDatabaseSession>();
-        var guard = services.GetRequiredService<IAccountPairAccessGuard>();
-        var identityType = typeof(SCDC.Modules.Identity.IdentityModule).Assembly.GetType("SCDC.Modules.Identity.Infrastructure.Persistence.IdentityDbContext")!;
-        var messagingType = typeof(SCDC.Modules.Messaging.MessagingModule).Assembly.GetType("SCDC.Modules.Messaging.Infrastructure.Persistence.MessagingDbContext")!;
-        var identity = (DbContext)services.GetRequiredService(identityType);
-        var messaging = (DbContext)services.GetRequiredService(messagingType);
-        await using var owner = await shared.BeginAsync(default);
+        await using var scope = f.Inner.Factory.Services.CreateAsyncScope(); var services = scope.ServiceProvider;
+        var local = services.GetRequiredService<SCDC.Modules.Messaging.Infrastructure.Persistence.MessagingSession>();
+        var access = services.GetRequiredService<SCDC.Modules.Messaging.Infrastructure.Access.MessagingIdentityAccess>();
+        var identity = services.GetRequiredService<SCDC.Modules.Identity.Infrastructure.Persistence.IdentityDbContext>();
+        var messaging = services.GetRequiredService<SCDC.Modules.Messaging.Infrastructure.Persistence.MessagingDbContext>();
+        var actor = f.Inner.Actor;
+        var permit = await access.AcquireAsync(new(actor.Id, actor.SessionId, actor.SecurityStamp, actor.AccessExpiresAt), IdentityPurpose.DmRead, actor.Id, default);
+        await using var owner = await local.BeginAsync(default);
         try
         {
-            var a = f.Inner.Actor;
-            var result = await guard.LockPairAsync(new(a.Id, a.SessionId, a.SecurityStamp, f.Inner.Users["bao"].Id), default);
-            Assert.Null(result.Failure);
-            await messaging.Database.UseTransactionAsync(shared.Transaction);
-            Assert.Same(shared.Connection, identity.Database.GetDbConnection());
-            Assert.Same(shared.Connection, messaging.Database.GetDbConnection());
-            Assert.Same(shared.Transaction, identity.Database.CurrentTransaction!.GetDbTransaction());
-            Assert.Same(shared.Transaction, messaging.Database.CurrentTransaction!.GetDbTransaction());
-            var first = await identity.Database.SqlQueryRaw<string>("SELECT concat(pg_backend_pid(),':',txid_current()) AS \"Value\"").SingleAsync();
-            var second = await messaging.Database.SqlQueryRaw<string>("SELECT concat(pg_backend_pid(),':',txid_current()) AS \"Value\"").SingleAsync();
-            Assert.Equal(first, second);
-            await owner.CommitAsync(default);
+            await messaging.Database.UseTransactionAsync(local.Transaction);
+            await access.AdmitAsync(messaging, permit, default);
+            Assert.NotSame(identity.Database.GetDbConnection(), messaging.Database.GetDbConnection());
+            Assert.Same(local.Connection, messaging.Database.GetDbConnection());
+            Assert.Null(identity.Database.CurrentTransaction);
+            Assert.Same(local.Transaction, messaging.Database.CurrentTransaction!.GetDbTransaction());
+            Assert.Null(services.GetService<IAccountPairAccessGuard>());
+            await access.EnsureAsync(messaging, permit, default); await owner.CommitAsync(default);
         }
-        finally { await messaging.Database.UseTransactionAsync(null); await guard.DetachAsync(default); }
-        Assert.Same(services.GetRequiredKeyedService<ISharedDatabaseSession>("Identity").Connection, identity.Database.GetDbConnection());
+        finally { await messaging.Database.UseTransactionAsync(null); }
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
         await using (var sql = new NpgsqlCommand("SELECT id FROM identity.users WHERE id=@id FOR NO KEY UPDATE", c, tx))
         { sql.Parameters.AddWithValue("id", a.Id); await sql.ExecuteScalarAsync(); }
         await using var scope = f.Inner.Factory.Services.CreateAsyncScope();
-        var opening = scope.ServiceProvider.GetRequiredService<IDirectConversationService>().OpenAsync(new(a.Id, a.SessionId, a.SecurityStamp, b.Id), default);
+        var opening = scope.ServiceProvider.GetRequiredService<IDirectConversationService>().OpenAsync(new(a.Id, a.SessionId, a.SecurityStamp, b.Id, a.AccessExpiresAt), default);
         var deadline = DateTime.UtcNow.AddSeconds(10); var blocked = false;
         while (DateTime.UtcNow < deadline)
         {

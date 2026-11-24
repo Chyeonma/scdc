@@ -9,14 +9,15 @@ namespace SCDC.Api.Tests.Messaging;
 public sealed class ModuleIntegrationTests
 {
     [Fact]
-    public async Task Community_and_dm_resolve_their_own_account_guards()
+    public async Task Community_and_dm_resolve_owner_specific_permits_without_the_old_pair_guard()
     {
         using var factory = new SCDCWebApplicationFactory();
         using var client = factory.CreateClient();
         await using var scope = factory.Services.CreateAsyncScope();
 
         Assert.Equal("AccountAccessGuard", scope.ServiceProvider.GetRequiredService<IAccountAccessGuard>().GetType().Name);
-        Assert.Equal("AccountPairAccessGuard", scope.ServiceProvider.GetRequiredService<IAccountPairAccessGuard>().GetType().Name);
+        Assert.Null(scope.ServiceProvider.GetService<IAccountPairAccessGuard>());
+        Assert.NotSame(scope.ServiceProvider.GetRequiredKeyedService<IIdentityPermitIssuer>(AccessOwner.Community), scope.ServiceProvider.GetRequiredKeyedService<IIdentityPermitIssuer>(AccessOwner.Messaging));
     }
 
     [Fact]

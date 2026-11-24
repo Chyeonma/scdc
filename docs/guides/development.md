@@ -756,3 +756,14 @@ Mutation role, gán role, tạo/sửa channel và ACL phải gửi `X-SCDC-Membe
 Thay đổi role/ACL làm mất quyền có thể trả 202 cùng `operationId`, `phase=fencing` và `statusUrl`. Policy hiện hành chưa đổi; không gửi lại mutation tự động. Dùng GET `/api/v1/servers/{serverId}/access-operations/{operationId}` để đọc tiến trình; actor của operation hoặc chủ server hiện tại phải có phiên và membership đang hoạt động. GET không kích hoạt worker. WebClient giữ tham chiếu trong sessionStorage theo actor/server, kể cả sau reload, và có nút kiểm tra tiến trình.
 
 Worker tiếp tục sau restart, nhận ACK thật từ Community/Messaging rồi xin lại permit của đúng session gốc trước final commit. Nếu actor mất phiên/quyền hoặc expectedVersion không còn đúng, policy dự kiến bị hủy; các floor đã cài vẫn giữ, scope mở lại ở epoch mới. Thử ACK thất lạc, owner lỗi, đăng xuất actor khi pending và recovery trước khi mở traffic mới. Bằng chứng tại [hồ sơ S2-07](../records/verification/architecture/s2-07-2026-11-23.md).
+
+
+<a id="s2-08-upgrade"></a>
+
+## Chạy S2-08 — Transaction DM riêng
+
+S2-08 dùng các bảng Identity/fence hiện có của S2-06 và không thêm migration. Triển khai cùng baseline Community S2-07 theo mục trên khi nâng cấp toàn ứng dụng. API tiếp tục cần ba connection string riêng, Redis và các key ring hiện hành. S2-08 không tự thu hồi các grant tạm; S2-11 xử lý toàn bộ quyền sau khi các writer đã chuyển xong.
+
+Để chạy `dm-mvp` trên Linux/macOS, dùng stack `compose.gateway-test.yaml` riêng, web localhost 15300 và database `scdc_gateway_test`; cấp psql qua PATH và PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD trỏ đúng database thử. Chọn run mới tối đa 12 ký tự, xuất `DM_WEB_URL` và `DM_MVP_RUN`. Tạo tài khoản/hội thoại bằng `scripts/dm-acceptance/mvp-local.py -Action Setup -Run <run>` rồi `-Action Fixtures`. Setup trên host có thể dùng `DM_MVP_ENGINE=podman` cùng `DM_MVP_PG_CONTAINER=scdc-gateway-<project>-postgres-1` khi không cài psql. Không tái sử dụng/reset run đã có.
+
+Trong `clients/WebClient`, chạy `npm ci` rồi `npx playwright test --project dm-mvp`; Python 3 và psql phải có trong môi trường chạy browser test. Driver chỉ ghi trạng thái vào tài khoản thuộc manifest của run; tin thử được gửi bằng API thật. Windows vẫn dùng PowerShell driver cũ. [Hồ sơ S2-08](../records/verification/architecture/s2-08-2026-11-24.md) ghi cấu hình và kết quả thực tế.

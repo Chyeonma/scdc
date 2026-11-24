@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Persistence;
+using SCDC.Modules.Messaging.Infrastructure.Access;
 using SCDC.Modules.Messaging.Application;
 using SCDC.Modules.Messaging.Domain;
 using SCDC.Modules.Messaging.Infrastructure.Persistence;
@@ -13,25 +13,44 @@ using SCDC.Modules.Messaging.Infrastructure.Security;
 
 namespace SCDC.Modules.Messaging.Infrastructure.Services;
 
-internal sealed class TextMessageSender(MessagingDbContext db, ISharedDatabaseSession session,
-    IAccountPairAccessGuard guard, MessageFingerprint fingerprints, TimeProvider clock) : ITextMessageSender
+internal sealed class TextMessageSender(MessagingDbContext db, MessagingSession session,
+    MessagingIdentityAccess access, MessagingProfiles profiles, MessageFingerprint fingerprints, TimeProvider clock) : ITextMessageSender
 {
     public async Task<Result<MessageResponse>> SendAsync(SendTextMessage command, CancellationToken cancellationToken)
     {
         try
         {
+            var actor = new AuthenticatedSession(command.ActorId, command.SessionId, command.SecurityStamp, command.AccessExpiresAt);
+            var hint = await db.DirectConversations.AsNoTracking().SingleOrDefaultAsync(p => p.SpaceId == command.ConversationId, cancellationToken);
+            var belongsHint = hint is not null && (hint.UserLowId == command.ActorId || hint.UserHighId == command.ActorId);
+            var peerHint = belongsHint ? (hint!.UserLowId == command.ActorId ? hint.UserHighId : hint.UserLowId) : (Guid?)null;
+            var replayHint = await db.SendOperations.AsNoTracking().AnyAsync(o => o.SpaceId == command.ConversationId && o.AuthorUserId == command.ActorId && o.ClientMessageId == command.ClientMessageId, cancellationToken);
+            var purpose = !belongsHint ? IdentityPurpose.DmRead : replayHint ? IdentityPurpose.DmReplay : IdentityPurpose.DmSendNew;
+            IdentityPermit permit;
+            try
+            {
+                permit = await access.AcquireAsync(actor, purpose, command.ConversationId, cancellationToken, purpose == IdentityPurpose.DmSendNew ? peerHint : null);
+            }
+            catch (MessagingAccessFailure e) when (purpose == IdentityPurpose.DmSendNew && e.Error.Code == "RESOURCE_NOT_FOUND")
+            {
+                // A concurrent request may have committed this operation before the peer became unavailable.
+                // Reclassify only an existing operation; the transaction still forbids creating with a replay permit.
+                if (!await db.SendOperations.AsNoTracking().AnyAsync(o => o.SpaceId == command.ConversationId && o.AuthorUserId == command.ActorId && o.ClientMessageId == command.ClientMessageId, cancellationToken)) throw;
+                permit = await access.AcquireAsync(actor, IdentityPurpose.DmReplay, command.ConversationId, cancellationToken);
+            }
+            var people = await profiles.ReadAsync(new[] { command.ActorId }, cancellationToken);
             await using var owner = await session.BeginAsync(cancellationToken);
             try
             {
                 await db.Database.UseTransactionAsync(session.Transaction, cancellationToken);
-                // Discover the pair without a space lock: ordered Identity locks must precede the space lock.
+                await access.AdmitAsync(db, permit, cancellationToken);
+                // Revalidate the local hint under the owner transaction before taking the space lock.
                 var pair = await db.DirectConversations.AsNoTracking().SingleOrDefaultAsync(
                     p => p.SpaceId == command.ConversationId, cancellationToken);
                 var belongs = pair is not null && (pair.UserLowId == command.ActorId || pair.UserHighId == command.ActorId);
                 var peer = belongs ? (pair!.UserLowId == command.ActorId ? pair.UserHighId : pair.UserLowId) : command.ActorId;
-                var access = await guard.LockPairAsync(new(command.ActorId, command.SessionId, command.SecurityStamp, peer), cancellationToken);
-                if (access.Failure is not null) return Fail(Error.Unauthorized("Common.Unauthorized", "The current session is not available."));
                 if (!belongs) return NotFound();
+                if (peerHint != peer) return Fail(Error.Conflict("ACCESS_CHANGED", "The conversation changed. Reload before sending."));
                 await db.Database.SqlQuery<Guid>($"""
                     SELECT id AS "Value" FROM messaging.spaces WHERE id = {command.ConversationId} FOR UPDATE
                     """).ToListAsync(cancellationToken);
@@ -60,41 +79,64 @@ internal sealed class TextMessageSender(MessagingDbContext db, ISharedDatabaseSe
                 }
                 else
                 {
-                    if (!access.PeerEligible) return NotFound();
+                    if (permit.Request.Purpose != IdentityPurpose.DmSendNew) return Fail(Error.Conflict("ACCESS_CHANGED", "The original operation changed. Reconcile before sending."));
                     var keyId = fingerprints.ActiveKeyId;
                     var hash = fingerprints.Compute(keyId, command.ConversationId, command.ActorId, command.ClientMessageId, content);
                     if (hash is null) return KeyUnavailable();
                     if (space.LastMessageSequence == long.MaxValue) return Unavailable();
                     var now = clock.GetUtcNow();
-                    message = new TextMessage { Id = Guid.CreateVersion7(), SpaceId = space.Id, AuthorUserId = command.ActorId,
-                        ClientMessageId = command.ClientMessageId, Content = content, CreatedAt = now,
-                        ConversationSequence = (space.LastMessageSequence ?? 0) + 1 };
+                    message = new TextMessage
+                    {
+                        Id = Guid.CreateVersion7(),
+                        SpaceId = space.Id,
+                        AuthorUserId = command.ActorId,
+                        ClientMessageId = command.ClientMessageId,
+                        Content = content,
+                        CreatedAt = now,
+                        ConversationSequence = (space.LastMessageSequence ?? 0) + 1
+                    };
                     db.Messages.Add(message);
                     await db.SaveChangesAsync(cancellationToken);
-                    db.SendOperations.Add(new SendOperation { SpaceId = space.Id, AuthorUserId = command.ActorId,
-                        ClientMessageId = command.ClientMessageId, MessageId = message.Id, FingerprintVersion = 1,
-                        KeyId = keyId, Fingerprint = hash, CreatedAt = now });
-                    db.MessageOutbox.Add(new MessageOutbox { Id = Guid.CreateVersion7(), AggregateId = message.Id,
-                        SpaceId = space.Id, OccurredAt = now, AvailableAt = now,
-                        Payload = JsonSerializer.Serialize(new { messageId = message.Id, conversationId = space.Id, version = "1" }) });
+                    db.SendOperations.Add(new SendOperation
+                    {
+                        SpaceId = space.Id,
+                        AuthorUserId = command.ActorId,
+                        ClientMessageId = command.ClientMessageId,
+                        MessageId = message.Id,
+                        FingerprintVersion = 1,
+                        KeyId = keyId,
+                        Fingerprint = hash,
+                        CreatedAt = now
+                    });
+                    db.MessageOutbox.Add(new MessageOutbox
+                    {
+                        Id = Guid.CreateVersion7(),
+                        AggregateId = message.Id,
+                        SpaceId = space.Id,
+                        OccurredAt = now,
+                        AvailableAt = now,
+                        Payload = JsonSerializer.Serialize(new { messageId = message.Id, conversationId = space.Id, version = "1" })
+                    });
                     space.LastMessageSequence = message.ConversationSequence;
                     space.LastMessageId = message.Id;
                     space.LastActivityAt = now;
                     await db.SaveChangesAsync(cancellationToken);
                 }
-                var response = new MessageResponse(message.Id, message.SpaceId, access.Actor!, message.ClientMessageId,
+                var response = new MessageResponse(message.Id, message.SpaceId, people[command.ActorId], message.ClientMessageId,
                     message.ConversationSequence.ToString(CultureInfo.InvariantCulture), message.Version.ToString(CultureInfo.InvariantCulture),
                     message.Content, message.CreatedAt, message.EditedAt, message.DeletedAt);
+                await access.EnsureAsync(db, permit, cancellationToken);
                 await owner.CommitAsync(cancellationToken);
                 return Result.Success(response);
             }
             finally
             {
                 await db.Database.UseTransactionAsync(null, CancellationToken.None);
-                await guard.DetachAsync(CancellationToken.None);
+
             }
         }
-        catch (Exception exception) when (DatabaseAvailability.IsUnavailable(exception)) { return Unavailable(); }
+        catch (MessagingAccessFailure e) { return Fail(e.Error); }
+        catch (Exception exception) when (MessagingFailures.Temporary(exception)) { return Unavailable(); }
     }
     private static Result<MessageResponse> Fail(Error error) => Result.Failure<MessageResponse>(error);
     private static Result<MessageResponse> NotFound() => Fail(Error.NotFound("RESOURCE_NOT_FOUND", "The requested conversation is not available."));

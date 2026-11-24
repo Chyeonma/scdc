@@ -14,7 +14,12 @@ const button=(page,name)=>page.getByRole('button',{name,exact:true});
 const draft=page=>page.getByRole('textbox',{name:'Nội dung tin nhắn',exact:true});
 const rows=page=>page.locator('.dm-text-message');
 const source=name=>fs.readFileSync(path.join(root,'scripts/dm-acceptance',name),'utf8');
-const script=async(action,id,extras=[])=> (await exec('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(root,'scripts/dm-acceptance/mvp.ps1'),'-Action',action,'-Run',run,'-Case',id,...extras],{cwd:root,encoding:'utf8',timeout:150000})).stdout;
+const script=async(action,id,extras=[])=> {
+ const windows=process.platform==='win32';
+ const driver=path.join(root,'scripts/dm-acceptance',windows?'mvp.ps1':'mvp-local.py');
+ const args=[...(windows?['-NoProfile','-ExecutionPolicy','Bypass','-File']:[]),driver,'-Action',action,'-Run',run,'-Case',id,...extras];
+ return(await exec(windows?'powershell.exe':'python3',args,{cwd:root,encoding:'utf8',timeout:150000})).stdout;
+};
 const snap=async id=>JSON.parse(await script('Snapshot',id));
 function proof(id,data){fs.writeFileSync(path.join(folder,'mvp-browser-'+id+'.json'),JSON.stringify({run,case:id,...data,result:'PASS actual browser/API/WebSocket/PostgreSQL',userResult:'Chua xac nhan'},null,2));}
 async function login(page,alias){

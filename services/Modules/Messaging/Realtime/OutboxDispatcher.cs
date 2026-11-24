@@ -69,7 +69,7 @@ public sealed class OutboxDispatcher(IServiceScopeFactory scopes, ConversationRe
                     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token, entry.Aborted);
                     deadline.CancelAfter(TimeSpan.FromSeconds(2));
                     await using var scope = scopes.CreateAsyncScope();
-                    // Redis admission is mandatory even while S2-08 still uses the old DB guard.
+                    // Redis admission and the recipient's local permit/fence are both mandatory.
                     var currentSession = await scope.ServiceProvider.GetRequiredService<IAuthenticatedSessionReader>().ReadAsync(entry.Actor, deadline.Token);
                     if (!currentSession.Allowed)
                     {
@@ -79,8 +79,8 @@ public sealed class OutboxDispatcher(IServiceScopeFactory scopes, ConversationRe
                         continue;
                     }
                     var access = await scope.ServiceProvider.GetRequiredService<ConversationAccess>().DeliverAsync(
-                        entry.Actor, claim.SpaceId, claim.MessageId, message => hub.Clients.Client(entry.Id).SendAsync("MessageChanged",
-                            new { eventId = claim.Id, conversationId = claim.SpaceId, message }, deadline.Token), deadline.Token);
+                        entry.Actor, claim.SpaceId, claim.MessageId, (message, deliveryToken) => hub.Clients.Client(entry.Id).SendAsync("MessageChanged",
+                            new { eventId = claim.Id, conversationId = claim.SpaceId, message }, deliveryToken), deadline.Token);
                     if (access.IsFailure)
                     {
                         if (access.Error.Code == "AUTHORITY_UNAVAILABLE") throw new InvalidOperationException("DISPATCH_UNAVAILABLE");
