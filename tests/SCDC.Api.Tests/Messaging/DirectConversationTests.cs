@@ -192,7 +192,6 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
             Assert.Same(local.Connection, messaging.Database.GetDbConnection());
             Assert.Null(identity.Database.CurrentTransaction);
             Assert.Same(local.Transaction, messaging.Database.CurrentTransaction!.GetDbTransaction());
-            Assert.Null(services.GetService<IAccountPairAccessGuard>());
             await access.EnsureAsync(messaging, permit, default); await owner.CommitAsync(default);
         }
         finally { await messaging.Database.UseTransactionAsync(null); }

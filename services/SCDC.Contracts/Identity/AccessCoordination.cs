@@ -23,7 +23,9 @@ public sealed record PermitRequest(AuthenticatedSession Actor, IdentityPurpose P
 public sealed record IdentityPermit(Guid Id, AccessOwner Owner, PermitRequest Request,
     IReadOnlyList<IdentityScope> Scopes, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
 
-/// <summary>Resolve by trusted owner key. Never construct requests from unverified HTTP body claims.</summary>
+/// <summary>Resolve by trusted owner key; callers impose a two-second deadline before opening their
+/// local transaction. Reacquisition revalidates access and can issue a new short-lived permit;
+/// it must not advance epochs or authorize an operation already rejected by a local fence.</summary>
 public interface IIdentityPermitIssuer
 {
     Task<IdentityPermit> AcquireAsync(PermitRequest request, CancellationToken cancellationToken);
@@ -31,6 +33,9 @@ public interface IIdentityPermitIssuer
 public sealed record IdentityFenceBatch(Guid OperationId, Guid BatchId, long RoutingGeneration,
     IReadOnlyList<IdentityScope> Scopes);
 public sealed record IdentityFenceReceipt(AccessOwner Owner, IdentityFenceBatch Batch);
+/// <summary>Apply under the owner's transaction and acknowledge only after commit. Repeating the same
+/// operation/batch and scopes is safe; conflicting content is rejected and epochs never decrease.
+/// The caller uses a two-second deadline; a timeout leaves the outcome unknown and is retried with the same IDs.</summary>
 public interface IIdentityFenceOwner
 {
     AccessOwner Owner { get; }

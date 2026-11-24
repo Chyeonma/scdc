@@ -227,7 +227,7 @@ Hai view nội bộ Identity (`identity.v_user_accounts`, `identity.v_active_ses
 
 Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và phương thức thay thế chi tiết đã có ở [S2-02](access-revocation.md#s2-02-protocol); chưa đổi chữ ký runtime trong S2-01/S2-02.
 
-| Hợp đồng hiện tại | Bên dùng và chỗ dính | Hướng xử lý | Thẻ |
+| Hợp đồng trước STEP-2 | Bên dùng và chỗ dính | Hướng xử lý | Thẻ |
 |---|---|---|---|
 | `IAccountAccessGuard` | `MembershipService`, `ServerService`, `CommunityManagementGuard` truyền transaction Community cho Identity | Thay bằng cấp giấy phép tài khoản có epoch và hàng rào cục bộ; Community giữ transaction của mình, kiểm tra trước commit | S2-02, S2-07 |
 | `IAccountPairAccessGuard` | Sáu file Messaging; `AccountPairAccessGuard` gắn DbContext Identity vào transaction shared | Thay bằng hợp đồng actor/peer và giấy phép đúng phạm vi; không mang DbConnection/DbTransaction qua ranh giới; peer không khả dụng không làm mất lịch sử | S2-02, S2-08 |
@@ -240,6 +240,8 @@ Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và p
 | `IUserSearchDirectory` | Chỉ `UsersController` của API dùng; truy vấn thuộc Identity | Giữ trong ranh giới Identity và chuyển cùng Identity khi tách; không tạo DB reader ở Messaging hay replicate chỉ mục người dùng sang đó | S2-10 |
 | `IChannelAccessChecker` | Chỉ có khai báo, không implementation/DI/caller | Xóa placeholder ở S2-10; không coi check boolean cũ là quyền ghi tới commit. Hợp đồng permission mới theo S2-02 | S2-10 |
 | `IRealtimeAccessRevoker` | Chỉ có khai báo, không implementation/DI/caller | Xóa placeholder; hợp đồng thu hồi tương lai phải có phạm vi, epoch, operation ID, xác nhận sau commit và phục hồi theo D05–D07 | S2-10 |
+
+S2-10 đã gỡ bốn hợp đồng guard/lifecycle cũ, cặp session/transaction dùng chung và hai placeholder theo bảng này; giữ các lookup công khai, reader lịch sử và reader Redis. Các hợp đồng permit, fence và provision mới không chứa kiểu persistence. Chi tiết deadline và gọi lại tại [hợp đồng giữa module](backend.md#s2-10-contracts); luật ACL trong `CommunityChannelGuard` vẫn dùng nội bộ. Grant chéo tạm chưa thay đổi, thuộc S2-11.
 
 ### Outbox, inbox, audit và hạ tầng chung
 

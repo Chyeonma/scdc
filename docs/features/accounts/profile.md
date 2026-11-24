@@ -78,7 +78,7 @@ Email chỉ có trong `/users/me` (hồ sơ riêng), không có trong kết qu�
 
 - `IUserDirectory` trả `UserSummary(id, username, displayName)`: tìm theo ID, theo username chính xác, hoặc nhiều ID.
 - [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs): tìm theo một phần username hoặc tên hiển thị, dùng trong DM.
-- [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs): lấy thông tin tác giả hoặc người kia trong lịch sử, kể cả khi tài khoản không còn hoạt động.
+- [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IHistoricalUserSummaryReader.cs): lấy thông tin tác giả hoặc người kia trong lịch sử, kể cả khi tài khoản không còn hoạt động.
 
 Có thông tin người dùng không có nghĩa là có quyền truy cập. Thông tin công khai không bao giờ chứa email, mật khẩu, security stamp hay thông tin phiên.
 

@@ -152,14 +152,14 @@ Dòng người dùng Identity (theo UUID, thứ tự network) → server → th�
 - Lần tra cứu đầu chỉ để biết khóa gì; sau khi có khóa phải đọc lại trạng thái và quyền.
 - Guard Identity kiểm tra phiên người thực hiện, và tài khoản người kia khi cần. Community không JOIN bảng Identity.
 
-### Cách giữ quyền tới commit (MVP)
+### Cách giữ quyền tới commit (MVP, lịch sử)
 
 - Mọi thao tác ghi của Community khóa server bằng `FOR UPDATE`.
 - `IChannelAccessGuard` giữ `FOR SHARE` trên server và phòng tới khi bên gọi commit. Guard trả lease (epoch, các phiên bản quyền, hạn phiên); bên gọi phải kiểm tra hạn ngay trước commit, và tự kiểm tra trạng thái không gian, tác giả của Messaging.
-- `IChannelAccessChecker.CheckAsync` chỉ trả đúng hay sai, không giữ transaction hay lease.
+- `IChannelAccessChecker` chỉ là placeholder, chưa có implementation hay caller; đã bỏ ở S2-10.
 - Đã kiểm chứng ([gói phòng và ACL](channels.md)): thay đổi vai trò hay ACL phải chờ transaction đọc xong; thu hồi ACL trước khi vào thì bị chặn. Chưa kiểm chứng cho ghi tin, rời server, xóa phòng, Hub.
 - Cơ chế dựa trên [khóa dòng PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS). Khóa server cần đo tranh chấp với tải đã chốt.
-- Đã có trong `main`: `IChannelAccessGuard`, phần tạo phòng của `IChatSpaceLifecycle`. Chưa có: xóa phòng, vòng đời Media, `ICommunityAccessReader`, định tuyến thu hồi cho server, phòng, thành viên.
+- Các hợp đồng transaction trên đã bỏ ở S2-10. Runtime giữ guard ACL nội bộ Community, permit/fence và luồng provision phòng; tin phòng, xóa phòng và vòng đời Media tiếp tục theo kế hoạch riêng.
 
 ### Khi tách service (v1)
 
@@ -173,13 +173,13 @@ Transaction và guard dùng chung chỉ đúng khi một ứng dụng dùng mộ
 
 ### S2-02 — Adapter và transaction riêng
 
-S2-02 chốt thiết kế mục tiêu; [S2-07](../../records/verification/architecture/s2-07-2026-11-23.md) đã chuyển Community sang permit/fence, policy pending và transaction riêng. Các adapter Messaging/provision và hợp đồng nhận transaction còn chuyển tiếp tới S2-08/09/10.
+S2-02 chốt thiết kế mục tiêu; S2-07, S2-08 và S2-09 đã chuyển Community, Messaging và provision sang transaction owner riêng. S2-10 bỏ hợp đồng transaction và adapter cũ; các deadline và quy tắc gọi lại nằm tại [hợp đồng giữa module](../../system/backend.md#s2-10-contracts).
 
 | Hợp đồng MVP | Thiết kế thay thế | Thẻ triển khai |
 |---|---|---|
 | `IAccountAccessGuard` | `IdentityAccess.AcquirePermit` cho actor; owner Community kiểm tra fence Identity trong transaction riêng | S2-07 |
 | `IAccountPairAccessGuard` | `IdentityAccess.AcquirePermit` theo mục đích DM; peer chỉ bắt buộc cho mở/gửi mới; reader hồ sơ độc lập | S2-08 |
-| `IChannelAccessGuard` | `CommunityAccess.AcquirePermit`; Messaging kiểm tra Identity và Community cùng dữ liệu tin cục bộ | S2-10; tin phòng ở STEP-4 |
+| `IChannelAccessGuard` | Bỏ interface nhận transaction, giữ guard ACL nội bộ; quyền đọc và ghi tin phòng theo permit/fence ở STEP-4 | S2-10; tin phòng ở STEP-4 |
 | `IChatSpaceLifecycle` | `ChannelProvisioning.Prepare/Confirm/Cancel/Get`; Community lưu quyết định, Messaging giữ không gian đang chuẩn bị và dấu hủy | S2-09 |
 
 Adapter Application dùng DTO nội bộ tương đương, deadline và CancellationToken. Api/Infrastructure chuyển đổi DTO ↔ Protobuf theo D43/D47; không đưa Protobuf, `DbConnection` hay `DbTransaction` vào hợp đồng Application/Domain. Code có thể dùng transaction trong module sở hữu, không truyền nó cho module khác. Hợp đồng và luật scope/epoch xem [S2-02](../../system/access-revocation.md#s2-02-protocol).
@@ -219,7 +219,7 @@ sequenceDiagram
 
 Community tự áp floor cần cho đường ghi của mình trong transaction cục bộ; sơ đồ chỉ vẽ lời gọi tới Messaging. Khi Media được bật, nó cũng phải ACK trước commit. Actor mất quyền Identity thì abort policy dự kiến bằng epoch mới; không rollback floor đã cài. Thu hồi đồng thời ở Identity không cần đợi transaction Community giữ khóa qua RPC.
 
-**Chuyển đổi code:** S2-07 đã bật gate cho các đường Community hiện hành; Messaging/provision tiếp tục theo S2-08/09. Các bước có thể thêm adapter và kiểm thử riêng khi chưa bật toàn bộ. Cờ `AccessCoordinationV1` chỉ bật khi mọi đường ghi/đọc/Hub/worker của owner đã dùng gate tương ứng; không cho writer MVP bypass fence sau khi bật. Giữ khóa Identity cũ cho tới khi hoàn tất chuyển đổi tất cả caller; S2-10 bỏ hợp đồng cũ, S2-11 kiểm tra quyền DB và lỗi tranh chấp trên chế độ mới. Không đổi reader tên người thành nguồn cấp quyền.
+**Chuyển đổi code:** các đường Community, DM, Hub, outbox và provision hiện có đã dùng permit/fence theo S2-07 đến S2-09. S2-10 bỏ guard và đăng ký connection dùng chung còn sót; luật ACL cục bộ giữ nguyên. S2-11 kiểm tra quyền DB và lỗi tranh chấp trên chế độ mới. Reader tên người chỉ tạo dữ liệu hiển thị.
 
 Quy tắc chuyển trạng thái và gửi lại theo epoch: [Memberships](memberships.md#technical), [Invitations](invitations.md#technical). Transaction riêng của từng chức năng: [Servers](servers.md#technical), [Memberships](memberships.md#membership-contracts), [Invitations](invitations.md#invite-contracts), [Channels](channels.md#technical), [Permissions](access-control.md#permission-contracts).
 
@@ -229,7 +229,7 @@ Quy tắc chuyển trạng thái và gửi lại theo epoch: [Memberships](membe
 
 ### Transaction chung và guard Identity (MVP, lịch sử trước S2-07)
 
-Phần dưới mô tả cách cũ, còn dùng cho việc chuyển tiếp caller ngoài Community. Runtime Community hiện tại theo [S2-07](../../system/access-revocation.md#s2-07-runtime).
+Phần dưới mô tả cách cũ đã gỡ ở S2-10. Runtime Community hiện tại theo [S2-07](../../system/access-revocation.md#s2-07-runtime); transaction giữa module theo [hợp đồng hiện hành](../../system/backend.md#s2-10-contracts).
 
 - Mỗi thao tác dùng một kết nối PostgreSQL và một transaction `READ COMMITTED`. `CommunityDbContext` tham gia transaction đó ([EF Core transactions](https://learn.microsoft.com/en-us/ef/core/saving/transactions)).
 - `IAccountAccessGuard` (trong Contracts) nhận người thực hiện và `DbTransaction`; không phụ thuộc EF hay code Identity. Identity dùng kết nối của transaction để khóa và kiểm tra schema của mình.
@@ -336,7 +336,7 @@ Bảng dưới so sánh schema **trước** chuỗi migration Community với th
 | <a id="com-sql-09"></a> COM-SQL-09 | Danh mục quyền và ngoại lệ có thể chứa quyền ngoài v1 | Chuyển sang 5 mã quản lý + `channel_view`; chỉ `channel_view` có ngoại lệ allow hay deny; không coi quyền trong seed là tính năng |
 | <a id="com-sql-10"></a> COM-SQL-10 | Chưa có chống trùng thao tác hay worker realtime cho Community | Thêm khóa thao tác `(actor, kind, scope, client_id)` với scope không null (tạo server dùng UUID 0), fingerprint, khóa, version, ID tài nguyên; outbox có lease; bộ thu hồi, guard; key ring bền và thử khởi động lại |
 
-- Code hiện tại: [schema.sql](../../../database/postgres/schema.sql), [CommunityModule](../../../services/Modules/Community/CommunityModule.cs), [IChannelAccessGuard](../../../services/SCDC.Contracts/Community/IChannelAccessGuard.cs). Schema trước migration còn trong `tests/SCDC.Api.Tests/Community/Fixtures/legacy-schema.sql`.
+- Code hiện tại: [schema.sql](../../../database/postgres/schema.sql), [CommunityModule](../../../services/Modules/Community/CommunityModule.cs), [CommunityChannelGuard](../../../services/Modules/Community/Features/Permissions/Infrastructure/CommunityChannelGuard.cs). Schema trước migration còn trong `tests/SCDC.Api.Tests/Community/Fixtures/legacy-schema.sql`.
 - Trước khi bật khóa duy nhất mới, dò trùng Unicode, hoa thường và kiểm tra mapping cũ đã review. Không tự đổi tên hay xóa dữ liệu thật.
 - Tin và phòng đã xóa giữ theo [vòng đời dữ liệu](../../system/data-lifecycle.md#deletion): tin không tự hết hạn (DEC-070); phòng đã xóa giữ nội dung, chưa có hạn xóa (DEC-105).
 - Vai trò và ngoại lệ của epoch cũ dọn theo quy tắc thành viên. Khôi phục từ backup (sau v1) không được phục hồi quyền cũ. Migration không tự xóa nội dung.

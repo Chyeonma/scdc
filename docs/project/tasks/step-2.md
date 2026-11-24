@@ -2,9 +2,9 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-09 hoàn tất triển khai và kiểm thử; S2-10 đến S2-12 chưa hoàn tất. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-10 hoàn tất triển khai và kiểm thử; S2-11 và S2-12 chưa hoàn tất. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
-S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-09 còn khoảng 4,5–8 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
+S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) ghi ước lượng sơ bộ 20,5–35 ngày công tại thời điểm trước khi làm S2-04/S2-05. Sau S2-10 còn khoảng 3,5–6 ngày công theo các task chưa làm. Bảng dưới giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -105,7 +105,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: `SCDC.Contracts` không còn `DbTransaction`, `ISharedDatabaseSession`; các lời gọi có timeout và gọi lặp không gây hại; bỏ hoặc giữ hợp đồng chưa dùng theo S2-01.
 - Xong khi: build qua; không còn chỗ nào trong code truyền transaction qua ranh giới module.
 - Phụ thuộc: S2-07, S2-08, S2-09.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 1–2 ngày công.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-10](../../records/verification/architecture/s2-10-2026-11-24.md): bỏ hợp đồng/implementation transaction cũ và hai placeholder, Identity tự quản lý connection; giữ ACL nội bộ và các DTO/lookup còn dùng. Bổ sung deadline owner Identity và đối chiếu ACK theo giá trị; **379/379 backend**, **82/82 frontend**, **30/30 test công cụ**, build Release 0 warning/error. Nhánh `refactor/s2-10-module-contracts` trên nền `eadf376`, chờ merge vào main qua PR; kết quả CI GitHub theo dõi trên PR. Volume dev vẫn ở S2-06; grant chéo tạm thuộc S2-11.
 
 ## S2-11 · Test tình huống lỗi và thu hẹp quyền database
 - Nhãn: tech

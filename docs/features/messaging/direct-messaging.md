@@ -287,7 +287,7 @@ Code: [schema.sql](../../../database/postgres/schema.sql), [migration](../../../
 
 - Rà soát Tài khoản, DM, OpenAPI, schema, fixture cùng một phiên bản; đối chiếu từng mã lỗi với giao diện và ca kiểm thử. Đổi đường dẫn hay trường phải sửa cùng lúc mock, frontend, backend, dữ liệu thử.
 - Thuật toán ID, fingerprint, cursor, guard: Vg và Sáng rà soát. Quy tắc UTF-16 và bản nháp đã chốt (DEC-068, 090, 091).
-- Người kia bị khóa (DEC-103, 104): đọc lịch sử và tác giả sửa, xóa không cần người kia hoạt động; gửi và gọi mới vẫn kiểm tra. Nền đã có [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) và [hiển thị trạng thái](../../../clients/WebClient/src/components/DmChat.jsx); chạy lại khi chuyển v1. Không cấp quyền đọc DM cho quản trị.
+- Người kia bị khóa (DEC-103, 104): đọc lịch sử và tác giả sửa, xóa không cần người kia hoạt động; gửi và gọi mới vẫn kiểm tra. Nền đã có [IHistoricalUserSummaryReader](../../../services/SCDC.Contracts/Identity/IHistoricalUserSummaryReader.cs) và [hiển thị trạng thái](../../../clients/WebClient/src/components/DmChat.jsx); chạy lại khi chuyển v1. Không cấp quyền đọc DM cho quản trị.
 - Dọn dữ liệu online ([vòng đời](../../system/data-lifecycle.md#cleanup)) thuộc v1; khôi phục để sau v1.
 - Bằng chứng cho commit đồng thời, thu hồi tranh chấp, xoay khóa, kết nối lại giữa trang, mất phản hồi, worker email thuộc gói làm.
 

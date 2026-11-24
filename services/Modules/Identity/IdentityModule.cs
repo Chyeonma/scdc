@@ -8,7 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 using SCDC.BuildingBlocks.Application;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Persistence;
+using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure;
@@ -53,7 +53,7 @@ public static class IdentityModule
             .ValidateOnStart();
 
         services.AddDbContext<IdentityDbContext>((provider, options) =>
-            options.UseNpgsql(provider.GetRequiredKeyedService<ISharedDatabaseSession>("Identity").Connection));
+            options.UseNpgsql(ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(), "Identity")));
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddSingleton<ITokenService, TokenService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
@@ -61,7 +61,6 @@ public static class IdentityModule
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IUserSearchDirectory, UserSearchDirectory>();
-        services.AddScoped<IAccountAccessGuard, AccountAccessGuard>();
         services.AddSingleton(provider => new RedisSessionConnection(provider.GetRequiredService<IConfiguration>(), "Reader"));
         services.AddSingleton<RedisSessionReader>();
         services.AddSingleton<IAuthenticatedSessionReader>(provider => provider.GetRequiredService<RedisSessionReader>());

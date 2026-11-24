@@ -103,12 +103,12 @@ Cặp người dùng được sắp bằng cách so từng byte UUID (không d�
 - Thiếu khóa: `503 FINGERPRINT_KEY_UNAVAILABLE`; không tạo tin mới, không trả 409.
 - Khóa HMAC tách riêng khỏi khóa cursor và email; không lưu trong DB hay tài liệu.
 
-### Khóa trong transaction (MVP)
+### Khóa trong transaction (sau S2-08)
 
-Thứ tự khóa: dòng người dùng Identity (theo UUID) → không gian chat → tin và thao tác → outbox.
+Messaging lấy permit Identity trước transaction cục bộ. Trong transaction Messaging, thứ tự là fence Identity → không gian chat → tin và thao tác → outbox.
 
-- [IAccountAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountAccessGuard.cs) (Identity cài đặt): kiểm tra người dùng đang hoạt động, đã xác minh, phiên, security stamp, hạn; giữ khóa chia sẻ trên dòng người dùng trong transaction của bên gọi.
-- [IAccountPairAccessGuard](../../../services/SCDC.Contracts/Identity/IAccountPairAccessGuard.cs) và [ISharedDatabaseSession](../../../services/SCDC.Contracts/Persistence/ISharedDatabaseSession.cs) được DM dùng; [RelationalWorkScope](../../../services/SCDC.BuildingBlocks/Infrastructure/Persistence/RelationalWorkScope.cs) quản lý kết nối và transaction dùng chung. Messaging không JOIN bảng Identity.
+- [IIdentityPermitIssuer](../../../services/SCDC.Contracts/Identity/AccessCoordination.cs) kiểm tra tài khoản, phiên, security stamp và phạm vi cần cho hành động; [MessagingIdentityAccess](../../../services/Modules/Messaging/Infrastructure/Access/MessagingIdentityAccess.cs) kiểm permit và fence tới commit.
+- [MessagingSession](../../../services/Modules/Messaging/Infrastructure/Persistence/MessagingSession.cs) quản lý connection và transaction riêng. Các hợp đồng guard và session dùng chung đã bỏ ở S2-10; Messaging không JOIN bảng Identity.
 - [TextMessageSender](../../../services/Modules/Messaging/Infrastructure/Services/TextMessageSender.cs) chỉ đòi người kia đủ điều kiện khi tạo tin mới. Đọc, gửi lại tin đã lưu, tác giả sửa hoặc xóa thì không cần người kia còn hoạt động.
 - Bên gọi giữ guard tới commit và kiểm tra hạn phiên ngay trước commit.
 

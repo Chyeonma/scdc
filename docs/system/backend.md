@@ -41,6 +41,26 @@ Mỗi trang tính năng ghi luồng API → Application → Domain và lưu tr�
 
 Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../services/Modules/Community/CommunityModule.cs), [BuildingBlocks](../../services/SCDC.BuildingBlocks). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
 
+<a id="s2-10-contracts"></a>
+
+### S2-10 — Hợp đồng giữa module
+
+`SCDC.Contracts` chỉ chứa DTO, mã lỗi và interface bất đồng bộ có `CancellationToken`. Hợp đồng không nhận connection, transaction, DbContext hay lớp triển khai của module khác. Identity tự tạo connection bằng `IdentityDbContext`; Community dùng `RelationalWorkScope`; Messaging dùng `MessagingSession`. Các transaction chỉ tồn tại trong owner.
+
+| Lời gọi đang dùng | Giới hạn chờ | Gửi lại sau lỗi hoặc mất phản hồi |
+|---|---|---|
+| `IIdentityPermitIssuer` từ Community và Messaging | 2 giây, trước transaction nghiệp vụ | Lấy permit mới theo quyền hiện tại; không tăng epoch, không dùng permit đã hết hạn hay bị fence chặn |
+| `IIdentityFenceOwner`, `ICommunityFenceOwner` | 2 giây mỗi owner | Giữ operation ID, batch ID và scope; receipt bền sau commit, nội dung khác bị từ chối |
+| `IChannelProvisioning.Prepare/Confirm/Cancel` | 2 giây mỗi lời gọi | Giữ operation ID, channel ID và fingerprint; quyết định đã chốt không lùi, không tạo lại tài nguyên |
+| `IUserDirectory` batch, `IHistoricalUserSummaryReader` | 2 giây, ngoài transaction bên gọi | Lookup lại được; chỉ trả nhãn công khai, không cấp quyền ghi hoặc phát tin |
+| `IAuthenticatedSessionReader`, `ISessionStoreReadiness` | Redis connect và command 500 ms; hủy theo caller | Đọc lại trạng thái mới; lỗi hoặc chưa sẵn sàng không được cấp quyền |
+
+Timeout không chứng minh bên nhận đã rollback. Coordinator chỉ ACK khi receipt khớp owner, operation, batch, generation và scopes; khi chưa rõ kết quả, tiến trình đã lưu tiếp tục bằng cùng ID. ACK tương đương sau serialize/deserialize được chấp nhận, không phụ thuộc tham chiếu đối tượng trong process. GET trạng thái là đường đọc cục bộ của authority; `Get/Activate` và permit readiness cho tin phòng giữ lại trong hợp đồng nhưng chưa có caller production, caller mới phải dùng cùng deadline.
+
+Đã bỏ bốn guard/lifecycle transaction cũ, `ISharedDatabaseSession` và `ISharedDatabaseTransaction`, cùng hai placeholder `IChannelAccessChecker`, `IRealtimeAccessRevoker` theo [bảng ranh giới](database.md#s2-01-boundaries). Luật ACL trong `CommunityChannelGuard` vẫn dùng nội bộ. `AccountActor`, reader hồ sơ, tra cứu công khai, Redis và các hợp đồng permit/fence/provision hiện hành được giữ. Host gRPC và mTLS thuộc STEP-3; thu hẹp grant tạm và đo lỗi dưới tải thuộc S2-11.
+
+[Hồ sơ S2-10](../records/verification/architecture/s2-10-2026-11-24.md) ghi build, kiểm thử, đối chiếu ranh giới và các giới hạn của lần triển khai này.
+
 ---
 
 ## Thiết kế v1: cấu trúc code

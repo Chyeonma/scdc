@@ -147,6 +147,51 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
     }
 
     [Fact]
+    public async Task Revocation_accepts_a_receipt_reconstructed_across_a_transport_boundary()
+    {
+        var auth = await Login(); owner.ReconstructReceipt = true;
+        var response = await client.PostAsJsonAsync("/api/v1/auth/logout", new { refreshToken = auth.GetProperty("refreshToken").GetString() });
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Me(auth)).StatusCode);
+        Assert.Equal(2L, await database.Sql("SELECT count(*) FROM identity.access_change_acks a JOIN identity.access_changes c USING(operation_id) WHERE c.user_id=@id", Actor(auth).UserId));
+    }
+
+    [Fact]
+    public async Task A_receipt_for_different_scopes_cannot_acknowledge_or_finalize_revocation()
+    {
+        var auth = await Login(); var other = await Login(false); owner.CorruptReceipt = true;
+        var response = await Authorized(HttpMethod.Delete, "/api/v1/auth/sessions/" + Actor(auth).SessionId, other);
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        var status = await response.Content.ReadFromJsonAsync<JsonElement>(); var operation = status.GetProperty("operationId").GetGuid();
+        Assert.Equal(0L, await database.Sql("SELECT count(*) FROM identity.access_change_acks WHERE operation_id=@id AND owner='Messaging'", operation));
+        Assert.Equal(0L, await database.Sql("SELECT count(*) FROM identity.auth_sessions WHERE id=@id AND revoked_at IS NOT NULL", Actor(auth).SessionId));
+        owner.CorruptReceipt = false;
+        await Wait(async () => (await Me(auth)).StatusCode == HttpStatusCode.Unauthorized);
+        Assert.Equal(2L, await database.Sql("SELECT count(*) FROM identity.access_change_acks WHERE operation_id=@id", operation));
+    }
+
+    [Fact]
+    public async Task An_owner_ignoring_cancellation_cannot_stall_revocation_and_recovery_reuses_the_work()
+    {
+        var auth = await Login(); var other = await Login(false);
+        owner.Stall = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var response = await Authorized(HttpMethod.Delete, "/api/v1/auth/sessions/" + Actor(auth).SessionId, other)
+                .WaitAsync(TimeSpan.FromSeconds(9));
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            var status = await response.Content.ReadFromJsonAsync<JsonElement>(); var operation = status.GetProperty("operationId").GetGuid();
+            Assert.Equal(0L, await database.Sql("SELECT count(*) FROM identity.auth_sessions WHERE id=@id AND revoked_at IS NOT NULL", Actor(auth).SessionId));
+            Assert.Equal(0L, await database.Sql("SELECT count(*) FROM identity.access_change_acks WHERE operation_id=@id AND owner='Messaging'", operation));
+            owner.Stall.TrySetResult(); owner.Stall = null;
+            await Wait(async () => (await Me(auth)).StatusCode == HttpStatusCode.Unauthorized);
+            Assert.Equal(2L, await database.Sql("SELECT count(*) FROM identity.access_change_acks WHERE operation_id=@id", operation));
+            Assert.Equal(1L, await database.Sql("SELECT count(*) FROM identity.access_changes WHERE user_id=@id", Actor(auth).UserId));
+        }
+        finally { owner.Stall?.TrySetResult(); owner.Stall = null; }
+    }
+
+    [Fact]
     public async Task Unavailable_owner_keeps_revocation_pending_and_worker_finishes_after_recovery()
     {
         var auth = await Login(); var other = await Login(false); owner.Blocked = true;
@@ -357,14 +402,22 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
         public AccessOwner Owner => inner.Owner;
         public volatile bool Blocked;
         public bool LoseNextReceipt;
+        public bool ReconstructReceipt;
+        public bool CorruptReceipt;
+        public TaskCompletionSource? Stall;
         public int Calls;
         public async Task<IdentityFenceReceipt> ApplyAsync(IdentityFenceBatch batch, CancellationToken ct)
         {
             Interlocked.Increment(ref Calls);
             if (Blocked) throw new AccessCheckException();
+            if (Stall is { } stall) await stall.Task; // Deliberately ignore cancellation like a lost RPC reply.
             var result = await inner.ApplyAsync(batch, ct);
             if (LoseNextReceipt) { LoseNextReceipt = false; throw new AccessCheckException(); }
-            return result;
+            if (CorruptReceipt) return result with { Batch = result.Batch with
+                { Scopes = result.Batch.Scopes.Select(scope => scope with { Epoch = scope.Epoch + 1 }).ToArray() } };
+            return ReconstructReceipt
+                ? JsonSerializer.Deserialize<IdentityFenceReceipt>(JsonSerializer.Serialize(result))!
+                : result;
         }
     }
 }

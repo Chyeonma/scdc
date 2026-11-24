@@ -32,6 +32,7 @@ public static class CommunityModule
         IConfiguration configuration,
         string environmentName)
     {
+        _ = ModuleDatabaseConnection.Get(configuration, "Community");
         var section = configuration.GetSection(CommunityOptions.SectionName);
         services.AddSingleton<IIdentityFenceOwner>(new PostgresIdentityFenceOwner(configuration, AccessOwner.Community));
         services.AddOptions<CommunityOptions>().Bind(section)

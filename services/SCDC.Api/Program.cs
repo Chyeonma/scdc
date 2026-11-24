@@ -6,8 +6,6 @@ using SCDC.Api.OpenApi;
 using SCDC.Modules.Community;
 using SCDC.Modules.Identity;
 using SCDC.Modules.Messaging;
-using SCDC.BuildingBlocks.Infrastructure;
-using SCDC.Contracts.Persistence;
 using SCDC.Modules.Messaging.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,16 +19,6 @@ builder.AddScdcTelemetry("scdc-monolith");
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 builder.Services.AddSingleton(TimeProvider.System);
-foreach (var module in new[] { "Identity", "Community", "Messaging" })
-{
-    var connection = builder.Configuration.GetConnectionString(module);
-    if (string.IsNullOrWhiteSpace(connection))
-        throw new InvalidOperationException($"ConnectionStrings:{module} must be configured.");
-    builder.Services.AddKeyedScoped<ISharedDatabaseSession>(module, (provider, _) => new SharedDatabaseSession(
-        ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(),module)));
-}
-// Compatibility for Messaging's transaction contracts until S2-08.
-builder.Services.AddScoped(provider => provider.GetRequiredKeyedService<ISharedDatabaseSession>("Messaging"));
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.AddMessagingModule(builder.Configuration);
