@@ -735,3 +735,24 @@ Migration có ledger/checksum Identity, chạy lại là no-op nếu checksum kh
 Chạy backend local cần Redis thật, ví dụ `Authentication__Sessions__Endpoint=127.0.0.1:6379`, credential username/file tương ứng khi bật ACL. CI dùng Redis riêng không publish ra ngoài runner. Không trỏ fixture vào database phát triển: tên database thử chính phải kết thúc `_test`, user setup cần quyền tạo/xóa database fixture. Các ca Redis access tự dùng database và prefix riêng.
 
 Khi Redis lỗi, HTTP cần đăng nhập trả 503 và Hub ngừng phát; giữ phiên, không tự gửi lại mutation. Lệnh thu hồi đã nhận có thể trả 202 và được worker tiếp tục. Dùng operation ID/GET để đối chiếu, không kết luận rollback chỉ vì request hết thời gian. Sau Redis restart, readiness chỉ mở sau khi rebuild từ PostgreSQL hiện tại, không từ snapshot quyền cũ.
+
+<a id="s2-07-upgrade"></a>
+
+## Nâng cấp S2-07 — Transaction và policy Community
+
+S2-07 cần baseline S2-06. Dừng API/worker và mọi writer, giữ backup đã kiểm tra khôi phục; dùng connection quản trị của đúng database qua `ConnectionStrings__Migration`. Không chạy bootstrap `schema.sql` trên volume có dữ liệu.
+
+```bash
+dotnet run --project tools/SCDC.DbMigrator -- \
+  database/postgres/migrations/20261123_s2-07_community_access.sql
+```
+
+Migration ghi ledger `community/2026112307`, tạo ba bảng authority `access_scopes`, `access_changes`, `access_change_acks`, nạp scope membership/lifecycle hiện hữu và floor tương ứng ở Community/Messaging. Receipt authority Community cho phép batch rỗng tại Messaging khi thay đổi chỉ mất quyền quản lý; vẫn phải ghi receipt thật trước ACK. Chạy lại cùng checksum là no-op; checksum khác bị từ chối. Dữ liệu nghiệp vụ giữ nguyên, không có down migration tự động.
+
+Chạy lại script `database/postgres/module-roles.sql`, rồi build/chạy API và WebClient cùng phiên bản. Dùng cùng engine, env và project của stack hiện hữu theo [S2-03](#s2-03-upgrade). Với Podman, thêm `ENGINE=podman` cho Make. Runtime không có quyền xóa scope/journal hoặc sửa/xóa ACK. Các quyền chéo tạm khác được đối chiếu và thu hẹp toàn bộ ở S2-11.
+
+Mutation role, gán role, tạo/sửa channel và ACL phải gửi `X-SCDC-Membership-Id` lấy từ `myMembership.membershipId` của actor trên server đang hiển thị; khác `membershipId` của thành viên đích trong body. Tạo/join server và GET không cần header này. Thiếu/sai dạng trả 400; membership đã đổi trả 409 và cần tải lại trước lần lưu mới.
+
+Thay đổi role/ACL làm mất quyền có thể trả 202 cùng `operationId`, `phase=fencing` và `statusUrl`. Policy hiện hành chưa đổi; không gửi lại mutation tự động. Dùng GET `/api/v1/servers/{serverId}/access-operations/{operationId}` để đọc tiến trình; actor của operation hoặc chủ server hiện tại phải có phiên và membership đang hoạt động. GET không kích hoạt worker. WebClient giữ tham chiếu trong sessionStorage theo actor/server, kể cả sau reload, và có nút kiểm tra tiến trình.
+
+Worker tiếp tục sau restart, nhận ACK thật từ Community/Messaging rồi xin lại permit của đúng session gốc trước final commit. Nếu actor mất phiên/quyền hoặc expectedVersion không còn đúng, policy dự kiến bị hủy; các floor đã cài vẫn giữ, scope mở lại ở epoch mới. Thử ACK thất lạc, owner lỗi, đăng xuất actor khi pending và recovery trước khi mở traffic mới. Bằng chứng tại [hồ sơ S2-07](../records/verification/architecture/s2-07-2026-11-23.md).

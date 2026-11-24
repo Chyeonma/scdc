@@ -2,7 +2,7 @@
 
 Khi một người bị đăng xuất, bị khóa tài khoản, rời server hay mất quyền xem phòng, hệ thống phải cắt mọi đường truy cập của họ: request HTTP mới, thao tác ghi, kết nối chat và media đang mở. Trang này mô tả yêu cầu thời gian, trách nhiệm của từng service, và thiết kế v1 khi các service tách rời nhau.
 
-**Trạng thái:** S2-06 đã triển khai Redis, permit Identity và coordinator thu hồi trong process; kết quả kiểm chứng tại [hồ sơ S2-06](../records/verification/authentication/s2-06-2026-11-23.md). MVP đã có thu hồi cho DM (một ứng dụng duy nhất). Thiết kế triển khai S2-02 đã có [bên dưới](#s2-02-protocol); các adapter, migration và kiểm chứng runtime thuộc S2-03 đến S2-11.
+**Trạng thái:** S2-07 bổ sung transaction riêng và coordinator policy Community ([hồ sơ](../records/verification/architecture/s2-07-2026-11-23.md)); S2-06 đã triển khai Redis, permit Identity và coordinator thu hồi trong process; kết quả kiểm chứng tại [hồ sơ S2-06](../records/verification/authentication/s2-06-2026-11-23.md). MVP đã có thu hồi cho DM (một ứng dụng duy nhất). Thiết kế triển khai S2-02 đã có [bên dưới](#s2-02-protocol); các adapter, migration và kiểm chứng runtime thuộc S2-03 đến S2-11.
 
 Cách tính quyền xem [quyền truy cập Community](../features/community/access-control.md); vòng đời phiên xem [tài khoản](../features/accounts/README.md).
 
@@ -338,7 +338,7 @@ Nếu Apply lấy khóa trước writer thì writer rollback vì epoch cũ. Nế
 
 ## Còn mở
 
-- S2-03/06/07/08/10 triển khai DDL, adapter, worker, Redis và quyền gọi theo thiết kế S2-02; S2-11 chạy các ca tranh chấp, restart và đo thời gian. Chưa có bằng chứng runtime cho giao thức mới.
+- S2-03/06/07 đã có DDL, Redis, permit Identity và coordinator Identity/Community cùng bằng chứng runtime. S2-08/09/10 tiếp tục thay writer Messaging, provision phòng và hợp đồng; S2-11 kiểm chứng toàn registry, tranh chấp và thời gian thu hồi.
 - Phiên bản Redis, persistence, tài nguyên, HA, bảo vệ kết nối và cấp credential được chọn trong S2-06; không làm thay đổi quy tắc fail closed hoặc thứ tự công bố phiên.
 - Lease/provider và bằng chứng ngắt LiveKit thuộc gói Media; không bật Media trong registry trước khi thực thi được hàng rào và thời hạn 5 giây.
 
@@ -363,3 +363,22 @@ Identity đọc generation trước snapshot DB. Lua so sánh version bigint b�
 Logout, logout-all, thu hồi một phiên, refresh-token reuse, đổi và reset mật khẩu tạo ý định dưới khóa user; password chỉ lưu hash đã tính tại Identity. Worker tiếp tục bằng danh tính hệ thống sau khi phiên yêu cầu bị chặn. Thu hồi giữ `FENCING` nếu thiếu owner hoặc Redis; HTTP chờ tối đa 5 giây rồi trả 202 với operation ID và đường GET `/api/v1/auth/revocations/{operationId}`. GET chỉ đọc tiến trình của account đang xác thực. Sau đủ receipt và Redis deny, transaction cuối đổi trạng thái phiên/mật khẩu, epoch, audit và outbox cùng lúc. Worker dùng lease 10 giây, CAS theo lease/version và retry 1–30 giây với jitter; không timeout rồi bỏ ý định.
 
 **Chuyển tiếp tới S2-07/08:** đường ghi Community/DM còn giữ guard khóa user/phiên cũ; transaction cuối của Identity vẫn lấy khóa user tương ứng. Vì vậy bản này chạy được với writer cũ trong khi permit/fence được chuẩn bị cho writer mới. S2-06 không gỡ quyền DB chéo hoặc chứng minh mọi writer đã dùng permit; các việc đó thuộc S2-07/08/10/11. Outbox đã kiểm tra Redis trước phát; Hub và watchdog dùng reader mới. Các fixture SQL quản trị phải công bố journal trước khi kiểm tra hành vi HTTP; thao tác SQL trực tiếp không thay giao thức thu hồi được xác nhận qua API.
+
+
+<a id="s2-07-runtime"></a>
+
+## S2-07 — Transaction riêng và policy Community
+
+Server, join, role, danh sách thành viên và channel lấy permit Identity trước khi mở transaction Community. Trong transaction chỉ đọc/khóa fence Identity và policy cục bộ; không truyền transaction hoặc đọc SQL Identity. Permit gắn owner, actor/session, mục đích, resource/operation và generation. Admission kiểm đủ ACCOUNT/SESSION, epoch và thời hạn; giữ khóa fence tới commit. RPC Identity/owner có deadline 2 giây, permit tối đa 5 giây, admission còn ít nhất 1,5 giây; DB dùng lock timeout 500 ms, statement/transaction timeout 1 giây và kiểm tra cuối bằng `clock_timestamp()` với biên 250 ms. S2-11 vẫn cần chứng minh ngân sách dưới tải và lệch đồng hồ.
+
+`RoleService` đóng transaction Community trước khi gọi `IUserDirectory` qua connection Identity độc lập, deadline 2 giây. Lookup chỉ bổ sung tên; không cấp quyền. Kiểm thử đã thu hồi USAGE schema Identity của role Community mà API vẫn hoạt động.
+
+`community.access_scopes/access_changes/access_change_acks` lưu phạm vi, thay đổi dự kiến và ACK. Bốn thao tác hiện hành đi qua coordinator: sửa/xóa role, thay tập role của thành viên và thay ACL channel. Dưới khóa server, coordinator kiểm tra request trên policy hiện hành, tính trước/sau bằng cùng evaluator dùng cho quyền thực tế, rồi rollback phần preview nếu có quyền bị mất. Chỉ các scope mất quyền được tăng epoch và đặt pending; owner, deny, allow, ngoại lệ cá nhân và đúng membership đều tham gia phép tính. Đổi tên và xóa deny làm tăng quyền không tự tạo thu hồi. Mutation cấu trúc trong server có thay đổi pending nhận lỗi tạm; scope đọc không bị ảnh hưởng vẫn dùng được.
+
+Ý định giữ actor/session/membership gốc, command chuẩn hóa, fingerprint bất biến, generation 1 và hai owner Community/Messaging; không giữ JWT, stamp hoặc token thô. Worker dùng lease 10 giây và retry có backoff/jitter. Cài floor theo thứ tự canonical, ghi receipt trong DB owner rồi mới lưu ACK authority. Batch cùng ID khác nội dung bị từ chối; floor dùng max, không lùi. MANAGEMENT chỉ ở Community; Messaging vẫn ghi receipt thật cho batch rỗng nếu không có scope thuộc trách nhiệm của nó.
+
+Sau đủ ACK, worker xin permit `RESUMING_ACCEPTED_OPERATION` cho đúng session gốc, khóa fence Identity rồi server, kiểm lại quyền/membership/expectedVersion trên policy cũ trước khi áp policy mới. Actor có thể tự mất quyền do chính thay đổi hợp lệ vừa gửi. Nếu điều kiện gốc mất, abort policy nhưng vẫn nâng scope tới floor đã cài. Commit policy, epoch, phase và outbox cùng transaction. Đăng nhập bằng session mới không tiếp quản thay đổi của session đã bị thu hồi. Rejoin tạo membership ID mới và retire scope của membership cũ.
+
+202 trả tham chiếu bền, GET status chỉ đọc và kiểm tra quyền hiện tại; không lộ command/scopes/policy dự kiến. Header actor và lưu tham chiếu qua reload triển khai cùng WebClient/OpenAPI. Chi tiết vận hành tại [nâng cấp S2-07](../guides/development.md#s2-07-upgrade).
+
+S2-07 chưa chuyển transaction tạo Messaging space sang luồng provision (S2-09), chưa thay guard DM (S2-08), chưa host RPC/gỡ hợp đồng cũ (S2-10), chưa thu hẹp toàn bộ grant tạm hoặc bật Media (S2-11/Media). Adapter `IChannelAccessGuard` nhận transaction cũ không còn được đăng ký; hiện không có caller production, channel nội bộ dùng guard cục bộ với permit đã lấy trước transaction. Không tuyên bố đã bật giao thức mới trên mọi owner khi các đường đó chưa được chuyển đổi.

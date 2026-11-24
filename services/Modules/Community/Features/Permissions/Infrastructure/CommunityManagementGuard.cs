@@ -4,21 +4,18 @@ using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Features.Permissions.Application;
 using SCDC.Modules.Community.Features.Permissions.Domain;
 using Npgsql;
+using SCDC.Modules.Community.Infrastructure.Access;
 
 namespace SCDC.Modules.Community.Features.Permissions.Infrastructure;
 
-internal sealed record ManagementLease(AccountAccessCheck Account, int ServerVersion, int AccessVersion,
+internal sealed record ManagementLease(CommunityAccountLease Account, int ServerVersion, int AccessVersion,
     Guid MembershipId, bool IsOwner, IReadOnlyList<string> Permissions);
-internal sealed class CommunityManagementGuard(IAccountAccessGuard accounts, TimeProvider clock)
+internal sealed class CommunityManagementGuard(CommunityIdentityAccess accounts)
 {
     public async Task<ManagementLease> AcquireAsync(RelationalWorkScope scope, AccountActor actor, Guid server, bool write, bool ownerOnly, CancellationToken ct,
-        string? requiredPermission = "manage_channel_access")
+        IdentityPermit permit, string? requiredPermission = "manage_channel_access", Guid? acceptedOperation = null)
     {
-        AccountAccessCheck account;
-        try { account=await accounts.AcquireAsync(actor,scope.Transaction,ct); }
-        catch(NpgsqlException){throw new PermissionFailure(Error.ServiceUnavailable("ACCESS_CHECK_UNAVAILABLE","Account access could not be checked."));}
-        if(account.Status==AccountAccessStatus.AccountDenied)throw new PermissionFailure(Error.Forbidden("ACCOUNT_ACCESS_DENIED","An active account with verified primary email is required."));
-        EnsureLease(account);
+        var account=await accounts.AdmitAsync(scope,permit,ct);
         Guid owner;int version,access;
         await using(var query=scope.CreateCommand($"SELECT owner_user_id,version,access_version,status,deleted_at IS NOT NULL FROM community.servers WHERE id=@id FOR {(write ? "UPDATE" : "SHARE")}"))
         {
@@ -34,6 +31,19 @@ internal sealed class CommunityManagementGuard(IAccountAccessGuard accounts, Tim
             if(await member.ExecuteScalarAsync(ct) is not Guid epoch)throw PermissionFailure.Missing();
             membershipId = epoch;
         }
+        if(write && actor.ExpectedMembershipId!=membershipId)
+            throw PermissionFailure.Conflict("MEMBERSHIP_CHANGED","Your membership changed. Reload before saving.");
+        if(write)
+        {
+            await using var pending=scope.CreateCommand("SELECT operation_id FROM community.access_changes WHERE server_id=@server AND phase=0");
+            pending.Parameters.AddWithValue("server",server);
+            if(await pending.ExecuteScalarAsync(ct) is Guid operation && operation!=acceptedOperation)
+                throw new AccessCheckException("ACCESS_PENDING");
+        }
+        var required=new List<SCDC.Contracts.Community.CommunityScope>{CommunityScopeStore.Membership(actor.UserId,server,membershipId)};
+        if(ownerOnly) required.Add(CommunityScopeStore.Management(actor.UserId,server,membershipId,"server_owner"));
+        else if(requiredPermission is not null)required.Add(CommunityScopeStore.Management(actor.UserId,server,membershipId,requiredPermission));
+        await CommunityScopeStore.CheckAsync(scope,required,acceptedOperation,ct);
         IReadOnlyList<string> permissions = ManagementPermissions.Codes.Order(StringComparer.Ordinal).ToArray();
         if(owner!=actor.UserId)
         {
@@ -55,8 +65,8 @@ internal sealed class CommunityManagementGuard(IAccountAccessGuard accounts, Tim
         }
         return new(account,version,access,membershipId,owner==actor.UserId,permissions);
     }
-    public void EnsureLease(AccountAccessCheck account)
-    {
-        if(!account.IsAllowedAt(clock.GetUtcNow()))throw new PermissionFailure(Error.Unauthorized("SESSION_INVALID","The session is no longer valid."));
-    }
+    public Task<IdentityPermit> PrepareAsync(AccountActor actor, Guid server, bool write, CancellationToken ct, IdentityPurpose? purpose = null)
+        =>accounts.AcquireAsync(actor,purpose??(write?IdentityPurpose.CommunityManage:IdentityPurpose.AccountRead),server,Guid.NewGuid(),ct);
+    public Task EnsureAsync(RelationalWorkScope scope, CommunityAccountLease account, CancellationToken ct)
+        =>accounts.EnsureAsync(scope,account,ct);
 }

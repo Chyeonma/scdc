@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC access and channel coordination — target S2-02",
     "version": "1.0.0",
-    "description": "S2-06 đã triển khai GET tiến trình thu hồi Identity; các endpoint Community và host RPC còn là mục tiêu S2-02. Chi tiết tại access-revocation.md và Community channels.md."
+    "description": "S2-06 triển khai GET thu hồi Identity. S2-07 triển khai policy fencing, membership header và GET tiến trình Community; provision phòng và host RPC còn là mục tiêu S2-02. Chi tiết tại access-revocation.md và Community channels.md."
   },
   "security": [
     {
@@ -77,7 +77,7 @@
       "get": {
         "operationId": "getCommunityAccessChange",
         "description": "Kiểm tra phiên và membership hiện tại. Chỉ người tạo thao tác hoặc chủ server hiện tại xem trạng thái tối thiểu; không trả policy dự kiến hay danh sách thành viên.",
-        "x-scdc-target-only": true,
+        "x-scdc-target-only": false,
         "parameters": [
           {
             "name": "serverId",
@@ -142,7 +142,8 @@
             }
           }
         },
-        "summary": "Đọc tiến trình thay đổi quyền Community"
+        "summary": "Đọc tiến trình thay đổi quyền Community",
+        "x-scdc-implementation": "implemented"
       }
     },
     "/api/v1/servers/{serverId}/channel-operations/{clientOperationId}": {
@@ -500,6 +501,13 @@
           },
           "cleanupPending": {
             "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Mã cố định khi thay đổi bị hủy; không chứa policy hoặc dữ liệu nhạy cảm."
           }
         }
       },

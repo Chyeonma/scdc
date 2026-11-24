@@ -8,6 +8,7 @@ using SCDC.BuildingBlocks.Application.Text;
 using SCDC.BuildingBlocks.Infrastructure.Outbox;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
+using SCDC.Modules.Community.Infrastructure.Access;
 using SCDC.Modules.Community.Features.Servers.Domain;
 using SCDC.Modules.Community.Features.Memberships.Domain;
 using SCDC.Modules.Community.Features.Permissions.Domain;
@@ -18,7 +19,7 @@ using SCDC.Modules.Community.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Community.Features.Servers.Application;
 
-internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountAccessGuard guard,
+internal sealed class ServerService(RelationalWorkScopeFactory scopes, CommunityIdentityAccess access,
     IOptionsMonitor<CommunityOptions> options, ServerReader reader, ServerCursorCodec cursors, SearchCursorCodec searchCursors,
     TransactionalOutbox outbox, TimeProvider clock, ILogger<ServerService> logger) : IServerService
 {
@@ -39,12 +40,13 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505", ConstraintName: "pk_community_operations" })
         {
             // CreateOnce has disposed the whole failed context and transaction before this new scope.
+            var permit = await access.AcquireAsync(actor, IdentityPurpose.CommunityWrite, data.Operation, data.Operation, ct);
             await using var scope = await scopes.OpenAsync(ct);
-            var lease = await CheckAsync(actor, scope, ct);
+            var lease = await access.AdmitAsync(scope, permit, ct);
             var operation = await FindOperationAsync(scope, actor.UserId, data.Operation, ct)
                 ?? throw new InvalidOperationException("Committed operation winner was not found.");
             var result = await ReplayAsync(scope, actor, data, operation, ct);
-            EnsureLease(lease);
+            await access.EnsureAsync(scope, lease, ct);
             await scope.CommitAsync(ct);
             return result;
         }
@@ -52,13 +54,14 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
 
     private async Task<CreateServerResult> CreateOnceAsync(AccountActor actor, NormalizedCreate data, CancellationToken ct)
     {
+        var permit = await access.AcquireAsync(actor, IdentityPurpose.CommunityWrite, data.Operation, data.Operation, ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await CheckAsync(actor, scope, ct);
+        var lease = await access.AdmitAsync(scope, permit, ct);
         var existing = await FindOperationAsync(scope, actor.UserId, data.Operation, ct);
         if (existing is not null)
         {
             var replay = await ReplayAsync(scope, actor, data, existing, ct);
-            EnsureLease(lease);
+            await access.EnsureAsync(scope, lease, ct);
             await scope.CommitAsync(ct);
             return replay;
         }
@@ -95,7 +98,7 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
             }, ct);
         var result = await reader.GetAsync(scope, actor.UserId, id, ct) as ServerDetail
             ?? throw new InvalidOperationException("Created server detail was not found.");
-        EnsureLease(lease);
+        await access.EnsureAsync(scope, lease, ct);
         await scope.CommitAsync(ct);
         return new(result, true);
     }
@@ -136,8 +139,9 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
         if (limit is < 1 or > 50)
             throw new RequestFailure(new ValidationError("VALIDATION_FAILED", "Invalid page size.", new Dictionary<string, string[]> { { "limit", ["Limit must be between 1 and 50."] } }));
         Guid? last = cursor is null ? null : cursors.Decode(cursor, actor.UserId, limit);
+        var permit = await access.AcquireAsync(actor, IdentityPurpose.AccountRead, actor.UserId, Guid.NewGuid(), ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await CheckAsync(actor, scope, ct);
+        var lease = await access.AdmitAsync(scope, permit, ct);
         var items = await reader.ListAsync(scope, actor.UserId, limit, last, ct);
         string? next = null;
         if (items.Count > limit)
@@ -145,7 +149,7 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
             items.RemoveAt(items.Count - 1);
             next = cursors.Encode(actor.UserId, limit, items[^1].Id);
         }
-        EnsureLease(lease);
+        await access.EnsureAsync(scope, lease, ct);
         await scope.CommitAsync(ct);
         return new MyServerPage(items, next);
     });
@@ -162,8 +166,9 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
         if (errors.Count > 0) throw new RequestFailure(new ValidationError("VALIDATION_FAILED", "Invalid search query.", errors));
         var key = UnicodeTextPolicy.NormalizeNameKey(text);
         var position = cursor is null ? null : searchCursors.Decode(cursor, actor.UserId, key, limit);
+        var permit = await access.AcquireAsync(actor, IdentityPurpose.AccountRead, actor.UserId, Guid.NewGuid(), ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await CheckAsync(actor, scope, ct);
+        var lease = await access.AdmitAsync(scope, permit, ct);
         var matches = await reader.SearchAsync(scope, key, limit, position, ct);
         string? next = null;
         if (matches.Count > limit)
@@ -171,37 +176,20 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
             matches.RemoveAt(matches.Count - 1);
             next = searchCursors.Encode(actor.UserId, key, limit, matches[^1].Position);
         }
-        EnsureLease(lease);
+        await access.EnsureAsync(scope, lease, ct);
         await scope.CommitAsync(ct);
         return new ServerPage(matches.Select(row => row.Server).ToArray(), next);
     });
     private Task<Result<T>> ReadAsync<T>(AccountActor actor, Func<RelationalWorkScope, Task<T?>> read, CancellationToken ct) where T : class => ExecuteAsync(async () =>
     {
+        var permit = await access.AcquireAsync(actor, IdentityPurpose.AccountRead, actor.UserId, Guid.NewGuid(), ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await CheckAsync(actor, scope, ct);
+        var lease = await access.AdmitAsync(scope, permit, ct);
         var value = await read(scope) ?? throw NotFound();
-        EnsureLease(lease);
+        await access.EnsureAsync(scope, lease, ct);
         await scope.CommitAsync(ct);
         return value;
     });
-    private async Task<AccountAccessCheck> CheckAsync(AccountActor actor, RelationalWorkScope scope, CancellationToken ct)
-    {
-        AccountAccessCheck lease;
-        try
-        {
-            lease = await guard.AcquireAsync(actor, scope.Transaction, ct);
-        }
-        catch (NpgsqlException) { throw new RequestFailure(Error.ServiceUnavailable("ACCESS_CHECK_UNAVAILABLE", "Account access could not be checked.")); }
-        if (lease.Status == AccountAccessStatus.AccountDenied)
-            throw new RequestFailure(Error.Forbidden("ACCOUNT_ACCESS_DENIED", "An active account with verified primary email is required."));
-        EnsureLease(lease);
-        return lease;
-    }
-    private void EnsureLease(AccountAccessCheck lease)
-    {
-        if (!lease.IsAllowedAt(clock.GetUtcNow()))
-            throw new RequestFailure(Error.Unauthorized("SESSION_INVALID", "The session is no longer valid."));
-    }
     private async Task<Result<T>> ExecuteAsync<T>(Func<Task<T>> action)
     {
         try
@@ -222,7 +210,7 @@ internal sealed class ServerService(RelationalWorkScopeFactory scopes, IAccountA
     {
         // The provider's non-retrying strategy can wrap a transient failure in InvalidOperationException.
         for (Exception? cause = ex; cause is not null; cause = cause.InnerException)
-            if (cause is NpgsqlException { IsTransient: true } || cause is PostgresException { SqlState: "55P03" or "40P01" or "40001" or "57014" })
+            if (cause is NpgsqlException { IsTransient: true } || cause is PostgresException { SqlState: "55P03" or "40P01" or "40001" or "57014" or "25P04" })
                 return true;
         return false;
     }

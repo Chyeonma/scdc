@@ -7,7 +7,9 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using SCDC.Api.Tests.Infrastructure;
 using SCDC.Contracts.Community;
+using SCDC.Modules.Community.Features.Permissions.Infrastructure;
 using SCDC.Contracts.Identity;
+using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Contracts.Messaging;
 using SCDC.Modules.Community.Infrastructure;
 
@@ -77,22 +79,29 @@ public sealed partial class CommunityApiTests
         var channel = (await JsonAsync(await ChannelCreateAsync(server))).GetProperty("id").GetGuid();
         var role = (await JsonAsync(await RoleCreateAsync(server))).GetProperty("id").GetGuid();
         await using var scope = _factory.Services.CreateAsyncScope();
-        var guard = scope.ServiceProvider.GetRequiredService<IChannelAccessGuard>();
+        var guard = scope.ServiceProvider.GetRequiredService<CommunityChannelGuard>();
         var payload = _other.AccessToken.Split('.')[1].Replace('-', '+').Replace('_', '/');
         using var claims = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload.PadRight((payload.Length + 3) / 4 * 4, '=')));
         var stamp = claims.RootElement.GetProperty("sst").GetGuid();
+        var actor=new AccountActor(_other.UserId,_other.SessionId,stamp,DateTimeOffset.FromUnixTimeSeconds(claims.RootElement.GetProperty("exp").GetInt64()));
+        var management=scope.ServiceProvider.GetRequiredService<CommunityManagementGuard>();
+        var permit=await management.PrepareAsync(actor,server,false,default);
         await using var connection = new NpgsqlConnection(_connectionString); await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
-        var lease = await guard.AcquireAsync(new(_other.UserId, _other.SessionId, stamp), server, channel, transaction, default);
-        Assert.Equal(ChannelAccessStatus.Allowed, lease.Status); Assert.True(lease.CanSendText);
-        Assert.Equal(member.GetProperty("membershipId").GetGuid(), lease.MembershipId); Assert.True(lease.IsAllowedAt(DateTimeOffset.UtcNow));
+        var lease=await guard.AcquireCoreAsync(new RelationalWorkScope(connection,transaction),actor,server,channel,false,null,default,permit);
+        Assert.True(lease.Evaluation.CanSendText);
+        Assert.Equal(member.GetProperty("membershipId").GetGuid(),lease.Server.MembershipId);
         await using var backend = new NpgsqlCommand("SELECT pg_backend_pid()", connection, transaction); var pid = (int)(await backend.ExecuteScalarAsync())!;
         var changed = mutation == "role" ? RoleSetAsync(server, member, [role]) : AclPutAsync(server, channel, "deny");
         await WaitForBlockedQueryAsync(pid, "%FROM community.servers WHERE id=%FOR UPDATE%");
         Assert.False(changed.IsCompleted); await transaction.CommitAsync(); Assert.Equal(HttpStatusCode.OK, (await changed).StatusCode);
         await using var next = await connection.BeginTransactionAsync();
-        var after = await guard.AcquireAsync(new(_other.UserId, _other.SessionId, stamp), server, channel, next, default);
-        Assert.Equal(mutation == "acl" ? ChannelAccessStatus.Hidden : ChannelAccessStatus.Allowed, after.Status);
+        if(mutation=="acl")
+        {
+            var hidden=await Assert.ThrowsAsync<SCDC.Modules.Community.Features.Permissions.Application.PermissionFailure>(()=>guard.AcquireCoreAsync(new RelationalWorkScope(connection,next),actor,server,channel,false,null,default,permit));
+            Assert.Equal("RESOURCE_NOT_FOUND",hidden.Error.Code);
+        }
+        else Assert.True((await guard.AcquireCoreAsync(new RelationalWorkScope(connection,next),actor,server,channel,false,null,default,permit)).Evaluation.CanView);
         await next.RollbackAsync();
     }
     [Theory]

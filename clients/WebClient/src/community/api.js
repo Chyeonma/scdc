@@ -34,18 +34,18 @@ export function getMembers(actorId, serverId, { cursor = null, signal } = {}) {
 export function getMemberRoles(actorId, serverId, userId, signal) {
   return api(`/servers/${encodeURIComponent(serverId)}/members/${encodeURIComponent(userId)}/roles`, { actorId, signal });
 }
-export function createRole(actorId, serverId, body, signal) {
-  return api(`/servers/${encodeURIComponent(serverId)}/roles`, { actorId, method: 'POST', body, signal, retry: false });
+export function createRole(actorId, serverId, body, signal, actorMembershipId) {
+  return api(`/servers/${encodeURIComponent(serverId)}/roles`, { actorId, method: 'POST', body, signal, retry: false, actorMembershipId });
 }
-export function updateRole(actorId, serverId, roleId, body, signal) {
-  return api(`/servers/${encodeURIComponent(serverId)}/roles/${encodeURIComponent(roleId)}`, { actorId, method: 'PATCH', body, signal, retry: false });
+export function updateRole(actorId, serverId, roleId, body, signal, actorMembershipId) {
+  return api(`/servers/${encodeURIComponent(serverId)}/roles/${encodeURIComponent(roleId)}`, { actorId, method: 'PATCH', body, signal, retry: false, actorMembershipId });
 }
-export function deleteRole(actorId, serverId, roleId, version, signal) {
+export function deleteRole(actorId, serverId, roleId, version, signal, actorMembershipId) {
   const query = new URLSearchParams({ expectedVersion: version });
-  return api(`/servers/${encodeURIComponent(serverId)}/roles/${encodeURIComponent(roleId)}?${query}`, { actorId, method: 'DELETE', signal, retry: false });
+  return api(`/servers/${encodeURIComponent(serverId)}/roles/${encodeURIComponent(roleId)}?${query}`, { actorId, method: 'DELETE', signal, retry: false, actorMembershipId });
 }
-export function replaceMemberRoles(actorId, serverId, userId, body, signal) {
-  return api(`/servers/${encodeURIComponent(serverId)}/members/${encodeURIComponent(userId)}/roles`, { actorId, method: 'PUT', body, signal, retry: false });
+export function replaceMemberRoles(actorId, serverId, userId, body, signal, actorMembershipId) {
+  return api(`/servers/${encodeURIComponent(serverId)}/members/${encodeURIComponent(userId)}/roles`, { actorId, method: 'PUT', body, signal, retry: false, actorMembershipId });
 }
 const channelPath = (serverId, channelId = null) => `/servers/${encodeURIComponent(serverId)}/channels${channelId ? `/${encodeURIComponent(channelId)}` : ''}`;
 export function getChannels(actorId, serverId, { cursor = null, signal } = {}) {
@@ -56,15 +56,19 @@ export function getChannels(actorId, serverId, { cursor = null, signal } = {}) {
 export function getChannel(actorId, serverId, channelId, signal) {
   return api(channelPath(serverId, channelId), { actorId, signal });
 }
-export function createChannel(actorId, serverId, body, signal) {
-  return api(channelPath(serverId), { actorId, method: 'POST', body, signal, retry: false });
+export function createChannel(actorId, serverId, body, signal, actorMembershipId) {
+  return api(channelPath(serverId), { actorId, method: 'POST', body, signal, retry: false, actorMembershipId });
 }
-export function updateChannel(actorId, serverId, channelId, body, signal) {
-  return api(channelPath(serverId, channelId), { actorId, method: 'PATCH', body, signal, retry: false });
+export function updateChannel(actorId, serverId, channelId, body, signal, actorMembershipId) {
+  return api(channelPath(serverId, channelId), { actorId, method: 'PATCH', body, signal, retry: false, actorMembershipId });
 }
 export function getChannelAccess(actorId, serverId, channelId, signal) {
   return api(`${channelPath(serverId, channelId)}/access`, { actorId, signal });
 }
-export function replaceChannelAccess(actorId, serverId, channelId, body, signal) {
-  return api(`${channelPath(serverId, channelId)}/access`, { actorId, method: 'PUT', body, signal, retry: false });
+export function replaceChannelAccess(actorId, serverId, channelId, body, signal, actorMembershipId) {
+  return api(`${channelPath(serverId, channelId)}/access`, { actorId, method: 'PUT', body, signal, retry: false, actorMembershipId });
+}
+
+export function getAccessChange(actorId, serverId, operationId, signal) {
+  return api(`/servers/${encodeURIComponent(serverId)}/access-operations/${encodeURIComponent(operationId)}`, { actorId, signal });
 }

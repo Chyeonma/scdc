@@ -11,6 +11,7 @@ using SCDC.Contracts.Messaging;
 using SCDC.Modules.Messaging.Infrastructure;
 using SCDC.BuildingBlocks.Infrastructure.Authentication;
 using SCDC.Contracts.Identity;
+using SCDC.Contracts.Community;
 
 namespace SCDC.Modules.Messaging;
 
@@ -21,6 +22,7 @@ public static class MessagingModule
         IConfiguration configuration)
     {
         services.AddSingleton<IIdentityFenceOwner>(new PostgresIdentityFenceOwner(configuration, AccessOwner.Messaging));
+        services.AddSingleton<ICommunityFenceOwner>(new PostgresCommunityFenceOwner(configuration,AccessOwner.Messaging));
         if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Messaging")))
             throw new InvalidOperationException("ConnectionStrings:Messaging must be configured.");
         services.AddDbContext<MessagingDbContext>((provider, options) =>

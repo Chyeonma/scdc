@@ -1,5 +1,6 @@
+import { readPendingPolicy, savePendingPolicy, clearPendingPolicy } from './pendingPolicy.js';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getServer, getRoles, getMembers, getMemberRoles, createRole, updateRole, deleteRole, replaceMemberRoles } from './api.js';
+import { getAccessChange, getServer, getRoles, getMembers, getMemberRoles, createRole, updateRole, deleteRole, replaceMemberRoles } from './api.js';
 import { permissionLabels } from './permissionConfig.js';
 import { validateRoleInput } from './text.js';
 import { operationId } from './pendingCreate.js';
@@ -19,6 +20,12 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
   const [deleting, setDeleting] = useState(null);
   const [errors, setErrors] = useState({});
   const [notice, setNotice] = useState(null);
+  const [acceptedChange, setAcceptedChange] = useState(() => {
+    try { return readPendingPolicy(window.sessionStorage, actorId, serverId); } catch { return null; }
+  });
+  useEffect(() => {
+    try { setAcceptedChange(readPendingPolicy(window.sessionStorage, actorId, serverId)); } catch { setAcceptedChange(null); }
+  }, [actorId, serverId]);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [target, setTarget] = useState(null);
@@ -58,7 +65,7 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
     disposed.current = false; load();
     return () => { disposed.current = true; reading.current?.abort(); targetRequest.current?.abort(); mutation.current?.abort(); };
   }, [load]);
-  const allowed = Boolean(data.server && !data.loading && !busy && !uncertain);
+  const allowed = Boolean(data.server && !data.loading && !busy && !uncertain && !acceptedChange);
   async function perform(action, body = null) {
     if (mutation.current || !allowed) return;
     const controller = new AbortController(); mutation.current = controller;
@@ -76,6 +83,13 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
       await load();
     } catch (error) {
       if (disposed.current || controller.signal.aborted && !timedOut) return;
+      if (error.status === 202 && error.problem?.operationId) {
+        setAcceptedChange(error.problem.operationId); setUncertain(true);
+        try { savePendingPolicy(window.sessionStorage, actorId, serverId, error.problem.operationId); }
+        catch { /* Keep the accepted reference in this tab; never replay the command. */ }
+        setNotice({ text: 'Yêu cầu đã được tiếp nhận và đang xử lý. Kiểm tra tiến trình trước khi lưu thay đổi tiếp.' });
+        return;
+      }
       const knownCreateFailure = body && (error.status === 400 || ['NAME_CONFLICT', 'ROLE_LIMIT_REACHED'].includes(error.problem?.errorCode));
       if (knownCreateFailure) {
         try { clearPendingRole(window.sessionStorage, actorId, serverId, body.clientOperationId); setPendingState({ body: null }); }
@@ -102,11 +116,11 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
   function submit(event) {
     event.preventDefault();
     if (!allowed || mutation.current || pendingState.error) return;
-    if (pending) { perform((signal) => createRole(actorId, serverId, pending, signal), pending); return; }
+    if (pending) { perform((signal) => createRole(actorId, serverId, pending, signal, data.server?.myMembership?.membershipId), pending); return; }
     const checked = validateRoleInput({ name, permissions }); setErrors(checked.errors);
     if (Object.keys(checked.errors).length) return;
     if (editing) {
-      perform((signal) => updateRole(actorId, serverId, editing.id, { expectedVersion: editing.version, ...checked.data }, signal));
+      perform((signal) => updateRole(actorId, serverId, editing.id, { expectedVersion: editing.version, ...checked.data }, signal, data.server?.myMembership?.membershipId));
     } else {
       let body;
       try {
@@ -114,7 +128,7 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
         savePendingRole(window.sessionStorage, actorId, serverId, body); setPendingState({ body });
       }
       catch (error) { setNotice({ error: true, text: error.message }); return; }
-      perform((signal) => createRole(actorId, serverId, body, signal), body);
+      perform((signal) => createRole(actorId, serverId, body, signal, data.server?.myMembership?.membershipId), body);
     }
   }
   async function selectMember(member) {
@@ -148,9 +162,19 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
     event.preventDefault();
     if (!target || !allowed || targetLoading) return;
     perform((signal) => replaceMemberRoles(actorId, serverId, target.userId,
-      { membershipId: target.membershipId, expectedVersion: target.version, roleIds: selectedRoles }, signal));
+      { membershipId: target.membershipId, expectedVersion: target.version, roleIds: selectedRoles }, signal, data.server?.myMembership?.membershipId));
   }
   const targetUser = data.members.find((member) => member.membership.userId === target?.userId)?.user;
+  async function inspectAcceptedChange() {
+    try {
+      const status = await getAccessChange(actorId, serverId, acceptedChange);
+      if (status.phase === 'fencing') { setNotice({ text: 'Thay đổi vẫn đang chờ xác nhận. Chưa công bố quyền mới.' }); return; }
+      clearPendingPolicy(window.sessionStorage, actorId, serverId, acceptedChange);
+      setAcceptedChange(null);
+      await load();
+      setNotice({ text: status.phase === 'committed' ? 'Thay đổi đã hoàn tất.' : 'Thay đổi đã hủy vì quyền hoặc dữ liệu đã thay đổi. Hãy kiểm tra lại.' });
+    } catch (error) { setNotice({ error: true, text: 'Chưa kiểm tra được tiến trình.', detail: error.message }); }
+  }
   return <main className="community-stage" aria-busy={data.loading || busy}>
     <div className="community-actions">
       <button className="btn btn--secondary" onClick={onBack}>← Chi tiết cộng đồng</button>
@@ -160,6 +184,7 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
       {data.server && <p>{data.server.name}</p>}</div></header>
     {data.loading && <p role="status">Đang tải danh mục và thành viên…</p>}
     {data.error && <div className="community-notice" role="alert"><h2>Không tải được quản lý vai trò</h2><p>{data.error.message}</p></div>}
+    {acceptedChange && <button className="btn btn--secondary" onClick={inspectAcceptedChange} disabled={busy}>Kiểm tra tiến trình thay đổi</button>}
     {notice && <div className="community-notice" role={notice.error ? 'alert' : 'status'}><p>{notice.text}</p>{notice.detail && <p>{notice.detail}</p>}</div>}
     {uncertain && <button className="btn btn--secondary" onClick={load} disabled={busy || data.loading}>Kiểm tra kết quả</button>}
     {pendingState.error && <p role="alert">{pendingState.error.message}</p>}
@@ -177,7 +202,7 @@ export function CommunityRoles({ actorId, serverId, onBack }) {
         </div>
         {deleting && <div className="community-notice" role="group" aria-label={`Xác nhận xóa ${deleting.name}`}>
           <p>Xóa vai trò “{deleting.name}”? Vai trò sẽ được gỡ khỏi các thành viên đã được gán.</p>
-          <div className="community-actions"><button className="btn btn--danger" disabled={!allowed} onClick={() => perform((signal) => deleteRole(actorId, serverId, deleting.id, deleting.version, signal))}>Xác nhận xóa vai trò</button>
+          <div className="community-actions"><button className="btn btn--danger" disabled={!allowed} onClick={() => perform((signal) => deleteRole(actorId, serverId, deleting.id, deleting.version, signal, data.server?.myMembership?.membershipId))}>Xác nhận xóa vai trò</button>
           <button className="btn btn--secondary" disabled={busy} onClick={() => setDeleting(null)}>Giữ vai trò</button></div>
         </div>}
         <form className="community-role-editor" onSubmit={submit} noValidate>

@@ -59,13 +59,21 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         return new(body.GetProperty("userId").GetGuid(), claims.RootElement.GetProperty("sid").GetGuid(), token, auth.GetProperty("refreshToken").GetString()!);
     }
     private static async Task<JsonElement> JsonAsync(HttpResponseMessage response) => JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync());
-    private Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, Actor actor, object? body = null, HttpClient? client = null)
+    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, Actor actor, object? body = null, HttpClient? client = null, Guid? actorMembershipId = null, bool omitMembership = false)
     {
         var request = new HttpRequestMessage(method, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", actor.AccessToken);
         if (body is not null)
             request.Content = JsonContent.Create(body);
-        return (client ?? _client).SendAsync(request);
+        var path=url.Split('?')[0].Split('/',StringSplitOptions.RemoveEmptyEntries);
+        if(!omitMembership && method!=HttpMethod.Get && path.Length>=5 && path[2]=="servers" && Guid.TryParse(path[3],out var server))
+        {
+            var membership=actorMembershipId??await SqlAsync("SELECT membership_id FROM community.server_members WHERE server_id=@server AND user_id=@user",("server",server),("user",actor.UserId)) as Guid?;
+            if(membership is Guid id)request.Headers.Add("X-SCDC-Membership-Id",id.ToString("D"));
+            // Nonmembers still carry an epoch so authorization/hidden-resource cases reach the guard.
+            else request.Headers.Add("X-SCDC-Membership-Id",Guid.NewGuid().ToString("D"));
+        }
+        return await (client ?? _client).SendAsync(request);
     }
     private Task<HttpResponseMessage> CreateAsync(Guid? operation = null, string name = "Test community", string? description = null, string? visibility = null, Actor? actor = null, HttpClient? client = null)
     {

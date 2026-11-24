@@ -173,7 +173,7 @@ Transaction và guard dùng chung chỉ đúng khi một ứng dụng dùng mộ
 
 ### S2-02 — Adapter và transaction riêng
 
-Thiết kế này là đầu vào S2-07 đến S2-10. Các interface trong code hiện vẫn là bản MVP; S2-02 bổ sung hợp đồng mục tiêu, không sửa runtime.
+S2-02 chốt thiết kế mục tiêu; [S2-07](../../records/verification/architecture/s2-07-2026-11-23.md) đã chuyển Community sang permit/fence, policy pending và transaction riêng. Các adapter Messaging/provision và hợp đồng nhận transaction còn chuyển tiếp tới S2-08/09/10.
 
 | Hợp đồng MVP | Thiết kế thay thế | Thẻ triển khai |
 |---|---|---|
@@ -219,7 +219,7 @@ sequenceDiagram
 
 Community tự áp floor cần cho đường ghi của mình trong transaction cục bộ; sơ đồ chỉ vẽ lời gọi tới Messaging. Khi Media được bật, nó cũng phải ACK trước commit. Actor mất quyền Identity thì abort policy dự kiến bằng epoch mới; không rollback floor đã cài. Thu hồi đồng thời ở Identity không cần đợi transaction Community giữ khóa qua RPC.
 
-**Chuyển đổi code:** S2-07/08/09 có thể thêm adapter và kiểm thử riêng khi chưa bật toàn bộ. Cờ `AccessCoordinationV1` chỉ bật khi mọi đường ghi/đọc/Hub/worker của owner đã dùng gate tương ứng; không cho writer MVP bypass fence sau khi bật. Giữ khóa Identity cũ cho tới khi hoàn tất chuyển đổi tất cả caller; S2-10 bỏ hợp đồng cũ, S2-11 kiểm tra quyền DB và lỗi tranh chấp trên chế độ mới. Không đổi reader tên người thành nguồn cấp quyền.
+**Chuyển đổi code:** S2-07 đã bật gate cho các đường Community hiện hành; Messaging/provision tiếp tục theo S2-08/09. Các bước có thể thêm adapter và kiểm thử riêng khi chưa bật toàn bộ. Cờ `AccessCoordinationV1` chỉ bật khi mọi đường ghi/đọc/Hub/worker của owner đã dùng gate tương ứng; không cho writer MVP bypass fence sau khi bật. Giữ khóa Identity cũ cho tới khi hoàn tất chuyển đổi tất cả caller; S2-10 bỏ hợp đồng cũ, S2-11 kiểm tra quyền DB và lỗi tranh chấp trên chế độ mới. Không đổi reader tên người thành nguồn cấp quyền.
 
 Quy tắc chuyển trạng thái và gửi lại theo epoch: [Memberships](memberships.md#technical), [Invitations](invitations.md#technical). Transaction riêng của từng chức năng: [Servers](servers.md#technical), [Memberships](memberships.md#membership-contracts), [Invitations](invitations.md#invite-contracts), [Channels](channels.md#technical), [Permissions](access-control.md#permission-contracts).
 
@@ -227,7 +227,9 @@ Quy tắc chuyển trạng thái và gửi lại theo epoch: [Memberships](membe
 
 <a id="account-transaction-và-identity-guard"></a>
 
-### Transaction chung và guard Identity (MVP)
+### Transaction chung và guard Identity (MVP, lịch sử trước S2-07)
+
+Phần dưới mô tả cách cũ, còn dùng cho việc chuyển tiếp caller ngoài Community. Runtime Community hiện tại theo [S2-07](../../system/access-revocation.md#s2-07-runtime).
 
 - Mỗi thao tác dùng một kết nối PostgreSQL và một transaction `READ COMMITTED`. `CommunityDbContext` tham gia transaction đó ([EF Core transactions](https://learn.microsoft.com/en-us/ef/core/saving/transactions)).
 - `IAccountAccessGuard` (trong Contracts) nhận người thực hiện và `DbTransaction`; không phụ thuộc EF hay code Identity. Identity dùng kết nối của transaction để khóa và kiểm tra schema của mình.

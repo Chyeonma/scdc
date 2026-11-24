@@ -21,6 +21,7 @@ using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Modules.Community.Infrastructure.Paging;
 using SCDC.BuildingBlocks.Infrastructure.Authentication;
 using SCDC.Contracts.Identity;
+using SCDC.Modules.Community.Infrastructure.Access;
 
 namespace SCDC.Modules.Community;
 
@@ -51,9 +52,13 @@ public static class CommunityModule
         services.AddSingleton<RoleReader>();
         services.AddSingleton<ChannelReader>();
         services.AddScoped<CommunityChannelGuard>();
-        services.AddScoped<IChannelAccessGuard>(provider => provider.GetRequiredService<CommunityChannelGuard>());
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<CommunityManagementGuard>();
+        services.AddScoped<CommunityIdentityAccess>();
+        services.AddSingleton<ICommunityFenceOwner>(new PostgresCommunityFenceOwner(configuration,AccessOwner.Community));
+        services.AddSingleton<CommunityPolicyCoordinator>();
+        services.AddSingleton<ICommunityChangeStatusReader>(p=>p.GetRequiredService<CommunityPolicyCoordinator>());
+        services.AddHostedService<CommunityAccessWorker>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IServerService, ServerService>();
         services.AddScoped<IMembershipService, MembershipService>();

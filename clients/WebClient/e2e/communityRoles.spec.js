@@ -136,7 +136,7 @@ test('a concurrent real role edit conflicts; UI rereads and only saves after ano
   await page.getByRole('button', { name: 'Sửa vai trò Avant', exact: true }).click();
   const catalog = await request.get(`/api/v1/servers/${server.id}/roles`, { headers: { Authorization: `Bearer ${owner.session.accessToken}` } });
   const current = (await catalog.json()).items.find((item) => item.name === 'Avant');
-  expect((await request.patch(`/api/v1/servers/${server.id}/roles/${current.id}`, { headers: { Authorization: `Bearer ${owner.session.accessToken}` }, data: { expectedVersion: current.version, name: 'Thay đổi từ nơi khác' } })).status()).toBe(200);
+  expect((await request.patch(`/api/v1/servers/${server.id}/roles/${current.id}`, { headers: { Authorization: `Bearer ${owner.session.accessToken}`, 'X-SCDC-Membership-Id': server.myMembership.membershipId }, data: { expectedVersion: current.version, name: 'Thay đổi từ nơi khác' } })).status()).toBe(200);
   let patches = 0;
   page.on('request', (event) => { if (event.method() === 'PATCH' && event.url().includes('/roles/')) patches++; });
   await editor(page).getByLabel('Tên vai trò', { exact: true }).fill('Ghi đè cũ');
@@ -219,4 +219,40 @@ test('member role selection ignores an older delayed selection', async ({ page, 
   await page.route('**/members/*/roles', async (route) => { if (route.request().method() === 'PUT') target = route.request().url(); await route.continue(); });
   await page.getByRole('button', { name: 'Lưu vai trò thành viên' }).click();
   await expect.poll(() => target).toContain(`/members/${second.session.user.id}/roles`);
+});
+
+test('accepted policy keeps its reference after reload and reconciles with GET without replaying the write', async ({ page, request }) => {
+  const { server } = await managed(page, request);
+  await create(page, 'Giữ policy hiện tại');
+  const catalog = await request.get(`/api/v1/servers/${server.id}/roles`, { headers: { Authorization: `Bearer ${(await page.evaluate(() => JSON.parse(localStorage.getItem('scdc.chat.session.v1')))).accessToken}` } });
+  const current = (await catalog.json()).items.find(item => item.name === 'Giữ policy hiện tại');
+  const operationId = '019d5678-1234-7123-8123-123456789abc';
+  const statusUrl = `/api/v1/servers/${server.id}/access-operations/${operationId}`;
+  let writes = 0, phase = 'fencing', reads = 0;
+  await page.route(`**/servers/${server.id}/roles/${current.id}`, async route => {
+    if (route.request().method() !== 'PATCH') { await route.continue(); return; }
+    writes++;
+    expect(route.request().headers()['x-scdc-membership-id']).toBe(server.myMembership.membershipId);
+    await route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ operationId, phase: 'fencing', statusUrl }) });
+  });
+  await page.route(`**${statusUrl}`, async route => {
+    expect(route.request().method()).toBe('GET'); reads++;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ operationId, phase, version: '3', cleanupPending: false, errorCode: phase === 'aborted' ? 'ACCESS_CHANGED' : null }) });
+  });
+  await page.getByRole('button', { name: 'Sửa vai trò Giữ policy hiện tại', exact: true }).click();
+  await editor(page).getByLabel('Tên vai trò', { exact: true }).fill('Policy dự kiến');
+  await editor(page).getByRole('button', { name: 'Lưu vai trò', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Kiểm tra tiến trình thay đổi', exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('đang xử lý');
+  await page.reload();
+  const inspect = page.getByRole('button', { name: 'Kiểm tra tiến trình thay đổi', exact: true });
+  await expect(inspect).toBeVisible();
+  await expect(editor(page).getByRole('button', { name: 'Tạo vai trò', exact: true })).toBeDisabled();
+  await inspect.click();
+  await expect(page.getByRole('status')).toContainText('vẫn đang chờ');
+  phase = 'aborted'; await inspect.click();
+  await expect(page.locator('.community-notice[role="status"]')).toContainText('đã hủy');
+  await expect(inspect).toHaveCount(0);
+  expect(writes).toBe(1); expect(reads).toBe(2);
+  await expect(role(page, 'Giữ policy hiện tại')).toBeVisible();
 });

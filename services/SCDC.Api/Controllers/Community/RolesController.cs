@@ -20,7 +20,7 @@ public sealed record ReplaceMemberRolesRequest(Guid MembershipId,string? Expecte
 [Route("api/v1/servers/{serverId:guid}")]
 public sealed class RolesController(IRoleService roles):ApiControllerBase
 {
-    private AccountActor Actor=>new(Claim("sub"),Claim("sid"),Claim("sst"));
+    private AccountActor Actor => CommunityHttpActor.Read(this,!HttpMethods.IsGet(Request.Method));
     private Guid Claim(string name)=>Guid.TryParse(User.FindFirst(name)?.Value,out var id)?id:throw new InvalidOperationException($"Required claim '{name}' is missing.");
     [HttpGet("roles")]
     public async Task<ActionResult<RolePage>> List(Guid serverId,[FromQuery]int limit=20,[FromQuery]string? cursor=null,CancellationToken ct=default)

@@ -1,5 +1,6 @@
+import { readPendingPolicy, savePendingPolicy, clearPendingPolicy } from './pendingPolicy.js';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getServer, getChannels, getChannel, createChannel, updateChannel, getChannelAccess, replaceChannelAccess, getRoles, getMembers } from './api.js';
+import { getAccessChange, getServer, getChannels, getChannel, createChannel, updateChannel, getChannelAccess, replaceChannelAccess, getRoles, getMembers } from './api.js';
 import { validateChannelInput } from './text.js';
 import { operationId } from './pendingCreate.js';
 import { readPendingChannel, savePendingChannel, clearPendingChannel } from './pendingChannel.js';
@@ -14,6 +15,12 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
   const pending = pendingState.body;
   const [name, setName] = useState(pending?.name || ''), [topic, setTopic] = useState(pending?.topic || '');
   const [errors, setErrors] = useState({}), [notice, setNotice] = useState(null);
+  const [acceptedChange, setAcceptedChange] = useState(() => {
+    try { return readPendingPolicy(window.sessionStorage, actorId, serverId); } catch { return null; }
+  });
+  useEffect(() => {
+    try { setAcceptedChange(readPendingPolicy(window.sessionStorage, actorId, serverId)); } catch { setAcceptedChange(null); }
+  }, [actorId, serverId]);
   const [busy, setBusy] = useState(false), [uncertain, setUncertain] = useState(false);
   const reading = useRef(null), selecting = useRef(null), mutation = useRef(null), selectedId = useRef(null), disposed = useRef(false);
   const readDetail = useCallback(async (server, id, signal) => {
@@ -45,7 +52,7 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
     disposed.current = false; load();
     return () => { disposed.current = true; reading.current?.abort(); selecting.current?.abort(); mutation.current?.abort(); };
   }, [load]);
-  const allowed = Boolean(data.server && !data.loading && !busy && !uncertain);
+  const allowed = Boolean(data.server && !data.loading && !busy && !uncertain && !acceptedChange);
   const canCreate = data.server?.effectivePermissions.includes('manage_channels');
   async function select(id) {
     if (!allowed) return;
@@ -80,6 +87,13 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
       setNotice({ text: 'Đã lưu thay đổi.' }); await load();
     } catch (error) {
       if (disposed.current || controller.signal.aborted && !timedOut) return;
+      if (error.status === 202 && error.problem?.operationId) {
+        setAcceptedChange(error.problem.operationId); setUncertain(true);
+        try { savePendingPolicy(window.sessionStorage, actorId, serverId, error.problem.operationId); }
+        catch { /* Keep the accepted reference in this tab; never replay the command. */ }
+        setNotice({ text: 'Yêu cầu đã được tiếp nhận và đang xử lý. Kiểm tra tiến trình trước khi lưu thay đổi tiếp.' });
+        return;
+      }
       const known = body && (error.status === 400 || error.problem?.errorCode === 'NAME_CONFLICT');
       if (known) {
         try { clearPendingChannel(window.sessionStorage, actorId, serverId, body.clientOperationId); setPendingState({ body: null }); }
@@ -98,13 +112,13 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
   function submit(event) {
     event.preventDefault();
     if (!allowed || !canCreate || pendingState.error || mutation.current) return;
-    if (pending) { perform((signal) => createChannel(actorId, serverId, pending, signal), pending); return; }
+    if (pending) { perform((signal) => createChannel(actorId, serverId, pending, signal, data.server?.myMembership?.membershipId), pending); return; }
     const checked = validateChannelInput({ name, topic }); setErrors(checked.errors);
     if (Object.keys(checked.errors).length) return;
     let body;
     try { body = { clientOperationId: operationId(window.crypto), ...checked.data }; savePendingChannel(window.sessionStorage, actorId, serverId, body); setPendingState({ body }); }
     catch (error) { setNotice({ error: true, text: error.message }); return; }
-    perform((signal) => createChannel(actorId, serverId, body, signal), body);
+    perform((signal) => createChannel(actorId, serverId, body, signal, data.server?.myMembership?.membershipId), body);
   }
   async function more() {
     if (!allowed || !data.nextCursor) return;
@@ -132,12 +146,23 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
       setDetail(null); setNotice({ error: true, text: 'Không tải được danh sách thành viên.', detail: error.message });
     }
   }
+  async function inspectAcceptedChange() {
+    try {
+      const status = await getAccessChange(actorId, serverId, acceptedChange);
+      if (status.phase === 'fencing') { setNotice({ text: 'Thay đổi vẫn đang chờ xác nhận. Chưa công bố quyền mới.' }); return; }
+      clearPendingPolicy(window.sessionStorage, actorId, serverId, acceptedChange);
+      setAcceptedChange(null);
+      await load();
+      setNotice({ text: status.phase === 'committed' ? 'Thay đổi đã hoàn tất.' : 'Thay đổi đã hủy vì quyền hoặc dữ liệu đã thay đổi. Hãy kiểm tra lại.' });
+    } catch (error) { setNotice({ error: true, text: 'Chưa kiểm tra được tiến trình.', detail: error.message }); }
+  }
   return <main className="community-stage" aria-busy={data.loading || busy}>
     <div className="community-actions"><button className="btn btn--secondary" onClick={onBack}>← Chi tiết cộng đồng</button>
       <button className="btn btn--secondary" onClick={load} disabled={busy || data.loading}>Tải lại phòng và quyền</button></div>
     <header className="community-heading"><div><p className="eyebrow">KHÔNG GIAN THẢO LUẬN</p><h1>Phòng cộng đồng</h1>{data.server && <p>{data.server.name}</p>}</div></header>
     {data.loading && <p role="status">Đang tải phòng…</p>}
     {data.error && <div className="community-notice" role="alert"><h2>Không tải được phòng</h2><p>{data.error.message}</p></div>}
+    {acceptedChange && <button className="btn btn--secondary" onClick={inspectAcceptedChange} disabled={busy}>Kiểm tra tiến trình thay đổi</button>}
     {notice && <div className="community-notice" role={notice.error ? 'alert' : 'status'}><p>{notice.text}</p>{notice.detail && <p>{notice.detail}</p>}</div>}
     {uncertain && <button className="btn btn--secondary" onClick={load} disabled={busy || data.loading}>Kiểm tra kết quả</button>}
     {pendingState.error && <p role="alert">{pendingState.error.message}</p>}
@@ -163,8 +188,8 @@ export function CommunityChannels({ actorId, serverId, onBack }) {
       <section className="community-section community-channel-detail">
         {detail?.loading && <p role="status">Đang mở phòng…</p>}
         {detail?.channel ? <ChannelEditor key={detail.channel.id} detail={detail} allowed={allowed && !detail.membersLoading}
-          canEdit={canCreate} onUpdate={(body) => perform((signal) => updateChannel(actorId, serverId, detail.channel.id, body, signal))}
-          onAccess={(body) => perform((signal) => replaceChannelAccess(actorId, serverId, detail.channel.id, body, signal))}
+          canEdit={canCreate} onUpdate={(body) => perform((signal) => updateChannel(actorId, serverId, detail.channel.id, body, signal, data.server?.myMembership?.membershipId))}
+          onAccess={(body) => perform((signal) => replaceChannelAccess(actorId, serverId, detail.channel.id, body, signal, data.server?.myMembership?.membershipId))}
           onMoreMembers={moreMembers} /> : !detail?.loading && <p>Chọn một phòng để xem chủ đề và các thao tác bạn được phép thực hiện.</p>}
       </section>
     </div>}

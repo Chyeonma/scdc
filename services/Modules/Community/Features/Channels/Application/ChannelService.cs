@@ -1,4 +1,5 @@
 using System.Globalization;
+using SCDC.Modules.Community.Infrastructure.Access;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,7 +20,7 @@ using SCDC.Modules.Community.Infrastructure.Persistence;
 namespace SCDC.Modules.Community.Features.Channels.Application;
 
 internal sealed class ChannelService(RelationalWorkScopeFactory scopes, CommunityManagementGuard management,
-    CommunityChannelGuard guard, ChannelReader reader, ConfigurationCursorCodec cursors,
+    CommunityPolicyCoordinator coordinator, CommunityChannelGuard guard, ChannelReader reader, ConfigurationCursorCodec cursors,
     IChatSpaceLifecycle spaces, IOptionsMonitor<CommunityOptions> options, TransactionalOutbox outbox,
     TimeProvider clock, ILogger<ChannelService> logger) : IChannelService
 {
@@ -27,19 +28,22 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
     {
         if (limit is < 1 or > 50) throw Invalid("limit", "Limit must be between 1 and 50.");
         var last = cursor is null ? (Guid?)null : cursors.Decode("Channels", cursor, actor.UserId, server, limit);
+        var permit=await management.PrepareAsync(actor,server,false,ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await management.AcquireAsync(scope, actor, server, false, false, ct, requiredPermission: null);
+        var lease = await management.AcquireAsync(scope, actor, server, false, false, ct, permit, requiredPermission: null);
         var items = await reader.ListAsync(scope, actor.UserId, server, lease, limit, last, ct);
         string? next = null;
         if (items.Count > limit) { items.RemoveAt(items.Count - 1); next = cursors.Encode("Channels", actor.UserId, server, limit, items[^1].Id); }
-        management.EnsureLease(lease.Account); await scope.CommitAsync(ct);
+        await CommunityScopeStore.CheckAsync(scope,items.SelectMany(item=>new[]{CommunityScopeStore.Channel(actor.UserId,server,item.Id,lease.MembershipId),CommunityScopeStore.Lifecycle(server,item.Id)}),null,ct);
+        await management.EnsureAsync(scope,lease.Account,ct); await scope.CommitAsync(ct);
         return new ChannelPage(items, next);
     });
     public Task<Result<ChannelView>> GetAsync(AccountActor actor, Guid server, Guid channel, CancellationToken ct) => ExecuteAsync(async () =>
     {
+        var permit=await management.PrepareAsync(actor,server,false,ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, false, null, ct);
-        management.EnsureLease(lease.Server.Account); await scope.CommitAsync(ct);
+        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, false, null, ct, permit);
+        await management.EnsureAsync(scope,lease.Server.Account,ct); await scope.CommitAsync(ct);
         return lease.Channel.View;
     });
     public Task<Result<CreateChannelResult>> CreateAsync(AccountActor actor, Guid server, CreateChannelCommand command, CancellationToken ct) => ExecuteAsync(async () =>
@@ -48,8 +52,9 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
             throw Invalid("clientOperationId", "A UUIDv4 with RFC variant is required.");
         var name = Name(command.Name); var topic = Topic(command.Topic);
         if (command.Kind is not (null or "text")) throw Invalid("kind", "This package supports text channels only.");
+        var permit=await management.PrepareAsync(actor,server,true,ct,IdentityPurpose.ChannelCreate);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await management.AcquireAsync(scope, actor, server, true, false, ct, "manage_channels");
+        var lease = await management.AcquireAsync(scope, actor, server, true, false, ct, permit, "manage_channels");
         await using (var query = scope.CreateCommand("SELECT resource_id,fingerprint,key_id,fingerprint_version FROM community.operations WHERE actor_user_id=@actor AND kind='create_channel' AND scope_id=@server AND client_operation_id=@op"))
         {
             query.Parameters.AddWithValue("actor", actor.UserId); query.Parameters.AddWithValue("server", server); query.Parameters.AddWithValue("op", command.ClientOperationId);
@@ -63,7 +68,7 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
                 var current = await reader.StateAsync(scope, server, existing, false, ct)
                     ?? throw PermissionFailure.Conflict("OPERATION_RESOURCE_REMOVED", "The channel created by this operation was removed.");
                 if (!(await reader.EvaluateAsync(scope, actor.UserId, server, current, lease, ct)).CanView) throw PermissionFailure.Missing();
-                management.EnsureLease(lease.Account); await scope.CommitAsync(ct);
+                await management.EnsureAsync(scope,lease.Account,ct); await scope.CommitAsync(ct);
                 return new CreateChannelResult(current.View, false);
             }
         }
@@ -77,7 +82,7 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
             ("actor", actor.UserId), ("server", server), ("op", command.ClientOperationId), ("key", keys.ActiveKeyId), ("hash", hashNew), ("id", id));
         await Changed(scope, server, id, lease, "channel_created", 1, ct);
         var created = await reader.StateAsync(scope, server, id, false, ct) ?? throw new InvalidOperationException("Created channel missing.");
-        management.EnsureLease(lease.Account); await scope.CommitAsync(ct);
+        await management.EnsureAsync(scope,lease.Account,ct); await scope.CommitAsync(ct);
         return new CreateChannelResult(created.View, true);
     });
     public Task<Result<ChannelView>> UpdateAsync(AccountActor actor, Guid server, Guid channel, UpdateChannelCommand command, CancellationToken ct) => ExecuteAsync(async () =>
@@ -85,28 +90,36 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
         var expected = Version(command.ExpectedVersion, "expectedVersion");
         if (!command.HasName && !command.HasTopic) throw Invalid("name", "Specify a name or topic to update.");
         var name = command.HasName ? Name(command.Name) : null; var topic = command.HasTopic ? Topic(command.Topic) : null;
+        var permit=await management.PrepareAsync(actor,server,true,ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, true, "manage_channels", ct);
+        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, true, "manage_channels", ct, permit);
         var current = lease.Channel;
         if (current.Version != expected) throw PermissionFailure.Conflict("VERSION_CONFLICT", "The channel has changed. Reload before saving.");
         name ??= current.View.Name; if (!command.HasTopic) topic = current.View.Topic;
         if (name == current.View.Name && topic == current.View.Topic)
-        { management.EnsureLease(lease.Server.Account); await scope.CommitAsync(ct); return current.View; }
+        { await management.EnsureAsync(scope,lease.Server.Account,ct); await scope.CommitAsync(ct); return current.View; }
         Capacity(lease.Server, current.Version);
         await Write(scope, "UPDATE community.channels SET name=@name,name_key=@key,topic=@topic WHERE space_id=@channel", ct,
             ("name", name), ("key", UnicodeTextPolicy.NormalizeNameKey(name)), ("topic", (object?)topic ?? DBNull.Value), ("channel", channel));
         await Changed(scope, server, channel, lease.Server, "channel_updated", current.AccessVersion, ct);
         var result = await reader.StateAsync(scope, server, channel, false, ct) ?? throw new InvalidOperationException("Updated channel missing.");
-        management.EnsureLease(lease.Server.Account); await scope.CommitAsync(ct); return result.View;
+        await management.EnsureAsync(scope,lease.Server.Account,ct); await scope.CommitAsync(ct); return result.View;
     });
     public Task<Result<ChannelAccess>> AccessAsync(AccountActor actor, Guid server, Guid channel, CancellationToken ct) => ExecuteAsync(async () =>
     {
+        var permit=await management.PrepareAsync(actor,server,false,ct);
         await using var scope = await scopes.OpenAsync(ct);
-        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, false, "manage_channel_access", ct);
+        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, false, "manage_channel_access", ct, permit);
         var result = await reader.AccessAsync(scope, server, lease.Channel, ct);
-        management.EnsureLease(lease.Server.Account); await scope.CommitAsync(ct); return result;
+        await management.EnsureAsync(scope,lease.Server.Account,ct); await scope.CommitAsync(ct); return result;
     });
     public Task<Result<ChannelAccess>> ReplaceAccessAsync(AccountActor actor, Guid server, Guid channel, ReplaceChannelAccessCommand command, CancellationToken ct) => ExecuteAsync(async () =>
+    {
+        Version(command.ExpectedAccessVersion,"expectedAccessVersion");
+        var normalized=command with {RoleOverrides=command.RoleOverrides?.OrderBy(r=>r?.RoleId).ToArray(),MemberOverrides=command.MemberOverrides?.OrderBy(m=>m?.UserId).ToArray()};
+        return await coordinator.ExecuteAsync<ChannelAccess>(actor,server,CommunityPolicyCommand.Create("channel_access",channel,normalized),ct);
+    });
+    internal async Task<object?> ReplacePolicyAsync(RelationalWorkScope scope,AccountActor actor,Guid server,Guid channel,ReplaceChannelAccessCommand command,IdentityPermit permit,Guid? acceptedOperation,CancellationToken ct)
     {
         var expected = Version(command.ExpectedAccessVersion, "expectedAccessVersion");
         if (command.DefaultView is not ("allow" or "deny")) throw Invalid("defaultView", "Choose allow or deny.");
@@ -115,13 +128,12 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
             throw Invalid("roleOverrides", "Specify distinct roles with allow or deny effects.");
         if (members is null || members.Any(m => m is null || m.UserId == Guid.Empty || m.MembershipId == Guid.Empty || m.Effect is not ("allow" or "deny")) || members.Select(m => m.UserId).Distinct().Count() != members.Count)
             throw Invalid("memberOverrides", "Specify distinct members with an epoch and allow or deny effect.");
-        await using var scope = await scopes.OpenAsync(ct);
-        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, true, "manage_channel_access", ct);
+        var lease = await guard.AcquireCoreAsync(scope, actor, server, channel, true, "manage_channel_access", ct, permit, acceptedOperation);
         if (lease.Channel.AccessVersion != expected) throw PermissionFailure.Conflict("VERSION_CONFLICT", "The access configuration has changed. Reload before saving.");
         await ValidateTargets(scope, server, roles, members, ct);
         var old = await reader.AccessAsync(scope, server, lease.Channel, ct);
         if (old.DefaultView == command.DefaultView && old.RoleOverrides.SequenceEqual(roles.OrderBy(r => r.RoleId)) && old.MemberOverrides.SequenceEqual(members.OrderBy(m => m.UserId)))
-        { management.EnsureLease(lease.Server.Account); await scope.CommitAsync(ct); return old; }
+        {  return old; }
         Capacity(lease.Server, lease.Channel.Version, lease.Channel.AccessVersion);
         await Write(scope, """
             DELETE FROM community.channel_role_overrides WHERE space_id=@channel;
@@ -136,8 +148,8 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
         await Changed(scope, server, channel, lease.Server, "channel_access_changed", expected + 1, ct);
         var state = await reader.StateAsync(scope, server, channel, false, ct) ?? throw new InvalidOperationException("Updated channel missing.");
         var result = await reader.AccessAsync(scope, server, state, ct);
-        management.EnsureLease(lease.Server.Account); await scope.CommitAsync(ct); return result;
-    });
+         return result;
+    }
     private static async Task ValidateTargets(RelationalWorkScope scope, Guid server, IReadOnlyList<RoleOverride> roles, IReadOnlyList<MemberOverride> members, CancellationToken ct)
     {
         await using (var query = scope.CreateCommand("SELECT count(*) FROM community.roles WHERE server_id=@server AND id=ANY(@roles)"))
@@ -209,7 +221,7 @@ internal sealed class ChannelService(RelationalWorkScopeFactory scopes, Communit
         catch (CursorKeyUnavailableException) { return Result.Failure<T>(Error.ServiceUnavailable("CURSOR_KEY_UNAVAILABLE", "Cursor keys are unavailable.")); }
         catch (PostgresException ex) when (ex is { SqlState: "23505", ConstraintName: "ux_channel_active_name_key" })
         { return Result.Failure<T>(Error.Conflict("NAME_CONFLICT", "A channel with this name already exists.")); }
-        catch (NpgsqlException ex) when (ex.IsTransient || ex is PostgresException { SqlState: "55P03" or "40P01" or "40001" or "57014" })
+        catch (NpgsqlException ex) when (ex.IsTransient || ex is PostgresException { SqlState: "55P03" or "40P01" or "40001" or "57014" or "25P04" })
         {
             logger.LogWarning("Community channel operation was interrupted ({FailureType}).", ex.GetType().Name);
             return Result.Failure<T>(Error.ServiceUnavailable("COMMUNITY_TEMPORARILY_UNAVAILABLE", "Community is temporarily unavailable. Reload current state before retrying."));

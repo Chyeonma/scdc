@@ -32,18 +32,23 @@ internal sealed class IdentityPermitIssuer(IConfiguration configuration, AccessO
             if (await guard.ExecuteScalarAsync(ct) is null) throw new AccessCheckException("Common.Unauthorized");
         }
         await using (var session = new NpgsqlCommand("""
-            SELECT s.expires_at FROM identity.auth_sessions s JOIN identity.users u ON u.id=s.user_id
+            SELECT s.expires_at,EXISTS(SELECT 1 FROM identity.user_emails e WHERE e.user_id=u.id AND e.is_primary AND e.verified_at IS NOT NULL)
+            FROM identity.auth_sessions s JOIN identity.users u ON u.id=s.user_id
             JOIN identity.user_security_states security ON security.user_id=u.id
             WHERE s.user_id=@user AND s.id=@session AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp()
             AND u.status=1 AND u.deleted_at IS NULL AND (NOT @require_stamp OR security.security_stamp=@stamp)
-            AND EXISTS(SELECT 1 FROM identity.user_emails e WHERE e.user_id=u.id AND e.is_primary AND e.verified_at IS NOT NULL)
             """, connection, transaction))
         {
             session.Parameters.AddWithValue("user", request.Actor.UserId); session.Parameters.AddWithValue("session", request.Actor.SessionId);
             session.Parameters.AddWithValue("stamp", request.Actor.SecurityStamp);
             session.Parameters.AddWithValue("require_stamp", !resuming);
-            if (await session.ExecuteScalarAsync(ct) is not DateTime expiry || expiry <= clock.GetUtcNow().UtcDateTime)
-                throw new AccessCheckException("Common.Unauthorized");
+            DateTime expiry;
+            await using(var row=await session.ExecuteReaderAsync(ct))
+            {
+                if(!await row.ReadAsync(ct)||row.GetDateTime(0)<=clock.GetUtcNow().UtcDateTime)throw new AccessCheckException("Common.Unauthorized");
+                expiry=row.GetDateTime(0);
+                if(!row.GetBoolean(1))throw new AccessCheckException("ACCOUNT_ACCESS_DENIED");
+            }
             if (request.Actor.AccessExpiresAt <= clock.GetUtcNow()) throw new AccessCheckException("Common.Unauthorized");
             if (needsPeer)
             {

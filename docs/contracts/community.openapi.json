@@ -3,7 +3,7 @@
   "info": {
     "title": "SCDC Community, permissions and channel text — target design",
     "version": "0.1.0-draft",
-    "description": "Community and channel-messaging contract. Create/view, public immediate join, public search, role/assignment and text-channel metadata/ACL capabilities are merged into main. Per-operation metadata identifies implemented and partial scope; topic documents describe current limits. Feature-branch fields retain development provenance. Voice creation, channel deletion, pending requests, invitations, message history/writers and realtime remain target design. No server deletion endpoint in v1."
+    "description": "Community and channel-messaging contract. Create/view, public immediate join, public search, role/assignment and text-channel metadata/ACL capabilities are merged into main. Per-operation metadata identifies implemented and partial scope; topic documents describe current limits. Feature-branch fields retain development provenance. Voice creation, channel deletion, pending requests, invitations, message history/writers and realtime remain target design. No server deletion endpoint in v1. S2-07 adds actor membership headers, durable policy fencing/status and independent Community transactions."
   },
   "servers": [
     {
@@ -1582,7 +1582,7 @@
       "post": {
         "operationId": "createChannel",
         "summary": "Tạo phòng text/voice",
-        "description": "Target includes text/voice; MVP implements text only (omitted kind defaults to text, voice is rejected). Owner/manage_channels creates metadata, Messaging space, operation and outbox in one transaction in the MVP monolith. For v1, DEC-132 requires Community metadata and the matching Messaging text space or empty Media voice room to be prepared before reporting creation complete and ready. DEC-133 assigns durable progress and orchestration to Community in its own database. DEC-134 selects direct gRPC preparation commands and results; the owner reports prepared only after its data commits. DEC-137 replaces the public 202/pending behavior of DEC-135 with a short wait: return 201/200 when creation is complete, or a definitive creation error only after durable cancellation prevents late publication. Completion and cancellation are mutually exclusive; already completed operations return success. Prepared resources stay unpublished; compensation/cleanup of committed owner data runs in the background with durable recovery. A network timeout or missing cancellation confirmation remains an unknown outcome. DEC-136 retains read-only GET lookup by current actor, operation kind create_channel, server and clientOperationId to reconcile a lost response or reload while the client retains the key; lookup requires authorization and does not create, resume or trigger business processing. Unknown-outcome replay keeps the same key/body; explicit Retry after confirmed terminal cancellation starts a new operation with a new key, after current permission/input checks, while old work stays cancelled. S2-02 and coordination.openapi.json define the target wait budget, cancellation, lookup, idempotency and late-command handling. The response schemas below retain the implemented MVP contract; v1 coordination schemas and routes are target-only in coordination.openapi.json. Completed replay returns the current viewable channel with 200; changed body conflicts. Deleted resource is not recreated. No dispatcher or Hub.",
+        "description": "Target includes text/voice; MVP implements text only (omitted kind defaults to text, voice is rejected). Owner/manage_channels creates metadata, Messaging space, operation and outbox in one transaction in the MVP monolith. For v1, DEC-132 requires Community metadata and the matching Messaging text space or empty Media voice room to be prepared before reporting creation complete and ready. DEC-133 assigns durable progress and orchestration to Community in its own database. DEC-134 selects direct gRPC preparation commands and results; the owner reports prepared only after its data commits. DEC-137 replaces the public 202/pending behavior of DEC-135 with a short wait: return 201/200 when creation is complete, or a definitive creation error only after durable cancellation prevents late publication. Completion and cancellation are mutually exclusive; already completed operations return success. Prepared resources stay unpublished; compensation/cleanup of committed owner data runs in the background with durable recovery. A network timeout or missing cancellation confirmation remains an unknown outcome. DEC-136 retains read-only GET lookup by current actor, operation kind create_channel, server and clientOperationId to reconcile a lost response or reload while the client retains the key; lookup requires authorization and does not create, resume or trigger business processing. Unknown-outcome replay keeps the same key/body; explicit Retry after confirmed terminal cancellation starts a new operation with a new key, after current permission/input checks, while old work stays cancelled. S2-02 and coordination.openapi.json define the target wait budget, cancellation, lookup, idempotency and late-command handling. The response schemas below retain the implemented MVP contract; v1 coordination schemas and routes are target-only in coordination.openapi.json. Completed replay returns the current viewable channel with 200; changed body conflicts. Deleted resource is not recreated. No dispatcher or Hub. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1632,6 +1632,9 @@
         "parameters": [
           {
             "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "requestBody": {
@@ -1703,7 +1706,7 @@
       "patch": {
         "operationId": "updateChannel",
         "summary": "Sửa tên/chủ đề phòng",
-        "description": "Implemented on feat/community-channels: current channel view and owner/manage_channels, name/topic with expectedVersion. Kind is immutable; topic null clears it. No-op preserves versions/event. Mutation writes access-change outbox; dispatcher/realtime remain target design.",
+        "description": "Implemented on feat/community-channels: current channel view and owner/manage_channels, name/topic with expectedVersion. Kind is immutable; topic null clears it. No-op preserves versions/event. Mutation writes access-change outbox; dispatcher/realtime remain target design. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1746,6 +1749,9 @@
           },
           {
             "$ref": "#/components/parameters/channelId"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "requestBody": {
@@ -1862,7 +1868,7 @@
       "put": {
         "operationId": "replaceChannelAccess",
         "summary": "Thay nguyên tử cấu hình xem phòng",
-        "description": "Implemented HTTP configuration on feat/community-channels: view and owner/manage_channel_access are checked under locks before mutation; full snapshot with expectedAccessVersion, same-server roles and active membership epochs. Role DENY wins, personal override applies last, owner follows foundation. A self-removing view can commit; later GET returns 404. No-op preserves versions/event. Subscription revocation and dispatcher remain target design.",
+        "description": "Implemented HTTP configuration on feat/community-channels: view and owner/manage_channel_access are checked under locks before mutation; full snapshot with expectedAccessVersion, same-server roles and active membership epochs. Role DENY wins, personal override applies last, owner follows foundation. A self-removing view can commit; later GET returns 404. No-op preserves versions/event. Subscription revocation and dispatcher remain target design. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -1894,6 +1900,16 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Đã nhận thay đổi làm mất quyền; policy hiện hành chưa đổi. Không tự gửi lại mutation; GET statusUrl để đối chiếu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOperationRef"
+                }
+              }
+            }
           }
         },
         "x-scdc-implementation": "partial-on-main",
@@ -1905,6 +1921,9 @@
           },
           {
             "$ref": "#/components/parameters/channelId"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "requestBody": {
@@ -1979,7 +1998,7 @@
       "post": {
         "operationId": "createRole",
         "summary": "Tạo vai trò tự tạo",
-        "description": "Implemented on feat/community-permissions: current owner only, maximum 20 custom roles, name 1–64 UTF-16 after trim with NFC/case-insensitive/accent-sensitive unique key. Validated management catalog. New scoped create operation returns 201, identical manual replay returns the current authorized role with 200; deleted resource conflicts. AccessVersion/outbox commit atomically; no automatic replay.",
+        "description": "Implemented on feat/community-permissions: current owner only, maximum 20 custom roles, name 1–64 UTF-16 after trim with NFC/case-insensitive/accent-sensitive unique key. Validated management catalog. New scoped create operation returns 201, identical manual replay returns the current authorized role with 200; deleted resource conflicts. AccessVersion/outbox commit atomically; no automatic replay. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2029,6 +2048,9 @@
         "parameters": [
           {
             "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "requestBody": {
@@ -2049,7 +2071,7 @@
       "patch": {
         "operationId": "updateRole",
         "summary": "Sửa vai trò tự tạo",
-        "description": "Implemented on feat/community-permissions: current owner and custom role only. Partial name/permissions change with current expectedVersion; stale version conflicts, valid no-op preserves version. Role/server access versions and outbox commit atomically. Reconcile unclear results through GET before explicit save.",
+        "description": "Implemented on feat/community-permissions: current owner and custom role only. Partial name/permissions change with current expectedVersion; stale version conflicts, valid no-op preserves version. Role/server access versions and outbox commit atomically. Reconcile unclear results through GET before explicit save. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2081,6 +2103,16 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Đã nhận thay đổi làm mất quyền; policy hiện hành chưa đổi. Không tự gửi lại mutation; GET statusUrl để đối chiếu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOperationRef"
+                }
+              }
+            }
           }
         },
         "x-scdc-implementation": "implemented-on-main",
@@ -2092,6 +2124,9 @@
           },
           {
             "$ref": "#/components/parameters/roleId"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "requestBody": {
@@ -2110,7 +2145,7 @@
       "delete": {
         "operationId": "deleteRole",
         "summary": "Xóa vai trò tự tạo",
-        "description": "Implemented on feat/community-permissions: owner/custom role with expectedVersion. Cascade assignments/role overrides and advance affected membership versions/accessVersion with outbox in one transaction. Legacy invite referencing this role returns 409 ROLE_IN_USE. Missing resource returns 404; no automatic replay.",
+        "description": "Implemented on feat/community-permissions: owner/custom role with expectedVersion. Cascade assignments/role overrides and advance affected membership versions/accessVersion with outbox in one transaction. Legacy invite referencing this role returns 409 ROLE_IN_USE. Missing resource returns 404; no automatic replay. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2135,6 +2170,16 @@
           },
           "204": {
             "description": "Committed result on feat/community-permissions; dispatcher/realtime effects remain unimplemented."
+          },
+          "202": {
+            "description": "Đã nhận thay đổi làm mất quyền; policy hiện hành chưa đổi. Không tự gửi lại mutation; GET statusUrl để đối chiếu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOperationRef"
+                }
+              }
+            }
           }
         },
         "x-scdc-implementation": "implemented-on-main",
@@ -2149,6 +2194,9 @@
           },
           {
             "$ref": "#/components/parameters/ExpectedVersion"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "x-scdc-feature-branch": "feat/community-permissions",
@@ -2266,7 +2314,7 @@
       "put": {
         "operationId": "replaceMemberRoles",
         "summary": "Thay tập vai trò thành viên",
-        "description": "Implemented on feat/community-permissions: current owner only. Atomically replace the full set of 0–20 distinct custom roles from this server, guarded by current membershipId/expectedVersion. Stale epoch/version conflicts; no-op preserves version/event. No automatic replay; reconcile unclear results through GET.",
+        "description": "Implemented on feat/community-permissions: current owner only. Atomically replace the full set of 0–20 distinct custom roles from this server, guarded by current membershipId/expectedVersion. Stale epoch/version conflicts; no-op preserves version/event. No automatic replay; reconcile unclear results through GET. S2-07: Identity permit trước transaction Community; kiểm tra membership actor và fence cục bộ, không truyền transaction cho Identity.",
         "responses": {
           "400": {
             "$ref": "#/components/responses/400"
@@ -2298,6 +2346,16 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Đã nhận thay đổi làm mất quyền; policy hiện hành chưa đổi. Không tự gửi lại mutation; GET statusUrl để đối chiếu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOperationRef"
+                }
+              }
+            }
           }
         },
         "x-scdc-implementation": "implemented-on-main",
@@ -2309,6 +2367,9 @@
           },
           {
             "$ref": "#/components/parameters/userId"
+          },
+          {
+            "$ref": "#/components/parameters/ActorMembershipId"
           }
         ],
         "requestBody": {
@@ -2595,6 +2656,55 @@
           }
         ]
       }
+    },
+    "/servers/{serverId}/access-operations/{operationId}": {
+      "get": {
+        "operationId": "getCommunityAccessChange",
+        "summary": "Đọc tiến trình thay đổi quyền Community",
+        "x-scdc-implementation": "implemented",
+        "description": "Phiên và membership phải còn hợp lệ. Chỉ actor của operation hoặc chủ server hiện tại; không trả policy dự kiến. GET không chạy worker.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/serverId"
+          },
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái đã lưu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOperationStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2751,6 +2861,16 @@
             "expired"
           ],
           "default": "pending"
+        }
+      },
+      "ActorMembershipId": {
+        "name": "X-SCDC-Membership-Id",
+        "in": "header",
+        "required": true,
+        "description": "Membership ID của actor đang hiển thị trong server. Khác membershipId của thành viên đích trong body; không tự thay bằng epoch mới khi gửi lại.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
         }
       }
     },
@@ -4389,6 +4509,68 @@
           "nextCursor"
         ],
         "additionalProperties": false
+      },
+      "PolicyOperationRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "phase",
+          "statusUrl"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "fencing"
+            ]
+          },
+          "statusUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "PolicyOperationStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "phase",
+          "version",
+          "cleanupPending",
+          "errorCode"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "fencing",
+              "committed",
+              "aborted"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "cleanupPending": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       }
     }
   },

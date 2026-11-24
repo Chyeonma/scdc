@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SCDC.BuildingBlocks.Infrastructure;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Contracts.Identity;
+using SCDC.Contracts.Community;
 
 namespace SCDC.Api.Errors;
 
@@ -23,6 +24,14 @@ internal sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
+        if(exception is CommunityChangePendingException pending)
+        {
+            var path=$"/api/v1/servers/{pending.ServerId:D}/access-operations/{pending.OperationId:D}";
+            httpContext.Response.StatusCode=StatusCodes.Status202Accepted;
+            httpContext.Response.Headers.Location=path;
+            await httpContext.Response.WriteAsJsonAsync(new {operationId=pending.OperationId,phase="fencing",statusUrl=path},cancellationToken);
+            return true;
+        }
         if (exception is AccessCheckException access)
         {
             if (access.Code == "ACCESS_PENDING" && access.OperationId is Guid operation)
@@ -35,6 +44,9 @@ internal sealed class GlobalExceptionHandler(
             }
             var error = access.Code switch
             {
+                "SESSION_INVALID" => Error.Unauthorized(access.Code,"The session is no longer valid."),
+                "ACCOUNT_ACCESS_DENIED" => Error.Forbidden(access.Code,"An active account with verified primary email is required."),
+                "MEMBERSHIP_REQUIRED" => Error.Validation(access.Code,"X-SCDC-Membership-Id must identify your current membership."),
                 "Common.Unauthorized" => Error.Unauthorized(access.Code, "The current session is unavailable."),
                 "RESOURCE_NOT_FOUND" => Error.NotFound(access.Code, "The requested resource is unavailable."),
                 "ACCESS_CHANGED" => Error.Conflict(access.Code, "Access changed. Reload before trying again."),

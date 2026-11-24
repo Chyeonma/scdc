@@ -9,7 +9,7 @@ Thư mục này chứa các file OpenAPI, JSON Schema và Protobuf, mô tả ch�
 | File | Tài liệu giải thích | Trạng thái |
 |---|---|---|
 | [Identity access](grpc/identity/access.proto), [Community access](grpc/community/access.proto), [Messaging coordination](grpc/messaging/coordination.proto) | [S2-02](../system/access-revocation.md#s2-02-protocol), [tạo phòng](../features/community/channels.md#s2-02-channel-protocol), [project C#](../system/backend.md#v1-grpc-code-generation) | Hợp đồng mục tiêu đã có; chưa có host hoặc mã sinh trong solution |
-| [Coordination REST](coordination.openapi.json) | [Thu hồi](../system/access-revocation.md#s2-02-protocol), [tạo phòng](../features/community/channels.md#s2-02-channel-protocol) | Mục tiêu S2-02: GET trạng thái, phản hồi pending/hủy/chưa rõ và membership của actor |
+| [Coordination REST](coordination.openapi.json) | [Thu hồi](../system/access-revocation.md#s2-02-protocol), [tạo phòng](../features/community/channels.md#s2-02-channel-protocol) | S2-06/07 đã có GET thu hồi Identity, GET policy Community, phản hồi pending và header membership actor; provision phòng còn là mục tiêu S2-02 |
 | [Account recovery](account-recovery.openapi.json) | [Liên kết email](../features/accounts/email-links.md), [khôi phục mật khẩu](../features/accounts/password-recovery.md) | Đã có xác minh email và đặt lại mật khẩu. Gửi lại email và worker gửi thư nằm ở nhánh Identity riêng, chưa tích hợp |
 | [Direct Messaging](direct-messaging.openapi.json) | [Nhắn tin riêng](../features/messaging/direct-messaging.md) | Đã có mở DM, hộp thư, gửi, lịch sử, sửa, xóa |
 | [Chat realtime](chat-realtime.schema.json) | [Đồng bộ tin](../features/messaging/synchronization.md) | Danh mục sự kiện SignalR; đã có cho DM. Cần đối chiếu với schema mục tiêu |

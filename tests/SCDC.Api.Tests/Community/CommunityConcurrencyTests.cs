@@ -56,6 +56,8 @@ public sealed partial class CommunityApiTests
     [Fact]
     public async Task Unique_operation_loser_rolls_back_and_reads_winner_from_a_new_transaction()
     {
+        // Initialize the fence rows before isolating the unique-operation race.
+        (await SendAsync(HttpMethod.Get,"/api/v1/servers",_owner)).EnsureSuccessStatusCode();
         var operation = Guid.NewGuid();
         await using var gate = await GateAsync(operation);
         var first = CreateAsync(operation);
@@ -101,7 +103,7 @@ public sealed partial class CommunityApiTests
     [Theory]
     [InlineData("logout")]
     [InlineData("password")]
-    public async Task Identity_security_writer_waits_for_create_commit_then_old_token_is_rejected(string writer)
+    public async Task Identity_fence_ack_waits_for_create_commit_then_old_token_is_rejected(string writer)
     {
         await using var gate = await GateAsync(Guid.NewGuid(), outbox: true);
         var creating = CreateAsync();
@@ -120,14 +122,14 @@ public sealed partial class CommunityApiTests
         var deadline = DateTimeOffset.UtcNow.AddSeconds(1);
         while (DateTimeOffset.UtcNow < deadline && !changing.IsCompleted)
         {
-            if (await SqlAsync("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE @pid=ANY(pg_blocking_pids(pid)) AND query LIKE '%FOR NO KEY UPDATE%')", ("pid", createPid)) is true)
+            if (await SqlAsync("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE @pid=ANY(pg_blocking_pids(pid)) AND query LIKE '%INSERT INTO community.access_fences%')", ("pid", createPid)) is true)
             {
                 blocked = true;
                 break;
             }
             await Task.Delay(10);
         }
-        Assert.True(blocked, "Identity writer must be blocked by this Community transaction's account guard.");
+        Assert.True(blocked, "Identity writer must be blocked by this Community transaction's Identity fence locks.");
         await gate.ReleaseAsync();
         Assert.Equal(HttpStatusCode.Created, (await creating).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await changing).StatusCode);
@@ -161,6 +163,24 @@ public sealed partial class CommunityApiTests
         Assert.Equal(0L, await SqlAsync("SELECT count(*) FROM community.operations WHERE actor_user_id=@actor", ("actor", _owner.UserId)));
         await gate.ReleaseAsync();
         Assert.Equal(HttpStatusCode.Created, (await CreateAsync(operation)).StatusCode);
+    }
+    [Fact]
+    public async Task Transaction_budget_terminates_a_slow_write_as_temporary_failure_without_partial_data()
+    {
+        var function="test_budget_"+Guid.NewGuid().ToString("N");
+        await SqlAsync($"""
+            CREATE FUNCTION community.{function}() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN IF NEW.payload->>'ownerUserId'='{_owner.UserId}' THEN PERFORM pg_sleep(1.2); END IF; RETURN NEW; END $$;
+            CREATE TRIGGER {function} BEFORE INSERT ON community.outbox_events FOR EACH ROW EXECUTE FUNCTION community.{function}();
+            """);
+        try
+        {
+            await AssertErrorAsync(await CreateAsync(),HttpStatusCode.ServiceUnavailable,"COMMUNITY_TEMPORARILY_UNAVAILABLE");
+            Assert.Equal(0L,await SqlAsync("SELECT count(*) FROM community.servers WHERE owner_user_id=@actor",("actor",_owner.UserId)));
+            Assert.Equal(0L,await SqlAsync("SELECT count(*) FROM community.operations WHERE actor_user_id=@actor",("actor",_owner.UserId)));
+            Assert.Equal(0L,await SqlAsync("SELECT count(*) FROM community.outbox_events WHERE payload->>'ownerUserId'=@actor",("actor",_owner.UserId.ToString())));
+        }
+        finally { await SqlAsync($"DROP TRIGGER {function} ON community.outbox_events; DROP FUNCTION community.{function}()"); }
     }
     [Theory]
     [InlineData("owner")]

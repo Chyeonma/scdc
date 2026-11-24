@@ -19,7 +19,7 @@ public sealed class MembershipsController(IMembershipService memberships) : ApiC
     {
         if (await Request.Body.ReadAsync(new byte[1], ct) != 0)
             return ApiErrorMapper.ToObjectResult(Error.Validation("VALIDATION_FAILED", "Join does not accept a request body."), HttpContext);
-        var actor = new AccountActor(Claim("sub"), Claim("sid"), Claim("sst"));
+        var actor = CommunityHttpActor.Read(this);
         return FromResult(await memberships.JoinAsync(actor, serverId, ct));
     }
 

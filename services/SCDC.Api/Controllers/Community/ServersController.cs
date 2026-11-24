@@ -14,7 +14,7 @@ public sealed record CreateServerRequest(Guid ClientOperationId, string? Name, s
 [Route("api/v1/servers")]
 public sealed class ServersController(IServerService servers) : ApiControllerBase
 {
-    private AccountActor Actor => new(Claim("sub"), Claim("sid"), Claim("sst"));
+    private AccountActor Actor => CommunityHttpActor.Read(this,false);
     private Guid Claim(string name) => Guid.TryParse(User.FindFirst(name)?.Value, out var id) ? id
         : throw new InvalidOperationException($"Required claim '{name}' is missing.");
 

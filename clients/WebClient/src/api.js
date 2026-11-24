@@ -170,6 +170,7 @@ export async function api(path, options = {}) {
     retry = true,
     signal,
     expectedActorId,
+    actorMembershipId,
     actorId = expectedActorId,
   } = options;
 
@@ -184,6 +185,7 @@ export async function api(path, options = {}) {
   checkActor();
 
   const headers = { Accept: 'application/json' };
+  if (actorMembershipId) headers['X-SCDC-Membership-Id'] = actorMembershipId;
 
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';

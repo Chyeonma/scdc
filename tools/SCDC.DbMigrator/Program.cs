@@ -11,6 +11,12 @@ try
     // This is an administrator/migrator connection, never a runtime module login.
     var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Migration")
         ?? throw new InvalidOperationException("ConnectionStrings__Migration must be configured.");
+    if(Path.GetFileName(args[0])==CommunityAccessMigration.FileName)
+    {
+        if(args.Length!=1)throw new MigrationPreflightException("S2-07 does not accept a data map.");
+        var changed=await CommunityAccessMigration.ApplyAsync(connection,await File.ReadAllTextAsync(args[0]));
+        Console.WriteLine(changed?"S2-07 applied.":"S2-07 already applied with matching checksum.");return 0;
+    }
     if (Path.GetFileName(args[0]) == IdentityAccessMigration.FileName)
     {
         if (args.Length != 1) throw new MigrationPreflightException("S2-06 does not accept a data map.");

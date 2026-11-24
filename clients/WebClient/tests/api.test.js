@@ -369,3 +369,30 @@ test('create-style POST does not refresh and replay automatically after a 401', 
   await assert.rejects(client.api('/servers', { actorId: 'user-1', method: 'POST', body: {}, retry: false }), (error) => error.status === 401);
   assert.equal(calls, 1);
 });
+
+test('Community mutation sends the displayed actor membership without replay after 401', async () => {
+  let count = 0;
+  const tab = await browser(rotatedSession).openTab(async (url, options) => {
+    count++;
+    assert.equal(options.headers['X-SCDC-Membership-Id'], 'actor-membership');
+    assert.equal(options.method, 'PUT');
+    return response(401, { errorCode: 'SESSION_INVALID' });
+  });
+  await assert.rejects(tab.api('/servers/server/members/target/roles', {
+    method: 'PUT', retry: false, actorMembershipId: 'actor-membership',
+    body: { membershipId: 'target-membership', expectedVersion: '1', roleIds: [] },
+  }), error => error.status === 401);
+  assert.equal(count, 1);
+});
+
+test('accepted Community policy exposes its status reference and never returns success', async () => {
+  let count = 0;
+  const tab = await browser(rotatedSession).openTab(async () => {
+    count++;
+    return response(202, { operationId: 'policy', phase: 'fencing', statusUrl: '/api/v1/servers/server/access-operations/policy' });
+  });
+  await assert.rejects(tab.api('/servers/server/channels/channel/access', {
+    method: 'PUT', retry: false, actorMembershipId: 'actor-membership', body: {},
+  }), error => error.status === 202 && error.problem.statusUrl === '/api/v1/servers/server/access-operations/policy');
+  assert.equal(count, 1);
+});

@@ -108,8 +108,14 @@ public sealed partial class CommunityApiTests
     {
         var id = (await JsonAsync(await CreateAsync())).GetProperty("id").GetGuid();
         var previous = await LeftWithGrantsAsync(id);
+        await SqlAsync("""
+            INSERT INTO community.access_scopes(authority,scope_kind,user_id,server_id,membership_id,current_epoch)
+            VALUES(2,3,@actor,@id,@previous,4)
+            """, ("id", id), ("actor", _other.UserId), ("previous", previous));
         var result = await JsonAsync(await JoinAsync(id));
         Assert.NotEqual(previous, result.GetProperty("membershipId").GetGuid());
+        Assert.Equal(true, await SqlAsync("SELECT retired AND current_epoch=4 FROM community.access_scopes WHERE server_id=@id AND user_id=@actor AND membership_id=@previous", ("id", id), ("actor", _other.UserId), ("previous", previous)));
+        Assert.Equal(1L, await SqlAsync("SELECT current_epoch FROM community.access_scopes WHERE server_id=@id AND user_id=@actor AND membership_id=@current AND NOT retired", ("id", id), ("actor", _other.UserId), ("current", result.GetProperty("membershipId").GetGuid())));
         Assert.Equal("5", result.GetProperty("version").GetString());
         Assert.Equal("active", result.GetProperty("status").GetString());
         Assert.True(result.GetProperty("joinedAt").GetDateTimeOffset() > DateTimeOffset.UtcNow.AddMinutes(-1));
@@ -181,6 +187,8 @@ public sealed partial class CommunityApiTests
     [Fact]
     public async Task Concurrent_join_waits_for_server_lock_then_returns_the_committed_epoch_without_another_event()
     {
+        // Initialize the session fence before isolating the server-lock race.
+        (await SendAsync(HttpMethod.Get,"/api/v1/servers",_other)).EnsureSuccessStatusCode();
         var id = (await JsonAsync(await CreateAsync())).GetProperty("id").GetGuid();
         await using var gate = await JoinGateAsync(id);
         var first = JoinAsync(id);
@@ -292,14 +300,14 @@ public sealed partial class CommunityApiTests
     }
 
     [Fact]
-    public async Task Logout_waits_for_join_guard_then_old_session_is_rejected()
+    public async Task Logout_fence_waits_for_join_commit_then_old_session_is_rejected()
     {
         var id = (await JsonAsync(await CreateAsync())).GetProperty("id").GetGuid();
         await using var gate = await JoinGateAsync(id);
         var joining = JoinAsync(id);
         var pid = await WaitForGateAsync(gate);
         var logout = _client.PostAsJsonAsync("/api/v1/auth/logout", new { refreshToken = _other.RefreshToken });
-        await WaitForBlockedQueryAsync(pid, "%FOR NO KEY UPDATE%");
+        await WaitForBlockedQueryAsync(pid, "%INSERT INTO community.access_fences%");
         await gate.ReleaseAsync();
         Assert.Equal(HttpStatusCode.OK, (await joining).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await logout).StatusCode);

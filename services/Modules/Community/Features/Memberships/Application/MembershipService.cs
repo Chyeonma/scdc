@@ -5,6 +5,7 @@ using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Infrastructure.Outbox;
 using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
+using SCDC.Modules.Community.Infrastructure.Access;
 using SCDC.Modules.Community.Features.Servers.Application;
 using SCDC.Modules.Community.Infrastructure.Persistence;
 
@@ -15,7 +16,7 @@ public interface IMembershipService
     Task<Result<MembershipView>> JoinAsync(AccountActor actor, Guid serverId, CancellationToken cancellationToken);
 }
 
-internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAccountAccessGuard guard,
+internal sealed class MembershipService(RelationalWorkScopeFactory scopes, CommunityIdentityAccess access,
     ServerReader reader, TransactionalOutbox outbox, TimeProvider clock, ILogger<MembershipService> logger) : IMembershipService
 {
     private sealed class RequestFailure(Error error) : Exception
@@ -30,7 +31,7 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
             return Result.Success(await JoinOnceAsync(actor, serverId, ct));
         }
         catch (RequestFailure ex) { return Result.Failure<MembershipView>(ex.Error); }
-        catch (NpgsqlException ex) when (ex.IsTransient || ex is PostgresException { SqlState: "55P03" or "40P01" or "40001" or "57014" })
+        catch (NpgsqlException ex) when (ex.IsTransient || ex is PostgresException { SqlState: "55P03" or "40P01" or "40001" or "57014" or "25P04" })
         {
             logger.LogWarning("Community join was interrupted ({FailureType}).", ex.GetType().Name);
             return Result.Failure<MembershipView>(Error.ServiceUnavailable("COMMUNITY_TEMPORARILY_UNAVAILABLE",
@@ -40,13 +41,9 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
 
     private async Task<MembershipView> JoinOnceAsync(AccountActor actor, Guid serverId, CancellationToken ct)
     {
+        var permit = await access.AcquireAsync(actor, IdentityPurpose.CommunityWrite, serverId, Guid.NewGuid(), ct);
         await using var scope = await scopes.OpenAsync(ct);
-        AccountAccessCheck lease;
-        try { lease = await guard.AcquireAsync(actor, scope.Transaction, ct); }
-        catch (NpgsqlException) { throw new RequestFailure(Error.ServiceUnavailable("ACCESS_CHECK_UNAVAILABLE", "Account access could not be checked.")); }
-        if (lease.Status == AccountAccessStatus.AccountDenied)
-            throw new RequestFailure(Error.Forbidden("ACCOUNT_ACCESS_DENIED", "An active account with verified primary email is required."));
-        EnsureLease(lease);
+        var lease = await access.AdmitAsync(scope, permit, ct);
 
         short joinMode;
         int serverVersion, accessVersion;
@@ -63,10 +60,12 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
             serverVersion = rows.GetInt32(3);
             accessVersion = rows.GetInt32(4);
         }
+        await using(var pending=scope.CreateCommand("SELECT EXISTS(SELECT 1 FROM community.access_changes WHERE server_id=@server AND phase=0)"))
+        {pending.Parameters.AddWithValue("server",serverId);if(await pending.ExecuteScalarAsync(ct) is true)throw new AccessCheckException("ACCESS_PENDING");}
         var existing = await reader.MembershipAsync(scope, actor.UserId, serverId, ct);
         if (existing?.Status == "active")
         {
-            EnsureLease(lease);
+            await access.EnsureAsync(scope, lease, ct);
             await scope.CommitAsync(ct);
             return existing;
         }
@@ -80,6 +79,16 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
         {
             if (!await ChannelAccessMaintenance.BumpAsync(scope, serverId, actor.UserId, false, ct))
                 throw new RequestFailure(Error.Conflict("VERSION_LIMIT_REACHED", "A channel access version limit has been reached."));
+            await using (var retire = scope.CreateCommand("""
+                UPDATE community.access_scopes SET retired=true,version=version+1
+                WHERE server_id=@server AND user_id=@actor AND membership_id=@previous AND NOT retired
+                """))
+            {
+                retire.Parameters.AddWithValue("server", serverId);
+                retire.Parameters.AddWithValue("actor", actor.UserId);
+                retire.Parameters.AddWithValue("previous", existing.MembershipId);
+                await retire.ExecuteNonQueryAsync(ct);
+            }
             // Remove grants/overrides of the departing epoch before changing it.
             await using var clear = scope.CreateCommand("""
                 DELETE FROM community.member_roles WHERE server_id=@id AND user_id=@actor;
@@ -106,6 +115,7 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
             if (await write.ExecuteNonQueryAsync(ct) != 1)
                 throw new InvalidOperationException("Membership changed outside the server mutation lock.");
         }
+        await CommunityScopeStore.EnsureAsync(scope, CommunityScopeStore.Membership(actor.UserId, serverId, membershipId), ct);
         await using (var bump = scope.CreateCommand("""
             UPDATE community.servers SET access_version=access_version+1 WHERE id=@id RETURNING version,access_version
             """))
@@ -127,14 +137,9 @@ internal sealed class MembershipService(RelationalWorkScopeFactory scopes, IAcco
                 membershipVersion = membership.Version,
                 accessVersion = accessVersion.ToString(CultureInfo.InvariantCulture)
             }, ct);
-        EnsureLease(lease);
+        await access.EnsureAsync(scope, lease, ct);
         await scope.CommitAsync(ct);
         return membership;
     }
 
-    private void EnsureLease(AccountAccessCheck lease)
-    {
-        if (!lease.IsAllowedAt(clock.GetUtcNow()))
-            throw new RequestFailure(Error.Unauthorized("SESSION_INVALID", "The session is no longer valid."));
-    }
 }

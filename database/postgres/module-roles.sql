@@ -48,6 +48,13 @@ DO $$ BEGIN
     END IF;
 END $$;
 
+DO $$ BEGIN
+    IF to_regclass('community.access_scopes') IS NOT NULL THEN
+        REVOKE DELETE ON community.access_scopes,community.access_changes FROM scdc_community;
+        REVOKE UPDATE,DELETE ON community.access_change_acks FROM scdc_community;
+    END IF;
+END $$;
+
 -- Temporary S2-03 grants. Remove only after the replacement flows pass S2-11.
 GRANT USAGE ON SCHEMA identity TO scdc_community,scdc_messaging;
 GRANT SELECT ON identity.users,identity.auth_sessions,identity.user_emails,identity.user_security_states

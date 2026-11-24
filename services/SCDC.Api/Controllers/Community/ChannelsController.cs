@@ -21,7 +21,7 @@ public sealed record ReplaceChannelAccessRequest(string? ExpectedAccessVersion, 
 [Route("api/v1/servers/{serverId:guid}/channels")]
 public sealed class ChannelsController(IChannelService channels) : ApiControllerBase
 {
-    private AccountActor Actor => new(Claim("sub"), Claim("sid"), Claim("sst"));
+    private AccountActor Actor => CommunityHttpActor.Read(this,!HttpMethods.IsGet(Request.Method));
     private Guid Claim(string name) => Guid.TryParse(User.FindFirst(name)?.Value, out var id) ? id : throw new InvalidOperationException($"Required claim '{name}' is missing.");
     [HttpGet]
     public async Task<ActionResult<ChannelPage>> List(Guid serverId, [FromQuery] int limit = 20, [FromQuery] string? cursor = null, CancellationToken ct = default)
