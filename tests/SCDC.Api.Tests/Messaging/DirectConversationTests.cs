@@ -1,15 +1,18 @@
+using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using SCDC.Api.Tests.Identity;
 using SCDC.Contracts.Persistence;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Messaging.Application;
+using SCDC.Modules.Messaging.Infrastructure.Persistence;
 
 namespace SCDC.Api.Tests.Messaging;
 
@@ -73,10 +76,12 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
         finally { await f.Sql("UPDATE identity.users SET status=1 WHERE id=@id", b.Id); }
     }
 
-    [Fact]
-    public async Task Forty_barrier_requests_force_unique_conflicts_and_leave_only_winning_space()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1500)]
+    public async Task Forty_concurrent_requests_leave_only_one_space(int lastRequestDelayMs)
     {
-        var a = f.Inner.Actor; var b = f.Inner.Users["search01"];
+        var a = f.Inner.Actor; var b = f.Inner.Users[lastRequestDelayMs == 0 ? "search01" : "search09"];
         // Existing fence rows allow concurrent readers. First-time fence insertion is deliberately serialized.
         foreach (var actor in new[] { a, b })
         {
@@ -84,20 +89,71 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
             Assert.Equal(HttpStatusCode.OK, warm.StatusCode);
         }
         var before = await f.OwnedSpaces();
-        await using var gate = await f.Gate(a.Id, b.Id);
         var barrier = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var tasks = Enumerable.Range(0, 40).Select(async i =>
         {
             await barrier.Task;
+            // Arrival skew must not hold the other requests inside their 500 ms lock budget.
+            if (i == 39) await Task.Delay(lastRequestDelayMs);
             return await f.Open(i % 2 == 0 ? a : b, i % 2 == 0 ? b.Id : a.Id);
         }).ToArray();
         barrier.SetResult();
-        await gate.WaitForBlocked(40);
-        await gate.Release();
         var responses = await Task.WhenAll(tasks);
         Assert.Single(responses.Select(x => x.GetProperty("id").GetGuid()).Distinct());
         Assert.Equal("1:2", await f.PairCounts(a.Id, b.Id));
         Assert.Equal(before + 1, await f.OwnedSpaces());
+    }
+
+    [Fact]
+    public async Task Unique_pair_conflict_rolls_back_losing_space_and_reopens_winner()
+    {
+        var a = f.Inner.Actor; var b = f.Inner.Users["search08"];
+        foreach (var actor in new[] { a, b })
+        {
+            using var warm = await f.Inner.Send("/api/v1/direct-conversations", actor);
+            Assert.Equal(HttpStatusCode.OK, warm.StatusCode);
+        }
+        var before = await f.OwnedSpaces();
+        var race = new UniquePairConflictProbe(() => f.Open(b, a.Id));
+        using var app = f.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.AddDbContext<MessagingDbContext>(options => options.AddInterceptors(race))));
+        using var client = app.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/direct-conversations")
+        { Content = JsonContent.Create(new { peerUserId = b.Id }) };
+        request.Headers.Authorization = new("Bearer", a.AccessToken);
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, race.UniqueConflicts);
+        Assert.Equal(race.Winner.GetProperty("id").GetGuid(), body.GetProperty("id").GetGuid());
+        Assert.Equal("1:2", await f.PairCounts(a.Id, b.Id));
+        Assert.Equal(before + 1, await f.OwnedSpaces());
+    }
+
+    private sealed class UniquePairConflictProbe(Func<Task<JsonElement>> createWinner) : DbCommandInterceptor
+    {
+        private int started;
+        public JsonElement Winner { get; private set; }
+        public int UniqueConflicts { get; private set; }
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            // The loser has inserted its space and checked the pair. Commit a real competing
+            // HTTP request now so PostgreSQL must reject this INSERT with the pair constraint.
+            if (command.CommandText.Contains("INSERT INTO messaging.direct_conversations", StringComparison.Ordinal)
+                && Interlocked.CompareExchange(ref started, 1, 0) == 0)
+                Winner = await createWinner();
+            return result;
+        }
+
+        public override Task CommandFailedAsync(DbCommand command, CommandErrorEventData eventData,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Exception is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "ux_direct_conversations_pair" })
+                UniqueConflicts++;
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]
