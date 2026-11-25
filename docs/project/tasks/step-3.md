@@ -14,6 +14,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: checklist trong [hướng dẫn vận hành](../../guides/operations.md): dựng project theo cây v1 (D40, D43); chuyển code; thay phần cài đặt hợp đồng trong process bằng client gọi qua mạng; database riêng và script chuyển dữ liệu offline có đối chiếu số dòng, ID, version (D48–D52); định tuyến gateway; chạy lại test backend và Playwright; đo thời gian thu hồi; thử tắt service; đường lui trước khi mở ghi.
 - Xong khi: 3a dùng checklist này; sau 3a cập nhật lại theo kinh nghiệm thực tế.
 - Phụ thuộc: STEP-2 xong.
+- Tiến độ: **Đã soạn checklist và đối chiếu chuẩn bị Identity — 2026-11-25**. [Runbook EX-00 đến EX-08](../../guides/operations.md#service-extraction), [mẫu hồ sơ](../../records/templates/service-extraction.md) và [bản áp dụng Identity](../../records/verification/architecture/s3-01-2026-11-25.md) bao phủ host, RPC/mTLS hai chiều, dữ liệu/khóa, gateway, kiểm thử và phục hồi. S3-02/S3-03 dùng bộ này khi triển khai; mốc sử dụng thực tế và cập nhật sau 3a vẫn chờ, chưa ghi S3-01 đã nghiệm thu toàn bộ.
 
 ## S3-02 · 3a: Identity thành service riêng
 - Nhãn: refactor, tech
