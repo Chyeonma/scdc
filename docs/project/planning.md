@@ -227,7 +227,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 |---|---|---|---|---|
 | [STEP-1](#step-1) | Khung chạy chung: gateway, Compose, CI, giám sát | Cả nhóm; Vg điều phối | Dựng lại môi trường; lần theo request qua trace; CI và demo đạt | **Hoàn tất phạm vi chung — 2026-11-22.** [S1-09](../records/verification/environment/s1-09-2026-11-22.md): demo 14/14, CI 299 backend và 77 frontend đạt. S1-07 giữ riêng cho Media, không chặn bước sau. |
 | [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | **Hoàn tất theo xác nhận của người dùng — 2026-11-25.** [S2-12](../records/verification/environment/s2-12-2026-11-25.md): demo UI thật 10/10, sáu cặp quyền chéo bị từ chối; logout ngắt WebSocket trong 362 ms, không có payload sau ngắt. [S2-11](../records/verification/architecture/s2-11-2026-11-25.md) kiểm chứng lỗi và thu hẹp quyền; CI trên `main` đạt 396 backend và 82 frontend. [Dev đã nâng đủ baseline](../records/verification/environment/dev-sync-2026-11-25.md), giữ dữ liệu và khóa. Ước lượng STEP-3 chuyển sang rà từng task. |
-| [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | **Identity API/worker và PostgreSQL riêng đã chạy dev, mã nguồn đồng bộ đủ S3-03 với main — 2026-11-25.** [S3-03](../records/verification/architecture/s3-03-2026-11-25.md): chuyển 22 bảng/459 dòng, giữ user/token/cursor cũ; cutoff WebSocket 237 ms. [S3-01](../records/verification/architecture/s3-01-2026-11-25.md) đã áp dụng và bổ sung bài học. Đã công bố task STEP-3/4 để đồng bộ Trello; email, Messaging/Community và phần Media chưa tích hợp tiếp tục theo [trạng thái nhánh/task](tasks/README.md). |
+| [STEP-3](#step-3) | Tách từng service: Identity → Community → Messaging; Media song song | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | **Identity API/worker và PostgreSQL riêng đã chạy dev, mã nguồn đồng bộ đủ S3-03 với main — 2026-11-25.** [S3-03](../records/verification/architecture/s3-03-2026-11-25.md): chuyển 22 bảng/459 dòng, giữ user/token/cursor cũ; cutoff WebSocket 237 ms. [S3-01](../records/verification/architecture/s3-01-2026-11-25.md) đã áp dụng và bổ sung bài học. Community bước 1–2 đã có code và test trên nhánh riêng, chưa cutover dev; xem [hồ sơ bước 2](../records/verification/architecture/s3-10-phase-2-2026-11-26.md). Email, Messaging và Media tiếp tục theo [trạng thái nhánh/task](tasks/README.md). |
 | [STEP-4](#step-4) | Tính năng mới trên kiến trúc mới: tin phòng, phòng thoại, hoàn thiện Community | Theo service | Đạt [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion) | — |
 
 Không ước lượng cả lộ trình ngay từ đầu: làm xong STEP-1, đo thời gian thực tế rồi mới ước lượng các bước sau ([ước lượng](#ước-lượng-và-khóa-lịchchi-phí)). Mỗi bước kết thúc bằng một buổi demo.
@@ -268,14 +268,14 @@ Vg làm Identity và Community, Sáng làm Messaging; mỗi phần có người 
 
 #### STEP-3 — Tách từng service
 
-Theo thứ tự ít rủi ro trước:
+Theo thứ tự Community trước đã chọn; giữ mã nhóm để truy vết task:
 
 | Thứ tự | Service | Phụ trách | Lý do |
 |---|---|---|---|
 | 3a | Identity | Vg | Cấp phiên/permit, lookup và điều phối fence trên ranh giới STEP-2; dùng lần tách đầu để kiểm chứng quy trình |
 | 3b (song song) | Media control | Thái | Xây mới thành service riêng, không phải chuyển dữ liệu. Làm gọi riêng trước (V1-MEDIA-02); phòng thoại cần quyền Community nên để STEP-4 |
-| 3c | Messaging | Sáng | Nhiều dữ liệu và realtime nhất; tách sau khi đã quen quy trình. Cần hợp đồng tạo phòng giữa Community và Messaging ([D14–D19](../features/community/channels.md#v1-channel-provisioning)) |
-| — | Community | Vg | Phần còn lại của monolith trở thành service Community |
+| 3d (triển khai trước 3c) | Community | Vg | Tách cấu trúc/host, nối các tương tác hiện có qua mạng rồi mới chuyển dữ liệu/gateway; Messaging tạm ở API cũ |
+| 3c | Messaging | Sáng | Nhiều dữ liệu và realtime nhất; tách sau Community. Hợp đồng tạo phòng qua mạng ([D14–D19](../features/community/channels.md#v1-channel-provisioning)) được nối trước qua API cũ |
 
 Mỗi lần tách gồm: chuyển dữ liệu offline ([D48–D52](../system/database.md#v1-migration-execution)), chạy lại toàn bộ test, đo thời gian thu hồi, và cách quay về bản trước nếu lỗi.
 

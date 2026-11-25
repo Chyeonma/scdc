@@ -6,7 +6,7 @@ Thẻ Trello của [STEP-3](../planning.md#step-3). Cách đồng bộ xem [READ
 
 Bản khung, chưa ước lượng chi tiết. [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12 ngày 2026-11-25](../../records/verification/environment/s2-12-2026-11-25.md). S3-01/S3-02/S3-03 đã hoàn tất phần kỹ thuật và kiểm chứng dev; mã nguồn S3-03 được hợp nhất vào main qua nhánh đồng bộ sau các PR gốc. Công bố 12 thẻ để theo dõi tiến độ; các task còn lại cần rà đầu ra, công sức và phụ thuộc trước khi bắt đầu. Nhánh Media vẫn cần đối chiếu nghiệm thu S1-07 và hợp đồng phiên hiện tại.
 
-Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Media làm song song từ đầu bước. Mỗi lần tách làm theo checklist S3-01.
+Thứ tự triển khai hiện tại: Identity → Community → Messaging; Media làm song song từ đầu bước. Giữ mã nhóm 3a/3b/3c/3d để truy vết task cũ. Community nối RPC sang Messaging trong API cũ trước khi tách host/database Messaging. Mỗi lần tách làm theo checklist S3-01.
 
 ## S3-01 · Checklist tách một service
 - Nhãn: docs
@@ -72,15 +72,16 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Người làm: Vg · Review: Sáng
 - Đầu ra: luồng chuẩn bị, xác nhận, hủy của S2-09 chạy qua mạng (D14–D19).
 - Xong khi: test mất phản hồi, gửi lại, hủy giữa chừng, khởi động lại giữa lúc dọn qua.
-- Phụ thuộc: S3-07.
+- Phụ thuộc: S3-01, S3-02; cần cấu trúc/host Community ở bước 1 S3-10. Theo thứ tự Community trước đã chọn, Messaging có thể tiếp tục ở API cũ; không cần đợi S3-07.
+- Tiến độ: **Đã triển khai transport gRPC/mTLS và test tích hợp ở bước 2 S3-10; chờ review**. [Hồ sơ bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) ghi provision, hủy, mất phản hồi và tiếp tục journal sau restart trên ba host/database thử riêng. Đổi endpoint/gateway dev thuộc bước 3.
 
-## S3-10 · 3d: Community là phần còn lại
+## S3-10 · 3d: Community thành service riêng
 - Nhãn: refactor
 - Người làm: Vg · Review: Sáng
-- Đầu ra: gỡ code các module đã tách khỏi monolith; đổi tên host thành Community; database Community riêng.
+- Đầu ra: host Community riêng không tham chiếu implementation Identity/Messaging; database Community riêng. Theo thứ tự Community trước đã chọn, Messaging tạm ở host API cũ tới S3-07/S3-08.
 - Xong khi: không còn code Identity, Messaging trong host Community; test Community và Playwright `community` qua.
-- Phụ thuộc: S3-03, S3-08, S3-09.
-- Tiến độ: **Đã triển khai và kiểm chứng bước 1 — cấu trúc và host chuẩn bị; S3-10 còn mở**. [Hồ sơ bước 1](../../records/verification/architecture/s3-10-phase-1-2026-11-25.md): backend 419/419, script 38/38; code Community chia bốn project, API chung tiếp tục dùng cùng nguồn controller. [Host preview](../../../services/Community/README.md) dùng database thử riêng và chặn nghiệp vụ, chưa bật worker. Bước 2 nối các luồng service hiện có; bước 3 mới chuyển dữ liệu dev/gateway. Các phụ thuộc nhận lưu lượng cần rà theo thứ tự Community được chọn.
+- Phụ thuộc: S3-03, S3-09; S3-08 không chặn cutover Community, vì Messaging vẫn có thể ở host/database hiện tại.
+- Tiến độ: **Đã triển khai bước 1–2; S3-10 còn mở tới khi chuyển dev và nghiệm thu**. [Bước 1](../../records/verification/architecture/s3-10-phase-1-2026-11-25.md) chia bốn project và dựng host chuẩn bị. [Bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) nối Identity, provision và fence quyền Messaging qua gRPC/mTLS, bật worker trong chế độ tích hợp trên stack thử. [Preview](../../../services/Community/README.md) mặc định vẫn chặn nghiệp vụ; bước 3 còn chuyển dữ liệu dev, đóng writer cũ, đổi callback/gateway và diễn tập rollback.
 
 ## S3-11 · 3e: Chuyển sang gRPC và mTLS
 - Nhãn: tech
