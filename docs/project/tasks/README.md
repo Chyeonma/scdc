@@ -5,18 +5,18 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 | File | Bước |
 |---|---|
 | [step-1.md](step-1.md) | STEP-1 — Phạm vi chung hoàn tất; S1-07 giữ riêng cho Media |
-| [step-2.md](step-2.md) | STEP-2 — S2-01 đến S2-11 hoàn tất triển khai và kiểm thử; còn S2-12 tổng kết |
+| [step-2.md](step-2.md) | STEP-2 — Hoàn tất theo xác nhận của người dùng ngày 2026-11-25 |
 | [step-3.md](step-3.md) | STEP-3 — Tách từng service (nháp, chưa đồng bộ) |
 | [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (nháp, chưa đồng bộ) |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |
 
 ## Task có thể bắt đầu
 
-Rà ngày **2026-11-25**: S2-01 đến S2-11 đã vào `main`, CI đạt và [dev đã nâng lên S2-11](../../records/verification/environment/dev-sync-2026-11-25.md). [Hồ sơ S2-11](../../records/verification/architecture/s2-11-2026-11-25.md) ghi kiểm thử ranh giới và lỗi. Có **7 task đủ phụ thuộc để bắt đầu**, gồm S2-12 và sáu việc làm sớm. Sáu việc làm sớm tiếp tục nhận được độc lập. Người nhận chuẩn bị ước lượng, dữ liệu thử và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
+Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12](../../records/verification/environment/s2-12-2026-11-25.md); CI đạt và [dev đã nâng lên S2-11](../../records/verification/environment/dev-sync-2026-11-25.md). Có **7 việc đủ phụ thuộc để bắt đầu**: checklist S3-01 trong bản nháp và sáu việc làm sớm. Ước lượng chi tiết STEP-3 chưa chốt; người nhận rà đầu ra, công sức và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
 
 | Task | Người làm đề xuất | Phần có thể làm ngay |
 |---|---|---|
-| S2-12 | Vg, cả nhóm | Demo ba role database tách quyền trên baseline S2-11, tổng kết STEP-2 và ước lượng STEP-3 |
+| S3-01 | Vg | Xây dựng checklist tách service từ kết quả STEP-2; task còn trong bản nháp STEP-3 |
 | E4-01 | Thái | Đối chiếu, tích hợp hoặc ghi lý do bỏ nhánh worker email trước S3-04 |
 | E4-02 | Người còn công suất; Sáng kiểm tra | Giao diện tin phòng với dữ liệu giả |
 | E4-03 | Người còn công suất; Thái kiểm tra | Prototype gọi riêng, phòng thoại và thiết bị với dữ liệu giả |
@@ -24,7 +24,7 @@ Rà ngày **2026-11-25**: S2-01 đến S2-11 đã vào `main`, CI đạt và [de
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên S2-12 trước khi chuyển sang tách service. Các task STEP-3 trên `main` vẫn là nháp: tách service chờ kết thúc STEP-2; nhánh Media còn chờ S1-07 và hợp đồng phiên tương ứng. Backend STEP-4 chờ STEP-3. Phần chuẩn bị S3/S4 đang được đề xuất riêng ở PR #39, chưa coi là đã công bố khi PR chưa merge.
+Ưu tiên S3-01 trước khi tách Identity. Các task STEP-3 trên `main` vẫn là nháp; rà phạm vi và ước lượng khi nhận việc. Nhánh Media còn chờ S1-07; kết quả hợp đồng phiên STEP-2 đã có. Backend STEP-4 chờ STEP-3. Phần chuẩn bị S3/S4 đang được đề xuất riêng ở PR #39, chưa coi là đã công bố khi PR chưa merge.
 
 ## Ai giữ phần nào
 

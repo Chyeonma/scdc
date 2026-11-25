@@ -4,7 +4,7 @@ Thẻ Trello của [STEP-3](../planning.md#step-3). Cách đồng bộ xem [READ
 
 Trạng thái: nháp
 
-Bản khung. Chi tiết phụ thuộc kết quả STEP-2 (hợp đồng thay transaction, cách kiểm tra phiên); rà lại ở buổi S2-12 rồi xóa dòng "Trạng thái: nháp". Chưa ước lượng.
+Bản khung, chưa ước lượng chi tiết. [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12 ngày 2026-11-25](../../records/verification/environment/s2-12-2026-11-25.md). Có thể bắt đầu checklist S3-01; rà kết quả hợp đồng, đầu ra và công sức của từng task trước khi công bố. Nhánh Media vẫn cần S1-07.
 
 Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Media làm song song từ đầu bước. Mỗi lần tách làm theo checklist S3-01.
 

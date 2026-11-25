@@ -2,9 +2,9 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-11 hoàn tất triển khai và kiểm thử; S2-12 chưa hoàn tất. S2-11 đã vào `main`, CI đạt; [dev đã nâng lên S2-11 ngày 2026-11-25](../../records/verification/environment/dev-sync-2026-11-25.md). Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-11 hoàn tất triển khai và kiểm thử; S2-12 và STEP-2 đã được người dùng xác nhận hoàn tất ngày 2026-11-25. S2-11 đã vào `main`, CI đạt; [dev đã nâng lên S2-11 ngày 2026-11-25](../../records/verification/environment/dev-sync-2026-11-25.md). Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
-S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) giữ ước lượng lịch sử trước S2-04/S2-05. Sau S2-11 còn S2-12, khoảng 0,5–1 ngày công. Bảng dưới giữ snapshot trước triển khai.
+S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) giữ ước lượng lịch sử trước S2-04/S2-05. [S2-12 đã hoàn tất theo xác nhận của người dùng](../../records/verification/environment/s2-12-2026-11-25.md); ước lượng chi tiết STEP-3 chuyển sang rà từng task trước khi nhận việc. Bảng dưới giữ snapshot trước triển khai.
 
 ## Hiện trạng (snapshot 2026-11-14, xác minh schema ngày 2026-11-15)
 
@@ -122,4 +122,4 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Xong khi: đạt tiêu chí xong của [STEP-2](../planning.md#step-2).
 - Phụ thuộc: tất cả thẻ trên.
 - Khả năng bắt đầu: **Đủ phụ thuộc — 2026-11-25**. S2-11 đã merge và CI đạt. Demo tổng kết dùng mã và quyền database S2-11; có thể chọn stack riêng hoặc dev đã nâng cấp theo [hồ sơ môi trường](../../records/verification/environment/dev-sync-2026-11-25.md). Cần ghi bằng chứng và tổng kết riêng cho STEP-2.
-- Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 0,5–1 ngày công.
+- Kết quả: **Hoàn tất theo xác nhận của người dùng — 2026-11-25**. [Hồ sơ S2-12](../../records/verification/environment/s2-12-2026-11-25.md): demo UI thật **10/10 luồng đạt**, sáu cặp quyền chéo bị từ chối, không còn khóa ngoại khác schema; logout ngắt WebSocket trong **362 ms**, không nhận thêm payload. CI trên `main` đạt **396 backend và 82 frontend**. Người dùng xác nhận đóng task sau demo; ước lượng STEP-3 chưa chốt, được chuyển sang rà từng task. STEP-2 hoàn tất, ưu tiên tiếp S3-01.
