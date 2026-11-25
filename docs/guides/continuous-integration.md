@@ -12,9 +12,10 @@ Workflow chạy cho mọi pull request, khi push vào `main` và khi gọi thủ
 |---|---|---|
 | `Backend` | Cài SDK .NET 10, khởi tạo PostgreSQL 18 riêng, restore và build toàn `SCDC.slnx` ở Release, chạy toàn bộ test backend | `backend-test-results`: báo cáo TRX, kể cả khi test thất bại |
 | `Frontend` | Cài Node.js 24, `npm ci`, chạy test Node và build Vite | `web-client-build`: thư mục `dist` sau khi test và build đạt |
-| `CI` | Chờ hai job trên; chỉ thành công khi cả hai thành công | Trạng thái check dùng cho quy tắc merge |
+| `Identity database transfer` | Hai PostgreSQL instance thử riêng; 14 ca dữ liệu/DDL/sequence, quyền, guard, restore ngắt, chạy lại và phục hồi | `identity-transfer-summary`: chỉ kết quả đã lọc |
+| `CI` | Chờ cả ba job trên; chỉ thành công khi mọi job thành công | Trạng thái check dùng cho quy tắc merge |
 
-Backend và frontend chạy độc lập. `CI` vẫn chạy khi một job thất bại, bị bỏ qua hoặc hủy, rồi trả lỗi nếu kết quả của một trong hai khác `success`. Các bước build và test không bỏ qua mã thoát lỗi.
+Ba job chạy độc lập. `CI` vẫn chạy khi một job thất bại, bị bỏ qua hoặc hủy, rồi trả lỗi nếu kết quả của một trong ba khác `success`. Các bước build và test không bỏ qua mã thoát lỗi.
 
 SDK được giới hạn trong major 10 bởi [global.json](../../global.json). NuGet restore theo các project; npm dùng lockfile và cache tải package. Workflow chỉ cần quyền đọc mã nguồn và không dùng secrets của ứng dụng.
 

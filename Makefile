@@ -11,6 +11,8 @@ SCDC_REDIS_SECRET_DIR ?= $(HOME)/.local/share/scdc/redis-secrets
 export SCDC_REDIS_SECRET_DIR
 SCDC_RPC_SECRET_DIR ?= $(HOME)/.local/share/scdc/rpc-secrets
 export SCDC_RPC_SECRET_DIR
+SCDC_IDENTITY_DB_SECRET_DIR ?= $(HOME)/.local/share/scdc/identity-database-secrets
+export SCDC_IDENTITY_DB_SECRET_DIR
 
 export SCDC_ENV_FILE = $(ENV_FILE)
 export SCDC_DOCS_FROM = $(FROM)
@@ -41,6 +43,7 @@ help:
 	  '  Hướng dẫn: docs/guides/development.md'
 
 init:
+	$(PYTHON) scripts/init_identity_database_secrets.py "$$SCDC_IDENTITY_DB_SECRET_DIR" --label-for-containers
 	$(PYTHON) scripts/init_rpc_certificates.py "$$SCDC_RPC_SECRET_DIR" --label-for-containers
 	$(PYTHON) scripts/init_redis_secrets.py "$$SCDC_REDIS_SECRET_DIR" --label-for-containers
 	@set -eu; \
@@ -79,6 +82,7 @@ check:
 	      "$$scdc_url"; \
 	  done
 	$(COMPOSE_COMMAND) exec -T postgres pg_isready -U scdc -d scdc_chat
+	$(COMPOSE_COMMAND) exec -T identity-postgres pg_isready -U scdc_identity_admin -d scdc_identity
 	$(COMPOSE_COMMAND) exec -T web-client nginx -t
 
 status:

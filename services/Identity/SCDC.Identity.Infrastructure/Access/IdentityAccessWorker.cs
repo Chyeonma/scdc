@@ -16,7 +16,7 @@ internal sealed class IdentityAccessWorker(SessionPublisher publisher, IdentityR
             try
             {
                 await publisher.SynchronizeAsync(stoppingToken);
-                await using var connection = new NpgsqlConnection(configuration.GetConnectionString("Identity"));
+                await using var connection = new NpgsqlConnection(ModuleDatabaseConnection.Get(configuration, "Identity"));
                 await connection.OpenAsync(stoppingToken);
                 var pending = new List<Guid>();
                 await using (var query = new NpgsqlCommand("""

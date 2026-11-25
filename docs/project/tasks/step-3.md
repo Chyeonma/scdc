@@ -4,7 +4,7 @@ Thẻ Trello của [STEP-3](../planning.md#step-3). Cách đồng bộ xem [READ
 
 Trạng thái: nháp
 
-Bản khung, chưa ước lượng chi tiết. [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12 ngày 2026-11-25](../../records/verification/environment/s2-12-2026-11-25.md). Có thể bắt đầu checklist S3-01; rà kết quả hợp đồng, đầu ra và công sức của từng task trước khi công bố. Nhánh Media vẫn cần S1-07.
+Bản khung, chưa ước lượng chi tiết. [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12 ngày 2026-11-25](../../records/verification/environment/s2-12-2026-11-25.md). S3-01/S3-02/S3-03 đã có kết quả và kiểm chứng dev, chờ review; rà đầu ra và công sức các task còn lại trước khi công bố. Nhánh Media vẫn cần S1-07.
 
 Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Media làm song song từ đầu bước. Mỗi lần tách làm theo checklist S3-01.
 
@@ -14,7 +14,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: checklist trong [hướng dẫn vận hành](../../guides/operations.md): dựng project theo cây v1 (D40, D43); chuyển code; thay phần cài đặt hợp đồng trong process bằng client gọi qua mạng; database riêng và script chuyển dữ liệu offline có đối chiếu số dòng, ID, version (D48–D52); định tuyến gateway; chạy lại test backend và Playwright; đo thời gian thu hồi; thử tắt service; đường lui trước khi mở ghi.
 - Xong khi: 3a dùng checklist này; sau 3a cập nhật lại theo kinh nghiệm thực tế.
 - Phụ thuộc: STEP-2 xong.
-- Tiến độ: **Đã soạn checklist và đối chiếu chuẩn bị Identity — 2026-11-25**. [Runbook EX-00 đến EX-08](../../guides/operations.md#service-extraction), [mẫu hồ sơ](../../records/templates/service-extraction.md) và [bản áp dụng Identity](../../records/verification/architecture/s3-01-2026-11-25.md) bao phủ host, RPC/mTLS hai chiều, dữ liệu/khóa, gateway, kiểm thử và phục hồi. S3-02/S3-03 dùng bộ này khi triển khai; mốc sử dụng thực tế và cập nhật sau 3a vẫn chờ, chưa ghi S3-01 đã nghiệm thu toàn bộ.
+- Tiến độ: **Đã áp dụng thực tế và bổ sung sau lần tách Identity S3-02/S3-03 — 2026-11-25; chờ review**. [Runbook EX-00 đến EX-08](../../guides/operations.md#service-extraction), [mẫu hồ sơ](../../records/templates/service-extraction.md) và [bản áp dụng Identity](../../records/verification/architecture/s3-01-2026-11-25.md) có bằng chứng host/RPC, dữ liệu/khóa, gateway, browser và hai nhánh phục hồi. Bổ sung catalog legacy, startup gate và điểm publisher đổi generation; S3-04/email vẫn riêng.
 
 ## S3-02 · 3a: Identity thành service riêng
 - Nhãn: refactor, tech
@@ -22,7 +22,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: host Identity riêng (API và worker); ký access token bằng khóa bất đối xứng, service khác kiểm tra bằng khóa công khai qua cấu hình (D28, D29); tiếp tục công bố phiên vào Redis (D30).
 - Xong khi: đăng nhập, phiên, thu hồi chạy qua gateway; module còn lại trong monolith dùng Identity qua mạng; toàn bộ test qua.
 - Phụ thuộc: S3-01.
-- Tiến độ: **Đã triển khai và kiểm chứng trên stack thử riêng — 2026-11-25**; nhánh `tech/s3-02-identity-service`. Bốn project Identity, gRPC/mTLS hai chiều, consumer JWT/Redis và gateway đã chạy thật. Backend 408/408, frontend 82/82, gateway/browser 14/14 đạt; cutoff WebSocket 389 ms. [Hồ sơ S3-02](../../records/verification/architecture/s3-02-2026-11-25.md). Chuyển dữ liệu/dev và hoàn tất 3a tiếp ở S3-03; chờ review theo quy trình.
+- Tiến độ: **Đã triển khai và chạy dev — 2026-11-25; chờ review**; nhánh `tech/s3-02-identity-service`, [PR #45](https://github.com/Chyeonma/scdc/pull/45). Bốn project Identity, gRPC/mTLS hai chiều, consumer JWT/Redis và gateway đã chạy thật. Backend 408/408, frontend 82/82, gateway/browser 14/14 đạt; cutoff suite 389 ms. [Hồ sơ S3-02](../../records/verification/architecture/s3-02-2026-11-25.md); chuyển dữ liệu và kiểm chứng dev ở [S3-03](../../records/verification/architecture/s3-03-2026-11-25.md), cutoff dev 237 ms.
 
 ## S3-03 · 3a: Database Identity riêng và chuyển dữ liệu
 - Nhãn: refactor
@@ -30,6 +30,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: PostgreSQL riêng cho Identity (D03); script chuyển schema `identity` từ database MVP; chạy thử trên bản sao dữ liệu.
 - Xong khi: đối chiếu số dòng, ID, security stamp khớp; người dùng cũ đăng nhập được.
 - Phụ thuộc: S3-02.
+- Tiến độ: **Đã chuyển dev và kiểm chứng — 2026-11-25; chờ review**; nhánh `refactor/s3-03-identity-database`, [PR #46](https://github.com/Chyeonma/scdc/pull/46) nối tiếp S3-02. Chuyển đủ 22 bảng/459 dòng Identity, source giữ nguyên và runtime `NOLOGIN`; backup mới đã phục hồi/đối chiếu. Bộ chuyển dữ liệu 14/14, gateway hai instance 14/14; user/JWT/refresh/cursor cũ, browser, trace/restart đạt, cutoff dev 237 ms. [Hồ sơ S3-03](../../records/verification/architecture/s3-03-2026-11-25.md).
 
 ## S3-04 · 3a: Worker gửi email chạy cùng Identity
 - Nhãn: tech
