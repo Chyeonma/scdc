@@ -105,6 +105,8 @@ export default defineConfig({
   retries: 0,
   reporter,
   use: { browserName: 'chromium', channel: process.env.SCDC_E2E_BROWSER_CHANNEL,
+    connectOptions: process.env.SCDC_BROWSER_WS_ENDPOINT
+      ? { wsEndpoint: process.env.SCDC_BROWSER_WS_ENDPOINT } : undefined,
     headless: true, screenshot: 'off', video: 'off' },
   projects: PROJECTS.map(({ evidence, ...project }) => project),
 });

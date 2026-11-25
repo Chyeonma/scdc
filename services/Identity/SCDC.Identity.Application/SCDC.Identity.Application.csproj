@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SCDC.Identity.Domain/SCDC.Identity.Domain.csproj" />
+    <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
+  </ItemGroup>
+</Project>

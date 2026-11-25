@@ -241,7 +241,7 @@ Tham khảo [gRPC services](https://learn.microsoft.com/en-us/aspnet/core/grpc/b
 **Lý do:** chỉ Identity ký được token. **Đổi lại:** phải phân phối khóa công khai và thay khóa. Phương án dùng chung một khóa bí mật cho mọi service không được chọn. Tham khảo [JWT bearer](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0), [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518.html#section-3).
 
 - Khóa riêng không bao giờ gửi cho service khác hay WebClient.
-- Từ S1-06, [TokenService](../../services/Modules/Identity/Infrastructure/Security/TokenService.cs) ký **RS256**, khóa sinh mặc định RSA 3072 bit. Bộ xác minh chỉ cho phép RS256, kiểm tra issuer, audience, thời hạn và các claim `sub`, `sid`, `sst`. HS256 cũ không còn được chấp nhận; refresh token còn hiệu lực có thể cấp access token mới.
+- Từ S1-06, [TokenService](../../services/Identity/SCDC.Identity.Infrastructure/Authentication/TokenService.cs) ký **RS256**, khóa sinh mặc định RSA 3072 bit. Bộ xác minh chỉ cho phép RS256, kiểm tra issuer, audience, thời hạn và các claim `sub`, `sid`, `sst`. HS256 cũ không còn được chấp nhận; refresh token còn hiệu lực có thể cấp access token mới.
 - Chữ ký hợp lệ chưa chứng minh phiên, tài khoản hay quyền còn hiệu lực; phiên kiểm tra qua Redis ([D30](access-revocation.md#v1-session-validation)), quyền ghi theo [D05](access-revocation.md#v1-authorization-coordination).
 - D20 xác thực service; D28 xác thực token người dùng. Hai việc khác nhau.
 

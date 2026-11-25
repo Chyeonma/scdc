@@ -214,7 +214,7 @@ Kết quả phải ghi kèm commit và build.
 
 ACC-GAP-02, 03, 05 và việc chọn nhà cung cấp email, domain, kho khóa xem [liên kết email](email-links.md#status).
 
-Code: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthScreen](../../../clients/WebClient/src/components/AuthScreen.jsx), [IdentityV1FlowTests](../../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs).
+Code: [RegistrationService](../../../services/Identity/SCDC.Identity.Infrastructure/Accounts/RegistrationService.cs), [AuthScreen](../../../clients/WebClient/src/components/AuthScreen.jsx), [IdentityV1FlowTests](../../../tests/SCDC.Api.Tests/Identity/IdentityV1FlowTests.cs).
 
 ---
 

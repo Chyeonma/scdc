@@ -39,7 +39,7 @@ Mỗi lần thao tác cần: người thực hiện đã được cấp quyền,
 | [Dockerfile API](../../services/SCDC.Api/Dockerfile), [Dockerfile Web](../../clients/WebClient/Dockerfile), [service mẫu](../../services/Sample/SCDC.Sample.Api/Dockerfile) | Service mẫu build riêng được; Dockerfile monolith chưa là Dockerfile cho từng service nghiệp vụ |
 | [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs) và `make check` | Có probe access readiness cho Redis; liveness hay readiness 200 không thay kiểm tra dữ liệu, worker và hành trình |
 | [Nginx](../../clients/WebClient/nginx.conf) phục vụ SPA, API, hub và service mẫu | Chưa tách route tới bốn service; phải giữ đường dẫn, query, mã lỗi, transport và lọc token trong log |
-| [IdentityModule](../../services/Modules/Identity/IdentityModule.cs) và [Shared.Core](../../services/Shared/SCDC.Shared.Core) | RS256, key ring và phiên Redis đã có; phải tách bootstrap xác thực khỏi module nghiệp vụ khi chuyển host |
+| [IdentityModule](../../services/Identity/SCDC.Identity.Infrastructure/IdentityModule.cs) và [Shared.Core](../../services/Shared/SCDC.Shared.Core) | RS256, key ring và phiên Redis đã có; phải tách bootstrap xác thực khỏi module nghiệp vụ khi chuyển host |
 | Ba login database và [module-roles.sql](../../database/postgres/module-roles.sql) | Quyền chéo đã thu hồi ở S2-11; runner hiện hữu chưa phải công cụ chuyển dữ liệu giữa các database STEP-3 |
 | [Demo STEP-2](../records/verification/environment/s2-12-2026-11-25.md), [nâng dev](../records/verification/environment/dev-sync-2026-11-25.md) | Có bằng chứng dev và dữ liệu cũ; tin phòng, Media và tích hợp worker email thuộc các task tiếp theo |
 
@@ -124,7 +124,7 @@ Checklist phục vụ phát triển và demo theo các quyết định hiện h�
 | Dữ liệu và quan sát | So sánh EX-03 khi chưa mở writer; sau mở ghi đối chiếu thêm các thao tác thử. Trace đi qua các host, backlog tiếp tục xử lý, log không có secret |
 | Độc lập | Dừng/khởi động lại service không buộc restart Nginx hay service khác. Những luồng phụ thuộc service bị dừng có thể từ chối đúng hợp đồng; không yêu cầu thao tác cần permit tiếp tục thành công khi authority lỗi |
 
-Các lệnh kiểm tra nền hiện có: `make docs-check`, `dotnet build SCDC.slnx --configuration Release`, `dotnet test SCDC.slnx --configuration Release`, `npm --prefix clients/WebClient test`, `python3 scripts/test_gateway.py --engine podman`. Bộ backend/browser phải dùng database và cấu hình thử riêng theo [hướng dẫn phát triển](development.md#frontend-tests), không dùng connection string dev đang có dữ liệu. Gateway runner hiện dựng monolith, phải cập nhật fixture cho host được tách trước khi dùng làm bằng chứng STEP-3. Đây là danh mục lệnh, không phải kết quả đã chạy của lần tách.
+Các lệnh kiểm tra nền hiện có: `make docs-check`, `dotnet build SCDC.slnx --configuration Release`, `dotnet test SCDC.slnx --configuration Release`, `npm --prefix clients/WebClient test`, `python3 scripts/test_gateway.py --engine podman`. Bộ backend/browser phải dùng database và cấu hình thử riêng theo [hướng dẫn phát triển](development.md#frontend-tests), không dùng connection string dev đang có dữ liệu. Gateway runner từ S3-02 dựng hai host Identity và Community/Messaging; `IdentityNetworkTests` kiểm chứng RPC/mTLS thật, còn fixture backend cũ chỉ dùng cho hồi quy. Đây là danh mục lệnh, không phải kết quả đã chạy của lần tách.
 
 <a id="service-extraction-rollback"></a>
 

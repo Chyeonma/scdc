@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SCDC.Api.Controllers.Identity;
+namespace SCDC.Identity.Api.Controllers.Identity;
 
 public sealed record RegisterRequest(
     [param: Required]

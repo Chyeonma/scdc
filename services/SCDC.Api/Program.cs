@@ -4,22 +4,22 @@ using Microsoft.OpenApi;
 using SCDC.Api.Errors;
 using SCDC.Api.OpenApi;
 using SCDC.Modules.Community;
-using SCDC.Modules.Identity;
+using SCDC.Api.Authentication;
+using SCDC.Api.InternalRpc;
+using SCDC.BuildingBlocks.Infrastructure.Transport;
 using SCDC.Modules.Messaging;
 using SCDC.Modules.Messaging.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
-if (args.Contains("--initialize-jwt-keys", StringComparer.Ordinal))
-{
-    IdentityModule.InitializeSigningKeys(builder.Configuration);
-    return;
-}
 builder.AddScdcTelemetry("scdc-monolith");
 // Query credentials in WebSocket handshakes must never reach request-start diagnostics.
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddIdentityModule(builder.Configuration);
+builder.Services.AddConsumerAuthentication(builder.Configuration);
+builder.Services.AddRemoteIdentity(builder.Configuration);
+builder.Services.AddGrpc(options => { options.MaxReceiveMessageSize = 128 * 1024; options.Interceptors.Add<RpcPeerGuard>(); });
+RpcTransport.ConfigureServer(builder);
 builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.AddMessagingModule(builder.Configuration);
 
@@ -68,12 +68,6 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 app.UseScdcRequestTelemetry();
 
-if (args.Contains("--initialize-user-search-keys", StringComparer.Ordinal))
-{
-    await app.Services.InitializeUserSearchKeysAsync();
-    return;
-}
-
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCors();
@@ -95,6 +89,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapGrpcService<CommunityIdentityFenceEndpoint>();
+app.MapGrpcService<MessagingIdentityFenceEndpoint>();
 app.MapHub<ChatHub>("/hubs/chat", options => options.CloseOnAuthenticationExpiration = true);
 
 await app.RunAsync();

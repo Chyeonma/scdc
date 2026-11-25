@@ -82,7 +82,7 @@ Email chỉ có trong `/users/me` (hồ sơ riêng), không có trong kết qu�
 
 Có thông tin người dùng không có nghĩa là có quyền truy cập. Thông tin công khai không bao giờ chứa email, mật khẩu, security stamp hay thông tin phiên.
 
-Code đối chiếu: [RegistrationService](../../../services/Modules/Identity/Infrastructure/Services/RegistrationService.cs), [AuthenticationService](../../../services/Modules/Identity/Infrastructure/Services/AuthenticationService.cs), [UserAccountService](../../../services/Modules/Identity/Infrastructure/Services/UserAccountService.cs), [IdentityModule](../../../services/Modules/Identity/IdentityModule.cs), [IdentityDbContext](../../../services/Modules/Identity/Infrastructure/Persistence/IdentityDbContext.cs), [IUserDirectory](../../../services/SCDC.Contracts/Identity/IUserDirectory.cs).
+Code đối chiếu: [RegistrationService](../../../services/Identity/SCDC.Identity.Infrastructure/Accounts/RegistrationService.cs), [AuthenticationService](../../../services/Identity/SCDC.Identity.Infrastructure/Authentication/AuthenticationService.cs), [UserAccountService](../../../services/Identity/SCDC.Identity.Infrastructure/Accounts/UserAccountService.cs), [IdentityModule](../../../services/Identity/SCDC.Identity.Infrastructure/IdentityModule.cs), [IdentityDbContext](../../../services/Identity/SCDC.Identity.Infrastructure/Accounts/IdentityDbContext.cs), [IUserDirectory](../../../services/SCDC.Contracts/Identity/IUserDirectory.cs).
 
 <a id="normalization-hồ-sơ-và-chuẩn-hóa-khi-bàn-giao"></a>
 

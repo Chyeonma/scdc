@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.15" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -32,6 +33,10 @@
     <ProjectReference Include="../../tools/SCDC.DbMigrator/SCDC.DbMigrator.csproj" />
     <ProjectReference Include="../../services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
     <ProjectReference Include="../../services/Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj" Aliases="ScdcSample" />
+    <ProjectReference Include="../../services/Identity/SCDC.Identity.Api/SCDC.Identity.Api.csproj" Aliases="IdentityApi" />
+    <ProjectReference Include="../../services/Identity/SCDC.Identity.Application/SCDC.Identity.Application.csproj" />
+    <ProjectReference Include="../../services/Identity/SCDC.Identity.Domain/SCDC.Identity.Domain.csproj" />
+    <ProjectReference Include="../../services/Identity/SCDC.Identity.Infrastructure/SCDC.Identity.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 
 Quy tắc kiểm tra nội dung tin nhắn: độ dài tối đa, cách đếm ký tự, tin trống, ký tự đặc biệt. Áp dụng cho DM và tin phòng, cả khi gửi mới lẫn khi sửa tin.
 
-**Trạng thái:** quy tắc đã chốt. DM trong nền `900e226` đã kiểm tra nội dung ở cả [backend](../../../services/SCDC.BuildingBlocks/Application/Text/UnicodeTextPolicy.cs) và [client](../../../clients/WebClient/src/dmTextPolicy.js); bằng chứng xem [P2-T01](../../records/verification/messaging/DM-P2-T01.md) và [DM-MVP](../../records/verification/messaging/DM-MVP.md). Tin phòng chưa có, khi làm phải dùng cùng quy tắc.
+**Trạng thái:** quy tắc đã chốt. DM trong nền `900e226` đã kiểm tra nội dung ở cả [backend](../../../services/Shared/SCDC.Shared.Core/Application/Text/UnicodeTextPolicy.cs) và [client](../../../clients/WebClient/src/dmTextPolicy.js); bằng chứng xem [P2-T01](../../records/verification/messaging/DM-P2-T01.md) và [DM-MVP](../../records/verification/messaging/DM-MVP.md). Tin phòng chưa có, khi làm phải dùng cùng quy tắc.
 
 Trạng thái gửi, gửi lại và bộ nhớ đệm phía client xem [vòng đời tin](message-lifecycle.md#client-state). Quyền gửi xem [DM](direct-messaging.md#permissions) và [tin phòng](channel-messaging.md).
 

@@ -5,7 +5,6 @@
     <Project Path="services/SCDC.Contracts/SCDC.Contracts.csproj" />
   </Folder>
   <Folder Name="/services/Modules/">
-    <Project Path="services/Modules/Identity/SCDC.Identity.csproj" />
     <Project Path="services/Modules/Community/SCDC.Community.csproj" />
     <Project Path="services/Modules/Messaging/SCDC.Messaging.csproj" />
   </Folder>
@@ -23,5 +22,18 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/SCDC.DbMigrator/SCDC.DbMigrator.csproj" />
+  </Folder>
+  <Folder Name="/services/Identity/">
+    <Project Path="services/Identity/SCDC.Identity.Api/SCDC.Identity.Api.csproj" />
+    <Project Path="services/Identity/SCDC.Identity.Application/SCDC.Identity.Application.csproj" />
+    <Project Path="services/Identity/SCDC.Identity.Domain/SCDC.Identity.Domain.csproj" />
+    <Project Path="services/Identity/SCDC.Identity.Infrastructure/SCDC.Identity.Infrastructure.csproj" />
+    <Project Path="services/Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+  </Folder>
+  <Folder Name="/services/Community/">
+    <Project Path="services/Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
+  </Folder>
+  <Folder Name="/services/Messaging/">
+    <Project Path="services/Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj" />
   </Folder>
 </Solution>

@@ -5,7 +5,7 @@ using SCDC.Modules.Identity.Application;
 using SCDC.Contracts.Identity;
 using SCDC.BuildingBlocks.Application.Results;
 
-namespace SCDC.Api.Controllers.Identity;
+namespace SCDC.Identity.Api.Controllers.Identity;
 
 [Authorize]
 [Route("api/v1/users")]

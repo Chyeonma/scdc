@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using SCDC.BuildingBlocks.Infrastructure.Authentication;
+using SCDC.Modules.Identity.Infrastructure.Authentication;
 using SCDC.Contracts.Identity;
 using StackExchange.Redis;
 

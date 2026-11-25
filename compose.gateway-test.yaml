@@ -1,7 +1,6 @@
-# Dedicated gateway acceptance stack (S1-02/S1-03). The runner supplies a unique project name.
-# Only Nginx is published; test clients cannot call the API directly from the host.
+# Dedicated gateway acceptance stack. Only Nginx is published.
 name: scdc-gateway-test
-x-jwt-trust: &jwt-trust
+x-jwt-trust:
   Authentication__Jwt__Issuer: SCDC
   Authentication__Jwt__Audience: SCDC.WebClient
   Authentication__Jwt__PublicKeyDirectory: /app/auth-public
@@ -9,23 +8,37 @@ x-jwt-trust: &jwt-trust
 services:
   auth-redis:
     image: docker.io/library/redis:8.2.11-alpine
-    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    command:
+    - redis-server
+    - --maxmemory
+    - 128mb
+    - --maxmemory-policy
+    - noeviction
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+      - CMD
+      - redis-cli
+      - ping
       interval: 2s
       timeout: 2s
       retries: 30
   identity-keygen:
     build:
       context: .
-      dockerfile: services/SCDC.Api/Dockerfile
-    entrypoint: ["dotnet", "SCDC.Api.dll", "--initialize-jwt-keys"]
+      dockerfile: services/Identity/SCDC.Identity.Api/Dockerfile
+    entrypoint:
+    - dotnet
+    - SCDC.Identity.Api.dll
+    - --initialize-jwt-keys
     environment:
-      <<: *jwt-trust
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
     volumes:
-      - gateway-private-keys:/app/auth-private
-      - gateway-public-keys:/app/auth-public
+    - gateway-private-keys:/app/auth-private
+    - gateway-public-keys:/app/auth-public
   postgres:
     image: docker.io/library/postgres:18-alpine
     environment:
@@ -36,35 +49,42 @@ services:
       POSTGRES_USER: scdc_gateway_test
       POSTGRES_PASSWORD: gateway-test-only
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scdc_gateway_test -d scdc_gateway_test"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U scdc_gateway_test -d scdc_gateway_test
       interval: 2s
       timeout: 3s
       retries: 30
     volumes:
-      - gateway-postgres-data:/var/lib/postgresql
-      - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
-      - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
-      - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
-
+    - gateway-postgres-data:/var/lib/postgresql
+    - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+    - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
+    - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
   chat-service:
     build:
       context: .
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
-      <<: *jwt-trust
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
       ASPNETCORE_ENVIRONMENT: Development
       Authentication__Sessions__Endpoint: auth-redis:6379
-      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
       ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
       ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
-      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
-      Modules__Identity__ExposeDevelopmentTokens: "true"
-      Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest
       Modules__Community__Operations__ActiveKeyId: gateway-test
       Modules__Community__Operations__Keys__gateway-test: Z2F0ZXdheS10ZXN0LW9ubHkta2V5LWF0LWxlYXN0LTMyLWJ5dGVz
       Modules__Community__KeyRingPath: /app/community-keys
       Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+      InternalRpc__CaPath: /run/secrets/rpc_ca
+      InternalRpc__CertificatePath: /run/secrets/rpc_monolith_certificate
+      InternalRpc__PrivateKeyPath: /run/secrets/rpc_monolith_private_key
+      InternalRpc__AllowedPeers__0: identity-service
+      InternalRpc__Identity__Endpoint: https://identity-service:8443
+      Modules__Messaging__CursorKeyRingPath: /app/messaging-cursor-keys
+      Modules__Messaging__CursorApplicationName: SCDC.GatewayTest
     depends_on:
       identity-keygen:
         condition: service_completed_successfully
@@ -72,41 +92,111 @@ services:
         condition: service_healthy
       auth-redis:
         condition: service_healthy
+      identity-service:
+        condition: service_started
+      messaging-cursor-keygen:
+        condition: service_completed_successfully
     volumes:
-      - gateway-identity-keys:/app/.dm-keys/user-search
-      - gateway-community-keys:/app/community-keys
-      - gateway-messaging-keys:/app/messaging-keys
-      - gateway-private-keys:/app/auth-private:ro
-      - gateway-public-keys:/app/auth-public:ro
-
+    - gateway-community-keys:/app/community-keys
+    - gateway-messaging-keys:/app/messaging-keys
+    - gateway-public-keys:/app/auth-public:ro
+    - gateway-messaging-cursor-keys:/app/messaging-cursor-keys
+    secrets:
+    - rpc_ca
+    - rpc_monolith_certificate
+    - rpc_monolith_private_key
   sample-service:
     build:
-      context: ./services
-      dockerfile: Sample/SCDC.Sample.Api/Dockerfile
+      context: .
+      dockerfile: services/Sample/SCDC.Sample.Api/Dockerfile
     environment:
-      <<: *jwt-trust
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
     volumes:
-      - gateway-public-keys:/app/auth-public:ro
+    - gateway-public-keys:/app/auth-public:ro
     depends_on:
       identity-keygen:
         condition: service_completed_successfully
-
   web-client:
     build:
       context: ./clients/WebClient
       dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:${GATEWAY_WEB_PORT:-15310}:80"
+    - 127.0.0.1:${GATEWAY_WEB_PORT:-15310}:80
     depends_on:
       chat-service:
         condition: service_started
       sample-service:
         condition: service_started
-
+      identity-service:
+        condition: service_started
+  identity-service:
+    build:
+      context: .
+      dockerfile: services/Identity/SCDC.Identity.Api/Dockerfile
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      ASPNETCORE_ENVIRONMENT: Development
+      Authentication__Sessions__Endpoint: auth-redis:6379
+      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Modules__Identity__ExposeDevelopmentTokens: 'true'
+      Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest
+      InternalRpc__CaPath: /run/secrets/rpc_ca
+      InternalRpc__CertificatePath: /run/secrets/rpc_identity_certificate
+      InternalRpc__PrivateKeyPath: /run/secrets/rpc_identity_private_key
+      InternalRpc__AllowedPeers__0: chat-service
+      InternalRpc__Community__Endpoint: https://chat-service:8443
+      InternalRpc__Messaging__Endpoint: https://chat-service:8443
+      InternalRpc__PeerOwners__chat-service__0: Community
+      InternalRpc__PeerOwners__chat-service__1: Messaging
+    depends_on:
+      identity-keygen:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    secrets:
+    - rpc_ca
+    - rpc_identity_certificate
+    - rpc_identity_private_key
+    volumes:
+    - gateway-identity-keys:/app/.dm-keys/user-search
+    - gateway-private-keys:/app/auth-private:ro
+    - gateway-public-keys:/app/auth-public:ro
+  messaging-cursor-keygen:
+    build:
+      context: .
+      dockerfile: services/SCDC.Api/Dockerfile
+    entrypoint:
+    - /bin/sh
+    - -ec
+    - umask 077; if ! find /app/messaging-cursor-keys -name 'key-*.xml' | grep -q .; then cp -a /app/legacy-cursors/. /app/messaging-cursor-keys/; fi
+    volumes:
+    - gateway-identity-keys:/app/legacy-cursors:ro
+    - gateway-messaging-cursor-keys:/app/messaging-cursor-keys
 volumes:
-  gateway-postgres-data:
-  gateway-identity-keys:
-  gateway-community-keys:
-  gateway-messaging-keys:
-  gateway-private-keys:
-  gateway-public-keys:
+  gateway-postgres-data: null
+  gateway-identity-keys: null
+  gateway-community-keys: null
+  gateway-messaging-keys: null
+  gateway-private-keys: null
+  gateway-public-keys: null
+  gateway-messaging-cursor-keys: null
+secrets:
+  rpc_ca:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/ca.crt
+  rpc_identity_certificate:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/identity-service.crt
+  rpc_identity_private_key:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/identity-service.key
+  rpc_monolith_certificate:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/chat-service.crt
+  rpc_monolith_private_key:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/chat-service.key

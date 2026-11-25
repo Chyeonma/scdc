@@ -34,7 +34,8 @@ def anchors(path):
 def main():
     files = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md")),
              ROOT / "database/postgres/README.md",
-             *sorted(ROOT.glob("services/Modules/*/README.md"))]
+             *sorted(ROOT.glob("services/Modules/*/README.md")),
+             *sorted(ROOT.glob("services/*/README.md"))]
     files = [path for path in files if path.exists() and
              (not path.is_relative_to(ARCHIVE) or path == ARCHIVE / "README.md")]
     errors = []

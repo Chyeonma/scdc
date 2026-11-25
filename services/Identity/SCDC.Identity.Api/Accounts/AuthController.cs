@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SCDC.Modules.Identity.Application;
 using SCDC.Contracts.Identity;
 
-namespace SCDC.Api.Controllers.Identity;
+namespace SCDC.Identity.Api.Controllers.Identity;
 
 [Route("api/v1/auth")]
 public sealed class AuthController(
