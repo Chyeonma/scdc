@@ -26,6 +26,10 @@ Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất](../../records/verification/e
 
 Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. Theo yêu cầu ngày 2026-11-25, cả 12 thẻ STEP-3 và 15 thẻ STEP-4 được công bố để đồng bộ lên Trello. S3-01 đến S3-03 có kết quả hoàn tất trong nguồn; các task còn lại giữ nguyên phụ thuộc và chưa tự chuyển sang đang làm. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng; lần công bố này dùng nguyên hai file hiện tại, không áp dụng cách tách file trong PR cũ.
 
+### Chuẩn bị tách Community
+
+[Tổng quan tách Community ngày 2026-11-25](../../records/planning/community-service-extraction-2026-11-25.md) tập hợp phạm vi S3-10, phụ thuộc S3-07/S3-08/S3-09, các hợp đồng provision/fence còn cần đưa qua mạng, dữ liệu và tiêu chí nghiệm thu. Có thể chuẩn bị Community song song; phương án cho Community nhận lưu lượng trước host Messaging riêng cần chốt lại phụ thuộc khi triển khai. Task và trạng thái hoàn tất hiện hành giữ theo các file nguồn.
+
 ## Nhánh tính năng chưa tích hợp
 
 | Nhánh | Bằng chứng đang có | Phần còn lại |
