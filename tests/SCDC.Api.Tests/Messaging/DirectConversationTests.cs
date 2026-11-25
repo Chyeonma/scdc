@@ -118,6 +118,7 @@ public sealed class DirectConversationTests(DirectFixture f) : IClassFixture<Dir
         using var app = f.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
             services.AddDbContext<MessagingDbContext>(options => options.AddInterceptors(race))));
         using var client = app.CreateClient();
+        await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/direct-conversations")
         { Content = JsonContent.Create(new { peerUserId = b.Id }) };
         request.Headers.Authorization = new("Bearer", a.AccessToken);

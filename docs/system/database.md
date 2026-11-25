@@ -2,7 +2,7 @@
 
 Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước chung, cách chạy migration, và các quyết định cho v1 (tách database theo service, công cụ migration, chuyển dữ liệu từ MVP).
 
-**Trạng thái:** sau S2-03/04/05, monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; schema đích không còn FK hoặc view đọc chéo. Transaction/quyền chéo tạm vẫn theo [S2-03](#s2-03-implementation). Tách database vật lý thuộc STEP-3.
+**Trạng thái:** monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; schema đích không còn FK hoặc view đọc chéo. S2-07 đến S2-10 đã bỏ transaction chung; S2-11 thu hồi quyền chéo tạm, gồm quyền cột và hàm. [Hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kiểm chứng; database dev hiện hữu vẫn ở S2-06. Tách database vật lý thuộc STEP-3.
 
 ## MVP hiện tại
 
@@ -26,7 +26,7 @@ erDiagram
     USER ||--o{ MESSAGE : authors
 ```
 
-Sơ đồ chỉ thể hiện quan hệ nghiệp vụ, không thay cho khóa ngoại trong SQL. DM có bảng người tham gia riêng. Đích STEP-2 là module chỉ đọc dữ liệu của mình; hiện còn quyền chéo tạm S2-03. Xem [ranh giới](architecture.md#boundaries).
+Sơ đồ chỉ thể hiện quan hệ nghiệp vụ, không thay cho khóa ngoại trong SQL. DM có bảng người tham gia riêng. Sau role script S2-11, mỗi module chỉ có quyền trên schema của mình. Xem [ranh giới](architecture.md#boundaries).
 
 ## Quy ước
 
@@ -241,7 +241,7 @@ Các tên dưới là hợp đồng hiện tại để đối chiếu. DTO và p
 | `IChannelAccessChecker` | Chỉ có khai báo, không implementation/DI/caller | Xóa placeholder ở S2-10; không coi check boolean cũ là quyền ghi tới commit. Hợp đồng permission mới theo S2-02 | S2-10 |
 | `IRealtimeAccessRevoker` | Chỉ có khai báo, không implementation/DI/caller | Xóa placeholder; hợp đồng thu hồi tương lai phải có phạm vi, epoch, operation ID, xác nhận sau commit và phục hồi theo D05–D07 | S2-10 |
 
-S2-10 đã gỡ bốn hợp đồng guard/lifecycle cũ, cặp session/transaction dùng chung và hai placeholder theo bảng này; giữ các lookup công khai, reader lịch sử và reader Redis. Các hợp đồng permit, fence và provision mới không chứa kiểu persistence. Chi tiết deadline và gọi lại tại [hợp đồng giữa module](backend.md#s2-10-contracts); luật ACL trong `CommunityChannelGuard` vẫn dùng nội bộ. Grant chéo tạm chưa thay đổi, thuộc S2-11.
+S2-10 đã gỡ bốn hợp đồng guard/lifecycle cũ, cặp session/transaction dùng chung và hai placeholder theo bảng này; giữ các lookup công khai, reader lịch sử và reader Redis. Các hợp đồng permit, fence và provision mới không chứa kiểu persistence. Chi tiết deadline và gọi lại tại [hợp đồng giữa module](backend.md#s2-10-contracts); luật ACL trong `CommunityChannelGuard` vẫn dùng nội bộ. Role script S2-11 thu hồi grant chéo tạm đã cấp trước đây và không cấp lại khi chạy lần sau.
 
 ### Outbox, inbox, audit và hạ tầng chung
 
@@ -270,7 +270,7 @@ Ba khóa cấu hình bắt buộc là `ConnectionStrings:Identity`, `ConnectionS
 
 [Migration S2-03](../../database/postgres/migrations/20261120_s2-03_module_databases.sql) chuyển dữ liệu theo bảng xử lý trên, kiểm tra đầy đủ outbox/inbox, chuyển nguyên relation audit/ledger và giữ checksum 001–004. Consumer inbox có dữ liệu phải có map owner đã review. Không dùng `CASCADE` để loại schema cũ; gặp đối tượng chưa xử lý thì rollback. Bootstrap mới bao gồm cùng migration; runner ghi/check checksum trong ledger từng owner, nhận kết nối quản trị `ConnectionStrings:Migration`.
 
-Quyền tạm của [module-roles.sql](../../database/postgres/module-roles.sql), cấp từ 2026-11-20 và gỡ tại S2-11 sau khi S2-07/08/09 thay đường cũ:
+Danh sách lịch sử quyền tạm cấp từ 2026-11-20, được role script S2-11 thu hồi sau khi S2-07/08/09 thay đường cũ:
 
 | Bên dùng | Đối tượng ngoài schema | Quyền và lý do |
 |---|---|---|
@@ -281,7 +281,7 @@ Quyền tạm của [module-roles.sql](../../database/postgres/module-roles.sql)
 | Community | `messaging.spaces` | INSERT để tạo channel; SELECT hai cột `id`, `space_type` và UPDATE `id` cho khóa của deferred DM trigger |
 | Community | `messaging.assert_direct_conversation_membership(uuid)` | EXECUTE do trigger kiểm tra trước khi commit channel space |
 
-Quyền UPDATE trên cột ID cũng cho phép thay ID; đây là quyền ghi chéo tạm thật và phải gỡ, không mô tả như chỉ đọc. PostgreSQL yêu cầu UPDATE trên ít nhất một cột cho các kiểu khóa dòng này ([tài liệu PostgreSQL 18](https://www.postgresql.org/docs/18/sql-select.html)). S2-04/S2-05 đã bỏ FK/view chéo; transaction và quyền tạm còn tới task tương ứng. Bảng fence hiện là hạ tầng SQL, chưa bật permit/fence RPC hoặc Redis.
+Quyền UPDATE trên cột ID cũng cho phép thay ID; đây là quyền ghi chéo tạm thật. S2-11 dùng REVOKE trên schema, bảng, sequence và hàm của owner khác, đồng thời thu hồi quyền PUBLIC trên schema nghiệp vụ. REVOKE cấp bảng cũng gỡ quyền cột theo [PostgreSQL 18](https://www.postgresql.org/docs/18/sql-revoke.html). Kiểm thử kiểm tra cả catalog ACL lẫn SELECT/UPDATE thực tế bằng ba login runtime. Permit/fence và Redis đã hoạt động trong process; transport gRPC thuộc STEP-3.
 
 Cách dựng mới, nâng cấp volume và chạy test: [hướng dẫn phát triển](../guides/development.md#s2-03-upgrade). Bằng chứng: [hồ sơ S2-03](../records/verification/architecture/s2-03-2026-11-20.md).
 

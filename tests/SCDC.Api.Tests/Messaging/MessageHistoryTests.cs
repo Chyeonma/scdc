@@ -77,9 +77,11 @@ public sealed class MessageHistoryTests(TextMessageFixture f) : IClassFixture<Te
         var space = await f.Open("search04"); for (var i = 0; i < 2; i++) await f.Send(space, f.D.Inner.Actor, Guid.NewGuid(), "restart");
         var cursor = Cursor(await Page(space, "?limit=1"))!;
         using var host = f.D.Inner.MakeFactory(); using var client = host.CreateClient();
+        await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/direct-conversations/{space}/messages" + Before(cursor, 1));
         request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
-        using var response = await client.SendAsync(request); Assert.Equal(200, (int)response.StatusCode);
+        using var response = await client.SendAsync(request);
+        Assert.True(response.StatusCode == System.Net.HttpStatusCode.OK, $"History restart returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         f.D.Inner.Clock.CursorFuture = true;
         try { await Page(space, Before(cursor, 1), expected: 400); } finally { f.D.Inner.Clock.CursorFuture = false; }
         var peer = f.D.Inner.Users["search04"];

@@ -2,7 +2,7 @@
 
 Khi một người bị đăng xuất, bị khóa tài khoản, rời server hay mất quyền xem phòng, hệ thống phải cắt mọi đường truy cập của họ: request HTTP mới, thao tác ghi, kết nối chat và media đang mở. Trang này mô tả yêu cầu thời gian, trách nhiệm của từng service, và thiết kế v1 khi các service tách rời nhau.
 
-**Trạng thái:** S2-07 bổ sung transaction riêng và coordinator policy Community ([hồ sơ](../records/verification/architecture/s2-07-2026-11-23.md)); S2-06 đã triển khai Redis, permit Identity và coordinator thu hồi trong process; kết quả kiểm chứng tại [hồ sơ S2-06](../records/verification/authentication/s2-06-2026-11-23.md). MVP đã có thu hồi cho DM (một ứng dụng duy nhất). Thiết kế triển khai S2-02 đã có [bên dưới](#s2-02-protocol); các adapter, migration và kiểm chứng runtime thuộc S2-03 đến S2-11.
+**Trạng thái:** S2-06 đến S2-10 đã triển khai Redis, permit/fence, coordinator Identity/Community và transaction riêng trong process. S2-11 thu hẹp quyền DB, đặt timeout trước advisory lock và chặn adapter reader treo bằng deadline tại watchdog; [hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kiểm chứng registry, lỗi và lệch đồng hồ. Thiết kế triển khai S2-02 nằm [bên dưới](#s2-02-protocol); transport giữa các service thuộc STEP-3.
 
 Cách tính quyền xem [quyền truy cập Community](../features/community/access-control.md); vòng đời phiên xem [tài khoản](../features/accounts/README.md).
 
@@ -235,7 +235,7 @@ S2-03 tạo `access_fences/fence_receipts` tại owner; S2-06 tạo `access_scop
 4. Khóa và kiểm tra dữ liệu nghiệp vụ, ghi dữ liệu, dấu chống trùng và outbox. Ngay trước commit kiểm tra lại hạn của mọi giấy phép và hạn phiên; giữ khóa fence tới commit.
 5. `Apply` tạo/khóa các dòng cùng thứ tự trên bằng `FOR UPDATE`, nâng floor bằng `max`, ghi receipt và commit rồi mới ACK. Writer đã giữ khóa xong trước ACK; writer tới sau mang epoch cũ bị chặn. Lệnh trùng trả receipt; cùng batch ID khác nội dung bị từ chối.
 
-Giấy phép sống tối đa 5 giây và không vượt hạn phiên; transaction ghi tối đa 1 giây, chờ khóa tối đa 500 ms. Admission yêu cầu còn ít nhất 1,5 giây, dự phòng lệch đồng hồ tối đa 100 ms mỗi bên; kiểm tra cuối tại DB dành thêm 250 ms trước hạn. Dùng `clock_timestamp()`, không dùng thời điểm bắt đầu transaction để kiểm tra hết hạn. Adapter phải áp deadline DB và rollback khi hết hạn; không gọi RPC trong transaction. Đây là ngân sách ban đầu, cần chứng minh độ lệch đồng hồ và khoảng commit trong S2-11; không mở writer mới nếu không giữ được giới hạn này. Timeout phía client không chứng minh DB đã rollback ([PostgreSQL timeouts](https://www.postgresql.org/docs/18/runtime-config-client.html#RUNTIME-CONFIG-CLIENT-STATEMENT)).
+Giấy phép sống tối đa 5 giây và không vượt hạn phiên; transaction ghi tối đa 1 giây, chờ khóa tối đa 500 ms. Admission yêu cầu còn ít nhất 1,5 giây, dự phòng lệch đồng hồ tối đa 100 ms mỗi bên, tức 200 ms giữa authority và consumer; kiểm tra cuối tại DB dành thêm 250 ms trước hạn. Dùng `clock_timestamp()`, không dùng thời điểm bắt đầu transaction để kiểm tra hết hạn. Adapter phải áp deadline DB trước khi chờ khóa và rollback khi hết hạn; không gọi RPC trong transaction. [S2-11](../records/verification/architecture/s2-11-2026-11-25.md) kiểm tra hai chiều lệch đồng hồ và commit đồng thời; writer mới phải giữ cùng ngân sách. Timeout phía client không chứng minh DB đã rollback ([PostgreSQL timeouts](https://www.postgresql.org/docs/18/runtime-config-client.html#RUNTIME-CONFIG-CLIENT-STATEMENT)).
 
 ### Thu hồi và thay đổi quyền
 

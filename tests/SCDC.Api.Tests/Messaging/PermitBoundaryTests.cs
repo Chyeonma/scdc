@@ -9,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using SCDC.Api.Tests.Identity;
 using SCDC.Api.Tests.Infrastructure;
+using SCDC.BuildingBlocks.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
+using SCDC.Modules.Community.Infrastructure.Access;
 using SCDC.Modules.Identity.Infrastructure.Persistence;
 using SCDC.Modules.Identity.Infrastructure.Services;
 using SCDC.Modules.Messaging.Application;
@@ -45,7 +47,9 @@ public sealed class PermitBoundaryTests(RedisAccessDatabase database) : IClassFi
                         async (request, ct) => { if (beforePermit is not null) await beforePermit(request, ct); }));
             });
         });
-        client = app.CreateClient(); actor = await Register(); peer = await Register();
+        client = app.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
+        actor = await Register(); peer = await Register();
     }
     private async Task<AuthenticatedSession> Register()
     {
@@ -207,7 +211,8 @@ public sealed class PermitBoundaryTests(RedisAccessDatabase database) : IClassFi
     [InlineData("duplicate")]
     [InlineData("owner")]
     [InlineData("resource")]
-    public async Task A_permit_for_the_wrong_owner_resource_or_incomplete_scope_cannot_enter_Messaging(string corruption)
+    [InlineData("future")]
+    public async Task A_permit_with_invalid_binding_scope_or_issue_time_cannot_enter_Messaging(string corruption)
     {
         var space = await Open(); await using var scope = app.Services.CreateAsyncScope(); var services = scope.ServiceProvider;
         var valid = await services.GetRequiredService<MessagingIdentityAccess>().AcquireAsync(actor, IdentityPurpose.DmSendNew, space, default, peer.UserId);
@@ -218,7 +223,8 @@ public sealed class PermitBoundaryTests(RedisAccessDatabase database) : IClassFi
             "peer" => valid with { Scopes = valid.Scopes.Where(s => s.UserId != peer.UserId).ToArray() },
             "duplicate" => valid with { Scopes = new[] { valid.Scopes[0], valid.Scopes[0], valid.Scopes[0] } },
             "owner" => valid with { Owner = AccessOwner.Community },
-            _ => valid with { Request = valid.Request with { ResourceId = Guid.NewGuid() } }
+            "resource" => valid with { Request = valid.Request with { ResourceId = Guid.NewGuid() } },
+            _ => valid with { IssuedAt = DateTimeOffset.UtcNow.AddMilliseconds(500) }
         };
         var gate = new MessagingIdentityAccess(new FixedPermit(tampered), TimeProvider.System);
         async Task Attempt()
@@ -250,6 +256,62 @@ public sealed class PermitBoundaryTests(RedisAccessDatabase database) : IClassFi
         }
         finally { await db.Database.UseTransactionAsync(null); }
         Assert.Equal(0, await Messages(space));
+    }
+
+    [Theory]
+    [InlineData(-100)]
+    [InlineData(100)]
+    public async Task Opposite_clock_offsets_within_the_budget_allow_concurrent_commits(int authorityOffsetMs)
+    {
+        var space = await Open();
+        using var skewed = app.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAllKeyed<IIdentityPermitIssuer>(AccessOwner.Messaging);
+            services.AddKeyedScoped<IIdentityPermitIssuer>(AccessOwner.Messaging, (provider, _) =>
+                new IdentityPermitIssuer(provider.GetRequiredService<IConfiguration>(), AccessOwner.Messaging, new OffsetClock(authorityOffsetMs)));
+            services.Replace(ServiceDescriptor.Scoped<MessagingIdentityAccess>(provider =>
+                new(provider.GetRequiredKeyedService<IIdentityPermitIssuer>(AccessOwner.Messaging), new OffsetClock(-authorityOffsetMs))));
+        }));
+        var services = skewed.Services;
+        var responses = await Task.WhenAll(Enumerable.Range(0, 16).Select(async _ =>
+        {
+            await using var scope = services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<ITextMessageSender>().SendAsync(Command(space, Guid.NewGuid()), default);
+        }));
+        Assert.All(responses, result => Assert.True(result.IsSuccess, result.Error.Code));
+        Assert.Equal(16, await Messages(space));
+        Assert.Equal(16L, await database.Sql("SELECT count(*) FROM messaging.outbox_events WHERE space_id=@id", space));
+        Assert.Equal(16L, await database.Sql("SELECT last_message_sequence FROM messaging.spaces WHERE id=@id", space));
+    }
+
+    private sealed class OffsetClock(int offsetMs) : TimeProvider
+    { public override DateTimeOffset GetUtcNow() => DateTimeOffset.UtcNow.AddMilliseconds(offsetMs); }
+
+    [Theory]
+    [InlineData(-100)]
+    [InlineData(100)]
+    public async Task Community_clock_offsets_admit_a_valid_lease_and_DB_rejects_expiry(int authorityOffsetMs)
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var issuer = new IdentityPermitIssuer(services.GetRequiredService<IConfiguration>(), AccessOwner.Community, new OffsetClock(authorityOffsetMs));
+        var gate = new CommunityIdentityAccess(issuer, new OffsetClock(-authorityOffsetMs));
+        var permit = await gate.AcquireAsync(new(actor.UserId, actor.SessionId, actor.SecurityStamp, actor.AccessExpiresAt),
+            IdentityPurpose.CommunityWrite, Guid.NewGuid(), Guid.NewGuid(), default);
+        var factory = services.GetRequiredService<RelationalWorkScopeFactory>();
+        await using (var work = await factory.OpenAsync(default))
+        {
+            var lease = await gate.AdmitAsync(work, permit, default);
+            await gate.EnsureAsync(work, lease, default);
+            await work.CommitAsync(default);
+        }
+        await using (var work = await factory.OpenAsync(default))
+        {
+            var lease = await gate.AdmitAsync(work, permit, default);
+            var behind = new CommunityIdentityAccess(issuer, new OffsetClock(-1000));
+            var expired = lease with { Permit = permit with { ExpiresAt = DateTimeOffset.UtcNow.AddMilliseconds(100) } };
+            Assert.Equal("ACCESS_CHANGED", (await Assert.ThrowsAsync<AccessCheckException>(() => behind.EnsureAsync(work, expired, default))).Code);
+        }
     }
     public async Task DisposeAsync() { client.Dispose(); await app.DisposeAsync(); await original.DisposeAsync(); }
     private sealed class ProfilesProbe(IServiceProvider services, Func<CancellationToken, Task> before) : IHistoricalUserSummaryReader

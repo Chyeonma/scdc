@@ -58,6 +58,7 @@ public sealed class ConversationInboxTests(InboxFixture f) : IClassFixture<Inbox
     {
         var cursor = (await f.Page()).GetProperty("nextCursor").GetString()!;
         using var host = f.D.Inner.MakeFactory(); using var client = host.CreateClient();
+        await SCDC.Api.Tests.Infrastructure.SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/direct-conversations?cursor=" + Uri.EscapeDataString(cursor));
         request.Headers.Authorization = new("Bearer", f.D.Inner.Actor.AccessToken);
         using var result = await client.SendAsync(request); Assert.Equal(HttpStatusCode.OK, result.StatusCode);

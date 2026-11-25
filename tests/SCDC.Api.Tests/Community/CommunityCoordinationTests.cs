@@ -43,6 +43,7 @@ public sealed class CommunityCoordinationTests(RedisAccessDatabase database):ICl
     public async Task InitializeAsync()
     {
         Start();ownerName="policy_a_"+Guid.NewGuid().ToString("N")[..12];memberName="policy_b_"+Guid.NewGuid().ToString("N")[..12];
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         owner=await Register(ownerName);member=await Register(memberName);
         var created=await Request("/api/v1/servers",owner,new{clientOperationId=Guid.NewGuid(),name="Policy proof",visibility="public"},expected:201);
         server=created.GetProperty("id").GetGuid();membership=created.GetProperty("myMembership").GetProperty("membershipId").GetGuid();

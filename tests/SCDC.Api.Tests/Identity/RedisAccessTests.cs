@@ -76,7 +76,7 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
     private IConfiguration settings = null!;
     private readonly string username = "redis_" + Guid.NewGuid().ToString("N")[..14];
     private const string Password = "RedisTestPassword123";
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
         app = original.WithWebHostBuilder(builder =>
         {
@@ -89,7 +89,7 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
             });
         });
         client = app.CreateClient(); settings = app.Services.GetRequiredService<IConfiguration>();
-        return Task.CompletedTask;
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
     }
     private async Task<JsonElement> Login(bool register = true)
     {
@@ -280,15 +280,36 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
         await Assert.ThrowsAsync<AccessCheckException>(() => issuer.AcquireAsync(new(actor, IdentityPurpose.CommunityManage, Guid.NewGuid(), Guid.NewGuid()), default));
     }
 
-    [Fact]
-    public async Task Fence_replay_is_idempotent_and_conflicting_batch_cannot_lower_or_replace_it()
+    [Theory]
+    [InlineData(AccessOwner.Community)]
+    [InlineData(AccessOwner.Messaging)]
+    public async Task Fence_replay_and_out_of_order_batches_cannot_lower_or_replace_it(AccessOwner target)
     {
         var user = Guid.NewGuid(); var operation = Guid.NewGuid();
         var batch = new IdentityFenceBatch(operation, operation, 1, [new(1, user, Guid.Empty, 9)]);
-        var fence = new PostgresIdentityFenceOwner(settings, AccessOwner.Messaging);
+        var fence = new PostgresIdentityFenceOwner(settings, target);
         await fence.ApplyAsync(batch, default); await fence.ApplyAsync(batch, default);
+        await fence.ApplyAsync(batch with { BatchId = Guid.NewGuid(), Scopes = [new(1, user, Guid.Empty, 2)] }, default);
         await Assert.ThrowsAsync<AccessCheckException>(() => fence.ApplyAsync(batch with { Scopes = [new(1, user, Guid.Empty, 1)] }, default));
-        Assert.Equal(9L, await database.Sql("SELECT min_epoch FROM messaging.access_fences WHERE user_id=@id", user));
+        Assert.Equal(9L, await database.Sql($"SELECT min_epoch FROM {target.ToString().ToLowerInvariant()}.access_fences WHERE user_id=@id", user));
+    }
+
+    [Theory]
+    [InlineData(AccessOwner.Community)]
+    [InlineData(AccessOwner.Messaging)]
+    public async Task Fence_batch_advisory_lock_is_bounded_before_waiting(AccessOwner target)
+    {
+        var operation = Guid.NewGuid();
+        var batch = new IdentityFenceBatch(operation, operation, 1, [new(1, Guid.NewGuid(), Guid.Empty, 2)]);
+        await using var connection = new NpgsqlConnection(database.Admin); await connection.OpenAsync();
+        await using var hold = new NpgsqlCommand("SELECT pg_advisory_lock(1935893325,hashtext(@batch))", connection);
+        hold.Parameters.AddWithValue("batch", batch.BatchId.ToString("D")); await hold.ExecuteNonQueryAsync();
+        var timer = Stopwatch.StartNew();
+        var failure = await Assert.ThrowsAsync<PostgresException>(() =>
+            new PostgresIdentityFenceOwner(settings, target).ApplyAsync(batch, default).WaitAsync(TimeSpan.FromSeconds(3)));
+        Assert.Equal(PostgresErrorCodes.LockNotAvailable, failure.SqlState);
+        Assert.True(timer.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.Equal(0L, await database.Sql($"SELECT count(*) FROM {target.ToString().ToLowerInvariant()}.fence_receipts WHERE batch_id=@id", operation));
     }
 
     [Fact]

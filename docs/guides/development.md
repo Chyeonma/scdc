@@ -634,7 +634,7 @@ Volume cũ có thể còn `identity.schema_migrations` với hai cột `id text`
 
 Nếu constraint profile cũ dùng `common.utf16_length_identity_legacy(text)`, CLI chuyển nguyên hàm sang Identity, giữ OID và constraint. Các đối tượng khác ngoài phạm vi vẫn làm transaction rollback khi bỏ schema cũ.
 
-3. Cấp role và cập nhật cấu hình. Với Compose local, nạp lại cấu hình PostgreSQL rồi chạy script cấp quyền (chỉ chạy sau migration):
+3. Cấp role và cập nhật cấu hình. Script hiện hành là bản S2-11: nếu nâng từ nền cũ, tiếp tục áp S2-06, S2-07 và S2-09 bằng CLI trước khi chạy script này; xem [baseline S2-11](#s2-11-upgrade). Với Compose local, nạp lại cấu hình PostgreSQL rồi chạy script cấp quyền:
 
 ```bash
 docker compose up -d postgres
@@ -667,7 +667,7 @@ Nếu `moderation.actions` hoặc `moderation.message_reports` có dữ liệu, 
 
 Schema mới giữ ID, NULL, version, thời điểm, nội dung và trạng thái operation/outbox. Các FK nội bộ, bất biến owner/member và cặp DM vẫn được bảo vệ. Khi Identity không còn account/profile, lịch sử DM dùng placeholder có ID cũ và `availability=unavailable`; actor hoặc peer không được cấp quyền ghi từ placeholder. Community giữ membership/owner ID và trả `user=null` khi không tìm được người dùng.
 
-Sau migration, chạy lại script cấp quyền và API theo bước S2-03. Script cấp quyền tương thích cả trước và sau khi bỏ view. Quyền chéo và transaction cũ còn cần cho S2-06 đến S2-11; không thu hồi sớm. [Hồ sơ S2-04/S2-05](../records/verification/architecture/s2-04-s2-05-2026-11-22.md) ghi kiểm thử dữ liệu và các ca lỗi. Không có down migration tự động.
+Với script hiện hành S2-11, tiếp tục nâng S2-06/S2-07/S2-09 trước khi cấp quyền và chạy API theo bước S2-03. Writer cũ còn dùng quyền chéo phải dừng trước khi chuyển sang bộ quyền mới. [Hồ sơ S2-04/S2-05](../records/verification/architecture/s2-04-s2-05-2026-11-22.md) ghi kiểm thử dữ liệu và các ca lỗi. Không có down migration tự động.
 
 Ví dụ server map (`reviewed-server-map.json`):
 
@@ -749,7 +749,7 @@ dotnet run --project tools/SCDC.DbMigrator -- \
 
 Migration ghi ledger `community/2026112307`, tạo ba bảng authority `access_scopes`, `access_changes`, `access_change_acks`, nạp scope membership/lifecycle hiện hữu và floor tương ứng ở Community/Messaging. Receipt authority Community cho phép batch rỗng tại Messaging khi thay đổi chỉ mất quyền quản lý; vẫn phải ghi receipt thật trước ACK. Chạy lại cùng checksum là no-op; checksum khác bị từ chối. Dữ liệu nghiệp vụ giữ nguyên, không có down migration tự động.
 
-Chạy lại script `database/postgres/module-roles.sql`, rồi build/chạy API và WebClient cùng phiên bản. Dùng cùng engine, env và project của stack hiện hữu theo [S2-03](#s2-03-upgrade). Với Podman, thêm `ENGINE=podman` cho Make. Runtime không có quyền xóa scope/journal hoặc sửa/xóa ACK. Các quyền chéo tạm khác được đối chiếu và thu hẹp toàn bộ ở S2-11.
+Với script hiện hành S2-11, tiếp tục nâng S2-09 rồi chạy `database/postgres/module-roles.sql`; sau đó build/chạy API và WebClient cùng phiên bản. Dùng cùng engine, env và project của stack hiện hữu theo [S2-03](#s2-03-upgrade). Với Podman, thêm `ENGINE=podman` cho Make. Runtime không có quyền xóa scope/journal hoặc sửa/xóa ACK. Quyền chéo tạm được thu hồi theo [S2-11](#s2-11-upgrade).
 
 Mutation role, gán role, tạo/sửa channel và ACL phải gửi `X-SCDC-Membership-Id` lấy từ `myMembership.membershipId` của actor trên server đang hiển thị; khác `membershipId` của thành viên đích trong body. Tạo/join server và GET không cần header này. Thiếu/sai dạng trả 400; membership đã đổi trả 409 và cần tải lại trước lần lưu mới.
 
@@ -770,7 +770,7 @@ dotnet run --project tools/SCDC.DbMigrator -- \
 
 CLI dùng `ConnectionStrings__Migration` của đúng database, ghi checksum `2026112409` vào ledger Community và Messaging trong cùng transaction. Chạy lại là no-op nếu checksum khớp; hai ledger lệch nhau hoặc checksum khác thì dừng. Migration giữ ID, fingerprint/key/version cũ, timestamp và dữ liệu nghiệp vụ; tiếp nhận phòng chữ cũ thành COMPLETED/READY mà không phát lại sự kiện tạo phòng. DM không nằm trong bảng provision phòng.
 
-Chạy lại `database/postgres/module-roles.sql` để cấp quyền bảng/hàm mới. Runtime không được DELETE hai bảng `channel_provisions`: dấu hủy phải còn sau cleanup. Quyền chéo tạm còn lại được xử lý ở S2-11. Build và chạy API/WebClient cùng phiên bản; giao diện cũ không có luồng đối chiếu và đổi khóa sau hủy. Không tự rollback về writer tạo phòng cũ hoặc chạy down migration; phải dừng writer và xác minh tương thích dữ liệu trước khi chọn phương án rollback.
+Chạy lại `database/postgres/module-roles.sql` để cấp quyền bảng/hàm mới và thu hồi toàn bộ quyền chéo tạm theo [S2-11](#s2-11-upgrade). Runtime không được DELETE hai bảng `channel_provisions`: dấu hủy phải còn sau cleanup. Build và chạy API/WebClient cùng phiên bản; giao diện cũ không có luồng đối chiếu và đổi khóa sau hủy. Không tự rollback về writer tạo phòng cũ hoặc chạy down migration; phải dừng writer và xác minh tương thích dữ liệu trước khi chọn phương án rollback.
 
 Community giữ tên phòng trong PREPARING, không đưa phòng vào list/detail. RPC adapter trong process có deadline 2 giây và chỉ chạy ngoài transaction Community; Messaging tự mở connection/transaction của mình. Sau 5 giây chưa hoàn tất, request/worker tranh chốt CANCELLED; chỉ báo `409 CHANNEL_CREATION_CANCELLED` khi quyết định hủy đã commit. Owner chưa dọn được thì `cleanupPending` vẫn còn và worker tiếp tục. Lease worker 6 giây, hết lease có thể nhận lại sau restart. Worker lấy theo `next_attempt_at`; Confirm/Cancel lỗi có backoff tối đa 30 giây để công việc cũ không chiếm hết lượt của thao tác mới.
 
@@ -782,8 +782,24 @@ Theo dõi `community.channel_provisions`: `phase` 0/1/2 là PREPARING/COMPLETED/
 
 ## Chạy S2-08 — Transaction DM riêng
 
-S2-08 dùng các bảng Identity/fence hiện có của S2-06 và không thêm migration. Triển khai cùng baseline Community S2-07 theo mục trên khi nâng cấp toàn ứng dụng. API tiếp tục cần ba connection string riêng, Redis và các key ring hiện hành. S2-08 không tự thu hồi các grant tạm; S2-11 xử lý toàn bộ quyền sau khi các writer đã chuyển xong.
+S2-08 dùng các bảng Identity/fence hiện có của S2-06 và không thêm migration. Triển khai cùng baseline Community S2-07/S2-09 theo mục trên khi nâng cấp toàn ứng dụng. API tiếp tục cần ba connection string riêng, Redis và các key ring hiện hành. Script S2-11 thu hồi toàn bộ grant tạm sau khi các writer đã chuyển xong.
 
 Để chạy `dm-mvp` trên Linux/macOS, dùng stack `compose.gateway-test.yaml` riêng, web localhost 15300 và database `scdc_gateway_test`; cấp psql qua PATH và PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD trỏ đúng database thử. Chọn run mới tối đa 12 ký tự, xuất `DM_WEB_URL` và `DM_MVP_RUN`. Tạo tài khoản/hội thoại bằng `scripts/dm-acceptance/mvp-local.py -Action Setup -Run <run>` rồi `-Action Fixtures`. Setup trên host có thể dùng `DM_MVP_ENGINE=podman` cùng `DM_MVP_PG_CONTAINER=scdc-gateway-<project>-postgres-1` khi không cài psql. Không tái sử dụng/reset run đã có.
 
 Trong `clients/WebClient`, chạy `npm ci` rồi `npx playwright test --project dm-mvp`; Python 3 và psql phải có trong môi trường chạy browser test. Driver chỉ ghi trạng thái vào tài khoản thuộc manifest của run; tin thử được gửi bằng API thật. Windows vẫn dùng PowerShell driver cũ. [Hồ sơ S2-08](../records/verification/architecture/s2-08-2026-11-24.md) ghi cấu hình và kết quả thực tế.
+
+<a id="s2-11-upgrade"></a>
+
+## S2-11 — Thu hẹp quyền database
+
+S2-11 không thêm DDL hoặc phiên bản ledger. Dùng API đã có S2-07 đến S2-10 và database đã áp S2-06/S2-07/S2-09; dừng API và worker trước khi thay quyền trên volume hiện hữu. Volume dev còn ở S2-06 phải nâng S2-07/S2-09 trước. Script mới từ chối baseline thiếu bảng hoặc ledger thay vì thu hồi quyền của writer cũ.
+
+Chạy bằng quản trị sau khi đối chiếu bản sao dữ liệu và baseline:
+
+```bash
+docker compose exec -T postgres sh /docker-entrypoint-initdb.d/003-module-roles.sh
+```
+
+Podman dùng `podman compose`. PostgreSQL ngoài Compose dùng `psql -X -f database/postgres/module-roles.sql` cùng ba biến mật khẩu ở bước S2-03. Script chạy trong một transaction, chạy lại được, thu hồi cả quyền SELECT/UPDATE cột ID và EXECUTE đã cấp chéo. Nó cũng đặt lại mật khẩu theo cấu hình; giữ cùng secret và connection string khi khởi chạy lại.
+
+Chạy bộ backend với ba login runtime thật và kiểm tra SELECT/UPDATE ngoài schema bị từ chối `42501`; kiểm tra cả quyền bảng, cột, sequence và hàm trong catalog. Giữ quyền ledger, journal, fence và receipt theo chính sách owner. Sau đó build/chạy API/WebClient cùng phiên bản và kiểm tra đăng nhập, Community, DM, realtime và thu hồi. [Hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kết quả, phép đo và giới hạn; phần tổng kết/demo STEP-2 thuộc S2-12.

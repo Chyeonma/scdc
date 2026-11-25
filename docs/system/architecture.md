@@ -63,7 +63,7 @@ Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.
 - Có interface không có nghĩa đã có bên dùng hay đã chạy đủ; xem trạng thái ở từng trang tính năng.
 - S2-10 đã bỏ hợp đồng transaction chung của MVP; mỗi owner tự giữ transaction. Host gRPC và mTLS tiếp tục ở STEP-3. Chi tiết: [hợp đồng giữa module](backend.md#s2-10-contracts), [database](database.md), [Community](../features/community/mechanics.md), [thu hồi truy cập](access-revocation.md).
 
-Khảo sát S2-01 đã đối chiếu 32 FK xuyên schema, 2 view và các hợp đồng; [bảng xử lý từng phụ thuộc](database.md#s2-01-boundaries) giữ đầu vào lịch sử. S2-03 đã chuyển audit về Identity và tách outbox theo owner; S2-04/05 bỏ FK và view chéo, S2-07 đến S2-10 thay và gỡ hợp đồng transaction. S2-11 còn thu hẹp grant tạm và kiểm chứng lỗi, tải, thời gian thu hồi trước khi tổng kết STEP-2.
+Khảo sát S2-01 đã đối chiếu 32 FK xuyên schema, 2 view và các hợp đồng; [bảng xử lý từng phụ thuộc](database.md#s2-01-boundaries) giữ đầu vào lịch sử. S2-03 đã chuyển audit về Identity và tách outbox theo owner; S2-04/05 bỏ FK và view chéo, S2-07 đến S2-10 thay và gỡ hợp đồng transaction. S2-11 thu hẹp grant tạm và kiểm chứng lỗi, tải, lệch đồng hồ, thời gian thu hồi; [hồ sơ](../records/verification/architecture/s2-11-2026-11-25.md) ghi phạm vi và kết quả. Tổng kết STEP-2 thuộc S2-12.
 
 <a id="future"></a>
 <a id="target"></a>

@@ -24,6 +24,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _client = _factory.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(_client);
         _connectionString = _factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_connectionString).Database);
         _owner = await RegisterAsync();
@@ -238,6 +239,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         var query = $"/api/v1/servers?limit=2&cursor={Uri.EscapeDataString(cursor)}";
         await using var restarted = new SCDCWebApplicationFactory();
         using var client = restarted.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         var second = await JsonAsync(await SendAsync(HttpMethod.Get, query, _owner, client: client));
         Assert.Single(second.GetProperty("items").EnumerateArray());
         Assert.Equal(JsonValueKind.Null, second.GetProperty("nextCursor").ValueKind);
@@ -272,6 +274,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         var id = (await JsonAsync(first)).GetProperty("id").GetGuid();
         await using var restarted = new SCDCWebApplicationFactory();
         using var client = restarted.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         Assert.Equal(HttpStatusCode.OK, (await CreateAsync(operation, client: client)).StatusCode);
         var original = _factory.Services.GetRequiredService<IOptionsMonitor<CommunityOptions>>().CurrentValue;
         var rotated = new CommunityOptions
@@ -285,6 +288,7 @@ public sealed partial class CommunityApiTests : IAsyncLifetime
         };
         using var rotatedFactory = _factory.WithWebHostBuilder(b => b.ConfigureServices(s => s.AddSingleton<IOptionsMonitor<CommunityOptions>>(new FixedMonitor(rotated))));
         using var rotatedClient = rotatedFactory.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(rotatedClient);
         Assert.Equal(HttpStatusCode.OK, (await CreateAsync(operation, client: rotatedClient)).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await CreateAsync(client: rotatedClient)).StatusCode);
         rotated.Operations.Keys.Remove("test");

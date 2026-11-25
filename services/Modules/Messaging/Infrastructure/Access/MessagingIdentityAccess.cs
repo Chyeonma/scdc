@@ -25,8 +25,9 @@ internal sealed class MessagingIdentityAccess([FromKeyedServices(AccessOwner.Mes
         catch (AccessCheckException failure) { throw Failure(failure.Code); }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw Failure("AUTHORITY_UNAVAILABLE"); }
         catch (Exception failure) when (DatabaseAvailability.IsUnavailable(failure)) { throw Failure("AUTHORITY_UNAVAILABLE"); }
+        // Two clocks each within 100 ms of UTC may differ by 200 ms.
         if (permit.Request != request || permit.Owner != AccessOwner.Messaging || permit.Request.Context != IdentityAccessContext.HttpCaller
-            || permit.IssuedAt > clock.GetUtcNow().AddMilliseconds(100) || permit.ExpiresAt > permit.IssuedAt.AddSeconds(5)
+            || permit.IssuedAt > clock.GetUtcNow().AddMilliseconds(200) || permit.ExpiresAt > permit.IssuedAt.AddSeconds(5)
             || permit.ExpiresAt > actor.AccessExpiresAt) throw Failure("ACCESS_CHANGED");
         return permit;
     }

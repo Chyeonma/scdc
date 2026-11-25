@@ -140,6 +140,7 @@ public sealed class UserSearchTests(UserSearchFixture fixture) : IClassFixture<U
         var cursor = first.GetProperty("nextCursor").GetString();
         using var other = fixture.MakeFactory();
         using var client = other.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
         using var request = new HttpRequestMessage(HttpMethod.Get,
             $"/api/v1/users/search?q={Uri.EscapeDataString(q)}&cursor={Uri.EscapeDataString(cursor!)}");
         request.Headers.Authorization = new("Bearer", fixture.Actor.AccessToken);
@@ -241,6 +242,7 @@ public sealed class UserSearchFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Factory = MakeFactory(); Client = Factory.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(Client);
         _connection = Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_connection).Database);
         await Register("owner", "Owner " + Prefix);
@@ -283,7 +285,8 @@ public sealed class UserSearchFixture : IAsyncLifetime
     public async Task<ActorData> Login(string username)
     {
         var r = await Client.PostAsJsonAsync("/api/v1/auth/login", new { login = username, password = "DmDemo2026!Local", deviceName = "DM-P1-test" });
-        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.True(r.StatusCode == HttpStatusCode.OK,
+            $"Login returned {(int)r.StatusCode}: {(r.IsSuccessStatusCode ? "unexpected status" : await r.Content.ReadAsStringAsync())}");
         var b = await r.Content.ReadFromJsonAsync<JsonElement>();
         var access = b.GetProperty("accessToken").GetString()!;
         using var jwt = JsonDocument.Parse(WebEncoders.Base64UrlDecode(access.Split('.')[1]));

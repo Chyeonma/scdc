@@ -129,9 +129,9 @@ internal sealed class ChannelProvisioning(IConfiguration configuration, TimeProv
             || identity.Request.ResourceId != permit.ChannelId || identity.Request.PeerId is not null
             || identity.Request.Context != IdentityAccessContext.HttpCaller || identity.Scopes.Count != 2
             || !identity.Scopes.Select(s => (s.Kind, s.UserId, s.SessionId)).ToHashSet().SetEquals(new[] { ((short)1, actor.UserId, Guid.Empty), ((short)2, actor.UserId, actor.SessionId) })
-            || identity.Scopes.Any(s => s.Epoch <= 0) || identity.IssuedAt > now.AddMilliseconds(100)
+            || identity.Scopes.Any(s => s.Epoch <= 0) || identity.IssuedAt > now.AddMilliseconds(200)
             || identity.ExpiresAt > identity.IssuedAt.AddSeconds(5) || identity.ExpiresAt > actor.AccessExpiresAt
-            || permit.IssuedAt > now.AddMilliseconds(100) || permit.ExpiresAt > permit.IssuedAt.AddSeconds(5)
+            || permit.IssuedAt > now.AddMilliseconds(200) || permit.ExpiresAt > permit.IssuedAt.AddSeconds(5)
             || permit.ExpiresAt > identity.ExpiresAt || permit.ExpiresAt - now < TimeSpan.FromMilliseconds(1500))
             throw new ProvisionConflictException("A current channel permit is required.");
         await using var connection = await OpenAsync(ct); await using var tx = await connection.BeginTransactionAsync(ct);

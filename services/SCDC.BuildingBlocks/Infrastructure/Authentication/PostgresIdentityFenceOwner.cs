@@ -25,7 +25,7 @@ public sealed class PostgresIdentityFenceOwner(IConfiguration configuration, Acc
         await using var connection = new NpgsqlConnection(configuration.GetConnectionString(owner.ToString()));
         await connection.OpenAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
-        await using (var gate = new NpgsqlCommand("SELECT pg_advisory_xact_lock(1935893325,hashtext(@batch)); SET LOCAL lock_timeout='500ms'; SET LOCAL statement_timeout='2s'", connection, transaction))
+        await using (var gate = new NpgsqlCommand("SET LOCAL lock_timeout='500ms'; SET LOCAL statement_timeout='2s'; SELECT pg_advisory_xact_lock(1935893325,hashtext(@batch))", connection, transaction))
         { gate.Parameters.AddWithValue("batch", batch.BatchId.ToString("D")); await gate.ExecuteNonQueryAsync(ct); }
         await using (var lookup = new NpgsqlCommand($"SELECT command_fingerprint FROM {schema}.fence_receipts WHERE authority=1 AND operation_id=@operation AND batch_id=@batch", connection, transaction))
         {

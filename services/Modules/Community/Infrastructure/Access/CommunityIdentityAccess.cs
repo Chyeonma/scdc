@@ -22,7 +22,8 @@ internal sealed class CommunityIdentityAccess(
         try { permit=await issuer.AcquireAsync(request,deadline.Token).WaitAsync(deadline.Token); }
         catch(OperationCanceledException) when(!ct.IsCancellationRequested) { throw new AccessCheckException(); }
         catch(Npgsql.NpgsqlException) { throw new AccessCheckException(); }
-        if(permit.Request!=request || permit.Owner!=AccessOwner.Community || permit.IssuedAt>clock.GetUtcNow().AddMilliseconds(100)
+        // Two clocks each within 100 ms of UTC may differ by 200 ms.
+        if(permit.Request!=request || permit.Owner!=AccessOwner.Community || permit.IssuedAt>clock.GetUtcNow().AddMilliseconds(200)
             || permit.ExpiresAt>permit.IssuedAt.AddSeconds(5) || permit.ExpiresAt>actor.AccessExpiresAt)
             throw new AccessCheckException("ACCESS_CHANGED");
         return permit;

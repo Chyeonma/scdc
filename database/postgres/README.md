@@ -26,11 +26,12 @@ Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`. S
 ## SQL và migration
 
 - [schema.sql](schema.sql): bootstrap schema, constraint, index, trigger và view; có DROP SCHEMA.
-- [module-roles.sql](module-roles.sql): cấp ba role runtime và liệt kê quyền tạm; Compose gọi qua [init-module-roles.sh](init-module-roles.sh). Mật khẩu local mặc định là `<tên_role>_dev`; có thể đặt ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD`.
+- [module-roles.sql](module-roles.sql): cấp ba role runtime chỉ trong schema owner và thu hồi quyền chéo đã cấp trước S2-11, gồm quyền cột và hàm. Script kiểm tra baseline S2-07/S2-09 trước khi thay quyền; Compose gọi qua [init-module-roles.sh](init-module-roles.sh). Mật khẩu local mặc định là `<tên_role>_dev`; có thể đặt ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD`.
 - [seed.sql](seed.sql): dữ liệu minh họa, password/token không dùng đăng nhập.
 - [migrations](migrations): thay đổi có ledger/checksum cho DB cần giữ dữ liệu. Runner, thứ tự và mapping legacy tại [hướng dẫn migration](../../docs/guides/development.md#migration).
 - Sau S2-03, chạy S2-04 và S2-05 theo [hướng dẫn ranh giới schema](../../docs/guides/development.md#s2-04-s2-05-upgrade). Hai migration độc lập, không sửa dữ liệu nghiệp vụ; bootstrap mới đã gồm cả hai.
 - S2-09 sau S2-07 thêm tiến trình tạo phòng riêng của Community/Messaging; [hướng dẫn nâng cấp offline](../../docs/guides/development.md#s2-09-upgrade). Chạy lại role script sau migration; giữ dấu hủy sau cleanup, không DELETE hai bảng provision bằng runtime.
+- S2-11 không thêm DDL/migration: dừng writer, nâng cấp đủ baseline S2-07/S2-09, chạy role script bằng quản trị rồi dùng API S2-10 trở lên. [Hướng dẫn thu hẹp quyền](../../docs/guides/development.md#s2-11-upgrade) và [kiểm chứng](../../docs/records/verification/architecture/s2-11-2026-11-25.md).
 
 Compose chỉ chạy script init khi volume mới được khởi tạo. Sửa SQL không cập nhật volume có sẵn. Dùng [database thử riêng](../../docs/guides/development.md#local-environment) cho suite tích hợp.
 
