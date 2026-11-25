@@ -15,7 +15,7 @@ internal sealed class SessionPublisher(IConfiguration configuration) : IDisposab
     private readonly SemaphoreSlim gate = new(1);
     private readonly ConcurrentDictionary<Guid, long> published = new();
     private string? currentGeneration;
-    private readonly string database = configuration.GetConnectionString("Identity")!;
+    private readonly string database = ModuleDatabaseConnection.Get(configuration, "Identity");
     // Compare decimal bigint strings, never Lua floating point numbers (epochs may exceed 2^53).
     internal const string PublishScript = """
         local generation=redis.call('HGET',KEYS[1],'generation')

@@ -44,6 +44,9 @@ def main():
     rpc_directory = artifact / 'private' / 'rpc'
     run([sys.executable, 'scripts/init_rpc_certificates.py', str(rpc_directory), '--label-for-containers'], 'initialize RPC identities')
     env['SCDC_RPC_SECRET_DIR'] = str(rpc_directory)
+    database_secrets = artifact / 'private' / 'identity-database'
+    run([sys.executable, 'scripts/init_identity_database_secrets.py', str(database_secrets), '--label-for-containers'], 'initialize Identity database secrets')
+    env['SCDC_IDENTITY_DB_SECRET_DIR'] = str(database_secrets)
     passed = False
     try:
         run(compose + ['config', '--quiet'], 'compose config')

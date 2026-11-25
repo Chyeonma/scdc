@@ -22,7 +22,7 @@ internal sealed record AcceptedIdentityChange(IdentitySecurityChange Change, Ide
 internal sealed class IdentityRevocations(IConfiguration configuration, IServiceScopeFactory scopes,
     IEnumerable<IIdentityFenceOwner> owners, SessionPublisher publisher) : IRevocationStatusReader
 {
-    private readonly string database = configuration.GetConnectionString("Identity")!;
+    private readonly string database = ModuleDatabaseConnection.Get(configuration, "Identity");
     private readonly IIdentityFenceOwner[] fenceOwners = owners.OrderBy(o => o.Owner).ToArray();
 
     // Caller has locked the user and validated the command. Persist only accepted, typed work;

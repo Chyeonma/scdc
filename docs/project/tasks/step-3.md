@@ -30,6 +30,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: PostgreSQL riêng cho Identity (D03); script chuyển schema `identity` từ database MVP; chạy thử trên bản sao dữ liệu.
 - Xong khi: đối chiếu số dòng, ID, security stamp khớp; người dùng cũ đăng nhập được.
 - Phụ thuộc: S3-02.
+- Tiến độ: **Đã triển khai và diễn tập trên bản sao dev — 2026-11-25**; nhánh `refactor/s3-03-identity-database`. PostgreSQL riêng, secret theo owner, baseline/lineage, CLI chuyển offline có manifest và startup gate. Bộ chuyển dữ liệu 14/14, gateway hai instance 14/14 đạt; user/JWT/refresh/cursor cũ và browser đã kiểm chứng. [Hồ sơ S3-03](../../records/verification/architecture/s3-03-2026-11-25.md); đang hoàn tất chuyển dev và chờ review.
 
 ## S3-04 · 3a: Worker gửi email chạy cùng Identity
 - Nhãn: tech
