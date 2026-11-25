@@ -26,5 +26,18 @@ VALUES('Fixture.Pending','User','11111111-1111-4111-8111-111111111111','{"fixtur
 INSERT INTO identity.inbox_events(consumer_name,event_id,payload_hash,last_error) VALUES('fixture','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',repeat('e',64),'pending-fixture');
 INSERT INTO identity.security_events(user_id,event_type,metadata) VALUES('11111111-1111-4111-8111-111111111111','Fixture.Audit','{"fixture":true}');
 CREATE TABLE identity.legacy_schema_migrations(id text PRIMARY KEY,applied_at timestamptz NOT NULL);
+-- A renamed pre-S2 ledger retains this name; pg_restore's implicit name for the
+-- newer ledger would otherwise gain a suffix in PG18.
+ALTER TABLE identity.legacy_schema_migrations RENAME CONSTRAINT legacy_schema_migrations_applied_at_not_null TO schema_migrations_applied_at_not_null;
 INSERT INTO identity.legacy_schema_migrations VALUES('fixture-mvp-lineage','2026-10-01');
+CREATE FUNCTION identity.utf16_length_identity_legacy(value text) RETURNS integer
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT COALESCE(sum(CASE WHEN ascii(ch)>65535 THEN 2 ELSE 1 END),0)::integer
+    FROM regexp_split_to_table(value,'') AS ch
+$$;
+ALTER TABLE identity.user_profiles ADD CONSTRAINT ck_user_profiles_utf16 CHECK (
+    ((identity.utf16_length_identity_legacy(display_name)>=1 AND identity.utf16_length_identity_legacy(display_name)<=64)
+      AND (bio IS NULL OR identity.utf16_length_identity_legacy(bio)<=500)
+      AND (identity.utf16_length_identity_legacy(locale)>=1 AND identity.utf16_length_identity_legacy(locale)<=16)
+      AND (identity.utf16_length_identity_legacy(timezone)>=1 AND identity.utf16_length_identity_legacy(timezone)<=64)));
 SELECT setval('identity.access_store_generation',37,true);

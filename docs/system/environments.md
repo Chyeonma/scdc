@@ -4,22 +4,25 @@ Trang này mô tả các môi trường chạy SCDC: môi trường phát triể
 
 Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/development.md); thao tác phát hành xem [vận hành](../guides/operations.md).
 
-**Trạng thái:** môi trường phát triển hiện tại là stack MVP (`900e226`). Toàn bộ bố trí v1 (D03, D21 đến D26, D32, D36, D38) đã chốt nhưng chưa triển khai.
+**Trạng thái 2026-11-25:** dev chạy Identity và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); Community/Messaging còn chung host và database cũ. Hai PR đang chờ review, main chưa merge. Media, việc tách hai owner còn lại và bố trí production tiếp tục theo lộ trình.
 
 ## Môi trường phát triển hiện tại
 
 | Thành phần | Vai trò | Cấu hình |
 |---|---|---|
 | WebClient | React và Vite khi debug; Nginx phục vụ bản build trong container | [Vite](../../clients/WebClient/vite.config.js), [Nginx](../../clients/WebClient/nginx.conf), [Dockerfile](../../clients/WebClient/Dockerfile) |
-| SCDC.Api | Một ứng dụng chứa Identity, Community, Messaging (gồm ChatHub, outbox, reconciler DM) | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
-| PostgreSQL | Một database | [Compose](../../compose.yaml), [schema.sql](../../database/postgres/schema.sql) |
+| Identity | API tài khoản, phiên và worker thu hồi/công bố Redis; gRPC/mTLS với consumer | [Service](../../services/Identity/README.md), [Program](../../services/Identity/SCDC.Identity.Api/Program.cs) |
+| SCDC.Api | Community/Messaging (ChatHub, outbox, reconciler DM); Identity permit/lookup qua mạng | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
+| PostgreSQL | Identity ở instance/database riêng; Community/Messaging còn trong `scdc_chat` | [Compose](../../compose.yaml), [baseline/chuyển Identity](../../database/postgres/identity/README.md) |
 | Volume `scdc-postgres-data` | Giữ dữ liệu DB qua khởi động lại | Compose |
 | Volume `scdc-community-keys` | Key ring cursor Community | Compose |
-| Volume `identity-user-search-keys` | Key ring cursor tìm người, hộp thư, lịch sử DM | Compose |
+| Volume `identity-user-search-keys` | Key ring cursor tìm người của Identity, giữ khóa cũ | Compose |
+| Volume `scdc-messaging-cursor-keys` | Bản sao key ring cũ lúc tách, sau đó Messaging sở hữu riêng; giữ application name/purpose | Compose |
+| Volume `scdc-identity-postgres-data` | Dữ liệu Identity đích; source Identity cũ giữ nguyên, runtime `NOLOGIN` | Compose |
 | Volume `scdc-messaging-keys` | Khóa fingerprint DM, tự tạo bởi job `messaging-keygen` | Compose |
 
-- WebClient chuyển tiếp `/api`, `/hubs`, `/swagger` tới API.
-- API chờ PostgreSQL sẵn sàng (`pg_isready`) và hai job tạo khóa DM/JWT thành công mới khởi động. Thứ tự khởi động không thay cho kiểm thử hành trình.
+- WebClient chuyển auth/users và health/Swagger Identity tới host riêng; Community/DM và Hub tới API còn lại.
+- API chờ PostgreSQL/Redis, job khóa và startup gate. Gate kiểm đúng source/target trước khi Identity chạy; thứ tự khởi động không thay cho kiểm thử hành trình.
 - Địa chỉ, công cụ, giá trị trên máy: [hướng dẫn](../guides/development.md#setup); danh sách khóa cấu hình: [cấu hình](../guides/development.md#configuration).
 - Không ghi bí mật production vào tài liệu. Hồ sơ chỉ ghi tên khóa, ID khóa và nguồn cấp.
 
