@@ -792,7 +792,7 @@ Trong `clients/WebClient`, chạy `npm ci` rồi `npx playwright test --project 
 
 ## S2-11 — Thu hẹp quyền database
 
-S2-11 không thêm DDL hoặc phiên bản ledger. Dùng API đã có S2-07 đến S2-10 và database đã áp S2-06/S2-07/S2-09; dừng API và worker trước khi thay quyền trên volume hiện hữu. Volume dev còn ở S2-06 phải nâng S2-07/S2-09 trước. Script mới từ chối baseline thiếu bảng hoặc ledger thay vì thu hồi quyền của writer cũ.
+S2-11 không thêm DDL hoặc phiên bản ledger. Dùng API đã có S2-07 đến S2-10 và database đã áp S2-06/S2-07/S2-09; dừng API và worker trước khi thay quyền trên volume hiện hữu. Volume ở S2-06 phải nâng S2-07/S2-09 trước. Script mới từ chối baseline thiếu bảng hoặc ledger thay vì thu hồi quyền của writer cũ.
 
 Chạy bằng quản trị sau khi đối chiếu bản sao dữ liệu và baseline:
 
@@ -802,4 +802,4 @@ docker compose exec -T postgres sh /docker-entrypoint-initdb.d/003-module-roles.
 
 Podman dùng `podman compose`. PostgreSQL ngoài Compose dùng `psql -X -f database/postgres/module-roles.sql` cùng ba biến mật khẩu ở bước S2-03. Script chạy trong một transaction, chạy lại được, thu hồi cả quyền SELECT/UPDATE cột ID và EXECUTE đã cấp chéo. Nó cũng đặt lại mật khẩu theo cấu hình; giữ cùng secret và connection string khi khởi chạy lại.
 
-Chạy bộ backend với ba login runtime thật và kiểm tra SELECT/UPDATE ngoài schema bị từ chối `42501`; kiểm tra cả quyền bảng, cột, sequence và hàm trong catalog. Giữ quyền ledger, journal, fence và receipt theo chính sách owner. Sau đó build/chạy API/WebClient cùng phiên bản và kiểm tra đăng nhập, Community, DM, realtime và thu hồi. [Hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kết quả, phép đo và giới hạn; phần tổng kết/demo STEP-2 thuộc S2-12.
+Chạy bộ backend với ba login runtime thật và kiểm tra SELECT/UPDATE ngoài schema bị từ chối `42501`; kiểm tra cả quyền bảng, cột, sequence và hàm trong catalog. Giữ quyền ledger, journal, fence và receipt theo chính sách owner. Sau đó build/chạy API/WebClient cùng phiên bản và kiểm tra đăng nhập, Community, DM, realtime và thu hồi. [Hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kết quả, phép đo và giới hạn; phần tổng kết/demo STEP-2 thuộc S2-12. [Dev đã nâng cấp ngày 2026-11-25](../records/verification/environment/dev-sync-2026-11-25.md), gồm khôi phục thử backup, áp migration và quyền, kiểm tra dữ liệu cũ và smoke qua gateway.

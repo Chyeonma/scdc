@@ -2,7 +2,7 @@
 
 Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước chung, cách chạy migration, và các quyết định cho v1 (tách database theo service, công cụ migration, chuyển dữ liệu từ MVP).
 
-**Trạng thái:** monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; schema đích không còn FK hoặc view đọc chéo. S2-07 đến S2-10 đã bỏ transaction chung; S2-11 thu hồi quyền chéo tạm, gồm quyền cột và hàm. [Hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kiểm chứng; database dev hiện hữu vẫn ở S2-06. Tách database vật lý thuộc STEP-3.
+**Trạng thái:** monolith dùng PostgreSQL 18, một database, ba user và connection string riêng. Outbox/inbox, audit, helper và ledger đã về owner; schema đích không còn FK hoặc view đọc chéo. S2-07 đến S2-10 đã bỏ transaction chung; S2-11 thu hồi quyền chéo tạm, gồm quyền cột và hàm. [Hồ sơ S2-11](../records/verification/architecture/s2-11-2026-11-25.md) ghi kiểm chứng; [database dev đã nâng đủ baseline và áp quyền S2-11 ngày 2026-11-25](../records/verification/environment/dev-sync-2026-11-25.md). Tách database vật lý thuộc STEP-3.
 
 ## MVP hiện tại
 
