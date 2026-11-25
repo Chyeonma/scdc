@@ -11,6 +11,10 @@
     <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
     <ProjectReference Include="../../SCDC.Contracts/SCDC.Contracts.csproj" />
     <ProjectReference Include="../../SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
+    <ProjectReference Include="../SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
+    <ProjectReference Include="../../Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj" />
+    <ProjectReference Include="../../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>

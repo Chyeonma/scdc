@@ -4,8 +4,49 @@ package scdc.community.v1;
 option csharp_namespace = "SCDC.Community.Grpc.V1";
 
 import "identity/access.proto";
+import "google/protobuf/timestamp.proto";
 
-// Target contracts. Application adapters must not reference generated types.
+service ChannelReadiness {
+  rpc Acquire(ChannelReadyRequest) returns (ChannelReadyPermit);
+}
+
+message CommunityScope {
+  uint32 kind = 1;
+  string user_id = 2;
+  string server_id = 3;
+  string channel_id = 4;
+  string membership_id = 5;
+  string permission = 6;
+  uint64 epoch = 7;
+}
+message CommunityFenceBatch {
+  string operation_id = 1;
+  string batch_id = 2;
+  uint64 routing_generation = 3;
+  repeated CommunityScope scopes = 4;
+}
+message CommunityFenceReceipt {
+  scdc.identity.v1.Owner owner = 1;
+  CommunityFenceBatch batch = 2;
+}
+message ChannelReadyRequest {
+  scdc.identity.v1.AccessRequest identity = 1;
+  string server_id = 2;
+  string channel_id = 3;
+  string membership_id = 4;
+}
+message ChannelReadyPermit {
+  string operation_id = 1;
+  string channel_id = 2;
+  string server_id = 3;
+  bytes fingerprint = 4;
+  scdc.identity.v1.Permit identity = 5;
+  repeated CommunityScope scopes = 6;
+  google.protobuf.Timestamp issued_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+}
+
+// Service contracts. Application adapters must not reference generated types.
 service CommunityAccess {
   rpc AcquirePermit(scdc.identity.v1.AccessRequest) returns (scdc.identity.v1.AccessReply);
   rpc GetChange(scdc.identity.v1.ChangeQuery) returns (scdc.identity.v1.ChangeStatus);

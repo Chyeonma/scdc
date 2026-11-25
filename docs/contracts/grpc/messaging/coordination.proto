@@ -5,8 +5,18 @@ option csharp_namespace = "SCDC.Messaging.Grpc.V1";
 
 import "google/protobuf/timestamp.proto";
 import "identity/access.proto";
+import "community/access.proto";
+import "google/protobuf/empty.proto";
 
-// Target S2-02 contracts; no runtime change in this task.
+service MessagingControl {
+  rpc Probe(google.protobuf.Empty) returns (scdc.identity.v1.ServiceReadiness);
+}
+
+service CommunityPolicyFence {
+  rpc Apply(scdc.community.v1.CommunityFenceBatch) returns (scdc.community.v1.CommunityFenceReceipt);
+}
+
+// Identity and Community use separate, method-authorized fence endpoints.
 service MessagingFence {
   rpc Apply(scdc.identity.v1.FenceBatch) returns (scdc.identity.v1.FenceReceipt);
   rpc Get(scdc.identity.v1.FenceQuery) returns (scdc.identity.v1.FenceReceipt);
@@ -17,6 +27,7 @@ service ChannelProvisioning {
   rpc Confirm(ChannelDecision) returns (ProvisionStatus);
   rpc Cancel(ChannelDecision) returns (ProvisionStatus);
   rpc Get(ProvisionQuery) returns (ProvisionStatus);
+  rpc Activate(scdc.community.v1.ChannelReadyPermit) returns (ProvisionStatus);
 }
 
 service IntegrationInbox {
@@ -63,6 +74,7 @@ message ProvisionStatus {
   ProvisionPhase phase = 3;
   uint64 decision_version = 4;
   bool cleanup_pending = 5;
+  bool missing = 6;
 }
 
 message IntegrationEvent {
