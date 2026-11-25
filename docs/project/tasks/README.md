@@ -6,8 +6,8 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 |---|---|
 | [step-1.md](step-1.md) | STEP-1 — Phạm vi chung hoàn tất; S1-07 giữ riêng cho Media |
 | [step-2.md](step-2.md) | STEP-2 — Hoàn tất theo xác nhận của người dùng ngày 2026-11-25 |
-| [step-3.md](step-3.md) | STEP-3 — Tách từng service (nháp, chưa đồng bộ) |
-| [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (nháp, chưa đồng bộ) |
+| [step-3.md](step-3.md) | STEP-3 — Tách từng service (12 thẻ đã công bố) |
+| [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (15 thẻ đã công bố) |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |
 
 ## Task có thể bắt đầu
@@ -24,7 +24,7 @@ Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất](../../records/verification/e
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. File task STEP-3/4 vẫn giữ trạng thái nháp nên chưa tự đồng bộ lên Trello; kết quả S3-01 đến S3-03 được ghi trong repo. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng mà chưa merge, nên đề xuất tách file/công bố task trong PR đó chưa được áp dụng. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan.
+Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. Theo yêu cầu ngày 2026-11-25, cả 12 thẻ STEP-3 và 15 thẻ STEP-4 được công bố để đồng bộ lên Trello. S3-01 đến S3-03 có kết quả hoàn tất trong nguồn; các task còn lại giữ nguyên phụ thuộc và chưa tự chuyển sang đang làm. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng; lần công bố này dùng nguyên hai file hiện tại, không áp dụng cách tách file trong PR cũ.
 
 ## Nhánh tính năng chưa tích hợp
 

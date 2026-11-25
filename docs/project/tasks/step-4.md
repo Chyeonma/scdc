@@ -2,7 +2,7 @@
 
 Thẻ Trello của [STEP-4](../planning.md#step-4). Cách đồng bộ xem [README](README.md).
 
-Trạng thái: nháp
+Đã công bố 15 thẻ để đồng bộ lên Trello theo yêu cầu ngày 2026-11-25; các phụ thuộc vẫn áp dụng khi nhận việc.
 
 Mã thẻ dùng lại mã COM-W và V1-MEDIA trong [kế hoạch](../planning.md#community-work-items); chi tiết đầu ra và tiêu chí đầy đủ nằm ở đó, thẻ chỉ tóm tắt. Phần backend của các thẻ này chờ STEP-3; phần làm được ngay (giao diện với dữ liệu giả, review hợp đồng, câu hỏi còn mở) đã tách sang [việc làm sớm](step-4-early.md). Mobile, thông báo, gửi file chưa vào đây vì chưa chốt thuộc v1.
 
