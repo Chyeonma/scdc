@@ -16,7 +16,7 @@ Quy tắc khi nhận việc ở đây:
 - Đầu ra: đối chiếu nhánh `feat/identity` (worker gửi email, 1 commit, bỏ ngỏ từ 2026-10-05) với Identity hiện tại; tích hợp phần email còn phù hợp vào nhánh chính, hoặc ghi lý do bỏ và cách cung cấp worker mà S3-04 cần. Giữ các thay đổi phiên, permit và thu hồi của STEP-2; ưu tiên xử lý trước S3-04.
 - Xong khi: không còn nhánh treo; test Identity qua; [email](../../features/accounts/email-links.md) cập nhật hiện trạng.
 - Phụ thuộc: không.
-- Khả năng bắt đầu: **Có thể làm ngay — 2026-11-24**. Làm trong monolith hiện tại, chưa cần host Identity riêng; kiểm tra xung đột với công việc Identity đang triển khai trước khi ghép code.
+- Khả năng bắt đầu: **Có thể làm ngay — cập nhật 2026-11-25**. Đối chiếu nhánh email cũ với host Identity đã tách ở S3-02/S3-03; tích hợp phần còn phù hợp vào các project Identity hiện tại, giữ nguyên JWT, Redis, permit/fence và dữ liệu đã chuyển.
 
 ## E4-02 · Giao diện tin phòng với dữ liệu giả
 - Nhãn: UI/UX

@@ -227,7 +227,7 @@ MVP là một ứng dụng để nhóm bắt đầu sớm; microservice thuộc 
 |---|---|---|---|---|
 | [STEP-1](#step-1) | Khung chạy chung: gateway, Compose, CI, giám sát | Cả nhóm; Vg điều phối | Dựng lại môi trường; lần theo request qua trace; CI và demo đạt | **Hoàn tất phạm vi chung — 2026-11-22.** [S1-09](../records/verification/environment/s1-09-2026-11-22.md): demo 14/14, CI 299 backend và 77 frontend đạt. S1-07 giữ riêng cho Media, không chặn bước sau. |
 | [STEP-2](#step-2) | Tách ranh giới dữ liệu và transaction ngay trong monolith | Vg (Identity, Community), Sáng (Messaging) | Không còn transaction, khóa ngoại, JOIN giữa module; test cũ vẫn qua | **Hoàn tất theo xác nhận của người dùng — 2026-11-25.** [S2-12](../records/verification/environment/s2-12-2026-11-25.md): demo UI thật 10/10, sáu cặp quyền chéo bị từ chối; logout ngắt WebSocket trong 362 ms, không có payload sau ngắt. [S2-11](../records/verification/architecture/s2-11-2026-11-25.md) kiểm chứng lỗi và thu hẹp quyền; CI trên `main` đạt 396 backend và 82 frontend. [Dev đã nâng đủ baseline](../records/verification/environment/dev-sync-2026-11-25.md), giữ dữ liệu và khóa. Ước lượng STEP-3 chuyển sang rà từng task. |
-| [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | STEP-2 đã hoàn tất; [S3-01 đã có checklist và bản đối chiếu Identity](../records/verification/architecture/s3-01-2026-11-25.md), chờ dùng khi chuyển thật và cập nhật sau 3a. Chưa tách service; task còn nháp, chưa ước lượng chi tiết. Media vẫn chờ S1-07. |
+| [STEP-3](#step-3) | Tách từng service: Identity, Media, Messaging; phần còn lại là Community | Vg, Thái, Sáng | Bốn service chạy và triển khai độc lập, mỗi service một database | **Identity API/worker và PostgreSQL riêng đã chạy dev, mã nguồn đồng bộ đủ S3-03 với main — 2026-11-25.** [S3-03](../records/verification/architecture/s3-03-2026-11-25.md): chuyển 22 bảng/459 dòng, giữ user/token/cursor cũ; cutoff WebSocket 237 ms. [S3-01](../records/verification/architecture/s3-01-2026-11-25.md) đã áp dụng và bổ sung bài học. Task chung còn nháp; email, Messaging/Community và phần Media chưa tích hợp tiếp tục theo [trạng thái nhánh/task](tasks/README.md). |
 | [STEP-4](#step-4) | Tính năng mới trên kiến trúc mới: tin phòng, phòng thoại, hoàn thiện Community | Theo service | Đạt [điều kiện hoàn tất v1](../releases/acceptance.md#v1-completion) | — |
 
 Không ước lượng cả lộ trình ngay từ đầu: làm xong STEP-1, đo thời gian thực tế rồi mới ước lượng các bước sau ([ước lượng](#ước-lượng-và-khóa-lịchchi-phí)). Mỗi bước kết thúc bằng một buổi demo.
@@ -272,7 +272,7 @@ Theo thứ tự ít rủi ro trước:
 
 | Thứ tự | Service | Phụ trách | Lý do |
 |---|---|---|---|
-| 3a | Identity | Vg | Service khác chỉ cần kiểm tra JWT và biết phiên còn hiệu lực. Ranh giới rõ nhất, dùng để học quy trình tách |
+| 3a | Identity | Vg | Cấp phiên/permit, lookup và điều phối fence trên ranh giới STEP-2; dùng lần tách đầu để kiểm chứng quy trình |
 | 3b (song song) | Media control | Thái | Xây mới thành service riêng, không phải chuyển dữ liệu. Làm gọi riêng trước (V1-MEDIA-02); phòng thoại cần quyền Community nên để STEP-4 |
 | 3c | Messaging | Sáng | Nhiều dữ liệu và realtime nhất; tách sau khi đã quen quy trình. Cần hợp đồng tạo phòng giữa Community và Messaging ([D14–D19](../features/community/channels.md#v1-channel-provisioning)) |
 | — | Community | Vg | Phần còn lại của monolith trở thành service Community |
@@ -297,6 +297,9 @@ Mỗi lần tách gồm: chuyển dữ liệu offline ([D48–D52](../system/dat
 ### Đề xuất hoãn một số công nghệ
 
 Các quyết định dưới đây đã chốt. Đề xuất chỉ **hoãn** để nhóm học từng thứ một, không bỏ. Nếu nhóm đồng ý, ghi DEC mới; nếu môn học bắt buộc thì giữ nguyên.
+
+S3-02 đã triển khai gRPC/HTTP2 và mTLS ngay khi tách Identity; đề xuất hoãn
+D04/D20 dưới đây không được áp dụng cho lần tách này.
 
 | Đã chốt | Đề xuất làm trước | Lý do | Chuyển sang bản chốt khi |
 |---|---|---|---|

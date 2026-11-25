@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import secrets
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -22,11 +23,12 @@ def main():
     parser.add_argument('--observe-port', type=int, default=15480)
     parser.add_argument('--keep', action='store_true')
     args = parser.parse_args()
+    os.umask(0o077)
     if any(not 1024 <= p <= 65535 for p in [args.port, args.observe_port]) or args.port == args.observe_port:
         parser.error('Use two different unprivileged ports')
     project = 'scdc-observe-' + datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S') + f'-{os.getpid()}'
     artifact = ROOT / 'artifacts/observability' / project
-    artifact.mkdir(parents=True)
+    artifact.mkdir(parents=True, mode=0o700)
     env = dict(os.environ, GATEWAY_WEB_PORT=str(args.port), OBSERVE_TEST_PORT=str(args.observe_port))
     compose = [args.engine, 'compose', '-p', project, '-f', str(ROOT / 'compose.gateway-test.yaml'),
                '-f', str(ROOT / 'compose.observability-test.yaml')]
@@ -37,6 +39,17 @@ def main():
     canary = 'SCDC_PRIVATE_CANARY_' + secrets.token_hex(8)
     results = {'project': project, 'trace_id': trace_id, 'gateway': origin, 'openobserve': observe,
                'checks': {}, 'passed': False, 'kept': args.keep}
+    for script, directory, variable in [
+        ('init_rpc_certificates.py', 'rpc', 'SCDC_RPC_SECRET_DIR'),
+        ('init_identity_database_secrets.py', 'identity-database', 'SCDC_IDENTITY_DB_SECRET_DIR'),
+    ]:
+        secret_directory = artifact / 'private' / directory
+        provision = subprocess.run([sys.executable, str(ROOT / 'scripts' / script), str(secret_directory), '--label-for-containers'],
+                                  cwd=ROOT, text=True, capture_output=True)
+        (artifact / ('initialize-' + directory + '.log')).write_text(provision.stdout + provision.stderr)
+        if provision.returncode:
+            raise RuntimeError('Failed to initialize private test secrets')
+        env[variable] = str(secret_directory)
 
     def run(parts, name, timeout=600, check=True):
         print(name, flush=True)
@@ -89,28 +102,29 @@ def main():
         run(['config', '--quiet'], 'compose-config')
         run(['build'], 'build')
         run(['up', '-d'], 'start-stack')
-        wait_for(lambda: request(origin + '/api/v1/health')[0] == 200 and request(origin + '/health')[0] == 200,
+        wait_for(lambda: request(origin + '/api/v1/health')[0] == 200
+                 and request(origin + '/api/v1/health/identity/access')[0] == 200 and request(origin + '/health')[0] == 200,
                  'services-ready')
         wait_for(lambda: request(observe + '/healthz')[0] == 200, 'openobserve-ready')
         assert request(origin + '/health?access_token=' + canary, headers=headers)[0] == 200
-        run(['stop', 'postgres'], 'stop-test-database')
+        run(['stop', 'identity-postgres'], 'stop-test-database')
         code, body = request(origin + '/api/v1/auth/login?access_token=' + canary,
                              {'login': 'probe@scdc-test.local', 'password': canary}, headers)
         (artifact / 'failure-response.json').write_text(body)
-        assert code == 500, f'Expected database failure, got {code}'
+        assert code == 503, f'Expected Identity database unavailability, got {code}'
         assert trace_id in body, 'Gateway did not preserve the incoming W3C trace context'
         results['checks']['gateway-error-context'] = True
-        run(['start', 'postgres'], 'restart-test-database')
+        run(['start', 'identity-postgres'], 'restart-test-database')
 
         def ingested():
             spans = search('traces')
             logs = search('logs')
-            return (any(s.get('trace_id') == trace_id and s.get('service_name') == 'scdc-monolith'
-                        and s.get('http_response_status_code') == '500' and s.get('span_status') == 'ERROR'
+            return (any(s.get('trace_id') == trace_id and s.get('service_name') == 'scdc-identity'
+                        and s.get('http_response_status_code') == '503' and s.get('span_status') == 'ERROR'
                         for s in spans)
                     and any(s.get('trace_id') == trace_id and s.get('service_name') == 'scdc-sample' for s in spans)
-                    and any(l.get('trace_id') == trace_id and l.get('service_name') == 'scdc-monolith'
-                            and l.get('statuscode') == 500 and l.get('severity') == 'Error' for l in logs)
+                    and any(l.get('trace_id') == trace_id and l.get('service_name') == 'scdc-identity'
+                            and l.get('statuscode') == 503 and l.get('severity') == 'Error' for l in logs)
                     and any(l.get('trace_id') == trace_id and l.get('service_name') == 'scdc-sample' for l in logs))
         wait_for(ingested, 'correlated-logs-traces')
         stored = (artifact / 'traces.json').read_text() + (artifact / 'logs.json').read_text()

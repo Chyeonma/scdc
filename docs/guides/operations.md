@@ -4,7 +4,7 @@
 
 Trang này gồm các quy trình vận hành: triển khai, rollback, xử lý sự cố (API, email, media), backup và khôi phục, dọn dữ liệu, khóa tài khoản, lịch công việc và bàn giao.
 
-**Trạng thái (2026-11-25):** dev đã chạy nền S2-11; [STEP-2 đã hoàn tất](../records/verification/environment/s2-12-2026-11-25.md). [Checklist S3-01](#service-extraction) dùng để chuẩn bị và kiểm chứng từng lần tách service, bắt đầu với Identity. Các quy trình production trên trang này vẫn là hướng dẫn chuẩn bị, chưa có manifest và lệnh production đã diễn tập. Backup và khôi phục của sản phẩm để [sau v1](../project/overview.md#backup-scope); các lần khôi phục thử dev không thay điều kiện này.
+**Trạng thái (2026-11-25):** dev đã chuyển sang Identity API/worker và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); main được đồng bộ cùng cấu hình qua nhánh `fix/s3-03-main-sync` sau các PR gốc. [Checklist S3-01](#service-extraction) đã được áp dụng và bổ sung từ lần chuyển. Các quy trình production trên trang này vẫn là hướng dẫn chuẩn bị, chưa có manifest và lệnh production đã diễn tập. Backup và khôi phục của sản phẩm để [sau v1](../project/overview.md#backup-scope); các lần khôi phục thử dev không thay điều kiện này.
 
 Điều kiện phát hành xem [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu xem [vòng đời dữ liệu](../system/data-lifecycle.md#policy).
 
@@ -86,9 +86,10 @@ Checklist phục vụ phát triển và demo theo các quyết định hiện h�
 ### EX-03 — Tách database và đối chiếu dữ liệu
 
 - [ ] Chốt mapping nguồn → đích theo [D02/D03](../system/database.md#v1-database-layout): Identity ở PostgreSQL instance riêng; Community/Messaging/Media có database riêng trên instance còn lại. Tạo runtime login và migrator tách quyền; thử đăng nhập thật, từ chối truy cập owner khác và DDL/ledger ngoài quyền.
-- [ ] Viết migration SQL, kiểm tra trước, ledger/checksum và khóa chạy theo [D48–D50](../system/database.md#v1-migration-execution). Công cụ hiện tại dùng cho nâng monolith; chưa có CLI v1 chọn service/database hoặc công cụ chuyển dữ liệu giữa database. Không coi lệnh giả định là đã chạy được; ghi lệnh thật và exit code sau khi task dữ liệu triển khai.
+- [ ] Viết migration SQL, kiểm tra trước, ledger/checksum và khóa chạy theo [D48–D50](../system/database.md#v1-migration-execution). Identity có [CLI `identity-transfer`](../../database/postgres/identity/README.md) chọn nguồn/đích cụ thể và baseline riêng; CLI migration SQL cũ vẫn dành cho monolith. Service tiếp theo phải có lệnh owner thật, không dùng migration đa owner trên DB đã tách.
 - [ ] Chuyển thử vào database riêng từ bản sao đã kiểm tra. Đối chiếu từng nhóm owner: số dòng, tập ID, quan hệ nội bộ, giá trị/hash theo cột, sequence/`is_called`, version/epoch, timestamp/hạn gốc, thao tác chống trùng, tombstone, outbox/inbox, audit, journal và ACK. Đối chiếu trạng thái công việc, không chỉ tổng số dòng; không tự đánh dấu đã phát hoặc reset việc đang xử lý.
 - [ ] Giữ ledger nguồn để truy vết và lập baseline đích có mapping/checksum rõ; không chép ledger rồi coi migration mới đã chạy. Giữ key ring và thông số giải mã cần dùng. Nếu JWT, phiên hoặc cursor cũ bị thay hiệu lực, phải có kế hoạch và bằng chứng cụ thể theo D51; không suy từ việc user ID còn nguyên.
+- [ ] Rà catalog trực tiếp của nguồn gốc, gồm tên NOT NULL và helper/CHECK legacy. Bản sao đã qua `pg_restore` có thể che việc PG18 đổi tên ngầm định hoặc cách nhóm AND ở lần restore đầu. Giữ tên constraint từ nguồn, chỉ chuẩn hóa biểu thức tương đương đã review; khác biệt chưa giải thích vẫn phải chặn mở writer.
 
 ### EX-04 — Cấu hình, khóa, Redis và quan sát
 

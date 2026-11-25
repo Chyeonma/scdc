@@ -2,21 +2,29 @@
 
 Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc giữa các phần, và các quyết định v1 về worker, Hub, repository, chia project, thư viện dùng chung và mã sinh từ gRPC.
 
-**Trạng thái:** nghiệp vụ hiện là MVP trong một ứng dụng API. [Service mẫu S1-03](#s1-03-sample-service) bắt đầu dựng bốn project theo D40 và D43 trong [solution](../../SCDC.slnx); bốn service nghiệp vụ chưa được tách.
+**Trạng thái S3-02/S3-03:** Identity có bốn project, host API/worker và PostgreSQL riêng; Community/Messaging còn trong API cũ. Gọi Identity qua gRPC/mTLS; thư viện mã sinh theo owner, Shared.Core thuần .NET. [Hồ sơ](../records/verification/architecture/s3-03-2026-11-25.md) ghi kiểm chứng dev và lịch sử đồng bộ main; bốn service nghiệp vụ chưa tách đầy đủ.
 
-## Cấu trúc hiện tại (MVP)
+## Cấu trúc hiện tại
 
 ```text
 services/
-├── SCDC.Api/               # Khởi động, controller, HTTP, xác thực, lỗi, OpenAPI
-├── SCDC.Contracts/         # Interface và kiểu để module gọi nhau
-├── SCDC.BuildingBlocks/    # Result, kiểm tra văn bản, transaction, outbox
+├── Identity/
+│   ├── SCDC.Identity.Api/
+│   ├── SCDC.Identity.Application/
+│   ├── SCDC.Identity.Domain/
+│   ├── SCDC.Identity.Infrastructure/
+│   └── SCDC.Identity.Grpc/ # Mã sinh hợp đồng, không có nghiệp vụ
+├── Community/SCDC.Community.Grpc/
+├── Messaging/SCDC.Messaging.Grpc/
+├── Shared/SCDC.Shared.Core/ # Kiểu JWT trust, Result, văn bản thuần .NET
+├── SCDC.Api/               # HTTP/Hub Community-Messaging, consumer auth, fence RPC
+├── SCDC.Contracts/         # Interface và DTO thuần giữa owner
+├── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
 └── Modules/
-    ├── Identity/
     ├── Community/
     └── Messaging/
 tests/SCDC.Api.Tests/       # Test backend
-tools/SCDC.DbMigrator/      # Công cụ chạy migration
+tools/SCDC.DbMigrator/      # Migration monolith và chuyển offline Identity riêng
 ```
 
 | Phần | Làm gì |
@@ -27,7 +35,12 @@ tools/SCDC.DbMigrator/      # Công cụ chạy migration
 | API | Lấy người thực hiện từ phiên, nhận input, gọi Application, chuyển `Result` thành HTTP |
 | Module bootstrap | Đăng ký DI, cấu hình, interface công khai |
 
-Hiện mỗi module tổ chức hơi khác nhau: Identity chia theo tầng (Domain, Application, Infrastructure) ở cấp module; Community chia theo chức năng ([Community](../features/community/mechanics.md)); Messaging có API DM, ChatHub, outbox và vòng đời phòng. Chỉ tạo thư mục hay class khi gói cần dùng.
+Identity nhóm Accounts/Sessions/Access/Authentication trong project theo tầng,
+giữ namespace cũ để tương thích nhưng assembly riêng. Domain/Application không
+tham chiếu SQL, Redis, ASP.NET hoặc Protobuf; adapter framework nằm trong owner
+Infrastructure, chưa tạo thư viện Hosting chung. Community chia theo chức năng
+([Community](../features/community/mechanics.md)); Messaging có API DM, ChatHub,
+outbox và vòng đời phòng trong module cũ tới các task tách tiếp theo.
 
 ### Quy tắc phụ thuộc
 
@@ -172,7 +185,7 @@ Migration: chạy như bước riêng ([D48](database.md#v1-migration-execution)
 
 Service mẫu chứng minh cách đóng gói một tiến trình .NET độc lập, chia project và định tuyến từ Nginx trước khi tách các service nghiệp vụ. `Sample` là khung thử hạ tầng cho [S1-03](../project/tasks/step-1.md), nằm ngoài bốn service nghiệp vụ của v1.
 
-**Trạng thái:** đã triển khai và kiểm thử trên nhánh `tech/s1-03-sample-service`, kế thừa commit gateway S1-02 `d325070`; [10 ca gateway và 77 test frontend đạt](../records/verification/gateway/s1-03-2026-11-13.md), chờ review.
+**Trạng thái:** đã triển khai, kiểm thử và vào main qua [PR #35](https://github.com/Chyeonma/scdc/pull/35); nền kiểm chứng kế thừa commit gateway S1-02 `d325070`, [10 ca gateway và 77 test frontend đạt](../records/verification/gateway/s1-03-2026-11-13.md).
 
 | Project | Trách nhiệm và tham chiếu |
 |---|---|

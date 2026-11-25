@@ -1,5 +1,10 @@
 # Overlay for compose.gateway-test.yaml; all data belongs to the unique test project.
 services:
+  identity-service:
+    environment:
+      Telemetry__Enabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "2000"
   chat-service:
     environment:
       Telemetry__Enabled: "true"

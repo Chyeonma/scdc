@@ -97,7 +97,7 @@ flowchart LR
 
 [S1-02](../project/tasks/step-1.md) đưa WebClient, REST và SignalR qua Nginx trước ứng dụng API hiện tại. Phần này mô tả định tuyến và cách kiểm chứng theo D09, D10 và D22.
 
-**Trạng thái:** đã triển khai và kiểm thử trên nhánh `tech/s1-02-nginx-gateway`; [7 ca gateway đạt, chờ review](../records/verification/gateway/s1-02-2026-11-12.md). S1-01 đã hoàn tất theo [xác nhận của người dùng ngày 2026-11-12](../records/planning/s1-01-confirmation-2026-11-12.md).
+**Trạng thái:** đã triển khai, kiểm thử và vào main qua [PR #34](https://github.com/Chyeonma/scdc/pull/34); [7 ca gateway đạt ở nền kiểm chứng S1-02](../records/verification/gateway/s1-02-2026-11-12.md). S1-01 đã hoàn tất theo [xác nhận của người dùng ngày 2026-11-12](../records/planning/s1-01-confirmation-2026-11-12.md).
 
 #### Định tuyến
 

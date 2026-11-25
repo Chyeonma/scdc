@@ -25,3 +25,8 @@ Readiness riêng: `/api/v1/health/identity/access`. Swagger Development:
 `/swagger/identity`. [Hướng dẫn phát triển](../../docs/guides/development.md),
 [checklist tách service](../../docs/guides/operations.md#service-extraction),
 [task STEP-3](../../docs/project/tasks/step-3.md).
+
+S3-03 dùng [PostgreSQL Identity riêng](../../database/postgres/identity/README.md).
+Source runtime cũ giữ `NOLOGIN`; startup gate yêu cầu transfer record khớp nguồn
+hoặc marker volume mới. Worker và EF/Npgsql đều đọc cùng runtime password file;
+API không có admin connection.

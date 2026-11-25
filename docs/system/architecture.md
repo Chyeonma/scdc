@@ -2,7 +2,7 @@
 
 Trang này mô tả kiến trúc hiện tại (MVP), ranh giới dữ liệu giữa các module, và kiến trúc mục tiêu v1 cùng danh sách các quyết định đã chốt. Người mới đọc nên bắt đầu từ [tóm tắt v1](#summary).
 
-**Trạng thái source S3-02:** Identity có host API/worker riêng, Community/Messaging còn trong `SCDC.Api`; permit, lookup và fence hai chiều đã qua gRPC/mTLS. Database Identity riêng và chuyển dữ liệu thuộc S3-03. Dev đang chạy nền S2-11 cho tới đợt chuyển có đối chiếu dữ liệu. Bốn service nghiệp vụ chưa tách đầy đủ; xem [lộ trình](../project/planning.md#roadmap).
+**Trạng thái source S3-02/S3-03:** Identity có host API/worker và PostgreSQL instance riêng; Community/Messaging còn trong `SCDC.Api` và database cũ. Permit, lookup và fence hai chiều đã qua gRPC/mTLS. Mốc chuyển dev và đối chiếu dữ liệu ở [hồ sơ S3-03](../records/verification/architecture/s3-03-2026-11-25.md). Bốn service nghiệp vụ chưa tách đầy đủ; xem [lộ trình](../project/planning.md#roadmap).
 
 <a id="ownership"></a>
 
@@ -16,7 +16,7 @@ Phân công người xem [kế hoạch](../project/planning.md#team); trang này
 
 <a id="current"></a>
 
-## Source sau S3-02
+## Source sau S3-02/S3-03
 
 ```mermaid
 %%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 45, "rankSpacing": 70}, "theme": "dark", "themeVariables": {"background": "#0f172a", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#64748b", "lineColor": "#94a3b8", "textColor": "#e2e8f0", "edgeLabelBackground": "#1e293b", "clusterBkg": "#141e2e", "clusterBorder": "#475569"}, "themeCSS": "& { background-color: #0f172a; }"}}%%
@@ -27,8 +27,8 @@ flowchart LR
     Api <-->|gRPC/mTLS · permit, lookup, fence| Identity
     Api --> Community[Community]
     Api --> Messaging[Messaging]
-    Identity --> Pg[(PostgreSQL 18)]
-    Community --> Pg
+    Identity --> IdentityPg[(PostgreSQL Identity riêng)]
+    Community --> Pg[(PostgreSQL Community/Messaging)]
     Messaging --> Pg
     Community -->|Contracts · provision| Messaging
     Identity -->|Công bố phiên| Redis[(Redis)]
@@ -36,11 +36,11 @@ flowchart LR
     classDef app fill:#172b46,stroke:#60a5fa,color:#dbeafe
     classDef data fill:#12352e,stroke:#34d399,color:#d1fae5
     class Web,Gateway,Api,Identity,Community,Messaging app
-    class Pg,Redis data
+    class Pg,IdentityPg,Redis data
 ```
 
 - Nginx phục vụ WebClient, định tuyến auth/users và health/Swagger Identity tới host riêng; Community/DM và SignalR `/hubs/chat` tới API còn lại.
-- Identity có bốn project, API và worker thu hồi chung host. Community/Messaging vẫn gọi nhau trong process, transaction theo owner. S3-02 giữ database hiện tại với ba schema/runtime login riêng; S3-03 chuyển Identity sang instance riêng.
+- Identity có bốn project, API và worker thu hồi chung host, database ở PostgreSQL riêng. Community/Messaging vẫn gọi nhau trong process, transaction theo owner và còn chung database trên instance cũ tới S3-08/S3-10. Source Identity cũ giữ nguyên dữ liệu, khóa role bằng `NOLOGIN` sau chuyển.
 - Identity công bố phiên vào Redis; các consumer chỉ kiểm JWT bằng public key và đọc Redis. Permit/lookup và fence hai chiều đi qua gRPC HTTP/2 với mTLS, deadline hai giây và peer/owner allowlist. Telemetry đi qua Collector tới OpenObserve.
 - Identity readiness `/api/v1/health/identity/access` kiểm tra PostgreSQL và Redis. Chưa có worker email (đang ở nhánh `feat/identity`, xem [email](../features/accounts/email-links.md#status)) hoặc Media.
 
