@@ -12,11 +12,11 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 
 ## Task có thể bắt đầu
 
-Rà ngày **2026-11-25**: S2-01 đến S2-10 đã vào `main`; S2-11 đã triển khai và có [hồ sơ kiểm chứng](../../records/verification/architecture/s2-11-2026-11-25.md). Sau khi merge S2-11 và CI đạt, có **7 task đủ phụ thuộc để bắt đầu**, gồm S2-12 và sáu việc làm sớm. Sáu việc làm sớm tiếp tục nhận được độc lập. Người nhận chuẩn bị ước lượng, dữ liệu thử và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
+Rà ngày **2026-11-25**: S2-01 đến S2-11 đã vào `main`, CI đạt và [dev đã nâng lên S2-11](../../records/verification/environment/dev-sync-2026-11-25.md). [Hồ sơ S2-11](../../records/verification/architecture/s2-11-2026-11-25.md) ghi kiểm thử ranh giới và lỗi. Có **7 task đủ phụ thuộc để bắt đầu**, gồm S2-12 và sáu việc làm sớm. Sáu việc làm sớm tiếp tục nhận được độc lập. Người nhận chuẩn bị ước lượng, dữ liệu thử và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
 
 | Task | Người làm đề xuất | Phần có thể làm ngay |
 |---|---|---|
-| S2-12 | Vg, cả nhóm | Sau khi merge S2-11 và CI đạt: demo ba role database tách quyền, tổng kết STEP-2 và ước lượng STEP-3 |
+| S2-12 | Vg, cả nhóm | Demo ba role database tách quyền trên baseline S2-11, tổng kết STEP-2 và ước lượng STEP-3 |
 | E4-01 | Thái | Đối chiếu, tích hợp hoặc ghi lý do bỏ nhánh worker email trước S3-04 |
 | E4-02 | Người còn công suất; Sáng kiểm tra | Giao diện tin phòng với dữ liệu giả |
 | E4-03 | Người còn công suất; Thái kiểm tra | Prototype gọi riêng, phòng thoại và thiết bị với dữ liệu giả |
@@ -24,7 +24,7 @@ Rà ngày **2026-11-25**: S2-01 đến S2-10 đã vào `main`; S2-11 đã triể
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên S2-12 sau khi merge S2-11 và CI đạt trước khi chuyển sang tách service. Các task STEP-3 trên `main` vẫn là nháp: tách service chờ kết thúc STEP-2; nhánh Media còn chờ S1-07 và hợp đồng phiên tương ứng. Backend STEP-4 chờ STEP-3. Phần chuẩn bị S3/S4 đang được đề xuất riêng ở PR #39, chưa coi là đã công bố khi PR chưa merge.
+Ưu tiên S2-12 trước khi chuyển sang tách service. Các task STEP-3 trên `main` vẫn là nháp: tách service chờ kết thúc STEP-2; nhánh Media còn chờ S1-07 và hợp đồng phiên tương ứng. Backend STEP-4 chờ STEP-3. Phần chuẩn bị S3/S4 đang được đề xuất riêng ở PR #39, chưa coi là đã công bố khi PR chưa merge.
 
 ## Ai giữ phần nào
 

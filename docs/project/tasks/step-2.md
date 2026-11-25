@@ -2,7 +2,7 @@
 
 Thẻ Trello của [STEP-2](../planning.md#step-2). Cách đồng bộ xem [README](README.md).
 
-**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-11 hoàn tất triển khai và kiểm thử; S2-12 chưa hoàn tất. Kết quả S2-11 và CI theo hồ sơ bên dưới. Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
+**Trạng thái:** đã công bố để đồng bộ Trello ngày 2026-11-22. S2-01 đến S2-11 hoàn tất triển khai và kiểm thử; S2-12 chưa hoàn tất. S2-11 đã vào `main`, CI đạt; [dev đã nâng lên S2-11 ngày 2026-11-25](../../records/verification/environment/dev-sync-2026-11-25.md). Bỏ bước review theo chỉ đạo của người dùng; vẫn kiểm tra bằng build, test và CI.
 
 S2-01 hoàn tất theo [xác nhận ngày 2026-11-17](../../records/planning/progress-2026-11-17.md); S2-02 xong thiết kế, S2-03 đã vào `main` tại `9d6d375`, CI đạt 299 backend và 77 frontend. [Tổng kết S1-09](../../records/verification/environment/s1-09-2026-11-22.md#step-2-estimate) giữ ước lượng lịch sử trước S2-04/S2-05. Sau S2-11 còn S2-12, khoảng 0,5–1 ngày công. Bảng dưới giữ snapshot trước triển khai.
 
@@ -81,7 +81,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Bổ sung S2-02: Community lưu policy dự kiến và ACK; tính phạm vi quyền hiệu lực, actor membership header và revalidation trước final commit; cập nhật client tương ứng.
 - Xong khi: test Community qua, kể cả các ca tài khoản bị khóa giữa chừng.
 - Phụ thuộc: S2-02, S2-03, S2-06.
-- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-23; commit ngày 2026-11-24**. [Hồ sơ S2-07](../../records/verification/architecture/s2-07-2026-11-23.md): Community lấy permit trước transaction, fence cục bộ, policy dự kiến/ACK và revalidation session gốc; header membership actor và UI 202/reload. **349/349 backend**, **82/82 frontend**, **52/52 browser Community**; CLI bảo toàn 50 bảng nghiệp vụ. Commit `432f870` trên `main`; volume dev hiện hữu vẫn ở S2-06. Tạo Messaging space bằng transaction cũ giữ tới S2-09.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-23; commit ngày 2026-11-24**. [Hồ sơ S2-07](../../records/verification/architecture/s2-07-2026-11-23.md): Community lấy permit trước transaction, fence cục bộ, policy dự kiến/ACK và revalidation session gốc; header membership actor và UI 202/reload. **349/349 backend**, **82/82 frontend**, **52/52 browser Community**; CLI bảo toàn 50 bảng nghiệp vụ. Commit `432f870` trên `main`. Tạo Messaging space bằng transaction cũ giữ tới S2-09.
 
 ## S2-08 · Messaging không dùng transaction của Identity
 - Nhãn: refactor
@@ -89,7 +89,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: 6 file Messaging đang dùng `IAccountPairAccessGuard` và `ISharedDatabaseSession` (gửi, sửa, lịch sử, hộp thư, mở hội thoại, ConversationAccess) chuyển sang thiết kế S2-02. `IHistoricalUserSummaryReader` không còn đọc qua kết nối chung.
 - Xong khi: toàn bộ test DM và Playwright `dm-mvp` qua.
 - Phụ thuộc: S2-02, S2-03, S2-06.
-- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-08](../../records/verification/architecture/s2-08-2026-11-24.md): sáu đường DM dùng permit/fence và transaction Messaging riêng; lookup hồ sơ độc lập, realtime kiểm lại sau lookup. **365/365 backend**, **82/82 frontend**, **14/14 Playwright dm-mvp**; thu hồi phiên qua UI 1.223 ms. Mã nguồn và hồ sơ cùng commit S2-08; volume dev hiện hữu vẫn ở S2-06.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-08](../../records/verification/architecture/s2-08-2026-11-24.md): sáu đường DM dùng permit/fence và transaction Messaging riêng; lookup hồ sơ độc lập, realtime kiểm lại sau lookup. **365/365 backend**, **82/82 frontend**, **14/14 Playwright dm-mvp**; thu hồi phiên qua UI 1.223 ms. Mã nguồn và hồ sơ cùng commit S2-08.
 
 ## S2-09 · Tạo phòng không dùng transaction chung
 - Nhãn: refactor
@@ -97,7 +97,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: `ChannelService` không gọi `IChatSpaceLifecycle` trong transaction của Community; dùng luồng chuẩn bị, xác nhận, hủy của D14–D19 (dạng chạy trong một ứng dụng).
 - Xong khi: tạo phòng chạy đúng; các ca mất phản hồi, gửi lại, hủy giữa chừng có test.
 - Phụ thuộc: S2-02, S2-03, S2-04, S2-05, S2-06, S2-07; không chờ S2-08.
-- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-09](../../records/verification/architecture/s2-09-2026-11-24.md): transaction owner riêng, reservation, quyết định bền và worker phục hồi; **374/374 backend** ở lượt cuối chạy collection tuần tự, **82/82 frontend**, **14/14 browser phòng**; CLI bảo toàn dữ liệu/field cũ của 53 bảng. Mã nguồn và hồ sơ cùng commit S2-09; volume dev vẫn ở S2-06.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-09](../../records/verification/architecture/s2-09-2026-11-24.md): transaction owner riêng, reservation, quyết định bền và worker phục hồi; **374/374 backend** ở lượt cuối chạy collection tuần tự, **82/82 frontend**, **14/14 browser phòng**; CLI bảo toàn dữ liệu/field cũ của 53 bảng. Mã nguồn và hồ sơ cùng commit S2-09.
 
 ## S2-10 · Dọn hợp đồng giữa module
 - Nhãn: refactor
@@ -105,7 +105,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: `SCDC.Contracts` không còn `DbTransaction`, `ISharedDatabaseSession`; các lời gọi có timeout và gọi lặp không gây hại; bỏ hoặc giữ hợp đồng chưa dùng theo S2-01.
 - Xong khi: build qua; không còn chỗ nào trong code truyền transaction qua ranh giới module.
 - Phụ thuộc: S2-07, S2-08, S2-09.
-- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-10](../../records/verification/architecture/s2-10-2026-11-24.md): bỏ hợp đồng/implementation transaction cũ và hai placeholder, Identity tự quản lý connection; giữ ACL nội bộ và các DTO/lookup còn dùng. Bổ sung deadline owner Identity và đối chiếu ACK theo giá trị; **379/379 backend**, **82/82 frontend**, **30/30 test công cụ**, build Release 0 warning/error. Đã vào `main` qua PR #38; [PR #40 sửa barrier CI](../../records/verification/ci/dm-concurrency-2026-11-24.md) đạt 381/381 backend và 82/82 frontend. Volume dev vẫn ở S2-06; grant chéo tạm được gỡ bởi S2-11.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-24**. [Hồ sơ S2-10](../../records/verification/architecture/s2-10-2026-11-24.md): bỏ hợp đồng/implementation transaction cũ và hai placeholder, Identity tự quản lý connection; giữ ACL nội bộ và các DTO/lookup còn dùng. Bổ sung deadline owner Identity và đối chiếu ACK theo giá trị; **379/379 backend**, **82/82 frontend**, **30/30 test công cụ**, build Release 0 warning/error. Đã vào `main` qua PR #38; [PR #40 sửa barrier CI](../../records/verification/ci/dm-concurrency-2026-11-24.md) đạt 381/381 backend và 82/82 frontend. Grant chéo tạm được gỡ bởi S2-11.
 
 ## S2-11 · Test tình huống lỗi và thu hẹp quyền database
 - Nhãn: tech
@@ -113,7 +113,7 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: test khi bên kia không trả lời, sự kiện đến hai lần, sai thứ tự, mất Redis; đo thời gian thu hồi quyền DM (yêu cầu 5 giây). Bỏ các quyền đọc chéo tạm thời của S2-03.
 - Xong khi: mỗi user database chỉ có quyền trên schema của mình mà test vẫn qua; có số đo thời gian thu hồi.
 - Phụ thuộc: S2-10.
-- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-25**. [Hồ sơ S2-11](../../records/verification/architecture/s2-11-2026-11-25.md): thu hồi quyền schema/bảng/cột/sequence/hàm chéo, kiểm tra baseline và rollback role script; sửa timeout trước advisory lock, deadline watchdog và ngân sách lệch đồng hồ. Bộ mã cuối đạt **396/396 backend**, **30/30 test công cụ**, build Release và kiểm tra tài liệu đạt. 32 WebSocket bị tác động ngắt trong **501–2.510 ms**, không có payload sau ngắt. Fixture chờ endpoint readiness trước luồng nghiệp vụ; các ca chủ động làm Redis lỗi tiếp tục kiểm tra 503. CI bắt buộc trước merge. Volume dev chưa nâng khỏi S2-06; hướng dẫn nâng S2-07/S2-09 trước khi áp quyền mới đã cập nhật.
+- Kết quả: **Hoàn tất triển khai và kiểm thử — 2026-11-25**. [Hồ sơ S2-11](../../records/verification/architecture/s2-11-2026-11-25.md): thu hồi quyền schema/bảng/cột/sequence/hàm chéo, kiểm tra baseline và rollback role script; sửa timeout trước advisory lock, deadline watchdog và ngân sách lệch đồng hồ. Bộ mã cuối đạt **396/396 backend**, **30/30 test công cụ**, build Release và kiểm tra tài liệu đạt. 32 WebSocket bị tác động ngắt trong **501–2.510 ms**, không có payload sau ngắt. Fixture chờ endpoint readiness trước luồng nghiệp vụ; các ca chủ động làm Redis lỗi tiếp tục kiểm tra 503. Đã vào `main` qua [PR #41](https://github.com/Chyeonma/scdc/pull/41), [CI đạt 396 backend và 82 frontend](https://github.com/Chyeonma/scdc/actions/runs/45545404660). [Dev đã nâng S2-07/S2-09 và áp quyền S2-11](../../records/verification/environment/dev-sync-2026-11-25.md), bảo toàn dữ liệu, khóa và phiên cũ; smoke gateway, WebSocket và browser đạt trong phạm vi hồ sơ.
 
 ## S2-12 · Demo và tổng kết STEP-2
 - Nhãn: docs
@@ -121,5 +121,5 @@ Code của từng module không có SQL đọc thẳng bảng của module khác
 - Đầu ra: demo DM và Community chạy với ba user database tách quyền; ghi bằng chứng vào cột "Kết quả" của [lộ trình](../planning.md#roadmap); ước lượng STEP-3.
 - Xong khi: đạt tiêu chí xong của [STEP-2](../planning.md#step-2).
 - Phụ thuộc: tất cả thẻ trên.
-- Khả năng bắt đầu: **Sau khi merge S2-11 và CI đạt — 2026-11-25**. Demo tổng kết dùng mã và quyền database S2-11 trên stack riêng; không dùng kết quả S2-09 thay cho nghiệm thu STEP-2. Database dev còn ở S2-06 phải nâng đủ baseline nếu được chọn làm môi trường demo.
+- Khả năng bắt đầu: **Đủ phụ thuộc — 2026-11-25**. S2-11 đã merge và CI đạt. Demo tổng kết dùng mã và quyền database S2-11; có thể chọn stack riêng hoặc dev đã nâng cấp theo [hồ sơ môi trường](../../records/verification/environment/dev-sync-2026-11-25.md). Cần ghi bằng chứng và tổng kết riêng cho STEP-2.
 - Trạng thái: **Chưa làm**. Ước lượng sơ bộ: 0,5–1 ngày công.
