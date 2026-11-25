@@ -2,7 +2,7 @@
 
 Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc giữa các phần, và các quyết định v1 về worker, Hub, repository, chia project, thư viện dùng chung và mã sinh từ gRPC.
 
-**Trạng thái S3-02/S3-03:** Identity có bốn project, host API/worker và PostgreSQL riêng; Community/Messaging còn trong API cũ. Gọi Identity qua gRPC/mTLS; thư viện mã sinh theo owner, Shared.Core thuần .NET. [Hồ sơ](../records/verification/architecture/s3-03-2026-11-25.md) ghi dev và PR chờ review; bốn service nghiệp vụ chưa tách đầy đủ.
+**Trạng thái S3-02/S3-03:** Identity có bốn project, host API/worker và PostgreSQL riêng; Community/Messaging còn trong API cũ. Gọi Identity qua gRPC/mTLS; thư viện mã sinh theo owner, Shared.Core thuần .NET. [Hồ sơ](../records/verification/architecture/s3-03-2026-11-25.md) ghi kiểm chứng dev và lịch sử đồng bộ main; bốn service nghiệp vụ chưa tách đầy đủ.
 
 ## Cấu trúc hiện tại
 
@@ -185,7 +185,7 @@ Migration: chạy như bước riêng ([D48](database.md#v1-migration-execution)
 
 Service mẫu chứng minh cách đóng gói một tiến trình .NET độc lập, chia project và định tuyến từ Nginx trước khi tách các service nghiệp vụ. `Sample` là khung thử hạ tầng cho [S1-03](../project/tasks/step-1.md), nằm ngoài bốn service nghiệp vụ của v1.
 
-**Trạng thái:** đã triển khai và kiểm thử trên nhánh `tech/s1-03-sample-service`, kế thừa commit gateway S1-02 `d325070`; [10 ca gateway và 77 test frontend đạt](../records/verification/gateway/s1-03-2026-11-13.md), chờ review.
+**Trạng thái:** đã triển khai, kiểm thử và vào main qua [PR #35](https://github.com/Chyeonma/scdc/pull/35); nền kiểm chứng kế thừa commit gateway S1-02 `d325070`, [10 ca gateway và 77 test frontend đạt](../records/verification/gateway/s1-03-2026-11-13.md).
 
 | Project | Trách nhiệm và tham chiếu |
 |---|---|

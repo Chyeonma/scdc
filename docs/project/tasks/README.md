@@ -12,11 +12,11 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 
 ## Task có thể bắt đầu
 
-Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12](../../records/verification/environment/s2-12-2026-11-25.md); CI đạt và [dev đã nâng lên S2-11](../../records/verification/environment/dev-sync-2026-11-25.md). Có **7 việc đủ phụ thuộc để bắt đầu**: checklist S3-01 trong bản nháp và sáu việc làm sớm. Ước lượng chi tiết STEP-3 chưa chốt; người nhận rà đầu ra, công sức và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
+Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất](../../records/verification/environment/s2-12-2026-11-25.md); [S3-01/S3-02/S3-03 đã có kết quả, Identity và PostgreSQL riêng đang chạy dev](../../records/verification/architecture/s3-03-2026-11-25.md). Phần S3-03 được đưa vào main bằng nhánh đồng bộ sau khi PR #46 merge vào nhánh S3-02. Có **7 việc đủ phụ thuộc để bắt đầu**: S3-07 và sáu việc làm sớm. Ước lượng các task tiếp theo chưa chốt; người nhận rà đầu ra, công sức và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
 
 | Task | Người làm đề xuất | Phần có thể làm ngay |
 |---|---|---|
-| S3-01 | Vg | [Checklist đã soạn và đối chiếu Identity](../../records/verification/architecture/s3-01-2026-11-25.md); dùng cho S3-02/S3-03 và cập nhật sau 3a. Task còn trong bản nháp STEP-3 |
+| S3-07 | Sáng | Tách host Messaging dựa trên Identity đã chạy qua mạng và [checklist đã áp dụng](../../records/verification/architecture/s3-01-2026-11-25.md) |
 | E4-01 | Thái | Đối chiếu, tích hợp hoặc ghi lý do bỏ nhánh worker email trước S3-04 |
 | E4-02 | Người còn công suất; Sáng kiểm tra | Giao diện tin phòng với dữ liệu giả |
 | E4-03 | Người còn công suất; Thái kiểm tra | Prototype gọi riêng, phòng thoại và thiết bị với dữ liệu giả |
@@ -24,7 +24,14 @@ Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất theo xác nhận của ngư�
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên S3-01 trước khi tách Identity. Các task STEP-3 trên `main` vẫn là nháp; rà phạm vi và ước lượng khi nhận việc. Nhánh Media còn chờ S1-07; kết quả hợp đồng phiên STEP-2 đã có. Backend STEP-4 chờ STEP-3. Phần chuẩn bị S3/S4 đang được đề xuất riêng ở PR #39, chưa coi là đã công bố khi PR chưa merge.
+Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. File task STEP-3/4 vẫn giữ trạng thái nháp nên chưa tự đồng bộ lên Trello; kết quả S3-01 đến S3-03 được ghi trong repo. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng mà chưa merge, nên đề xuất tách file/công bố task trong PR đó chưa được áp dụng. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan.
+
+## Nhánh tính năng chưa tích hợp
+
+| Nhánh | Bằng chứng đang có | Phần còn lại |
+|---|---|---|
+| `feat/media-direct-calls` (`adf6a61`, 2026-11-23) | [Hồ sơ trên nhánh Media](https://github.com/Chyeonma/scdc/blob/feat/media-direct-calls/docs/verification/media-direct-calls.md) ghi LiveKit thật, 16 unit test và 5 ca E2E; [CI đạt](https://github.com/Chyeonma/scdc/actions/runs/45049551943) | Chưa có PR vào main. Cần đối chiếu nghiệm thu S1-07, hợp đồng phiên/thu hồi hiện tại và S3-05/S3-06; chưa kết luận Media hoàn tất trên main |
+| `feat/identity` (`60f4db3`, 2026-10-05) | [PR #28](https://github.com/Chyeonma/scdc/pull/28) còn mở, chứa phần email cũ | E4-01 rà và tích hợp vào host Identity hiện tại trước S3-04 |
 
 ## Ai giữ phần nào
 

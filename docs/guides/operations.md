@@ -4,7 +4,7 @@
 
 Trang này gồm các quy trình vận hành: triển khai, rollback, xử lý sự cố (API, email, media), backup và khôi phục, dọn dữ liệu, khóa tài khoản, lịch công việc và bàn giao.
 
-**Trạng thái (2026-11-25):** dev đã chuyển sang Identity API/worker và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md), hai PR riêng chờ review; main chưa nhận các PR này. [Checklist S3-01](#service-extraction) đã được áp dụng và bổ sung từ lần chuyển. Các quy trình production trên trang này vẫn là hướng dẫn chuẩn bị, chưa có manifest và lệnh production đã diễn tập. Backup và khôi phục của sản phẩm để [sau v1](../project/overview.md#backup-scope); các lần khôi phục thử dev không thay điều kiện này.
+**Trạng thái (2026-11-25):** dev đã chuyển sang Identity API/worker và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); main được đồng bộ cùng cấu hình qua nhánh `fix/s3-03-main-sync` sau các PR gốc. [Checklist S3-01](#service-extraction) đã được áp dụng và bổ sung từ lần chuyển. Các quy trình production trên trang này vẫn là hướng dẫn chuẩn bị, chưa có manifest và lệnh production đã diễn tập. Backup và khôi phục của sản phẩm để [sau v1](../project/overview.md#backup-scope); các lần khôi phục thử dev không thay điều kiện này.
 
 Điều kiện phát hành xem [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu xem [vòng đời dữ liệu](../system/data-lifecycle.md#policy).
 

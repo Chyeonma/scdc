@@ -4,7 +4,7 @@ Trang này mô tả các môi trường chạy SCDC: môi trường phát triể
 
 Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/development.md); thao tác phát hành xem [vận hành](../guides/operations.md).
 
-**Trạng thái 2026-11-25:** dev chạy Identity và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); Community/Messaging còn chung host và database cũ. Hai PR đang chờ review, main chưa merge. Media, việc tách hai owner còn lại và bố trí production tiếp tục theo lộ trình.
+**Trạng thái 2026-11-25:** dev chạy Identity và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); Community/Messaging còn chung host và database cũ. Mã nguồn main được đồng bộ đủ S3-03 sau các PR gốc. Media, việc tách hai owner còn lại và bố trí production tiếp tục theo lộ trình.
 
 ## Môi trường phát triển hiện tại
 
