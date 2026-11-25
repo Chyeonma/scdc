@@ -2,7 +2,7 @@
 
 Trang này mô tả kiến trúc hiện tại (MVP), ranh giới dữ liệu giữa các module, và kiến trúc mục tiêu v1 cùng danh sách các quyết định đã chốt. Người mới đọc nên bắt đầu từ [tóm tắt v1](#summary).
 
-**Trạng thái:** backend vẫn là một ứng dụng API (modular monolith). Trên nền MVP `900e226`, STEP-1 đã thêm gateway, CI và giám sát; S2-03 đến S2-10 đã tách database user, outbox, Redis, transaction và hợp đồng theo owner. Bốn service nghiệp vụ chưa được tách; xem [lộ trình](../project/planning.md#roadmap).
+**Trạng thái source S3-02:** Identity có host API/worker riêng, Community/Messaging còn trong `SCDC.Api`; permit, lookup và fence hai chiều đã qua gRPC/mTLS. Database Identity riêng và chuyển dữ liệu thuộc S3-03. Dev đang chạy nền S2-11 cho tới đợt chuyển có đối chiếu dữ liệu. Bốn service nghiệp vụ chưa tách đầy đủ; xem [lộ trình](../project/planning.md#roadmap).
 
 <a id="ownership"></a>
 
@@ -16,14 +16,15 @@ Phân công người xem [kế hoạch](../project/planning.md#team); trang này
 
 <a id="current"></a>
 
-## Hiện tại (sau S2-10)
+## Source sau S3-02
 
 ```mermaid
 %%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 45, "rankSpacing": 70}, "theme": "dark", "themeVariables": {"background": "#0f172a", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#64748b", "lineColor": "#94a3b8", "textColor": "#e2e8f0", "edgeLabelBackground": "#1e293b", "clusterBkg": "#141e2e", "clusterBorder": "#475569"}, "themeCSS": "& { background-color: #0f172a; }"}}%%
 flowchart LR
     Web[WebClient · React 19 / Vite] --> Gateway[Nginx]
-    Gateway -->|HTTP /api/v1 · SignalR /hubs/chat| Api[SCDC.Api · .NET 10]
-    Api --> Identity[Identity]
+    Gateway -->|HTTP auth/users| Identity[Identity API + worker]
+    Gateway -->|Community/DM · SignalR /hubs/chat| Api[SCDC.Api · .NET 10]
+    Api <-->|gRPC/mTLS · permit, lookup, fence| Identity
     Api --> Community[Community]
     Api --> Messaging[Messaging]
     Identity --> Pg[(PostgreSQL 18)]
@@ -38,10 +39,10 @@ flowchart LR
     class Pg,Redis data
 ```
 
-- Nginx phục vụ WebClient và chuyển HTTP `/api/v1`, SignalR `/hubs/chat` tới API.
-- API cùng ChatHub, worker outbox, thu hồi quyền và provision chạy Identity, Community, Messaging trên một PostgreSQL, với ba schema, database user và connection string riêng. Gọi liên module qua adapter trong process, transaction theo owner.
-- Identity công bố phiên vào Redis; API và realtime kiểm tra trạng thái hiện tại qua Redis. Telemetry đi qua Collector tới OpenObserve.
-- Chưa có: worker email (đang ở nhánh `feat/identity`, xem [email](../features/accounts/email-links.md#status)), Media. Health endpoint chưa kiểm tra DB.
+- Nginx phục vụ WebClient, định tuyến auth/users và health/Swagger Identity tới host riêng; Community/DM và SignalR `/hubs/chat` tới API còn lại.
+- Identity có bốn project, API và worker thu hồi chung host. Community/Messaging vẫn gọi nhau trong process, transaction theo owner. S3-02 giữ database hiện tại với ba schema/runtime login riêng; S3-03 chuyển Identity sang instance riêng.
+- Identity công bố phiên vào Redis; các consumer chỉ kiểm JWT bằng public key và đọc Redis. Permit/lookup và fence hai chiều đi qua gRPC HTTP/2 với mTLS, deadline hai giây và peer/owner allowlist. Telemetry đi qua Collector tới OpenObserve.
+- Identity readiness `/api/v1/health/identity/access` kiểm tra PostgreSQL và Redis. Chưa có worker email (đang ở nhánh `feat/identity`, xem [email](../features/accounts/email-links.md#status)) hoặc Media.
 
 Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.yaml), [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs). Cấu hình xem [môi trường](environments.md); cách chạy xem [hướng dẫn phát triển](../guides/development.md).
 
@@ -61,7 +62,7 @@ Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.
 - Mỗi module chỉ đọc ghi dữ liệu của mình. Gọi module khác qua [SCDC.Contracts](../../services/SCDC.Contracts); không tham chiếu code cài đặt, không JOIN bảng của module khác.
 - View SQL để quan sát không thay được hợp đồng nghiệp vụ. Tiền tố API hay vị trí tài liệu không quyết định module nào sở hữu dữ liệu.
 - Có interface không có nghĩa đã có bên dùng hay đã chạy đủ; xem trạng thái ở từng trang tính năng.
-- S2-10 đã bỏ hợp đồng transaction chung của MVP; mỗi owner tự giữ transaction. Host gRPC và mTLS tiếp tục ở STEP-3. Chi tiết: [hợp đồng giữa module](backend.md#s2-10-contracts), [database](database.md), [Community](../features/community/mechanics.md), [thu hồi truy cập](access-revocation.md).
+- S2-10 đã bỏ hợp đồng transaction chung của MVP; mỗi owner tự giữ transaction. S3-02 đưa các hợp đồng Identity đang được gọi lên gRPC/mTLS; các RPC provision giữa Community/Messaging chờ S3-09. Chi tiết: [hợp đồng giữa module](backend.md#s2-10-contracts), [database](database.md), [Community](../features/community/mechanics.md), [thu hồi truy cập](access-revocation.md).
 
 Khảo sát S2-01 đã đối chiếu 32 FK xuyên schema, 2 view và các hợp đồng; [bảng xử lý từng phụ thuộc](database.md#s2-01-boundaries) giữ đầu vào lịch sử. S2-03 đã chuyển audit về Identity và tách outbox theo owner; S2-04/05 bỏ FK và view chéo, S2-07 đến S2-10 thay và gỡ hợp đồng transaction. S2-11 thu hẹp grant tạm và kiểm chứng lỗi, tải, lệch đồng hồ, thời gian thu hồi; [hồ sơ](../records/verification/architecture/s2-11-2026-11-25.md) ghi phạm vi và kết quả. Tổng kết STEP-2 thuộc S2-12.
 

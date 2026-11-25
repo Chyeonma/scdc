@@ -201,8 +201,8 @@ Ngoài ra v1 cần thử: rollback không gửi thư; worker chết trước và
 
 | Phần | Đã có | File |
 |---|---|---|
-| Cấp và dùng token | Policy theo người dùng và loại; thời gian chờ 60 giây; hủy token cũ cùng loại. Xác minh và đặt lại khóa người dùng rồi đọc lại token và policy; đặt lại kiểm tra mật khẩu trước, không tự xác minh tài khoản | `services/Modules/Identity/Infrastructure/Services/RegistrationService.cs` |
-| Delivery và outbox | Cùng transaction với token và audit; outbox chỉ có ID và loại; token trong envelope Data Protection; key ring lưu trên đĩa, có cấu hình certificate bảo vệ ngoài Development | `services/Modules/Identity/Infrastructure/Email/AccountEmailQueue.cs`, `services/Modules/Identity/IdentityModule.cs` |
+| Cấp và dùng token | Policy theo người dùng và loại; thời gian chờ 60 giây; hủy token cũ cùng loại. Xác minh và đặt lại khóa người dùng rồi đọc lại token và policy; đặt lại kiểm tra mật khẩu trước, không tự xác minh tài khoản | `services/Identity/SCDC.Identity.Infrastructure/Accounts/RegistrationService.cs` |
+| Delivery và outbox | Cùng transaction với token và audit; outbox chỉ có ID và loại; token trong envelope Data Protection; key ring lưu trên đĩa, có cấu hình certificate bảo vệ ngoài Development | `services/Modules/Identity/Infrastructure/Email/AccountEmailQueue.cs`, `services/Identity/SCDC.Identity.Infrastructure/IdentityModule.cs` |
 | Worker và Gmail SMTP | Worker nền trong Identity; giành việc bằng lease và `FOR UPDATE SKIP LOCKED`; kiểm tra token trước khi gửi; gọi SMTP ngoài transaction; thử lại tối đa 5 lần có jitter; xóa envelope; trạng thái `ProviderAccepted`. Dùng `System.Net.Mail.SmtpClient`, cổng 587, TLS | `IdentityEmailWorker.cs`, `IdentityEmailProcessor.cs`, `GmailSmtpEmailSender.cs` trong `services/Modules/Identity/Infrastructure/Email/` |
 | Schema | Bảng policy và delivery; điền token hiện hành và mốc cấp để giữ thời gian chờ | `database/postgres/migrations/001_identity_email.sql` |
 

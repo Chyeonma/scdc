@@ -8,7 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 using SCDC.BuildingBlocks.Application;
 using SCDC.Contracts.Identity;
-using SCDC.BuildingBlocks.Infrastructure;
+
 using SCDC.Modules.Identity.Application;
 using SCDC.Modules.Identity.Domain;
 using SCDC.Modules.Identity.Infrastructure;
@@ -17,7 +17,7 @@ using SCDC.Modules.Identity.Infrastructure.Security;
 using SCDC.Modules.Identity.Infrastructure.Services;
 using ModuleIdentityOptions = SCDC.Modules.Identity.Infrastructure.IdentityOptions;
 using SCDC.Shared.Core.Authentication;
-using SCDC.BuildingBlocks.Infrastructure.Authentication;
+using SCDC.Modules.Identity.Infrastructure.Authentication;
 
 namespace SCDC.Modules.Identity;
 
@@ -25,7 +25,7 @@ public static class IdentityModule
 {
     public static IServiceCollection AddIdentityModule(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration, bool configureAuthentication = true)
     {
         var connectionString = configuration.GetConnectionString("Identity");
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -34,11 +34,14 @@ public static class IdentityModule
         }
 
         var identitySection = configuration.GetSection(ModuleIdentityOptions.SectionName);
+        if (configureAuthentication)
+        {
         services.AddOptions<JwtTrustOptions>()
             .Bind(configuration.GetSection(JwtTrustOptions.SectionName))
             .Validate(options => { _ = options.LoadPublicKeys(); return true; }, "Invalid JWT trust.")
             .ValidateOnStart();
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<JwtTrustOptions>>().Value);
+        }
         services.AddSingleton(provider => new IdentitySigningKey(
             provider.GetRequiredService<IOptions<ModuleIdentityOptions>>().Value,
             provider.GetRequiredService<JwtTrustOptions>()));
@@ -80,6 +83,8 @@ public static class IdentityModule
             DataProtectionProvider.Create(new DirectoryInfo(searchKeyRing), builder =>
                 builder.SetApplicationName(configuration["Modules:Identity:UserSearch:ApplicationName"] ?? "SCDC.UserSearch")));
 
+        if (configureAuthentication)
+        {
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();
@@ -119,6 +124,8 @@ public static class IdentityModule
                 };
             });
         services.AddAuthorization();
+        }
+        services.AddScoped<IIdentityReadiness, IdentityReadiness>();
         services.AddSingleton<IModuleDescriptor, IdentityModuleDescriptor>();
         return services;
     }

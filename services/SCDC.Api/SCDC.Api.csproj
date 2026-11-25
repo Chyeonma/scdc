@@ -21,7 +21,12 @@
   <ItemGroup>
     <ProjectReference Include="../SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
     <ProjectReference Include="../SCDC.Contracts/SCDC.Contracts.csproj" />
-    <ProjectReference Include="../Modules/Identity/SCDC.Identity.csproj" />
+    <ProjectReference Include="../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
+    <ProjectReference Include="../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+    <ProjectReference Include="../Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
+    <ProjectReference Include="../Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj" />
     <ProjectReference Include="../Modules/Community/SCDC.Community.csproj" />
     <ProjectReference Include="../Modules/Messaging/SCDC.Messaging.csproj" />
   </ItemGroup>

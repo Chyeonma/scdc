@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.85.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.85.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="../../../docs/contracts/grpc/messaging/coordination.proto" ProtoRoot="../../../docs/contracts/grpc" GrpcServices="Both" />
+  </ItemGroup>
+</Project>

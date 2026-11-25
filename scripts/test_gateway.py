@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -40,6 +41,9 @@ def main():
             raise RuntimeError(f'{name} failed (exit {result.returncode}):\n{output[-5000:]}')
         return output
 
+    rpc_directory = artifact / 'private' / 'rpc'
+    run([sys.executable, 'scripts/init_rpc_certificates.py', str(rpc_directory), '--label-for-containers'], 'initialize RPC identities')
+    env['SCDC_RPC_SECRET_DIR'] = str(rpc_directory)
     passed = False
     try:
         run(compose + ['config', '--quiet'], 'compose config')
@@ -55,6 +59,10 @@ def main():
             try:
                 with opener.open(origin + '/api/v1/health', timeout=2) as response:
                     api_ready = response.status == 200
+                with opener.open(origin + '/api/v1/health/identity/access', timeout=2) as response:
+                    api_ready = api_ready and response.status == 200
+                with opener.open(origin + '/api/v1/health/access', timeout=2) as response:
+                    api_ready = api_ready and response.status == 200
                 with opener.open(origin + '/health', timeout=2) as response:
                     sample = json.load(response)
                     if api_ready and response.status == 200 and sample.get('service') == 'sample-service' and sample.get('status') == 'healthy':

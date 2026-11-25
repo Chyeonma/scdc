@@ -229,7 +229,7 @@ RPO cho phép mất một phần thay đổi sau mốc khôi phục, nhưng khô
 | Outbox, inbox trong schema; DM có worker outbox | Chưa có worker dọn và bằng chứng chống chạy lại sau khi dọn |
 | Media chưa có module | Kết thúc, đang thoát và chặn theo [Media](../features/media/participation-lifecycle.md); không dọn trước khi dừng hẳn |
 
-Code: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../../services/Modules/Identity/Domain/IdentityEnums.cs), [IdentityData](../../services/Modules/Identity/Infrastructure/IdentityData.cs), [UserDirectory](../../services/Modules/Identity/Infrastructure/Services/UserDirectory.cs), [HistoricalUserSummaryReader](../../services/Modules/Identity/Infrastructure/Services/HistoricalUserSummaryReader.cs), [hồ sơ DM-MVP](../records/verification/messaging/DM-MVP.md).
+Code: [schema.sql](../../database/postgres/schema.sql), [IdentityEnums](../../services/Identity/SCDC.Identity.Domain/Accounts/IdentityEnums.cs), [IdentityData](../../services/Identity/SCDC.Identity.Infrastructure/Accounts/IdentityData.cs), [UserDirectory](../../services/Identity/SCDC.Identity.Infrastructure/Accounts/UserDirectory.cs), [HistoricalUserSummaryReader](../../services/Identity/SCDC.Identity.Infrastructure/Accounts/HistoricalUserSummaryReader.cs), [hồ sơ DM-MVP](../records/verification/messaging/DM-MVP.md).
 
 | Gói | Cần có |
 |---|---|

@@ -1,3 +1,4 @@
+extern alias IdentityApi;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -12,12 +13,12 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
     private static readonly string CommunityKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     internal static readonly string CommunityKeyRingPath = Path.Combine(Path.GetTempPath(), $"scdc-test-keys-{Guid.NewGuid():N}");
 
-    public static async Task WaitForAccessReadyAsync(HttpClient client)
+    public static async Task WaitForAccessReadyAsync(HttpClient client, string path = "/api/v1/health/access")
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (true)
         {
-            using var response = await client.GetAsync("/api/v1/health/access", deadline.Token);
+            using var response = await client.GetAsync(path, deadline.Token);
             if (response.StatusCode == HttpStatusCode.OK) return;
             Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
             await Task.Delay(50, deadline.Token);
@@ -33,8 +34,18 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
             ["Modules:Community:Operations:Keys:test"] = CommunityKey,
             ["Modules:Community:KeyRingPath"] = CommunityKeyRingPath
         })));
-        builder.ConfigureServices(services =>
+        builder.ConfigureServices((context, services) =>
         {
+            // Legacy component regressions compose Identity in TestServer only.
+            // Independent-host tests exercise the production gRPC path separately.
+            SCDC.Modules.Identity.IdentityModule.AddIdentityModule(services, context.Configuration, configureAuthentication: false);
+            services.AddControllers().AddApplicationPart(typeof(IdentityApi::SCDC.Identity.Api.Controllers.Identity.AuthController).Assembly);
+            services.Configure<Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions>(options =>
+            {
+                var original=options.SchemaGeneratorOptions.SchemaIdSelector;
+                options.CustomSchemaIds(type=>type.Namespace?.StartsWith("SCDC.Identity.Api",StringComparison.Ordinal)==true
+                    ? "Identity"+original(type) : original(type));
+            });
             // Requests drive provisioning deterministically. Recovery tests explicitly
             // start the worker; unrelated factory instances must not steal fault fixtures.
             foreach (var descriptor in services.Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)

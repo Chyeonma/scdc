@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SCDC.Identity.Application/SCDC.Identity.Application.csproj" />
+    <ProjectReference Include="../SCDC.Identity.Infrastructure/SCDC.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="../SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+    <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
+    <ProjectReference Include="../../SCDC.Contracts/SCDC.Contracts.csproj" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
+  </ItemGroup>
+</Project>

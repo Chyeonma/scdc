@@ -5,4 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../../docs/fixtures/text-policy.json" LogicalName="SCDC.TextPolicy.json" />
+  </ItemGroup>
 </Project>

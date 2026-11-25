@@ -21,6 +21,7 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "true"
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
       ConnectionStrings__TestDatabase: Host=127.0.0.1;Port=5432;Database=scdc_ci_test;Username=scdc_ci;Password=ci-postgres-only
       ConnectionStrings__Identity: Host=127.0.0.1;Port=5432;Database=scdc_ci_test;Username=scdc_identity;Password=scdc_identity_dev;Pooling=false
       ConnectionStrings__Community: Host=127.0.0.1;Port=5432;Database=scdc_ci_test;Username=scdc_community;Password=scdc_community_dev
@@ -79,6 +80,8 @@ jobs:
           docker exec -e IDENTITY_DB_PASSWORD=scdc_identity_dev -e COMMUNITY_DB_PASSWORD=scdc_community_dev -e MESSAGING_DB_PASSWORD=scdc_messaging_dev "$POSTGRES_CONTAINER" psql -X -U scdc_ci -d scdc_ci_test -f /tmp/module-roles.sql
       - name: Restore backend
         run: dotnet restore SCDC.slnx
+      - name: Test local secret provisioning
+        run: python3 -m unittest discover -s scripts/tests
       - name: Build backend
         run: dotnet build SCDC.slnx --configuration Release --no-restore
       - name: Test backend

@@ -22,6 +22,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: host Identity riêng (API và worker); ký access token bằng khóa bất đối xứng, service khác kiểm tra bằng khóa công khai qua cấu hình (D28, D29); tiếp tục công bố phiên vào Redis (D30).
 - Xong khi: đăng nhập, phiên, thu hồi chạy qua gateway; module còn lại trong monolith dùng Identity qua mạng; toàn bộ test qua.
 - Phụ thuộc: S3-01.
+- Tiến độ: **Đã triển khai và kiểm chứng trên stack thử riêng — 2026-11-25**; nhánh `tech/s3-02-identity-service`. Bốn project Identity, gRPC/mTLS hai chiều, consumer JWT/Redis và gateway đã chạy thật. Backend 408/408, frontend 82/82, gateway/browser 14/14 đạt; cutoff WebSocket 389 ms. [Hồ sơ S3-02](../../records/verification/architecture/s3-02-2026-11-25.md). Chuyển dữ liệu/dev và hoàn tất 3a tiếp ở S3-03; chờ review theo quy trình.
 
 ## S3-03 · 3a: Database Identity riêng và chuyển dữ liệu
 - Nhãn: refactor

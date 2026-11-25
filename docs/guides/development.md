@@ -4,7 +4,7 @@
 
 Cách cài đặt, chạy, cấu hình và kiểm thử SCDC trên máy phát triển.
 
-**Cập nhật:** 2026-11-20, bổ sung database user và migration S2-03 cho hướng dẫn dựng môi trường S1-08 cho gateway, service mẫu, JWT và giám sát. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
+**Cập nhật:** 2026-11-25, S3-02 tách host Identity và gRPC/mTLS. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
 
 Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình và dữ liệu mẫu chỉ dùng cho môi trường phát triển.
 
@@ -48,7 +48,7 @@ Nếu chọn Podman, dùng `make setup ENGINE=podman`, rồi thêm `ENGINE=podma
 
 `setup` thực hiện lần lượt:
 
-1. Tạo `.env` với khóa Community ngẫu nhiên nếu file chưa có. File hiện hữu được giữ nguyên; khóa không in ra terminal.
+1. Tạo `.env` với khóa Community ngẫu nhiên nếu file chưa có; khởi tạo Redis ACL và chứng chỉ RPC ngoài repo. File và khóa hiện hữu được giữ nguyên; bí mật không in ra terminal.
 2. Kiểm tra cấu hình Compose, build image và khởi chạy stack.
 3. Compose tự tạo khóa DM và JWT bằng hai job `messaging-keygen`, `identity-keygen`; API chờ các job thành công rồi mới chạy. Các job không ghi đè khóa hiện hữu.
 4. Chạy `make check`: đợi giao diện và các endpoint health trả HTTP 200, kiểm tra PostgreSQL nhận kết nối và cấu hình Nginx hợp lệ. Lệnh thất bại nếu một bước không đạt.
@@ -61,13 +61,15 @@ Xem trạng thái sau khi dựng:
 make status
 ```
 
-Hai job tạo khóa có trạng thái `Exited (0)` là bình thường; các container PostgreSQL, API, service mẫu, WebClient/Nginx, Collector và OpenObserve phải đang chạy. LiveKit thuộc S1-07, chưa có trong stack này.
+Các job tạo khóa có trạng thái `Exited (0)` là bình thường; PostgreSQL, Identity API/worker, API Community/Messaging, Redis, service mẫu, WebClient/Nginx, Collector và OpenObserve phải đang chạy. Job `messaging-cursor-keygen` sao chép key ring cũ đúng một lần sang volume riêng để DM cursor tiếp tục giải mã được. LiveKit thuộc S1-07, chưa có trong stack này.
 
 | Dịch vụ | Địa chỉ |
 |---|---|
 | WebClient | `http://localhost:3000` |
 | Swagger qua gateway (Development) | `http://localhost:3000/swagger` |
 | OpenAPI JSON qua gateway | `http://localhost:3000/swagger/v1/swagger.json` |
+| Swagger Identity (Development) | `http://localhost:3000/swagger/identity` |
+| Readiness Identity, Community/Messaging | `http://localhost:3000/api/v1/health/identity/access`, `/api/v1/health/access` |
 | Health Nginx, service mẫu, API | `http://localhost:3000/healthz`, `/health`, `/api/v1/health` |
 | Endpoint thử JWT S1-06 | `http://localhost:3000/sample/protected`; cần bearer access token do Identity cấp |
 | OpenObserve local | `http://localhost:5080`; mặc định `root@scdc.local` / `ScdcObserve!2026Local` trên volume mới |
@@ -96,6 +98,20 @@ make check
 `down` giữ volume; `up` dùng lại image, dữ liệu và khóa. Khi sửa code, chạy `make build` rồi `make up` để dùng image mới. Có thể chạy lại `make setup` để build và kiểm tra toàn bộ; khóa và cấu hình hiện hữu vẫn được giữ.
 
 Database mới tự nạp schema và seed. Với database đã có dữ liệu, dùng [hướng dẫn nâng cấp](#migration); script khởi tạo không tự chạy lại. Phạm vi tính năng hiện có xem [MVP](../releases/mvp.md); tin phòng và realtime Community chưa có.
+
+### Identity riêng — S3-02
+
+[Identity](../../services/Identity/README.md) có bốn project Api/Application/Domain/Infrastructure và project mã sinh gRPC riêng. `identity-service` sở hữu API tài khoản, worker thu hồi, JWT private key và Redis writer. `chat-service` giữ Community/Messaging, chỉ nhận public key, Redis reader và hai connection của mình. S3-02 tách process trên database hiện tại; việc chuyển dữ liệu sang PostgreSQL riêng thuộc S3-03.
+
+Gateway chuyển `/api/v1/auth`, `/api/v1/users`, `/api/v1/health/identity` và Swagger Identity tới host mới. REST/Hub còn lại tới `chat-service`. Cả hai upstream được phân giải DNS lại sau đổi IP, mutation không tự retry.
+
+`make init` chạy [công cụ cấp chứng chỉ local](../../scripts/init_rpc_certificates.py) vào `SCDC_RPC_SECRET_DIR` (mặc định `~/.local/share/scdc/rpc-secrets`). Đây là CA phát triển; mỗi host chỉ mount certificate, private key của chính nó và CA public qua Compose secrets. CA private key không mount vào container. Chứng chỉ leaf hết hạn sau 180 ngày; không tự thay khóa/chứng chỉ khi chạy lại hoặc khi phát hiện bộ thiếu. Giữ bản sao và cấp lại có chủ đích trước khi hết hạn.
+
+RPC HTTP/2 TLS nghe cổng nội bộ 8443, bắt buộc mTLS hai chiều, peer allowlist và mapping `InternalRpc:PeerOwners:chat-service` gồm Community/Messaging. Client xác minh tên service và CA; mỗi lời gọi có deadline hai giây và truyền cancellation. Public HTTP 8080 không cho JWT người dùng thay chứng chỉ RPC.
+
+Chạy riêng `SCDC.Api` bằng `dotnet run` cần host Identity và cấu hình `InternalRpc` tương ứng; các ví dụ một host ở mục Community mô tả fixture monolith lịch sử. Để chạy ứng dụng hiện tại, dùng Compose. Backend test cũ vẫn ghép module trong TestServer để hồi quy; `IdentityNetworkTests` dùng hai Kestrel thật, gRPC/mTLS, PostgreSQL và Redis riêng để kiểm chứng mạng.
+
+Nếu Chromium chạy bằng Playwright `launchServer` trên cùng máy, có thể đặt `SCDC_BROWSER_WS_ENDPOINT` cho runner E2E; phiên bản Playwright của server và client phải trùng. Mặc định runner vẫn dùng browser local.
 
 <a id="gateway"></a>
 

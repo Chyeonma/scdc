@@ -12,6 +12,24 @@ service IdentityAccess {
   rpc GetChange(ChangeQuery) returns (ChangeStatus);
 }
 
+// Only trusted service peers may use profile lookups. These labels never grant access.
+service IdentityDirectory {
+  rpc LookupProfiles(ProfileQuery) returns (ProfileList);
+  rpc LookupHistorical(ProfileQuery) returns (ProfileList);
+}
+
+message ProfileQuery {
+  repeated string user_ids = 1;
+  string username = 2;
+}
+message Profile {
+  string user_id = 1;
+  string username = 2;
+  string display_name = 3;
+  string availability = 4;
+}
+message ProfileList { repeated Profile items = 1; }
+
 enum Authority {
   AUTHORITY_UNSPECIFIED = 0;
   AUTHORITY_IDENTITY = 1;
@@ -99,6 +117,7 @@ message AccessRequest {
   string expected_membership_id = 11;
   string peer_session_id = 12;
   AccessContext context = 13;
+  google.protobuf.Timestamp access_expires_at = 14;
 }
 
 message Permit {
@@ -114,6 +133,8 @@ message Permit {
   google.protobuf.Timestamp issued_at = 10;
   google.protobuf.Timestamp expires_at = 11;
   uint64 routing_generation = 12;
+  // Complete binding, including access expiry and resumption context.
+  AccessRequest request = 13;
 }
 
 message Rejection {
