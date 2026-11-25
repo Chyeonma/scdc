@@ -111,6 +111,8 @@ def main():
         assert role('source') == 'f' and role('target') == 't'
         assert sql('target', "SELECT security_stamp='22222222-2222-4222-8222-222222222222'::uuid FROM identity.user_security_states", database) == 't'
         assert sql('target', "SELECT last_value=37 AND is_called FROM identity.access_store_generation", database) == 't'
+        not_null_names = "SELECT json_agg(json_build_array(r.relname,a.attname,c.conname) ORDER BY r.relname,a.attname,c.conname)::text FROM pg_constraint c JOIN pg_class r ON r.oid=c.conrelid JOIN pg_namespace n ON n.oid=r.relnamespace JOIN pg_attribute a ON a.attrelid=r.oid AND a.attnum=c.conkey[1] WHERE n.nspname='identity' AND c.contype='n'"
+        assert sql('source', not_null_names, database) == sql('target', not_null_names, database)
         assert sql('target', "SELECT NOT has_table_privilege('scdc_identity','identity.schema_migrations','SELECT') AND NOT has_table_privilege('scdc_identity','identity.legacy_schema_migrations','SELECT') AND NOT has_schema_privilege('scdc_identity','scdc_migrations','USAGE') AND NOT has_table_privilege('scdc_identity','identity.security_events','UPDATE') AND NOT has_table_privilege('scdc_identity','identity.access_change_acks','UPDATE') AND NOT has_table_privilege('scdc_identity','identity.access_scopes','DELETE')", database) == 't'
         assert 'already ready' in transfer(database, '02-repeat')
         sql('target', "SELECT nextval('identity.access_store_generation')", database)

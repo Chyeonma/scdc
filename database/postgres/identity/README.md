@@ -47,7 +47,9 @@ Nguồn chuyển sang `NOLOGIN`, các bảng Identity được khóa SHARE trong
 timestamp/version/epoch, audit/outbox/inbox, journal/ACK/lease/publication và
 sequence `last_value/is_called`. Manifest SHA-256 từng bảng dùng toàn bộ hàng
 JSON sắp xếp ổn định theo UTC; schema/sequence được đối chiếu riêng. Chỉ chuẩn
-hóa một biểu thức CHECK email đã rà, do PG18 gộp AND tương đương khi restore.
+hóa hai biểu thức CHECK email/UTF-16 legacy đã rà, do PG18 gộp AND tương đương
+khi restore. Tên NOT NULL được lấy từ catalog nguồn và giữ lại ở đích, kể cả
+khi ledger legacy đổi tên làm tên ngầm định của PG18 bị thêm hậu tố.
 
 Đích chỉ được xóa schema baseline **rỗng đã kiểm tra** trước restore. Target có
 dữ liệu mà không có transfer record khớp bị từ chối. Sau đối chiếu, grant và

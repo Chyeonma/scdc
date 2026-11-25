@@ -127,6 +127,7 @@ public static class IdentityDatabaseTransfer
         var restoreRequired = true;
         if (record is not null && await HasIdentityTables(target, ct))
         {
+            await AlignNotNullNames(source, target, sourceLock, ct);
             var resumed = await Manifest(target, targetSettings, options, options.TargetContainer, evidence, "resume-target", ct);
             if (resumed.Sha256 == original.Sha256) restoreRequired = false;
             else if (populated)
@@ -159,6 +160,7 @@ public static class IdentityDatabaseTransfer
             await Pg(options, targetSettings, options.TargetContainer, "pg_restore",
                 ["--no-owner", "--no-privileges", "--single-transaction", "--exit-on-error"], evidence, "restore", ct, input: input);
         }
+        await AlignNotNullNames(source, target, sourceLock, ct);
         var restored = await Manifest(target, targetSettings, options, options.TargetContainer, evidence, "target", ct);
         await WritePrivate(Path.Combine(evidence, "target.json"), JsonSerializer.Serialize(restored, JsonOptions), ct);
         if (original.Sha256 != restored.Sha256)
@@ -284,6 +286,11 @@ public static class IdentityDatabaseTransfer
         schema = schema.Replace(
             "CONSTRAINT ck_user_emails_format CHECK ((((char_length((email)::text) >= 3) AND (char_length((email)::text) <= 254)) AND (POSITION(('@'::text) IN (email)) > 1)))",
             "CONSTRAINT ck_user_emails_format CHECK (((char_length((email)::text) >= 3) AND (char_length((email)::text) <= 254) AND (POSITION(('@'::text) IN (email)) > 1)))", StringComparison.Ordinal);
+        // Older MVP volumes retain this UTF-16 CHECK. Keep its original grouping
+        // as the signature so an interrupted copy retains its recorded source hash.
+        schema = schema.Replace(
+            "CONSTRAINT ck_user_profiles_utf16 CHECK (((identity.utf16_length_identity_legacy((display_name)::text) >= 1) AND (identity.utf16_length_identity_legacy((display_name)::text) <= 64) AND ((bio IS NULL) OR (identity.utf16_length_identity_legacy((bio)::text) <= 500)) AND ((identity.utf16_length_identity_legacy((locale)::text) >= 1) AND (identity.utf16_length_identity_legacy((locale)::text) <= 16)) AND ((identity.utf16_length_identity_legacy((timezone)::text) >= 1) AND (identity.utf16_length_identity_legacy((timezone)::text) <= 64))))",
+            "CONSTRAINT ck_user_profiles_utf16 CHECK ((((identity.utf16_length_identity_legacy((display_name)::text) >= 1) AND (identity.utf16_length_identity_legacy((display_name)::text) <= 64)) AND ((bio IS NULL) OR (identity.utf16_length_identity_legacy((bio)::text) <= 500)) AND ((identity.utf16_length_identity_legacy((locale)::text) >= 1) AND (identity.utf16_length_identity_legacy((locale)::text) <= 16)) AND ((identity.utf16_length_identity_legacy((timezone)::text) >= 1) AND (identity.utf16_length_identity_legacy((timezone)::text) <= 64))))", StringComparison.Ordinal);
         var tables = new List<IdentityTableManifest>();
         foreach (var table in await TableNames(db, ct, tx))
         {
@@ -306,6 +313,31 @@ public static class IdentityDatabaseTransfer
             sequences.Add(new(name, rows.GetInt64(0), rows.GetBoolean(1)));
         }
         return new(Hash(schema), tables.ToArray(), sequences.ToArray());
+    }
+    private static async Task AlignNotNullNames(NpgsqlConnection source, NpgsqlConnection target, NpgsqlTransaction sourceLock, CancellationToken ct)
+    {
+        // PG18's implicit NOT NULL name can collide with a renamed MVP ledger's
+        // constraint. Restore the original names; do not weaken or drop constraints.
+        const string catalog = """
+            SELECT r.relname,a.attname,c.conname FROM pg_constraint c
+            JOIN pg_class r ON r.oid=c.conrelid JOIN pg_namespace n ON n.oid=r.relnamespace
+            JOIN pg_attribute a ON a.attrelid=r.oid AND a.attnum=c.conkey[1]
+            WHERE n.nspname='identity' AND c.contype='n'
+            """;
+        var names = new List<(string Table, string Column, string Constraint)>();
+        await using (var command = new NpgsqlCommand(catalog, source, sourceLock))
+        await using (var rows = await command.ExecuteReaderAsync(ct))
+            while (await rows.ReadAsync(ct)) names.Add((rows.GetString(0), rows.GetString(1), rows.GetString(2)));
+        foreach (var original in names)
+        {
+            await using var lookup = new NpgsqlCommand(catalog + " AND r.relname=@table AND a.attname=@column", target);
+            lookup.Parameters.AddWithValue("table", original.Table); lookup.Parameters.AddWithValue("column", original.Column);
+            string? restored;
+            await using (var row = await lookup.ExecuteReaderAsync(ct)) restored = await row.ReadAsync(ct) ? row.GetString(2) : null;
+            if (restored is null) throw new MigrationPreflightException("Restored target is missing a source NOT NULL constraint.");
+            if (restored != original.Constraint)
+                await Execute(target, "ALTER TABLE identity." + Quote(original.Table) + " RENAME CONSTRAINT " + Quote(restored) + " TO " + Quote(original.Constraint), ct);
+        }
     }
     private static async Task VerifyContainer(IdentityTransferOptions options, NpgsqlConnectionStringBuilder settings,
         string container, string expected, string evidence, string label, CancellationToken ct)
