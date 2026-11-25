@@ -63,6 +63,7 @@ public sealed class IdentityConcurrencyTests : IAsyncLifetime
             });
         });
         _client = _factory.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(_client);
         var registration = await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             username = _username,

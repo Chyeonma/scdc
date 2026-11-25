@@ -80,6 +80,7 @@ Thứ tự: 3a Identity → 3c Messaging → 3d Community, nối tiếp; 3b Medi
 - Đầu ra: gỡ code các module đã tách khỏi monolith; đổi tên host thành Community; database Community riêng.
 - Xong khi: không còn code Identity, Messaging trong host Community; test Community và Playwright `community` qua.
 - Phụ thuộc: S3-03, S3-08, S3-09.
+- Tiến độ: **Đang thực hiện theo ba đợt — bước 1 tách cấu trúc và host chuẩn bị**. Code Community chia bốn project, API chung tiếp tục dùng cùng nguồn controller; [host preview](../../../services/Community/README.md) dùng database thử riêng và chặn nghiệp vụ, chưa bật worker. Bước 2 nối các luồng service hiện có; bước 3 mới chuyển dữ liệu dev/gateway. S3-10 chưa hoàn tất, các phụ thuộc nhận lưu lượng cần rà theo thứ tự Community được chọn.
 
 ## S3-11 · 3e: Chuyển sang gRPC và mTLS
 - Nhãn: tech

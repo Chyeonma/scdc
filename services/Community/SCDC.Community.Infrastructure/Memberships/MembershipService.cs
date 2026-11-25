@@ -11,11 +11,6 @@ using SCDC.Modules.Community.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Community.Features.Memberships.Application;
 
-public interface IMembershipService
-{
-    Task<Result<MembershipView>> JoinAsync(AccountActor actor, Guid serverId, CancellationToken cancellationToken);
-}
-
 internal sealed class MembershipService(RelationalWorkScopeFactory scopes, CommunityIdentityAccess access,
     ServerReader reader, TransactionalOutbox outbox, TimeProvider clock, ILogger<MembershipService> logger) : IMembershipService
 {

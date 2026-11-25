@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SCDC.Community.Application/SCDC.Community.Application.csproj" />
+    <ProjectReference Include="../SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj" />
+    <ProjectReference Include="../SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
+    <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
+    <ProjectReference Include="../../SCDC.Contracts/SCDC.Contracts.csproj" />
+    <ProjectReference Include="../../SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
+  </ItemGroup>
+  <!-- Technical HTTP adapters are compiled into each host; neither host references the other. -->
+  <ItemGroup>
+    <Compile Include="../../SCDC.Api/Controllers/ApiControllerBase.cs" Link="Http/ApiControllerBase.cs" />
+    <Compile Include="../../SCDC.Api/Controllers/Identity/ClaimsPrincipalExtensions.cs" Link="Http/ClaimsPrincipalExtensions.cs" />
+    <Compile Include="../../SCDC.Api/Errors/*.cs" Link="Errors/%(Filename)%(Extension)" />
+    <Compile Include="../../SCDC.Api/Authentication/ConsumerAuthentication.cs" Link="Authentication/ConsumerAuthentication.cs" />
+    <Compile Include="../../SCDC.Api/OpenApi/AuthenticationOperationFilter.cs" Link="OpenApi/AuthenticationOperationFilter.cs" />
+    <Compile Include="../../SCDC.Api/Observability/ScdcTelemetry.cs" Link="Observability/ScdcTelemetry.cs" />
+  </ItemGroup>
+</Project>

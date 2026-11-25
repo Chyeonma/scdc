@@ -1,0 +1,65 @@
+name: scdc-community-preview
+
+services:
+  community-preview-postgres:
+    profiles: [community-preview]
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_community
+      POSTGRES_USER: scdc_community_preview_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/community_preview_admin_password
+    secrets:
+      - community_preview_admin_password
+      - community_preview_password
+    volumes:
+      - community-preview-data:/var/lib/postgresql
+      - ./database/postgres/community/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+      - ./database/postgres/community/baseline.sql:/docker-entrypoint-initdb.d/002-baseline.sql:ro,z
+      - ./database/postgres/community/init.sh:/docker-entrypoint-initdb.d/003-runtime.sh:ro,z
+      - ./database/postgres/community/runtime-grants.sql:/opt/scdc/community/runtime-grants.sql:ro,z
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U scdc_community_preview_admin -d scdc_community']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  community-preview:
+    profiles: [community-preview]
+    build:
+      context: .
+      dockerfile: services/Community/SCDC.Community.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: '8080'
+      ConnectionStrings__Community: Host=community-preview-postgres;Database=scdc_community;Username=scdc_community
+      ConnectionStrings__CommunityPasswordFile: /run/secrets/community_preview_password
+      Modules__Community__KeyRingPath: /app/community-keys
+      Modules__Community__Operations__ActiveKeyId: preview
+      Modules__Community__Operations__KeyFiles__preview: /run/secrets/community_preview_operation_key
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-preview
+    secrets:
+      - community_preview_password
+      - community_preview_operation_key
+      - source: community_preview_jwt_public
+        target: /app/auth-public/identity-preview.pub.pem
+    volumes:
+      - community-preview-keys:/app/community-keys
+    ports:
+      - '127.0.0.1:5082:8080'
+    depends_on:
+      community-preview-postgres:
+        condition: service_healthy
+
+secrets:
+  community_preview_admin_password:
+    file: ${SCDC_COMMUNITY_PREVIEW_SECRET_DIR:?Set SCDC_COMMUNITY_PREVIEW_SECRET_DIR}/community_preview_admin_password
+  community_preview_password:
+    file: ${SCDC_COMMUNITY_PREVIEW_SECRET_DIR:?Set SCDC_COMMUNITY_PREVIEW_SECRET_DIR}/community_preview_password
+  community_preview_operation_key:
+    file: ${SCDC_COMMUNITY_PREVIEW_SECRET_DIR:?Set SCDC_COMMUNITY_PREVIEW_SECRET_DIR}/community_preview_operation_key
+  community_preview_jwt_public:
+    file: ${SCDC_COMMUNITY_PREVIEW_SECRET_DIR:?Set SCDC_COMMUNITY_PREVIEW_SECRET_DIR}/identity-preview.pub.pem
+
+volumes:
+  community-preview-data:
+  community-preview-keys:

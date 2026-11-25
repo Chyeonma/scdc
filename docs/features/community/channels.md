@@ -231,7 +231,7 @@ Phòng thoại chưa tạo phòng trên LiveKit, chưa giữ chỗ, chưa cấp 
 
 **Lý do:** "đã tạo xong" nghĩa là dữ liệu nền đã đủ. **Đổi lại:** tạo phòng phụ thuộc Messaging hoặc Media phải đáp ứng. Chuẩn bị xong không đảm bảo service luôn sẵn sàng về sau.
 
-- S2-09 đã chuyển [ChannelService](../../../services/Modules/Community/Features/Channels/Application/ChannelService.cs) sang [ChannelProvisionCoordinator](../../../services/Modules/Community/Infrastructure/ChannelProvisionCoordinator.cs): Community giữ reservation và quyết định, Messaging chuẩn bị/xác nhận/hủy bằng transaction riêng. S2-10 đã bỏ hợp đồng `IChatSpaceLifecycle` cũ; adapter vẫn chạy trong process tới STEP-3.
+- S2-09 đã chuyển [ChannelService](../../../services/Community/SCDC.Community.Infrastructure/Channels/ChannelService.cs) sang [ChannelProvisionCoordinator](../../../services/Community/SCDC.Community.Infrastructure/ChannelProvisionCoordinator.cs): Community giữ reservation và quyết định, Messaging chuẩn bị/xác nhận/hủy bằng transaction riêng. S2-10 đã bỏ hợp đồng `IChatSpaceLifecycle` cũ; adapter vẫn chạy trong process tới STEP-3.
 - Không có rollback chung. Một service có thể đã commit khi service kia chưa xong; đối chiếu và xử lý theo quyết định đã lưu. Không công bố phòng từ kết quả một phần. Tham khảo [Saga](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga).
 - Quyền phải giữ tới bước hoàn tất ([D05](../../system/access-revocation.md#v1-authorization-coordination)). Kết quả chuẩn bị đến muộn không tự công bố nếu quyền hay tài nguyên đã mất hiệu lực.
 

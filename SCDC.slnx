@@ -5,7 +5,6 @@
     <Project Path="services/SCDC.Contracts/SCDC.Contracts.csproj" />
   </Folder>
   <Folder Name="/services/Modules/">
-    <Project Path="services/Modules/Community/SCDC.Community.csproj" />
     <Project Path="services/Modules/Messaging/SCDC.Messaging.csproj" />
   </Folder>
   <Folder Name="/services/Sample/">
@@ -31,6 +30,10 @@
     <Project Path="services/Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
   </Folder>
   <Folder Name="/services/Community/">
+    <Project Path="services/Community/SCDC.Community.Api/SCDC.Community.Api.csproj" />
+    <Project Path="services/Community/SCDC.Community.Application/SCDC.Community.Application.csproj" />
+    <Project Path="services/Community/SCDC.Community.Domain/SCDC.Community.Domain.csproj" />
+    <Project Path="services/Community/SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj" />
     <Project Path="services/Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
   </Folder>
   <Folder Name="/services/Messaging/">

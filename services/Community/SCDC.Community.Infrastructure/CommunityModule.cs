@@ -30,7 +30,8 @@ public static class CommunityModule
     public static IServiceCollection AddCommunityModule(
         this IServiceCollection services,
         IConfiguration configuration,
-        string environmentName)
+        string environmentName,
+        bool runWorkers = true)
     {
         _ = ModuleDatabaseConnection.Get(configuration, "Community");
         var section = configuration.GetSection(CommunityOptions.SectionName);
@@ -59,10 +60,10 @@ public static class CommunityModule
         services.AddSingleton<ICommunityFenceOwner>(new PostgresCommunityFenceOwner(configuration,AccessOwner.Community));
         services.AddSingleton<CommunityPolicyCoordinator>();
         services.AddSingleton<ICommunityChangeStatusReader>(p=>p.GetRequiredService<CommunityPolicyCoordinator>());
-        services.AddHostedService<CommunityAccessWorker>();
+        if (runWorkers) services.AddHostedService<CommunityAccessWorker>();
         services.AddSingleton<ChannelProvisionCoordinator>();
         services.AddScoped<IChannelReadyPermitIssuer, ChannelReadyPermitIssuer>();
-        services.AddHostedService<ChannelProvisionWorker>();
+        if (runWorkers) services.AddHostedService<ChannelProvisionWorker>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IServerService, ServerService>();
         services.AddScoped<IMembershipService, MembershipService>();
