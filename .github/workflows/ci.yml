@@ -122,10 +122,66 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  identity-transfer:
+    name: Identity database transfer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "true"
+    services:
+      source:
+        image: docker.io/library/postgres:18-alpine
+        env:
+          POSTGRES_DB: scdc_transfer_source_test
+          POSTGRES_USER: transfer_source
+          POSTGRES_PASSWORD: ci-transfer-source-only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U transfer_source -d scdc_transfer_source_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+      target:
+        image: docker.io/library/postgres:18-alpine
+        env:
+          POSTGRES_DB: scdc_transfer_target_test
+          POSTGRES_USER: transfer_target
+          POSTGRES_PASSWORD: ci-transfer-target-only
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U transfer_target -d scdc_transfer_target_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build database tool
+        run: dotnet build tools/SCDC.DbMigrator -c Release
+      - name: Exercise offline transfer and recovery
+        env:
+          SOURCE_CONTAINER: ${{ job.services.source.id }}
+          TARGET_CONTAINER: ${{ job.services.target.id }}
+        run: >-
+          python3 scripts/test_identity_transfer.py --engine docker
+          --source-container "$SOURCE_CONTAINER" --source-port 5433
+          --target-container "$TARGET_CONTAINER" --target-port 5434
+      - name: Upload transfer summary
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: identity-transfer-summary
+          path: artifacts/identity-transfer/*/result.json
+          if-no-files-found: warn
+          retention-days: 7
+
   ci:
     name: CI
     if: always()
-    needs: [backend, frontend]
+    needs: [backend, frontend, identity-transfer]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -133,7 +189,9 @@ jobs:
         env:
           BACKEND_RESULT: ${{ needs.backend.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
+          TRANSFER_RESULT: ${{ needs.identity-transfer.result }}
         run: |
           printf 'Backend: %s\nFrontend: %s\n' "$BACKEND_RESULT" "$FRONTEND_RESULT"
           test "$BACKEND_RESULT" = success
           test "$FRONTEND_RESULT" = success
+          test "$TRANSFER_RESULT" = success

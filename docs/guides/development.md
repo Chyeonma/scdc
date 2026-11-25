@@ -75,6 +75,8 @@ Các job tạo khóa có trạng thái `Exited (0)` là bình thường; Postgre
 | OpenObserve local | `http://localhost:5080`; mặc định `root@scdc.local` / `ScdcObserve!2026Local` trên volume mới |
 | API trực tiếp để debug | `http://localhost:5026` |
 | PostgreSQL | `localhost:5432` |
+| PostgreSQL Identity riêng | `127.0.0.1:5433`, database `scdc_identity`; admin/runtime password qua Compose secrets |
+| Identity trực tiếp để debug | `http://127.0.0.1:5027`; các luồng ứng dụng đi qua gateway |
 
 `make check` kiểm tra hạ tầng và health; để kiểm tra nghiệp vụ, tạo và xác minh hai tài khoản theo [mục 3](#identity), rồi thử gửi DM qua hai cửa sổ trình duyệt. Tài khoản seed không có mật khẩu đăng nhập thực.
 
@@ -99,9 +101,13 @@ make check
 
 Database mới tự nạp schema và seed. Với database đã có dữ liệu, dùng [hướng dẫn nâng cấp](#migration); script khởi tạo không tự chạy lại. Phạm vi tính năng hiện có xem [MVP](../releases/mvp.md); tin phòng và realtime Community chưa có.
 
-### Identity riêng — S3-02
+### Identity riêng — S3-02/S3-03
 
-[Identity](../../services/Identity/README.md) có bốn project Api/Application/Domain/Infrastructure và project mã sinh gRPC riêng. `identity-service` sở hữu API tài khoản, worker thu hồi, JWT private key và Redis writer. `chat-service` giữ Community/Messaging, chỉ nhận public key, Redis reader và hai connection của mình. S3-02 tách process trên database hiện tại; việc chuyển dữ liệu sang PostgreSQL riêng thuộc S3-03.
+[Identity](../../services/Identity/README.md) có bốn project Api/Application/Domain/Infrastructure và project mã sinh gRPC riêng. `identity-service` sở hữu API tài khoản, worker thu hồi, JWT private key và Redis writer. `chat-service` giữ Community/Messaging, chỉ nhận public key, Redis reader và hai connection của mình. S3-03 thêm `identity-postgres` riêng, database `scdc_identity`; source cũ giữ nguyên dữ liệu Identity nhưng role cũ `NOLOGIN` sau chuyển.
+
+`make init` tạo hai database password ở `SCDC_IDENTITY_DB_SECRET_DIR` (mặc định `~/.local/share/scdc/identity-database-secrets`). Admin secret chỉ cấp PostgreSQL/job kiểm tra; Identity nhận runtime secret bằng `ConnectionStrings:IdentityPasswordFile`. Không xoay credential hoặc khởi tạo lại volume có dữ liệu bằng entrypoint.
+
+**Volume MVP đã có dữ liệu:** hoàn tất [chuyển offline S3-03](../../database/postgres/identity/README.md) trước khi mở host mới. Job `identity-cutover-gate` chỉ đọc metadata, kiểm source role đã khóa và target transfer record khớp instance/OID/DB. Với volume tạo mới từ S3-03, marker khởi tạo cho phép baseline Identity mới. Gate từ chối source còn ghi hoặc đích rỗng chưa chuyển; `compose up` không tự chuyển dữ liệu đang dùng. Job không phải API và không cấp credential admin cho consumer.
 
 Gateway chuyển `/api/v1/auth`, `/api/v1/users`, `/api/v1/health/identity` và Swagger Identity tới host mới. REST/Hub còn lại tới `chat-service`. Cả hai upstream được phân giải DNS lại sau đổi IP, mutation không tự retry.
 

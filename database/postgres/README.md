@@ -2,6 +2,14 @@
 
 Thiết kế schema, quan hệ và quy ước dữ liệu tại [Thiết kế database](../../docs/system/database.md). SQL có cấu trúc cho cả tính năng chưa triển khai.
 
+## Identity riêng — S3-03
+
+Từ S3-03, Identity chạy trên instance `identity-postgres`, database
+`scdc_identity`. [Baseline, chuyển offline và phục hồi](identity/README.md)
+quy định lệnh thật và quyền nguồn/đích. Các script monolith trên trang này tiếp tục
+dùng cho baseline nguồn và fixture; không chạy chúng trên database Identity
+riêng. Community/Messaging vẫn ở instance `postgres` tới các task tương ứng.
+
 ## Mục lục
 
 - [Kết nối local](#kết-nối-local)
@@ -18,7 +26,7 @@ Thông số dưới đây dùng cho stack Compose Development:
 | Host / port | `localhost:5432` |
 | Database | `scdc_chat` |
 | Quản trị / migration | `scdc` / `scdc_dev` |
-| User API | `scdc_identity`, `scdc_community`, `scdc_messaging` |
+| User API ở instance cũ | `scdc_community`, `scdc_messaging`; `scdc_identity` giữ `NOLOGIN` sau chuyển |
 | SSL mode | `disable` |
 
 Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`. S2-05 chỉ loại Moderation khi cả hai bảng rỗng; gặp dữ liệu thì migration dừng và giữ nguyên database.

@@ -51,7 +51,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - pg_isready -U scdc_gateway_test -d scdc_gateway_test
+      - pg_isready -h 127.0.0.1 -U scdc_gateway_test -d scdc_gateway_test
       interval: 2s
       timeout: 3s
       retries: 30
@@ -60,6 +60,7 @@ services:
     - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
     - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
     - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
+    - ./database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
   chat-service:
     build:
       context: .
@@ -143,7 +144,7 @@ services:
       Authentication__Jwt__KeyIds__0: identity-local-v1
       ASPNETCORE_ENVIRONMENT: Development
       Authentication__Sessions__Endpoint: auth-redis:6379
-      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      ConnectionStrings__Identity: Host=identity-postgres;Port=5432;Database=scdc_identity_gateway_test;Username=scdc_identity
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Modules__Identity__ExposeDevelopmentTokens: 'true'
       Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest
@@ -155,17 +156,21 @@ services:
       InternalRpc__Messaging__Endpoint: https://chat-service:8443
       InternalRpc__PeerOwners__chat-service__0: Community
       InternalRpc__PeerOwners__chat-service__1: Messaging
+      ConnectionStrings__IdentityPasswordFile: /run/secrets/identity_database_password
     depends_on:
       identity-keygen:
         condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
       auth-redis:
         condition: service_healthy
+      identity-postgres:
+        condition: service_healthy
+      identity-cutover-gate:
+        condition: service_completed_successfully
     secrets:
     - rpc_ca
     - rpc_identity_certificate
     - rpc_identity_private_key
+    - identity_database_password
     volumes:
     - gateway-identity-keys:/app/.dm-keys/user-search
     - gateway-private-keys:/app/auth-private:ro
@@ -181,6 +186,45 @@ services:
     volumes:
     - gateway-identity-keys:/app/legacy-cursors:ro
     - gateway-messaging-cursor-keys:/app/messaging-cursor-keys
+  identity-postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_identity_gateway_test
+      POSTGRES_USER: scdc_identity_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/identity_database_admin_password
+    secrets:
+    - identity_database_admin_password
+    - identity_database_password
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -h 127.0.0.1 -U scdc_identity_admin -d scdc_identity_gateway_test
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+    - gateway-identity-postgres-data:/var/lib/postgresql
+    - ./database/postgres/identity/init.sh:/docker-entrypoint-initdb.d/001-identity.sh:ro,z
+    - ./database/postgres/identity:/opt/scdc/identity:ro,z
+  identity-cutover-gate:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/cutover-gate.sh
+    environment:
+      SOURCE_DATABASE_USER: scdc_gateway_test
+      SOURCE_DATABASE_NAME: scdc_gateway_test
+      SOURCE_DATABASE_PASSWORD: gateway-test-only
+      TARGET_DATABASE_NAME: scdc_identity_gateway_test
+    secrets:
+    - identity_database_admin_password
+    volumes:
+    - ./database/postgres/identity/cutover-gate.sh:/opt/scdc/cutover-gate.sh:ro,z
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-postgres:
+        condition: service_healthy
 volumes:
   gateway-postgres-data: null
   gateway-identity-keys: null
@@ -189,6 +233,7 @@ volumes:
   gateway-private-keys: null
   gateway-public-keys: null
   gateway-messaging-cursor-keys: null
+  gateway-identity-postgres-data: null
 secrets:
   rpc_ca:
     file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/ca.crt
@@ -200,3 +245,7 @@ secrets:
     file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/chat-service.crt
   rpc_monolith_private_key:
     file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/chat-service.key
+  identity_database_admin_password:
+    file: ${SCDC_IDENTITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/identity-database-secrets}/identity_database_admin_password
+  identity_database_password:
+    file: ${SCDC_IDENTITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/identity-database-secrets}/identity_database_password

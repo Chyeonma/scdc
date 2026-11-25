@@ -19,7 +19,7 @@ internal sealed class IdentityPermitIssuer(IConfiguration configuration, AccessO
             || request.RoutingGeneration != 1 || (dm && owner != AccessOwner.Messaging) || (community && owner != AccessOwner.Community)
             || needsPeer != (request.PeerId is not null) || request.PeerId == Guid.Empty)
             throw new AccessCheckException("INVALID_PERMIT_REQUEST");
-        await using var connection = new NpgsqlConnection(configuration.GetConnectionString("Identity"));
+        await using var connection = new NpgsqlConnection(ModuleDatabaseConnection.Get(configuration, "Identity"));
         await connection.OpenAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
         await using (var budget = new NpgsqlCommand("SET LOCAL lock_timeout='500ms'; SET LOCAL statement_timeout='2s'", connection, transaction))

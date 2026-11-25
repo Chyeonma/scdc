@@ -1,6 +1,37 @@
 using System.Text.Json;
 using SCDC.DbMigrator;
 
+if (args.FirstOrDefault() == "identity-transfer")
+{
+    try
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        var quiesced = false; var rollback = false;
+        for (var i = 1; i < args.Length; i++)
+        {
+            if (args[i] == "--quiesced") { quiesced = true; continue; }
+            if (args[i] == "--rollback-before-writes") { rollback = true; continue; }
+            if (args[i] is not ("--engine" or "--source-container" or "--target-container" or "--artifact-directory") || ++i >= args.Length)
+                throw new MigrationPreflightException("Usage: identity-transfer --engine docker|podman --source-container NAME --target-container NAME --artifact-directory NEW_PATH --quiesced [--rollback-before-writes]");
+            values.Add(args[i - 1], args[i]);
+        }
+        if (!values.TryGetValue("--source-container", out var source) || !values.TryGetValue("--target-container", out var target)
+            || !values.TryGetValue("--artifact-directory", out var artifacts))
+            throw new MigrationPreflightException("Explicit source/target containers and artifact directory are required.");
+        using var cancelled = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancelled.Cancel(); };
+        var changed = await IdentityDatabaseTransfer.RunAsync(new(values.GetValueOrDefault("--engine", "docker"), source, target, artifacts, quiesced, rollback), cancelled.Token);
+        Console.WriteLine(rollback ? "Source restored before target writes; target runtime remains frozen."
+            : changed ? "Identity transfer verified and ready; source runtime remains frozen." : "Matching Identity transfer is already ready; no data copied.");
+        return 0;
+    }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine(error is MigrationPreflightException ? error.Message : "Identity transfer stopped: " + error.GetType().Name + ". Inspect private evidence and writer state before recovery.");
+        return 1;
+    }
+}
+
 if (args.Length is < 1 or > 2)
 {
     Console.Error.WriteLine("Usage: dotnet run --project tools/SCDC.DbMigrator -- <migration.sql> [reviewed-map.json]");

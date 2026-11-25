@@ -5,7 +5,7 @@ on:
     paths:
       - 'README.md'
       - 'docs/**'
-      - 'database/postgres/README.md'
+      - 'database/postgres/**/README.md'
       - 'services/Modules/**/README.md'
       - 'services/*/README.md'
       - 'scripts/check_docs.py'
@@ -14,7 +14,7 @@ on:
     paths:
       - 'README.md'
       - 'docs/**'
-      - 'database/postgres/README.md'
+      - 'database/postgres/**/README.md'
       - 'services/Modules/**/README.md'
       - 'services/*/README.md'
       - 'scripts/check_docs.py'

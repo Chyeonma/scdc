@@ -280,6 +280,13 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         Monolith.UseKestrel(0);Monolith.StartServer();
         MonolithRpc=Address(Monolith.Services,"https");Chat=new HttpClient{BaseAddress=new Uri(Address(Monolith.Services,"http"))};
         var identity=Settings("identity-service","chat-service");
+        var identityDatabase = new NpgsqlConnectionStringBuilder(identity["ConnectionStrings:Identity"]!);
+        var databasePasswordFile = Path.Combine(directory,"database.password");
+        await File.WriteAllTextAsync(databasePasswordFile,identityDatabase.Password);
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(databasePasswordFile,UnixFileMode.UserRead|UnixFileMode.UserWrite);
+        identityDatabase.Password="";
+        identity["ConnectionStrings:Identity"]=identityDatabase.ConnectionString;
+        identity["ConnectionStrings:IdentityPasswordFile"]=databasePasswordFile;
         identity["InternalRpc:Community:Endpoint"]=MonolithRpc;identity["InternalRpc:Messaging:Endpoint"]=MonolithRpc;
         IdentityHost=new WebApplicationFactory<IdentityProgram>().WithWebHostBuilder(builder=>
         { builder.UseEnvironment("Development");builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(identity));

@@ -39,8 +39,8 @@ services:
     entrypoint:
     - /bin/sh
     - -ec
-    - "umask 077\nif [ ! -e /app/messaging-keys/dm-local-v1.key ]; then\n  head -c 32 /dev/urandom > /app/messaging-keys/dm-local-v1.key\nfi\ntest \"$$(wc\
-      \ -c < /app/messaging-keys/dm-local-v1.key)\" -ge 32\n"
+    - "umask 077\nif [ ! -e /app/messaging-keys/dm-local-v1.key ]; then\n  head -c 32 /dev/urandom > /app/messaging-keys/dm-local-v1.key\nfi\ntest \"$$(wc -c < /app/messaging-keys/dm-local-v1.key)\"\
+      \ -ge 32\n"
     volumes:
     - scdc-messaging-keys:/app/messaging-keys
   identity-keygen:
@@ -82,8 +82,7 @@ services:
       Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
       Modules__Community__Operations__ActiveKeyId: local1
-      Modules__Community__Operations__Keys__local1: ${COMMUNITY_OPERATION_KEY:?Set COMMUNITY_OPERATION_KEY to a persistent base64 key of at least 32 random
-        bytes}
+      Modules__Community__Operations__Keys__local1: ${COMMUNITY_OPERATION_KEY:?Set COMMUNITY_OPERATION_KEY to a persistent base64 key of at least 32 random bytes}
       Modules__Community__KeyRingPath: /app/community-keys
       InternalRpc__CaPath: /run/secrets/rpc_ca
       InternalRpc__CertificatePath: /run/secrets/rpc_monolith_certificate
@@ -194,7 +193,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - pg_isready -U scdc -d scdc_chat
+      - pg_isready -h 127.0.0.1 -U scdc -d scdc_chat
       interval: 5s
       timeout: 3s
       retries: 10
@@ -204,6 +203,7 @@ services:
     - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
     - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
     - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro,z
+    - ./database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
   identity-service:
     build:
       context: .
@@ -211,7 +211,7 @@ services:
     environment:
       Authentication__Sessions__WriterUser: scdc_writer
       Authentication__Sessions__WriterPasswordFile: /run/secrets/redis_writer_password
-      ConnectionStrings__Identity: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_identity;Password=${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      ConnectionStrings__Identity: Host=identity-postgres;Port=5432;Database=scdc_identity;Username=scdc_identity
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
       Modules__Identity__SigningKeyId: identity-local-v1
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
@@ -235,19 +235,23 @@ services:
       InternalRpc__Messaging__Endpoint: https://chat-service:8443
       InternalRpc__PeerOwners__chat-service__0: Community
       InternalRpc__PeerOwners__chat-service__1: Messaging
+      ConnectionStrings__IdentityPasswordFile: /run/secrets/identity_database_password
     depends_on:
       identity-keygen:
         condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
       auth-redis:
         condition: service_healthy
+      identity-postgres:
+        condition: service_healthy
+      identity-cutover-gate:
+        condition: service_completed_successfully
     secrets:
     - redis_reader_password
     - redis_writer_password
     - rpc_ca
     - rpc_identity_certificate
     - rpc_identity_private_key
+    - identity_database_password
     volumes:
     - identity-user-search-keys:/app/.dm-keys/user-search
     - scdc-identity-private-keys:/app/auth-private:ro
@@ -266,6 +270,48 @@ services:
     volumes:
     - identity-user-search-keys:/app/legacy-cursors:ro
     - scdc-messaging-cursor-keys:/app/messaging-cursor-keys
+  identity-postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_identity
+      POSTGRES_USER: scdc_identity_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/identity_database_admin_password
+    secrets:
+    - identity_database_admin_password
+    - identity_database_password
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -h 127.0.0.1 -U scdc_identity_admin -d scdc_identity
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+    - scdc-identity-postgres-data:/var/lib/postgresql
+    - ./database/postgres/identity/init.sh:/docker-entrypoint-initdb.d/001-identity.sh:ro,z
+    - ./database/postgres/identity:/opt/scdc/identity:ro,z
+    ports:
+    - 127.0.0.1:5433:5432
+    restart: unless-stopped
+  identity-cutover-gate:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/cutover-gate.sh
+    environment:
+      SOURCE_DATABASE_USER: scdc
+      SOURCE_DATABASE_NAME: scdc_chat
+      SOURCE_DATABASE_PASSWORD: scdc_dev
+      TARGET_DATABASE_NAME: scdc_identity
+    secrets:
+    - identity_database_admin_password
+    volumes:
+    - ./database/postgres/identity/cutover-gate.sh:/opt/scdc/cutover-gate.sh:ro,z
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-postgres:
+        condition: service_healthy
 volumes:
   scdc-auth-redis: null
   scdc-postgres-data: null
@@ -276,6 +322,7 @@ volumes:
   scdc-identity-private-keys: null
   scdc-identity-public-keys: null
   scdc-messaging-cursor-keys: null
+  scdc-identity-postgres-data: null
 secrets:
   redis_acl:
     file: ${SCDC_REDIS_SECRET_DIR:-${HOME}/.local/share/scdc/redis-secrets}/users.acl
@@ -293,3 +340,7 @@ secrets:
     file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/chat-service.crt
   rpc_monolith_private_key:
     file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/chat-service.key
+  identity_database_admin_password:
+    file: ${SCDC_IDENTITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/identity-database-secrets}/identity_database_admin_password
+  identity_database_password:
+    file: ${SCDC_IDENTITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/identity-database-secrets}/identity_database_password
