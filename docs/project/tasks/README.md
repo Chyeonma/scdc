@@ -16,7 +16,7 @@ Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất theo xác nhận của ngư�
 
 | Task | Người làm đề xuất | Phần có thể làm ngay |
 |---|---|---|
-| S3-01 | Vg | Xây dựng checklist tách service từ kết quả STEP-2; task còn trong bản nháp STEP-3 |
+| S3-01 | Vg | [Checklist đã soạn và đối chiếu Identity](../../records/verification/architecture/s3-01-2026-11-25.md); dùng cho S3-02/S3-03 và cập nhật sau 3a. Task còn trong bản nháp STEP-3 |
 | E4-01 | Thái | Đối chiếu, tích hợp hoặc ghi lý do bỏ nhánh worker email trước S3-04 |
 | E4-02 | Người còn công suất; Sáng kiểm tra | Giao diện tin phòng với dữ liệu giả |
 | E4-03 | Người còn công suất; Thái kiểm tra | Prototype gọi riêng, phòng thoại và thiết bị với dữ liệu giả |

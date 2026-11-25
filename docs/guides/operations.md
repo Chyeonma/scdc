@@ -4,7 +4,7 @@
 
 Trang này gồm các quy trình vận hành: triển khai, rollback, xử lý sự cố (API, email, media), backup và khôi phục, dọn dữ liệu, khóa tài khoản, lịch công việc và bàn giao.
 
-**Trạng thái (2026-10-13, nền `900e226`):** đây là runbook để chuẩn bị và diễn tập. Chưa có cấu hình production, công cụ backup hay kết quả diễn tập. Chưa có lệnh production nào chạy được nguyên văn. Backup và khôi phục để [sau v1](../project/overview.md#backup-scope).
+**Trạng thái (2026-11-25):** dev đã chạy nền S2-11; [STEP-2 đã hoàn tất](../records/verification/environment/s2-12-2026-11-25.md). [Checklist S3-01](#service-extraction) dùng để chuẩn bị và kiểm chứng từng lần tách service, bắt đầu với Identity. Các quy trình production trên trang này vẫn là hướng dẫn chuẩn bị, chưa có manifest và lệnh production đã diễn tập. Backup và khôi phục của sản phẩm để [sau v1](../project/overview.md#backup-scope); các lần khôi phục thử dev không thay điều kiện này.
 
 Điều kiện phát hành xem [nghiệm thu](../releases/acceptance.md#release-gates); chính sách dữ liệu xem [vòng đời dữ liệu](../system/data-lifecycle.md#policy).
 
@@ -35,13 +35,13 @@ Mỗi lần thao tác cần: người thực hiện đã được cấp quyền,
 
 | Hiện có | Giới hạn |
 |---|---|
-| [compose.yaml](../../compose.yaml): Web, API, PostgreSQL | Chỉ cho phát triển: mở cổng DB, mật khẩu trên máy, SQL init và seed; chưa có HTTPS, kho bí mật, media |
-| [Dockerfile API](../../services/SCDC.Api/Dockerfile), [Dockerfile Web](../../clients/WebClient/Dockerfile) | Có build; chưa có manifest production hay bản build khóa digest |
-| [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs) | Không kiểm tra DB hay worker; HTTP 200 không chứng minh ứng dụng dùng được |
-| [Nginx](../../clients/WebClient/nginx.conf): `/healthz`, proxy API và hub; tắt access log cho `/hubs/` | `/healthz` chỉ trả chuỗi tĩnh; cần kiểm tra log trên production không lộ query hay token |
-| [Program.cs](../../services/SCDC.Api/Program.cs), [IdentityModule](../../services/Modules/Identity/IdentityModule.cs) | Swagger bật khi Development; cần cấu hình proxy, HTTPS, CORS |
-| [appsettings.json](../../services/SCDC.Api/appsettings.json) | Connection string và signing key trống; `ExposeDevelopmentTokens` mặc định false nhưng chưa có kiểm tra cấm bật ngoài Development |
-| Nền có Identity, Community, DM (ghi tin, lịch sử, sửa, xóa, Hub, outbox, kết nối lại) | Chưa có tin phòng, realtime Community, Media, worker dọn dữ liệu; worker email ở nhánh riêng. Bằng chứng: [hồ sơ 2026-10-13](../records/verification/messaging/merge-2026-10-13.md) |
+| [compose.yaml](../../compose.yaml): Web/Nginx, API monolith, service mẫu, PostgreSQL, Redis, OTel và OpenObserve | Stack phát triển; Identity, Community và Messaging chưa có host hoặc database vật lý riêng |
+| [Dockerfile API](../../services/SCDC.Api/Dockerfile), [Dockerfile Web](../../clients/WebClient/Dockerfile), [service mẫu](../../services/Sample/SCDC.Sample.Api/Dockerfile) | Service mẫu build riêng được; Dockerfile monolith chưa là Dockerfile cho từng service nghiệp vụ |
+| [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs) và `make check` | Có probe access readiness cho Redis; liveness hay readiness 200 không thay kiểm tra dữ liệu, worker và hành trình |
+| [Nginx](../../clients/WebClient/nginx.conf) phục vụ SPA, API, hub và service mẫu | Chưa tách route tới bốn service; phải giữ đường dẫn, query, mã lỗi, transport và lọc token trong log |
+| [IdentityModule](../../services/Modules/Identity/IdentityModule.cs) và [Shared.Core](../../services/Shared/SCDC.Shared.Core) | RS256, key ring và phiên Redis đã có; phải tách bootstrap xác thực khỏi module nghiệp vụ khi chuyển host |
+| Ba login database và [module-roles.sql](../../database/postgres/module-roles.sql) | Quyền chéo đã thu hồi ở S2-11; runner hiện hữu chưa phải công cụ chuyển dữ liệu giữa các database STEP-3 |
+| [Demo STEP-2](../records/verification/environment/s2-12-2026-11-25.md), [nâng dev](../records/verification/environment/dev-sync-2026-11-25.md) | Có bằng chứng dev và dữ liệu cũ; tin phòng, Media và tích hợp worker email thuộc các task tiếp theo |
 
 Trên production phải kiểm tra cấu hình thật sự được nạp: đúng môi trường, signing key riêng, token Development tắt, origin hợp lệ, domain link email đúng, DB không mở cho trình duyệt. Kiểm tra qua response và log đã lọc; không dump toàn bộ biến môi trường hay connection string. Cấu hình chi tiết: [hướng dẫn phát triển](development.md#configuration).
 
@@ -53,7 +53,92 @@ curl --fail --silent --show-error http://localhost:5026/api/v1/health
 curl --fail --silent --show-error http://localhost:3000/healthz
 ```
 
-Hai endpoint chỉ cho biết tiến trình và proxy còn sống. Muốn kiểm tra DB và hành trình thì dùng tài khoản thử.
+Hai endpoint chỉ cho biết tiến trình và proxy còn sống. Muốn kiểm tra DB và hành trình thì dùng tài khoản thử. Đối với stack dev hiện hành, chạy `make check` hoặc `make check ENGINE=podman` theo [hướng dẫn phát triển](development.md#setup).
+
+<a id="service-extraction"></a>
+
+## S3-01 — Checklist tách một service
+
+Mỗi lần tách lập một [hồ sơ theo mẫu](../records/templates/service-extraction.md), ghi kết quả và minh chứng cho từng mục EX-00 đến EX-08. [Bản áp dụng chuẩn bị cho Identity](../records/verification/architecture/s3-01-2026-11-25.md) chỉ rõ code đang có, phần còn thiếu và task thực hiện. S3-02/S3-03 dùng hồ sơ này khi tách Identity; sau lần chuyển thật phải cập nhật checklist bằng kết quả thực tế.
+
+Checklist phục vụ phát triển và demo theo các quyết định hiện hành, không cấp quyền vận hành production. Mục không áp dụng cần lý do; ô chưa có bằng chứng vẫn để mở. Không dùng kết quả monolith làm bằng chứng service đã chạy độc lập.
+
+### EX-00 — Chốt phạm vi và bản gốc
+
+- [ ] Ghi service, task, người làm/người kiểm tra, nhánh riêng, commit, engine, Compose project, image ID/digest, cấu hình và database nguồn/đích. Chỉ ghi tên secret, key ID và vị trí lưu có giới hạn truy cập.
+- [ ] Liệt kê endpoint, Hub, worker, bảng, sequence, helper, ledger, outbox/inbox, fence/receipt và khóa thuộc owner; ghi caller/callee còn ở monolith. Phân loại trạng thái đang xử lý trước khi chuyển.
+- [ ] Chốt luồng phải tiếp tục chạy, bộ test, cách đo thu hồi, thời gian bảo trì dự kiến và hai phương án phục hồi ở EX-08. Baseline là [S2-11/S2-12](../records/verification/environment/s2-12-2026-11-25.md), không cấp lại quyền chéo để chạy code cũ.
+
+### EX-01 — Dựng host và giới hạn phụ thuộc
+
+- [ ] Tạo bốn project `SCDC.<Service>.Api`, `.Application`, `.Domain`, `.Infrastructure` theo [D40/D43](../system/backend.md#v1-code-layout); nhóm theo chức năng. Worker và Hub thuộc cùng host owner theo D12/D13. Đưa project vào solution, CI và Dockerfile build riêng.
+- [ ] Api gọi Application và dùng Infrastructure để nối DI; Infrastructure tham chiếu Application/Domain; Domain không kéo ASP.NET, SQL, Redis hoặc SDK. Không tham chiếu implementation của service khác. Chỉ dùng [Shared.Core](../system/backend.md#v1-code-layout) trong phạm vi D45; không chuyển nguyên BuildingBlocks hoặc persistence vào thư viện chung.
+- [ ] Tách cấu hình xác thực, clock, telemetry, lỗi HTTP và cursor mà host còn lại cần. Khởi động thử từng host với đúng tập cấu hình/khóa của nó; không yêu cầu private signing key hoặc connection string owner khác chỉ để hoàn tất DI.
+
+### EX-02 — Thay lời gọi trong process bằng hợp đồng qua mạng
+
+- [ ] Lập ma trận từng interface/phương thức → caller → RPC → bên nhận → quyền gọi → deadline → khóa chống trùng → lỗi công khai. Đối chiếu DTO hiện tại với [`.proto` mục tiêu](../system/api-conventions.md#v1-grpc-contract-sources); ghi rõ phương thức còn thiếu. Lookup công khai, nhãn lịch sử, permit, fence, provision và ACK có ý nghĩa khác nhau.
+- [ ] Dùng gRPC/HTTP2 và mTLS ngay khi tách theo [D04/D20](../system/api-conventions.md#v1-internal-protocol); chưa có quyết định hoãn. Sinh mã vào project hợp đồng riêng theo [D47](../system/backend.md#v1-grpc-code-generation), dùng lại các kiểu import; chỉ adapter Api/Infrastructure tham chiếu mã sinh. Domain/Application giữ kiểu thuần của mình.
+- [ ] Chốt danh tính peer và ma trận quyền RPC, cả khi hai owner còn chung host chuyển tiếp. Kiểm tra service identity từ kênh mTLS, không từ trường `owner` trong payload; kiểm tra riêng actor, phiên, mục đích và scope. Thử chứng chỉ thiếu, sai danh tính/quyền, hết hạn hoặc không thuộc tập tin cậy.
+- [ ] Giữ [ngân sách STEP-2](../system/access-revocation.md#s2-02-protocol): deadline lời gọi hiện hành tối đa 2 giây, permit tối đa 5 giây, admission tối thiểu 1,5 giây và kiểm tra lệch đồng hồ hai đầu. Tính cả các lần thử trong deadline; không biến timeout thành kết luận rollback. Retry chỉ theo ngữ nghĩa từng thao tác, giữ operation/event/batch ID và fingerprint; ACK phải khớp các giá trị và chỉ sau commit bền.
+- [ ] Dựng cả hai chiều gọi trước khi chuyển route: authority cấp permit cho owner và authority gửi fence tới owner; outbox gửi/nhận theo D27. Thiếu phụ thuộc phải từ chối đúng hợp đồng, không fallback đọc database hoặc dùng lại quyền cũ.
+
+### EX-03 — Tách database và đối chiếu dữ liệu
+
+- [ ] Chốt mapping nguồn → đích theo [D02/D03](../system/database.md#v1-database-layout): Identity ở PostgreSQL instance riêng; Community/Messaging/Media có database riêng trên instance còn lại. Tạo runtime login và migrator tách quyền; thử đăng nhập thật, từ chối truy cập owner khác và DDL/ledger ngoài quyền.
+- [ ] Viết migration SQL, kiểm tra trước, ledger/checksum và khóa chạy theo [D48–D50](../system/database.md#v1-migration-execution). Công cụ hiện tại dùng cho nâng monolith; chưa có CLI v1 chọn service/database hoặc công cụ chuyển dữ liệu giữa database. Không coi lệnh giả định là đã chạy được; ghi lệnh thật và exit code sau khi task dữ liệu triển khai.
+- [ ] Chuyển thử vào database riêng từ bản sao đã kiểm tra. Đối chiếu từng nhóm owner: số dòng, tập ID, quan hệ nội bộ, giá trị/hash theo cột, sequence/`is_called`, version/epoch, timestamp/hạn gốc, thao tác chống trùng, tombstone, outbox/inbox, audit, journal và ACK. Đối chiếu trạng thái công việc, không chỉ tổng số dòng; không tự đánh dấu đã phát hoặc reset việc đang xử lý.
+- [ ] Giữ ledger nguồn để truy vết và lập baseline đích có mapping/checksum rõ; không chép ledger rồi coi migration mới đã chạy. Giữ key ring và thông số giải mã cần dùng. Nếu JWT, phiên hoặc cursor cũ bị thay hiệu lực, phải có kế hoạch và bằng chứng cụ thể theo D51; không suy từ việc user ID còn nguyên.
+
+### EX-04 — Cấu hình, khóa, Redis và quan sát
+
+- [ ] Khai báo endpoint, health/readiness, volume và secret của từng host trong cấu hình triển khai. Private JWT key chỉ cấp Identity; consumer nhận public key chỉ đọc. Khóa riêng mTLS theo peer, DB login theo owner; dùng file ngoài repo/Compose secrets theo D36, không ghi bí mật vào artifact công khai hoặc image.
+- [ ] Chỉ Identity công bố trạng thái xác thực vào Redis; consumer giữ quyền reader. Giữ generation/epoch, readiness và quy tắc khi Redis lỗi; không đặt lại Redis prefix hoặc bỏ dấu thu hồi để làm service mới khởi động được.
+- [ ] Kiểm tra readiness với dependency thực tế, không chỉ process sống; worker lưu tiến độ trong DB owner và phục hồi sau restart. Ghi đúng `service.name`, kiểm tra trace qua gateway và RPC, backlog/tuổi công việc, lỗi và thời gian; không ghi bearer token, query chứa token, payload riêng tư hoặc toàn bộ environment.
+
+### EX-05 — Diễn tập khi chưa nhận lưu lượng
+
+- [ ] Dựng project/volume/database và Redis hoặc prefix thử riêng; service mới chưa được gateway gửi request và chưa có worker ghi vào dữ liệu thật hoặc công bố view xác thực lên Redis dev. Khi dùng bản sao, chặn email thật và tác động Media ra ngoài.
+- [ ] Build service mới và phần monolith còn lại độc lập; chạy test thành phần/tích hợp cùng ma trận gRPC/mTLS, dữ liệu và quyền. Ghi rõ thay đổi fixture nào để gọi qua mạng; không giữ adapter trong process trong test rồi kết luận đã kiểm chứng mạng.
+- [ ] Diễn tập đóng ghi → chuyển dữ liệu → đối chiếu → bật đúng một tập writer → smoke và hai nhánh phục hồi EX-08 trên dữ liệu thử. Ghi thời lượng từng bước, kết quả và điểm chưa đủ; hoàn tất trước khi chuyển dữ liệu đang dùng.
+
+### EX-06 — Chuyển gateway trong khoảng bảo trì
+
+- [ ] Theo [D52](../system/database.md#v1-mvp-data-cutover), đóng request và dừng mọi API/worker/job đang ghi, chờ transaction kết thúc. Chuẩn bị bản sao và cấu hình/khóa cần cho phương án đã diễn tập; không xóa volume, chạy seed hoặc bootstrap `schema.sql` trên database có dữ liệu.
+- [ ] Chạy migration/chuyển dữ liệu theo lệnh đã xác minh, đối chiếu EX-03 khi writer còn dừng. Chuyển cấu hình kết nối của các host và endpoint RPC phối hợp; bảo đảm nguồn cũ không còn writer/worker cùng owner, kể cả coordinator và Redis publisher.
+- [ ] Đổi đúng route đã lập ma trận trong [Nginx](../../clients/WebClient/nginx.conf): giữ method, path/query, header membership, mã lỗi, CORS, SignalR negotiate và WebSocket. REST và Hub công khai vẫn qua gateway; RPC nội bộ không thành đường bỏ qua xác thực. Không retry tự động mutation tại gateway.
+- [ ] Bật đúng host/worker đích, chờ readiness và chạy EX-07 qua gateway trước khi mở lại. Readiness hoặc đối chiếu chưa đạt thì giữ phần bị ảnh hưởng đóng; không tự mở lại nguồn cũ khi chưa biết đích đã ghi hay chưa.
+
+<a id="service-extraction-tests"></a>
+
+### EX-07 — Kiểm chứng trước khi nghiệm thu lần tách
+
+| Nhóm | Bằng chứng phải ghi trên host mới và phần còn lại |
+|---|---|
+| Build và phụ thuộc | Build/publish riêng từng host, project graph không kéo implementation owner khác; generated contract chỉ ở adapter. Khởi động bằng đúng cấu hình đã triển khai |
+| Hồi quy | Backend và frontend theo phần ảnh hưởng; browser Community/DM bằng API, PostgreSQL và Redis thật. Gateway suite kiểm tra route, mã lỗi, transport, reload và đổi IP; ghi bộ test thực tế đã chạy |
+| Quyền và phiên cũ | Role thật không đọc/ghi chéo; JWT đúng/sai/thu hồi, refresh và phát hiện reuse, lịch sử/cursor cũ theo kế hoạch tương thích; khác actor, scope hoặc membership không được cấp quyền |
+| Gửi lại và trạng thái bền | Mất phản hồi sau commit, retry cùng ID, khác payload cùng ID, sự kiện trùng/sai thứ tự, ACK sai và công việc chưa rõ kết quả không làm ghi/phát lại sai |
+| Restart và lỗi phụ thuộc | Tắt rồi bật từng host, Redis hoặc đầu RPC; thử deadline và lỗi mTLS. Request mới từ chối đúng hợp đồng, không thêm bản ghi ngoài ý muốn; khôi phục không hồi sinh phiên hoặc quyền cũ |
+| Thu hồi thật | Đo HTTP và WebSocket thật qua Nginx dưới mức kết nối ghi trong hồ sơ; dưới 5 giây từ commit thu hồi, hoặc đo bảo thủ từ trước request; ghi tin đã commit và xác nhận không có payload mới tới phiên đã mất quyền, giữ kết nối đối chứng |
+| Dữ liệu và quan sát | So sánh EX-03 khi chưa mở writer; sau mở ghi đối chiếu thêm các thao tác thử. Trace đi qua các host, backlog tiếp tục xử lý, log không có secret |
+| Độc lập | Dừng/khởi động lại service không buộc restart Nginx hay service khác. Những luồng phụ thuộc service bị dừng có thể từ chối đúng hợp đồng; không yêu cầu thao tác cần permit tiếp tục thành công khi authority lỗi |
+
+Các lệnh kiểm tra nền hiện có: `make docs-check`, `dotnet build SCDC.slnx --configuration Release`, `dotnet test SCDC.slnx --configuration Release`, `npm --prefix clients/WebClient test`, `python3 scripts/test_gateway.py --engine podman`. Bộ backend/browser phải dùng database và cấu hình thử riêng theo [hướng dẫn phát triển](development.md#frontend-tests), không dùng connection string dev đang có dữ liệu. Gateway runner hiện dựng monolith, phải cập nhật fixture cho host được tách trước khi dùng làm bằng chứng STEP-3. Đây là danh mục lệnh, không phải kết quả đã chạy của lần tách.
+
+<a id="service-extraction-rollback"></a>
+
+### EX-08 — Phục hồi và ghi kết quả
+
+| Mốc thực tế | Điều kiện và thao tác |
+|---|---|
+| Đích còn đúng baseline đã chuyển | Dừng toàn bộ writer đích, chứng minh chưa có ghi nghiệp vụ hoặc thay đổi authority/generation mới và nguồn vẫn đúng baseline. Kiểm tra image/schema/khóa còn tương thích, phục hồi route và cấu hình nguồn, bật đúng một tập writer rồi smoke lại. Chỉ đổi route khi đã xác nhận các điều kiện này |
+| Đích đã ghi, công bố generation mới hoặc chưa rõ | Giữ phần ảnh hưởng đóng; nguồn cũ có thể đã thiếu thay đổi. Không chỉ trỏ gateway hoặc connection string về nguồn. Ưu tiên sửa tiến; nếu quay lại, cần mapping chênh lệch, đối chiếu trạng thái, fence/epoch, generation/sequence, journal/outbox và khóa, diễn tập rồi mới mở ghi. Identity khởi động và đồng bộ Redis cũng có thể đổi generation trước khi gateway mở |
+
+- [ ] Đính kèm bằng chứng cho mọi mục: commit/image, command và exit code đã lọc, manifest dữ liệu, thời gian, test và số đo. Tách kết quả cũ, rà code, diễn tập và chạy thật; không công bố credential hoặc snapshot người dùng.
+- [ ] Ghi mốc mở ghi đích, quyết định mở lại/phục hồi và giới hạn còn lại vào hồ sơ. Sau Identity, cập nhật checklist bằng bài học thực tế; chỉ đánh dấu lần tách đạt khi có bằng chứng EX-00 đến EX-08 tương ứng.
+
+Nguồn checklist: S3-01, D02–D04, D12–D13, D20, D27–D30, D36, D40–D47, D48–D52; [hợp đồng STEP-2](../system/backend.md#s2-10-contracts), [thu hồi truy cập](../system/access-revocation.md#s2-02-protocol), [dữ liệu MVP](../system/database.md#v1-mvp-data-transition).
 
 <a id="deploy"></a>
 
