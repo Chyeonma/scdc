@@ -98,8 +98,11 @@ Nguồn: [D03 và D48–D52](../../../docs/system/database.md),
 ## Nâng cấp email — E4-01
 
 Giữ nguyên baseline `2026112503` và schema chuyển dữ liệu S3-03. Migration
-`20261126_e4-01_email_worker.sql` chạy sau bootstrap/transfer, chỉ thêm bảng
-policy và delivery trong Identity, giữ link mới nhất và mốc cooldown cũ.
+`20261126_e4-01_email_upgrade.sql` (v2, `2026112602`) chạy sau bootstrap/transfer,
+tạo mới hoặc nhận diện hai bảng policy/delivery có đúng schema đã rà. Migration
+v1 `20261126_e4-01_email_worker.sql` giữ nguyên checksum và vẫn được hỗ trợ.
+V2 giữ delivery cũ, hợp nhất policy mà không lùi cooldown và không giả lập
+ledger v1 khi chỉ nhận diện bảng legacy.
 Token legacy chỉ còn hash không thể dựng lại email; yêu cầu gửi lại sẽ tạo
 một delivery mới.
 
@@ -110,7 +113,7 @@ rồi chạy từ gốc repo:
 ```bash
 dotnet build tools/SCDC.DbMigrator -c Release
 dotnet tools/SCDC.DbMigrator/bin/Release/net10.0/SCDC.DbMigrator.dll \
-  database/postgres/identity/20261126_e4-01_email_worker.sql
+  database/postgres/identity/20261126_e4-01_email_upgrade.sql
 ```
 
 Công cụ dùng transaction, advisory lock có giới hạn chờ và ledger checksum.
@@ -129,3 +132,7 @@ python3 scripts/test_identity_email_upgrade.py --engine podman --container <pg-t
 
 Script tạo/xóa database fixture riêng, kiểm tra nâng mới, chạy lại và từ chối
 checksum khác. [Hồ sơ E4-01](../../../docs/records/verification/authentication/e4-01-2026-11-26.md).
+
+Schema legacy khác cột/ràng buộc đã rà sẽ bị từ chối. Envelope legacy còn hạn
+chưa có ledger v1 cần kế hoạch chuyển key/envelope riêng; migration không
+tự hủy thư đang chờ. [Kiểm chứng nhận diện legacy](../../../docs/records/verification/authentication/e4-01-legacy-adoption-2026-11-26.md).

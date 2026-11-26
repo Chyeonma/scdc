@@ -188,7 +188,7 @@ Cập nhật E4-01 ngày 2026-11-26 trên nền `main@7778a8f`, chọn lọc t�
 | Envelope | Key ring riêng, application `SCDC.Identity.Email`, purpose `Identity.EmailDelivery.v1`; ràng buộc vào delivery, user, token, loại, phiên bản mẫu và người nhận; outbox không chứa token hoặc email |
 | Worker | Chạy trong host Identity; lease ngắn, SMTP ngoài transaction; thử lại tối đa 5 lần; bỏ link bị thay, đã dùng hoặc không đủ thời gian gửi; xóa envelope khi kết thúc |
 | Bí mật | App Password có thể cấp qua file chỉ Identity được mount; Compose lưu key ring trong volume riêng; ngoài Development cần certificate bảo vệ key ring |
-| Database | Migration owner `20261126_e4-01_email_worker.sql`, có checksum, backfill policy/cooldown, chặn nâng cấp khi writer cũ còn kết nối; readiness chưa đạt khi thiếu bảng email |
+| Database | Migration owner v2 `20261126_e4-01_email_upgrade.sql`, có checksum, nhận diện bảng legacy đã rà, backfill policy/cooldown, chặn nâng cấp khi writer cũ còn kết nối; readiness chưa đạt khi thiếu bảng email |
 
 [Hồ sơ E4-01](../../records/verification/authentication/e4-01-2026-11-26.md) ghi các test đồng thời, rollback, lease, restart/key ring, timeout, token bị thay và host Identity độc lập. Sender giả không chứng minh Gmail hoặc hộp thư đã nhận. `ProviderAccepted` là trạng thái SMTP đã chấp nhận.
 

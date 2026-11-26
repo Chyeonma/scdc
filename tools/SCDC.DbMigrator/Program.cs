@@ -46,10 +46,13 @@ try
     // This is an administrator/migrator connection, never a runtime module login.
     var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Migration")
         ?? throw new InvalidOperationException("ConnectionStrings__Migration must be configured.");
-    if (Path.GetFileName(args[0]) == IdentityEmailMigration.FileName)
+    if (Path.GetFileName(args[0]) is IdentityEmailMigration.FileName or IdentityEmailMigration.LegacyFileName)
     {
         if (args.Length != 1) throw new MigrationPreflightException("E4-01 does not accept a data map.");
-        var changed = await IdentityEmailMigration.ApplyAsync(connection, await File.ReadAllTextAsync(args[0]));
+        var emailSql = await File.ReadAllTextAsync(args[0]);
+        var changed = Path.GetFileName(args[0]) == IdentityEmailMigration.LegacyFileName
+            ? await IdentityEmailMigration.ApplyLegacyAsync(connection, emailSql)
+            : await IdentityEmailMigration.ApplyAsync(connection, emailSql);
         Console.WriteLine(changed ? "Identity email upgrade applied." : "Identity email upgrade already applied with matching checksum.");
         return 0;
     }

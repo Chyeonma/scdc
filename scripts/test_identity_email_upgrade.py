@@ -31,7 +31,7 @@ def main():
     run(['exec', args.container, 'mkdir', '-p', '/opt/scdc/identity', '/run/secrets'])
     run(['exec', '-i', args.container, 'sh', '-c',
          'umask 077; cat > /run/secrets/identity_database_admin_password'], data=password)
-    for filename in ('migrate-email.sh', '20261126_e4-01_email_worker.sql'):
+    for filename in ('migrate-email.sh', '20261126_e4-01_email_upgrade.sql'):
         run(['cp', str(root / filename), args.container + ':/opt/scdc/identity/' + filename])
     admin = ['exec', args.container, 'psql', '-X', '-U', user, '-d', source, '-v', 'ON_ERROR_STOP=1']
     run(admin + ['-c', 'CREATE DATABASE ' + database])
@@ -47,7 +47,7 @@ def main():
         run(job)
         run(job)
         run(['exec', '-i', args.container, 'sh', '-c',
-             'cat >> /opt/scdc/identity/20261126_e4-01_email_worker.sql'], data='\n-- checksum rejection test\n')
+             'cat >> /opt/scdc/identity/20261126_e4-01_email_upgrade.sql'], data='\n-- checksum rejection test\n')
         run(job, expected=3)
         print('Identity email Compose upgrade: 3/3 passed (fresh, repeat, checksum rejection).')
     finally:
