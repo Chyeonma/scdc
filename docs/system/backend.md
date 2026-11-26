@@ -2,7 +2,7 @@
 
 Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc giữa các phần, và các quyết định v1 về worker, Hub, repository, chia project, thư viện dùng chung và mã sinh từ gRPC.
 
-**Trạng thái dev:** Identity và Community chạy bằng host/database riêng; Messaging tiếp tục ở `SCDC.Api` với Community bị tắt đăng ký. Community dùng database `scdc_community` trên instance PostgreSQL chung với Messaging, runtime `scdc_community_service`; login nguồn `scdc_community` giữ `NOLOGIN`. [Bước 3 S3-10](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi chuyển dữ liệu, callback/gateway, kiểm chứng browser và rollback. Code Community đang trên nhánh review; main chưa hợp nhất các PR bước 1–3.
+**Trạng thái dev:** Identity và Community chạy bằng host/database riêng; Messaging tiếp tục ở `SCDC.Api` với Community bị tắt đăng ký. Community dùng database `scdc_community` trên instance PostgreSQL chung với Messaging, runtime `scdc_community_service`; login nguồn `scdc_community` giữ `NOLOGIN`. [Bước 3 S3-10](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi chuyển dữ liệu, callback/gateway, kiểm chứng browser và rollback. Code Community bước 1–3 đã vào main qua PR #50 và PR #52; S3-09/S3-10 đã hoàn tất.
 
 **Host Community:** chương trình mặc định ở chế độ chuẩn bị; Compose dev đặt `CommunityHost:Integrated=true` để bật worker, nhận Identity fence và gọi Messaging qua gRPC/mTLS. [Preview](../../services/Community/README.md) riêng vẫn preparation/503. Giới hạn và cấu trúc Identity xem [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); bốn service nghiệp vụ chưa tách đầy đủ.
 

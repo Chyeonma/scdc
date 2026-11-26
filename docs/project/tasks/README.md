@@ -24,11 +24,11 @@ Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất](../../records/verification/e
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. Theo yêu cầu ngày 2026-11-25, cả 12 thẻ STEP-3 và 15 thẻ STEP-4 được công bố để đồng bộ lên Trello. S3-01 đến S3-03 có kết quả hoàn tất trong nguồn; các task còn lại giữ nguyên phụ thuộc và chưa tự chuyển sang đang làm. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng; lần công bố này dùng nguyên hai file hiện tại, không áp dụng cách tách file trong PR cũ.
+Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. Theo yêu cầu ngày 2026-11-25, cả 12 thẻ STEP-3 và 15 thẻ STEP-4 được công bố để đồng bộ lên Trello. S3-01/S3-02/S3-03/S3-09/S3-10 có kết quả hoàn tất trong nguồn; các task còn lại giữ nguyên phụ thuộc và chưa tự chuyển sang đang làm. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng; lần công bố này dùng nguyên hai file hiện tại, không áp dụng cách tách file trong PR cũ.
 
 ## Nhánh tính năng chưa tích hợp
 
-S3-10 có [host Community chuẩn bị](../../../services/Community/README.md) và bốn project riêng. Preview giữ readiness 503, chưa chạy worker hoặc chuyển dữ liệu/gateway dev; phần hoàn thiện RPC và chuyển lưu lượng tiếp tục theo hai đợt sau. S3-10 chưa được đánh dấu hoàn tất.
+S3-09/S3-10 đã hoàn tất và vào main qua [PR #50](https://github.com/Chyeonma/scdc/pull/50) và [PR #52](https://github.com/Chyeonma/scdc/pull/52). [Community](../../../services/Community/README.md) đang chạy host/database riêng trên dev, nối Identity/Messaging qua gRPC/mTLS; [hồ sơ bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi dữ liệu, gateway, browser và rollback. Messaging tiếp tục ở API cũ tới S3-07/S3-08.
 
 | Nhánh | Bằng chứng đang có | Phần còn lại |
 |---|---|---|
