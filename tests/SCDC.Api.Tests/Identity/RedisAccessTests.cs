@@ -148,6 +148,43 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
     }
 
     [Fact]
+    public async Task Revocation_does_not_return_success_when_final_Redis_publication_is_unavailable()
+    {
+        var auth = await Login(); var actor = Actor(auth);
+        // Revoke the publisher's read after the pending deny was published and
+        // in the same transaction that commits revocation. Owner ACKs and DB
+        // finalization still succeed; only the final Redis snapshot fails.
+        await database.Sql($"""
+            CREATE FUNCTION identity.e4_fail_final_publication() RETURNS trigger
+            LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+            BEGIN
+                IF NEW.user_id='{actor.UserId}' THEN
+                    REVOKE SELECT ON identity.user_emails FROM scdc_identity;
+                END IF;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER e4_fail_final_publication AFTER UPDATE OF phase ON identity.access_changes
+            FOR EACH ROW WHEN (OLD.phase=0 AND NEW.phase=1) EXECUTE FUNCTION identity.e4_fail_final_publication();
+            """);
+        try
+        {
+            using var response = await client.PostAsJsonAsync("/api/v1/auth/logout",
+                new { refreshToken = auth.GetProperty("refreshToken").GetString() });
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            Assert.Equal(true, await database.Sql("SELECT phase=1 FROM identity.access_changes WHERE user_id=@id", actor.UserId));
+            using var denied = await Me(auth);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, denied.StatusCode);
+        }
+        finally
+        {
+            await database.Sql("GRANT SELECT ON identity.user_emails TO scdc_identity; DROP TRIGGER e4_fail_final_publication ON identity.access_changes; DROP FUNCTION identity.e4_fail_final_publication();");
+        }
+        await app.Services.GetRequiredService<SessionPublisher>().SynchronizeAsync(default);
+        using var revoked = await Me(auth);
+        Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
+    }
+
+    [Fact]
     public async Task Revocation_accepts_a_receipt_reconstructed_across_a_transport_boundary()
     {
         var auth = await Login(); owner.ReconstructReceipt = true;
