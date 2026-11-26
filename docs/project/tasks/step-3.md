@@ -73,7 +73,7 @@ Thứ tự triển khai hiện tại: Identity → Community → Messaging; Medi
 - Đầu ra: luồng chuẩn bị, xác nhận, hủy của S2-09 chạy qua mạng (D14–D19).
 - Xong khi: test mất phản hồi, gửi lại, hủy giữa chừng, khởi động lại giữa lúc dọn qua.
 - Phụ thuộc: S3-01, S3-02; cần cấu trúc/host Community ở bước 1 S3-10. Theo thứ tự Community trước đã chọn, Messaging có thể tiếp tục ở API cũ; không cần đợi S3-07.
-- Tiến độ: **Đã triển khai transport gRPC/mTLS và test tích hợp ở bước 2 S3-10; chờ review**. [Hồ sơ bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) ghi provision, hủy, mất phản hồi và tiếp tục journal sau restart trên ba host/database thử riêng. Đổi endpoint/gateway dev thuộc bước 3.
+- Tiến độ: **Đã triển khai transport gRPC/mTLS và test tích hợp ở bước 2 S3-10; chờ review**. [Hồ sơ bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) ghi provision, hủy, mất phản hồi và tiếp tục journal sau restart trên ba host/database thử riêng. [Bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) đã đổi endpoint/gateway dev và kiểm chứng browser; code chờ review/merge.
 
 ## S3-10 · 3d: Community thành service riêng
 - Nhãn: refactor
@@ -81,7 +81,8 @@ Thứ tự triển khai hiện tại: Identity → Community → Messaging; Medi
 - Đầu ra: host Community riêng không tham chiếu implementation Identity/Messaging; database Community riêng. Theo thứ tự Community trước đã chọn, Messaging tạm ở host API cũ tới S3-07/S3-08.
 - Xong khi: không còn code Identity, Messaging trong host Community; test Community và Playwright `community` qua.
 - Phụ thuộc: S3-03, S3-09; S3-08 không chặn cutover Community, vì Messaging vẫn có thể ở host/database hiện tại.
-- Tiến độ: **Đã triển khai bước 1–2; S3-10 còn mở tới khi chuyển dev và nghiệm thu**. [Bước 1](../../records/verification/architecture/s3-10-phase-1-2026-11-25.md) chia bốn project và dựng host chuẩn bị. [Bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) nối Identity, provision và fence quyền Messaging qua gRPC/mTLS, bật worker trong chế độ tích hợp trên stack thử. [Preview](../../../services/Community/README.md) mặc định vẫn chặn nghiệp vụ; bước 3 còn chuyển dữ liệu dev, đóng writer cũ, đổi callback/gateway và diễn tập rollback.
+- Tiến độ: **Đã kiểm chứng bước 1–3 và chuyển dev; chờ review/merge**. [Bước 1](../../records/verification/architecture/s3-10-phase-1-2026-11-25.md) tách project; [bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) nối RPC; [bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) chuyển 21 bảng/242 dòng, khóa writer cũ, đổi callback/gateway. Browser: 55 Community, 15 gateway và 14 DM MVP đạt; kiểm tra phiên/cursor/thao tác gửi lại và dữ liệu cũ trên dev đạt. Rollback trước ghi và chặn sau ghi đã diễn tập. Các PR chưa merge main; chưa đóng task hoặc toàn STEP-3.
+
 
 ## S3-11 · 3e: Chuyển sang gRPC và mTLS
 - Nhãn: tech

@@ -1,6 +1,6 @@
 # Community service
 
-Community có bốn project ứng dụng và project hợp đồng gRPC riêng. Host riêng có chế độ chuẩn bị mặc định và chế độ tích hợp Identity/Messaging qua gRPC/mTLS. Dev vẫn phục vụ Community qua API chung; chuyển dữ liệu và gateway thuộc bước 3.
+Community có bốn project ứng dụng và project hợp đồng gRPC riêng. Host riêng có chế độ chuẩn bị mặc định và chế độ tích hợp Identity/Messaging qua gRPC/mTLS. Dev đã chuyển Community sang host/database riêng qua [bước 3](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). Messaging tiếp tục ở API cũ; code đang trên nhánh review, chưa merge main.
 
 | Project | Vai trò |
 |---|---|
@@ -11,6 +11,12 @@ Community có bốn project ứng dụng và project hợp đồng gRPC riêng. 
 | `SCDC.Community.Grpc` | Mã sinh hợp đồng fence và channel readiness; chỉ chứa message/client/server base |
 
 Namespace cũ được giữ để tương thích. Controller và bộ lọc OpenAPI Community nằm trong project API mới; `SCDC.Api` biên dịch các file này bằng liên kết nguồn trong giai đoạn chuyển tiếp. Các adapter HTTP kỹ thuật dùng chung cũng được biên dịch vào từng host; host Community không tham chiếu assembly `SCDC.Api` hoặc implementation Messaging/Identity.
+
+## Dev sau cutover
+
+Compose mặc định chạy `community-service` với `CommunityHost__Integrated=true`, database `scdc_community` trên PostgreSQL chung với Messaging và login `scdc_community_service`. Login nguồn `scdc_community` bị khóa; schema nguồn được giữ để truy vết. Gateway cổng 3000 gửi `/api/v1/servers` và Swagger Community tới host mới; debug riêng ở `http://localhost:5028/swagger/community/`.
+
+Host mới dùng lại volume `scdc-community-keys`, HMAC `local1` và public JWT key; private JWT key vẫn chỉ ở Identity. `make init` cấp riêng password runtime, nhận lại HMAC từ `.env` và thêm chứng chỉ Community bằng CA cũ. Với volume dev cũ, phải làm [chuyển offline](../../database/postgres/community/README.md) trước; gate không tự chuyển dữ liệu đang dùng.
 
 ## Chạy preview riêng
 
@@ -77,12 +83,12 @@ Các RPC provision `Prepare/Confirm/Cancel/Get/Activate` và fence giữ operati
 
 Trong chế độ tích hợp, `/health/ready` chỉ trả 200 khi database Community, Redis phiên và hai dependency qua mTLS đều sẵn sàng. Messaging mất kết nối làm readiness 503; các luồng độc lập như đọc server vẫn hoạt động. Thao tác cần Messaging giữ kết quả pending/lỗi theo hợp đồng và tiếp tục bằng journal khi service trở lại. Profile preview phía trên vẫn mặc định `preparation`, không tự nối sang dev.
 
-Các thiết lập này phải được áp dụng đồng bộ trong stack thử. Đổi callback Identity, gateway và dữ liệu dev thật chỉ thực hiện cùng đợt cutover ở bước 3 theo [checklist](../../docs/guides/operations.md#service-extraction).
+Compose mặc định đã áp dụng đồng bộ các thiết lập này sau cutover dev. Stack thử vẫn dùng database/secret riêng. Chạy lại hoặc rollback theo [runbook Community](../../database/postgres/community/README.md) và [checklist](../../docs/guides/operations.md#service-extraction).
 
 ## Kiểm tra và phần tiếp theo
 
 `CommunityHostTests` kiểm tra chế độ chuẩn bị, database mới, quyền runtime, Swagger và chặn API. `CommunityNetworkTests` chạy ba Kestrel host thật qua mTLS với ba database riêng; kiểm tra provision, receipt, delegation, lỗi mạng, deadline/cancellation, thu hồi quyền, restart và đóng SignalR sau logout. Bộ test Community/DM/Identity hiện hành kiểm tra hồi quy host chung. Build cả solution bằng `dotnet build SCDC.slnx --configuration Release`; cách chuẩn bị PostgreSQL/Redis cho test xem [hướng dẫn](../../docs/guides/development.md#community).
 
-Baseline database thử nằm trong [database/postgres/community](../../database/postgres/community/README.md). Bước 3 còn phải chuyển dữ liệu dev, đóng writer cũ, đổi callback/gateway và diễn tập rollback theo [checklist tách service](../../docs/guides/operations.md#service-extraction). S3-10 còn mở tới khi có bằng chứng chuyển và nghiệm thu.
+Baseline database thử nằm trong [database/postgres/community](../../database/postgres/community/README.md). Bước 3 đã chuyển dev và kiểm chứng theo [hồ sơ](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). S3-10 chờ review/merge; Messaging/Media còn task tách riêng. Readiness/Activate chưa có caller production cho tính năng chat phòng.
 
 Nguồn: [task S3-10](../../docs/project/tasks/step-3.md), [cấu trúc backend](../../docs/system/backend.md#v1-code-layout), D12, D40, D43, D47.
