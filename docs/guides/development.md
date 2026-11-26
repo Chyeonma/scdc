@@ -123,6 +123,22 @@ Nếu Chromium chạy bằng Playwright `launchServer` trên cùng máy, có th�
 
 [Community preview](../../services/Community/README.md#chạy-preview-riêng) có host và database thử riêng, bật bằng `compose.community-preview.yaml` với profile `community-preview`. Nó không thay stack dev hoặc gateway mặc định. Liveness/database trả 200 khi khỏe; readiness và API nghiệp vụ tiếp tục trả 503 tới khi hoàn thiện tích hợp service. Các secret thử do [script riêng](../../scripts/init_community_preview_secrets.py) cấp ngoài repo, không dùng khóa Identity thật.
 
+### Community tích hợp — bước 2 S3-10
+
+Host Community có chế độ `CommunityHost__Integrated=true` để chạy worker và gọi Identity/Messaging bằng gRPC/mTLS. Messaging vẫn có thể ở `SCDC.Api` với `Hosting__CommunityEnabled=false`; mỗi host chỉ nhận database của owner mình. [Cấu hình ba host](../../services/Community/README.md#chế-độ-tích-hợp-qua-mạng) ghi endpoint, allowlist, delegation `ChannelRead` và cách cấp bộ chứng chỉ ba peer vào thư mục thử mới. Profile preview mặc định phía trên vẫn ở chế độ chuẩn bị.
+
+`CommunityNetworkTests` dựng ba Kestrel host thật và ba database thử riêng từ baseline, dùng PostgreSQL/Redis và các biến môi trường test backend hiện hành. Fixture cần tài khoản admin test được tạo database; từ chối database nguồn không có hậu tố `_test`, tự xóa database sinh ra khi kết thúc. Chạy riêng bằng `dotnet test SCDC.slnx --configuration Release --filter FullyQualifiedName~CommunityNetworkTests`. Chuyển dữ liệu, callback Identity và gateway dev thật thuộc bước 3, không thực hiện chỉ bằng việc bật flag trên stack đang dùng.
+
+### Community dev — bước 3 S3-10
+
+Compose mặc định chạy thêm `community-service`; PostgreSQL chứa hai database `scdc_chat` (Messaging và bản lưu nguồn cũ) và `scdc_community` (Community). Identity tiếp tục dùng instance riêng. `make init` thêm chứng chỉ Community bằng CA hiện có, giữ các chứng chỉ cũ; password runtime và HMAC nhận từ `.env` nằm ngoài repo trong `SCDC_COMMUNITY_DB_SECRET_DIR`.
+
+Với volume cũ, dừng writer và làm [runbook chuyển Community](../../database/postgres/community/README.md) trước khi `make up`. Job `community-database-init` chỉ tạo đích rỗng; `community-cutover-gate` từ chối nguồn còn ghi hoặc transfer chưa khớp. Volume mới được entrypoint chép seed Community sang database riêng trước khi có request. Không chạy initializer này bằng tay trên dữ liệu cũ.
+
+Gateway `/api/v1/servers` và `/swagger/community` tới Community; `/api/v1/health/community/access` kiểm readiness thực. Debug `http://localhost:5028/swagger/community/`. `make check` kiểm cả ba host. Preview 5082 vẫn giữ trạng thái chuẩn bị. [Hồ sơ bước 3](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) phân biệt dev đang chạy với PR chưa merge.
+
+Chạy browser hồi quy trên stack thử riêng: `python3 scripts/test_gateway.py --engine podman --projects gateway community dm-mvp`. Cần Node/npm và Chromium/Chrome như các bộ E2E hiện hành; có thể đặt `SCDC_E2E_BROWSER_CHANNEL=chrome DM_BROWSER_CHANNEL=chrome`. Với Podman, dùng Docker Compose provider qua Podman socket; phiên diễn tập dùng Compose 5.6.0. Runner tự cấp secret, tạo dữ liệu thử và dọn stack; `--keep` giữ để điều tra, `--gateway-grep` chọn ca gateway khi kiểm tra sửa lỗi. DM fixture luôn xác minh database/container thử, không chạy trên dev.
+
 <a id="gateway"></a>
 
 ### Nginx trước API hiện tại — S1-02

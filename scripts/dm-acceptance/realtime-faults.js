@@ -2,7 +2,10 @@
 // Actual frames are observed; duplicates/stale application frames are explicitly local injection.
 (() => {
   window.dmHubFixture?.off();
-  if (location.hostname !== 'localhost' || location.port !== '15300') throw new Error('Use localhost:15300 acceptance.');
+  const expectedOrigin = window.dmAcceptanceOrigin || 'http://localhost:15300';
+  if (!['localhost', '127.0.0.1'].includes(location.hostname) || location.origin !== expectedOrigin) {
+    throw new Error('Use the dedicated local acceptance origin.');
+  }
   const Original = window.WebSocket;
   let prototype = Original.prototype, descriptor;
   while (prototype && !descriptor) { descriptor = Object.getOwnPropertyDescriptor(prototype, 'onmessage'); prototype = Object.getPrototypeOf(prototype); }

@@ -20,10 +20,12 @@ builder.Services.AddConsumerAuthentication(builder.Configuration);
 builder.Services.AddRemoteIdentity(builder.Configuration);
 builder.Services.AddGrpc(options => { options.MaxReceiveMessageSize = 128 * 1024; options.Interceptors.Add<RpcPeerGuard>(); });
 RpcTransport.ConfigureServer(builder);
-builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
+var communityEnabled = builder.Configuration.GetValue("Hosting:CommunityEnabled", true);
+if (communityEnabled) builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
 builder.Services.AddMessagingModule(builder.Configuration);
 
-builder.Services.AddControllers();
+var controllers = builder.Services.AddControllers();
+if (!communityEnabled) controllers.ConfigureApplicationPartManager(parts => parts.FeatureProviders.Add(new SCDC.Api.CommunityControllerFeature()));
 builder.Services.AddApiProblemDetails();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -89,8 +91,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-app.MapGrpcService<CommunityIdentityFenceEndpoint>();
+if (communityEnabled) app.MapGrpcService<CommunityIdentityFenceEndpoint>();
 app.MapGrpcService<MessagingIdentityFenceEndpoint>();
+app.MapGrpcService<MessagingControlEndpoint>();
+app.MapGrpcService<MessagingCommunityFenceEndpoint>();
+app.MapGrpcService<MessagingChannelProvisionEndpoint>();
 app.MapHub<ChatHub>("/hubs/chat", options => options.CloseOnAuthenticationExpiration = true);
 
 await app.RunAsync();

@@ -2,19 +2,28 @@ using Grpc.Core;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Identity.Infrastructure.Transport;
 using W = SCDC.Identity.Grpc.V1;
+using Google.Protobuf.WellKnownTypes;
+using SCDC.Modules.Identity.Application;
 
 namespace SCDC.Identity.Api.InternalRpc;
 
 public sealed class IdentityAccessEndpoint(IServiceProvider services, IConfiguration configuration) : W.IdentityAccess.IdentityAccessBase
 {
+    public override async Task<W.ServiceReadiness> Probe(Empty request, ServerCallContext context) =>
+        new() { Ready = await services.GetRequiredService<IIdentityReadiness>().IsReadyAsync(context.CancellationToken) };
+
     public override async Task<W.AccessReply> AcquirePermit(W.AccessRequest request, ServerCallContext context)
     {
         var owner = (AccessOwner)(int)request.Owner;
-        if (!Enum.IsDefined(owner)) throw new AccessCheckException("INVALID_PERMIT_REQUEST");
+        if (!System.Enum.IsDefined(owner)) throw new AccessCheckException("INVALID_PERMIT_REQUEST");
         var peer = context.GetHttpContext().Connection.ClientCertificate!
             .GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.DnsName, false);
         var owners = configuration.GetSection("InternalRpc:PeerOwners:" + peer).Get<string[]>() ?? [];
-        if (!owners.Contains(owner.ToString(), StringComparer.Ordinal))
+        // Delegation is purpose-specific, never an additional owner-wide permission.
+        var delegated = configuration.GetSection($"InternalRpc:PermitDelegations:{peer}:{owner}").Get<string[]>() ?? [];
+        if (!owners.Contains(owner.ToString(), StringComparer.Ordinal)
+            && !(owner == AccessOwner.Messaging && (IdentityPurpose)(int)request.Purpose == IdentityPurpose.ChannelRead
+                && delegated.Contains(nameof(IdentityPurpose.ChannelRead), StringComparer.Ordinal)))
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Peer cannot request permits for this owner."));
         var permit = await services.GetRequiredKeyedService<IIdentityPermitIssuer>(owner).AcquireAsync(IdentityWire.Read(request), context.CancellationToken);
         return new W.AccessReply { Permit = IdentityWire.Write(permit) };

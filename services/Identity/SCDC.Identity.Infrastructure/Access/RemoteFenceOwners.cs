@@ -24,7 +24,7 @@ internal sealed class GrpcFenceOwner(RpcTransport transport, IConfiguration conf
     {
         var endpoint = configuration[$"InternalRpc:{owner}:Endpoint"]
             ?? throw new InvalidOperationException("Fence owner RPC endpoint is required.");
-        var channel = transport.Channel(endpoint, "chat-service");
+        var channel = transport.Channel(endpoint, configuration[$"InternalRpc:{owner}:Peer"] ?? "chat-service");
         using var call = owner == AccessOwner.Community
             ? new SCDC.Community.Grpc.V1.CommunityFence.CommunityFenceClient(channel).ApplyAsync(IdentityWire.Write(batch), deadline: DateTime.UtcNow.AddSeconds(2), cancellationToken: ct)
             : new SCDC.Messaging.Grpc.V1.MessagingFence.MessagingFenceClient(channel).ApplyAsync(IdentityWire.Write(batch), deadline: DateTime.UtcNow.AddSeconds(2), cancellationToken: ct);

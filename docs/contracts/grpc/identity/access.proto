@@ -4,13 +4,17 @@ package scdc.identity.v1;
 option csharp_namespace = "SCDC.Identity.Grpc.V1";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
-// Target S2-02 contract; no RPC host or generated project is implemented yet.
+// Identity authority contracts, served over authenticated internal gRPC.
 // Shared messages are transport envelopes, not shared domain models.
 service IdentityAccess {
+  rpc Probe(google.protobuf.Empty) returns (ServiceReadiness);
   rpc AcquirePermit(AccessRequest) returns (AccessReply);
   rpc GetChange(ChangeQuery) returns (ChangeStatus);
 }
+
+message ServiceReadiness { bool ready = 1; }
 
 // Only trusted service peers may use profile lookups. These labels never grant access.
 service IdentityDirectory {

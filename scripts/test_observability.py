@@ -39,12 +39,22 @@ def main():
     canary = 'SCDC_PRIVATE_CANARY_' + secrets.token_hex(8)
     results = {'project': project, 'trace_id': trace_id, 'gateway': origin, 'openobserve': observe,
                'checks': {}, 'passed': False, 'kept': args.keep}
+    private_directory = artifact / 'private'
+    private_directory.mkdir(mode=0o700)
+    community_env = private_directory / 'community.env'
+    community_env.write_text('COMMUNITY_OPERATION_KEY=Z2F0ZXdheS10ZXN0LW9ubHkta2V5LWF0LWxlYXN0LTMyLWJ5dGVz\n')
     for script, directory, variable in [
         ('init_rpc_certificates.py', 'rpc', 'SCDC_RPC_SECRET_DIR'),
         ('init_identity_database_secrets.py', 'identity-database', 'SCDC_IDENTITY_DB_SECRET_DIR'),
+        ('init_community_database_secrets.py', 'community-database', 'SCDC_COMMUNITY_DB_SECRET_DIR'),
     ]:
         secret_directory = artifact / 'private' / directory
-        provision = subprocess.run([sys.executable, str(ROOT / 'scripts' / script), str(secret_directory), '--label-for-containers'],
+        command = [sys.executable, str(ROOT / 'scripts' / script), str(secret_directory), '--label-for-containers']
+        if script == 'init_rpc_certificates.py':
+            command += ['--include-community']
+        elif script == 'init_community_database_secrets.py':
+            command += ['--env-file', str(community_env)]
+        provision = subprocess.run(command,
                                   cwd=ROOT, text=True, capture_output=True)
         (artifact / ('initialize-' + directory + '.log')).write_text(provision.stdout + provision.stderr)
         if provision.returncode:

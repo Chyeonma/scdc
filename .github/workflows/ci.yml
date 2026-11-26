@@ -169,12 +169,22 @@ jobs:
           python3 scripts/test_identity_transfer.py --engine docker
           --source-container "$SOURCE_CONTAINER" --source-port 5433
           --target-container "$TARGET_CONTAINER" --target-port 5434
+      - name: Exercise Community transfer and recovery
+        env:
+          SOURCE_CONTAINER: ${{ job.services.source.id }}
+        run: >-
+          python3 scripts/test_community_transfer.py --engine docker
+          --source-container "$SOURCE_CONTAINER" --source-port 5433
+          --target-container "$SOURCE_CONTAINER" --target-port 5433
       - name: Upload transfer summary
+        # Both transfers keep private dumps/manifests out of CI artifacts.
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: identity-transfer-summary
-          path: artifacts/identity-transfer/*/result.json
+          path: |
+            artifacts/identity-transfer/*/result.json
+            artifacts/community-transfer/*/result.json
           if-no-files-found: warn
           retention-days: 7
 

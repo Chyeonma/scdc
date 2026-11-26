@@ -1,4 +1,3 @@
-# Dedicated gateway acceptance stack. Only Nginx is published.
 name: scdc-gateway-test
 x-jwt-trust:
   Authentication__Jwt__Issuer: SCDC
@@ -48,6 +47,7 @@ services:
       MESSAGING_DB_PASSWORD: ${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
       POSTGRES_USER: scdc_gateway_test
       POSTGRES_PASSWORD: gateway-test-only
+      COMMUNITY_DATABASE_NAME: scdc_community_gateway_test
     healthcheck:
       test:
       - CMD-SHELL
@@ -61,6 +61,10 @@ services:
     - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
     - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
     - ./database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
+    - ./database/postgres/community:/opt/scdc/community:ro,z
+    - ./database/postgres/community/init-source.sh:/docker-entrypoint-initdb.d/005-community-database.sh:ro,z
+    secrets:
+    - community_database_password
   chat-service:
     build:
       context: .
@@ -72,11 +76,7 @@ services:
       Authentication__Jwt__KeyIds__0: identity-local-v1
       ASPNETCORE_ENVIRONMENT: Development
       Authentication__Sessions__Endpoint: auth-redis:6379
-      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
       ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_gateway_test;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
-      Modules__Community__Operations__ActiveKeyId: gateway-test
-      Modules__Community__Operations__Keys__gateway-test: Z2F0ZXdheS10ZXN0LW9ubHkta2V5LWF0LWxlYXN0LTMyLWJ5dGVz
-      Modules__Community__KeyRingPath: /app/community-keys
       Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
       Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
       InternalRpc__CaPath: /run/secrets/rpc_ca
@@ -86,6 +86,8 @@ services:
       InternalRpc__Identity__Endpoint: https://identity-service:8443
       Modules__Messaging__CursorKeyRingPath: /app/messaging-cursor-keys
       Modules__Messaging__CursorApplicationName: SCDC.GatewayTest
+      Hosting__CommunityEnabled: 'false'
+      InternalRpc__AllowedPeers__1: community-service
     depends_on:
       identity-keygen:
         condition: service_completed_successfully
@@ -97,8 +99,9 @@ services:
         condition: service_started
       messaging-cursor-keygen:
         condition: service_completed_successfully
+      community-cutover-gate:
+        condition: service_completed_successfully
     volumes:
-    - gateway-community-keys:/app/community-keys
     - gateway-messaging-keys:/app/messaging-keys
     - gateway-public-keys:/app/auth-public:ro
     - gateway-messaging-cursor-keys:/app/messaging-cursor-keys
@@ -133,6 +136,10 @@ services:
         condition: service_started
       identity-service:
         condition: service_started
+      community-service:
+        condition: service_started
+    environment:
+      SCDC_COMMUNITY_UPSTREAM: community-service:8080
   identity-service:
     build:
       context: .
@@ -152,11 +159,14 @@ services:
       InternalRpc__CertificatePath: /run/secrets/rpc_identity_certificate
       InternalRpc__PrivateKeyPath: /run/secrets/rpc_identity_private_key
       InternalRpc__AllowedPeers__0: chat-service
-      InternalRpc__Community__Endpoint: https://chat-service:8443
+      InternalRpc__Community__Endpoint: https://community-service:8443
       InternalRpc__Messaging__Endpoint: https://chat-service:8443
-      InternalRpc__PeerOwners__chat-service__0: Community
-      InternalRpc__PeerOwners__chat-service__1: Messaging
+      InternalRpc__PeerOwners__chat-service__0: Messaging
       ConnectionStrings__IdentityPasswordFile: /run/secrets/identity_database_password
+      InternalRpc__AllowedPeers__1: community-service
+      InternalRpc__Community__Peer: community-service
+      InternalRpc__PeerOwners__community-service__0: Community
+      InternalRpc__PermitDelegations__community-service__Messaging__0: ChannelRead
     depends_on:
       identity-keygen:
         condition: service_completed_successfully
@@ -165,6 +175,8 @@ services:
       identity-postgres:
         condition: service_healthy
       identity-cutover-gate:
+        condition: service_completed_successfully
+      community-cutover-gate:
         condition: service_completed_successfully
     secrets:
     - rpc_ca
@@ -182,7 +194,8 @@ services:
     entrypoint:
     - /bin/sh
     - -ec
-    - umask 077; if ! find /app/messaging-cursor-keys -name 'key-*.xml' | grep -q .; then cp -a /app/legacy-cursors/. /app/messaging-cursor-keys/; fi
+    - umask 077; if ! find /app/messaging-cursor-keys -name 'key-*.xml' | grep -q .; then cp -a /app/legacy-cursors/. /app/messaging-cursor-keys/;
+      fi
     volumes:
     - gateway-identity-keys:/app/legacy-cursors:ro
     - gateway-messaging-cursor-keys:/app/messaging-cursor-keys
@@ -225,6 +238,86 @@ services:
         condition: service_healthy
       identity-postgres:
         condition: service_healthy
+  community-database-init:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/community/bootstrap-target.sh
+    environment:
+      PGHOST: postgres
+      PGUSER: scdc_gateway_test
+      PGPASSWORD: gateway-test-only
+      PGDATABASE: scdc_gateway_test
+      COMMUNITY_DATABASE_NAME: scdc_community_gateway_test
+    secrets:
+    - community_database_password
+    volumes:
+    - ./database/postgres/community:/opt/scdc/community:ro,z
+    depends_on:
+      postgres:
+        condition: service_healthy
+  community-cutover-gate:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/community/cutover-gate.sh
+    environment:
+      PGHOST: postgres
+      PGUSER: scdc_gateway_test
+      PGPASSWORD: gateway-test-only
+      PGDATABASE: scdc_gateway_test
+      COMMUNITY_DATABASE_NAME: scdc_community_gateway_test
+    volumes:
+    - ./database/postgres/community:/opt/scdc/community:ro,z
+    depends_on:
+      community-database-init:
+        condition: service_completed_successfully
+  community-service:
+    build:
+      context: .
+      dockerfile: services/Community/SCDC.Community.Api/Dockerfile
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      Authentication__Sessions__Endpoint: auth-redis:6379
+      ASPNETCORE_ENVIRONMENT: Development
+      CommunityHost__Integrated: 'true'
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_community_gateway_test;Username=scdc_community_service
+      ConnectionStrings__CommunityPasswordFile: /run/secrets/community_database_password
+      Modules__Community__Operations__ActiveKeyId: gateway-test
+      Modules__Community__KeyRingPath: /app/community-keys
+      InternalRpc__CaPath: /run/secrets/rpc_ca
+      InternalRpc__CertificatePath: /run/secrets/rpc_community_certificate
+      InternalRpc__PrivateKeyPath: /run/secrets/rpc_community_private_key
+      InternalRpc__AllowedPeers__0: identity-service
+      InternalRpc__AllowedPeers__1: chat-service
+      InternalRpc__Identity__Endpoint: https://identity-service:8443
+      InternalRpc__Messaging__Endpoint: https://chat-service:8443
+      Modules__Community__Operations__Keys__gateway-test: Z2F0ZXdheS10ZXN0LW9ubHkta2V5LWF0LWxlYXN0LTMyLWJ5dGVz
+    secrets:
+    - community_database_password
+    - rpc_ca
+    - rpc_community_certificate
+    - rpc_community_private_key
+    volumes:
+    - gateway-community-keys:/app/community-keys
+    - gateway-public-keys:/app/auth-public:ro
+    depends_on:
+      community-cutover-gate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+      identity-keygen:
+        condition: service_completed_successfully
+      identity-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+    restart: unless-stopped
 volumes:
   gateway-postgres-data: null
   gateway-identity-keys: null
@@ -249,3 +342,9 @@ secrets:
     file: ${SCDC_IDENTITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/identity-database-secrets}/identity_database_admin_password
   identity_database_password:
     file: ${SCDC_IDENTITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/identity-database-secrets}/identity_database_password
+  rpc_community_certificate:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/community-service.crt
+  rpc_community_private_key:
+    file: ${SCDC_RPC_SECRET_DIR:-${HOME}/.local/share/scdc/rpc-secrets}/community-service.key
+  community_database_password:
+    file: ${SCDC_COMMUNITY_DB_SECRET_DIR:-${HOME}/.local/share/scdc/community-database-secrets}/community_database_password

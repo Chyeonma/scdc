@@ -23,7 +23,9 @@ const script=async(action,id,extras=[])=> {
 const snap=async id=>JSON.parse(await script('Snapshot',id));
 function proof(id,data){fs.writeFileSync(path.join(folder,'mvp-browser-'+id+'.json'),JSON.stringify({run,case:id,...data,result:'PASS actual browser/API/WebSocket/PostgreSQL',userResult:'Chua xac nhan'},null,2));}
 async function login(page,alias){
- await page.addInitScript({content:source('realtime-faults.js')});await page.goto('/#home');
+ const origin=process.env.DM_WEB_URL||'http://localhost:15300';
+ if(origin!=='http://localhost:15300'&&(!/^scdc-gateway-[a-z0-9-]+$/.test(process.env.SCDC_GATEWAY_PROJECT||'')||process.env.SCDC_GATEWAY_DATABASE!=='scdc_gateway_test'))throw new Error('Use a dedicated gateway test stack for a different acceptance origin.');
+ await page.addInitScript({content:'window.dmAcceptanceOrigin='+JSON.stringify(origin)+';\n'+source('realtime-faults.js')});await page.goto('/#home');
  await page.locator('input[name="login"]').fill(user(alias).username);await page.locator('input[name="password"]').fill('DmDemo2026!Local');
  const pending=page.waitForResponse(r=>r.url().endsWith('/api/v1/auth/login')&&r.request().method()==='POST');
  await button(page,'Đăng nhập').last().click();const auth=await(await pending).json();sessions.push(auth);
@@ -40,7 +42,7 @@ async function open(page,peer,id){
  await expect(page.locator('.dm-connection-state')).toHaveAttribute('data-state','online',{timeout:20000});
 }
 async function clients(page,browser,id){
- const p=pair(id);const context=await browser.newContext({baseURL:'http://localhost:15300'});contexts.push(context);const b=await context.newPage();
+ const p=pair(id);const context=await browser.newContext({baseURL:process.env.DM_WEB_URL||'http://localhost:15300'});contexts.push(context);const b=await context.newPage();
  const aa=await login(page,'A'),bb=await login(b,p.peerAlias);await open(b,'A',p.conversationId);await open(page,p.peerAlias,p.conversationId);
  const before=await snap(id);expect(before.messages).toBe(0);return{p,b,aa,bb,before,context};
 }
@@ -68,7 +70,7 @@ test.afterEach(async({request,page})=>{
 test('C01 full search/open/send/reload happy path and actual outsider REST denials',async({page,browser,request})=>{
  const{p,b,aa,before}=await clients(page,browser,'C01');let reads=0;b.on('request',r=>{if(r.method()==='GET'&&new URL(r.url()).pathname.endsWith(`/${p.conversationId}/messages`))reads++;});
  const dto=await send(page,p,'MVP-M01');await expect(b.locator(`[data-message-id="${dto.id}"]`)).toContainText('MVP-M01');expect(reads).toBe(0);
- const outsider=await login(await (async()=>{const c=await browser.newContext({baseURL:'http://localhost:15300'});contexts.push(c);return c.newPage();})(),'S23');
+ const outsider=await login(await (async()=>{const c=await browser.newContext({baseURL:process.env.DM_WEB_URL||'http://localhost:15300'});contexts.push(c);return c.newPage();})(),'S23');
  const denied=await requestApi(request,outsider,'GET',`/direct-conversations/${p.conversationId}/messages`);expect(denied.status).toBe(404);expect(denied.body.errorCode).toBe('RESOURCE_NOT_FOUND');
  await b.reload();await expect(rows(b)).toHaveCount(1);await page.reload();await expect(rows(page)).toHaveCount(1);
  const after=await snap('C01');expect(after.messages).toBe(1);expect(after.operations).toBe(1);expect(after.createOutbox).toBe(1);proof('C01',{p,before,after,messageId:dto.id,receiverHistoryReadsBeforeReload:0,outsiderStatus:404});
@@ -130,7 +132,7 @@ for(const id of ['EDITOLD','DELETEOLD'])test(`${id} offline old message changes 
 
 test('C05 two actual A sessions submit stale edit and stale delete, conflict reloads current UI',async({page,browser})=>{
  const{p,before}=await clients(page,browser,'C05');const dto=await send(page,p,'RACE-ORIGINAL');
- const c=await browser.newContext({baseURL:'http://localhost:15300'});contexts.push(c);const a2=await c.newPage();await login(a2,'A');await open(a2,p.peerAlias,p.conversationId);
+ const c=await browser.newContext({baseURL:process.env.DM_WEB_URL||'http://localhost:15300'});contexts.push(c);const a2=await c.newPage();await login(a2,'A');await open(a2,p.peerAlias,p.conversationId);
  await a2.evaluate(id=>window.dmHubFixture.on({conversationId:id,dropEvents:true}),p.conversationId);
  await button(rows(a2),'Sửa').click();await a2.getByLabel('Sửa nội dung tin nhắn').fill('RACE-LOSER');await edit(page,dto.id,'RACE-WINNER');
  const pending=a2.waitForResponse(r=>r.request().method()==='PATCH');await button(a2,'Lưu thay đổi').click();expect((await pending).status()).toBe(409);await expect(rows(a2)).toContainText('RACE-WINNER');
@@ -139,7 +141,7 @@ test('C05 two actual A sessions submit stale edit and stale delete, conflict rel
 });
 
 test('C08 exact old session revoked via settings UI and conservative request-to-clear cutoff <=5s',async({page,browser,request})=>{
- const{p,aa,before}=await clients(page,browser,'C08');const c=await browser.newContext({baseURL:'http://localhost:15300'});contexts.push(c);const a2=await c.newPage();const auth2=await login(a2,'A');await open(a2,p.peerAlias,p.conversationId);
+ const{p,aa,before}=await clients(page,browser,'C08');const c=await browser.newContext({baseURL:process.env.DM_WEB_URL||'http://localhost:15300'});contexts.push(c);const a2=await c.newPage();const auth2=await login(a2,'A');await open(a2,p.peerAlias,p.conversationId);
  const sid=JSON.parse(Buffer.from(auth2.accessToken.split('.')[1],'base64url').toString()).sid;
  await button(page,'Cài đặt').click();await page.getByRole('button',{name:/Phiên đăng nhập/}).click();const card=page.locator(`[data-session-id="${sid}"]`);
  const started=Date.now();const revoked=page.waitForResponse(r=>r.request().method()==='DELETE'&&new URL(r.url()).pathname.endsWith('/sessions/'+sid));
@@ -160,7 +162,7 @@ test('C09 desktop composition/draft switch/reload have no unexpected writer',asy
 });
 
 test('MOBILE actual touch/coarse browser Enter adds newline and explicit Send persists',async({browser})=>{
- const p=pair('MOBILE'),c=await browser.newContext({baseURL:'http://localhost:15300',viewport:{width:390,height:844},isMobile:true,hasTouch:true});contexts.push(c);const page=await c.newPage();await login(page,'A');await open(page,p.peerAlias,p.conversationId);
+ const p=pair('MOBILE'),c=await browser.newContext({baseURL:process.env.DM_WEB_URL||'http://localhost:15300',viewport:{width:390,height:844},isMobile:true,hasTouch:true});contexts.push(c);const page=await c.newPage();await login(page,'A');await open(page,p.peerAlias,p.conversationId);
  expect(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches)).toBe(true);await draft(page).fill('MOBILE-LINE');await draft(page).press('Enter');await expect(draft(page)).toHaveValue('MOBILE-LINE\n');expect((await snap('MOBILE')).messages).toBe(0);
  await button(page,'Gửi').click();await expect(rows(page)).toHaveCount(1);proof('MOBILE',{p,after:await snap('MOBILE'),type:'Actual Edge touch/coarse emulation, not a physical keyboard/device'});
 });

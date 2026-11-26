@@ -11,6 +11,23 @@ spec.loader.exec_module(rpc)
 
 
 class RpcCertificatesTests(unittest.TestCase):
+    def test_community_identity_is_opt_in_and_does_not_rotate_an_existing_legacy_set(self):
+        with tempfile.TemporaryDirectory() as parent:
+            legacy = Path(parent) / 'legacy'
+            rpc.initialize(legacy)
+            before = {name: (legacy / name).read_bytes() for name in rpc.FILES}
+            with self.assertRaisesRegex(ValueError, 'Partial'):
+                rpc.initialize(legacy, include_community=True)
+            self.assertEqual(before, {name: (legacy / name).read_bytes() for name in rpc.FILES})
+            isolated = Path(parent) / 'integrated'
+            rpc.initialize(isolated, include_community=True)
+            names = rpc.FILES + ['community-service.crt', 'community-service.key']
+            before = {name: (isolated / name).read_bytes() for name in names}
+            subprocess.run(['openssl', 'verify', '-CAfile', str(isolated / 'ca.crt'), '-purpose', 'sslclient',
+                            '-verify_hostname', 'community-service', str(isolated / 'community-service.crt')], check=True, capture_output=True)
+            rpc.initialize(isolated, include_community=True)
+            self.assertEqual(before, {name: (isolated / name).read_bytes() for name in names})
+
     def test_provisioned_identities_validate_and_rerun_preserves_all_keys(self):
         with tempfile.TemporaryDirectory() as parent:
             directory = Path(parent) / 'rpc'
@@ -38,6 +55,22 @@ class RpcCertificatesTests(unittest.TestCase):
             linked.symlink_to(directory, target_is_directory=True)
             with self.assertRaisesRegex(ValueError, 'symlink'):
                 rpc.initialize(linked)
+
+    def test_add_community_preserves_existing_ca_and_identities(self):
+        with tempfile.TemporaryDirectory() as parent:
+            directory = Path(parent) / 'rpc'
+            rpc.initialize(directory)
+            originals = {name: (directory/name).read_bytes() for name in rpc.FILES}
+            rpc.add_community(directory)
+            rpc.initialize(directory, include_community=True)
+            complete = {path.name: path.read_bytes() for path in directory.iterdir()}
+            rpc.add_community(directory)
+            self.assertEqual(complete, {path.name: path.read_bytes() for path in directory.iterdir()})
+            for name, value in originals.items():
+                self.assertEqual(value, (directory/name).read_bytes())
+            (directory/'community-service.crt').unlink()
+            with self.assertRaisesRegex(ValueError, 'Partial'):
+                rpc.add_community(directory)
 
     def test_mismatched_private_key_is_rejected(self):
         with tempfile.TemporaryDirectory() as parent:

@@ -95,6 +95,11 @@ public sealed class RpcTransport(IConfiguration configuration) : IDisposable
 
 public sealed class RpcPeerGuard(IConfiguration configuration, ILogger<RpcPeerGuard> logger) : Interceptor
 {
+    public static void RequirePeer(ServerCallContext context, string expected)
+    {
+        if (context.GetHttpContext().Connection.ClientCertificate?.GetNameInfo(X509NameType.DnsName, false) != expected)
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "Service peer cannot call this method."));
+    }
     public override async Task<TResponse> UnaryServerHandler<TRequest,TResponse>(TRequest request, ServerCallContext context,
         UnaryServerMethod<TRequest,TResponse> continuation)
     {
@@ -124,5 +129,5 @@ public sealed class RpcPeerGuard(IConfiguration configuration, ILogger<RpcPeerGu
     }
     public static string PublicCode(string? code) => code is "ACCESS_CHECK_UNAVAILABLE" or "ACCESS_PENDING"
         or "INVALID_PERMIT_REQUEST" or "ACCOUNT_ACCESS_DENIED" or "RESOURCE_NOT_FOUND"
-        or "ACCESS_CHANGED" or "Common.Unauthorized" ? code : "ACCESS_CHECK_UNAVAILABLE";
+        or "ACCESS_CHANGED" or "Common.Unauthorized" or "INVALID_FENCE" or "FENCE_CONFLICT" ? code : "ACCESS_CHECK_UNAVAILABLE";
 }

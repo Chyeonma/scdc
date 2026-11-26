@@ -13,6 +13,9 @@
     <ProjectReference Include="../../SCDC.Contracts/SCDC.Contracts.csproj" />
     <ProjectReference Include="../../SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
+    <ProjectReference Include="../../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+    <ProjectReference Include="../../Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />

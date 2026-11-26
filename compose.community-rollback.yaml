@@ -1,0 +1,29 @@
+# Only after community-transfer --rollback-before-writes succeeds while all writers are stopped.
+# Docker Compose 2.24.4+ supports !override. This file cannot bypass the database rollback gate.
+services:
+  community-service:
+    profiles: [community-target-disabled]
+  community-cutover-gate:
+    entrypoint: [/bin/sh, /opt/scdc/community/cutover-gate.sh, --rollback]
+  chat-service:
+    environment:
+      Hosting__CommunityEnabled: 'true'
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      Modules__Community__Operations__ActiveKeyId: local1
+      Modules__Community__Operations__Keys__local1: ${COMMUNITY_OPERATION_KEY:?Retain the existing operation key}
+      Modules__Community__KeyRingPath: /app/community-keys
+    volumes:
+      - scdc-community-keys:/app/community-keys
+  identity-service:
+    environment:
+      InternalRpc__Community__Endpoint: https://chat-service:8443
+      InternalRpc__Community__Peer: chat-service
+      InternalRpc__PeerOwners__chat-service__0: Community
+      InternalRpc__PeerOwners__chat-service__1: Messaging
+  web-client:
+    environment:
+      SCDC_COMMUNITY_UPSTREAM: chat-service:8080
+    depends_on: !override
+      chat-service: {condition: service_started}
+      identity-service: {condition: service_started}
+      sample-service: {condition: service_started}

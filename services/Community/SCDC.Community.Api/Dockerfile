@@ -7,6 +7,7 @@ COPY ["services/Community/SCDC.Community.Domain/SCDC.Community.Domain.csproj", "
 COPY ["services/Community/SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj", "services/Community/SCDC.Community.Infrastructure/"]
 COPY ["services/Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj", "services/Community/SCDC.Community.Grpc/"]
 COPY ["services/Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj", "services/Identity/SCDC.Identity.Grpc/"]
+COPY ["services/Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj", "services/Messaging/SCDC.Messaging.Grpc/"]
 COPY ["services/SCDC.Contracts/SCDC.Contracts.csproj", "services/SCDC.Contracts/"]
 COPY ["services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj", "services/SCDC.BuildingBlocks/"]
 COPY ["services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj", "services/Shared/SCDC.Shared.Core/"]
@@ -17,7 +18,7 @@ RUN dotnet publish services/Community/SCDC.Community.Api/SCDC.Community.Api.cspr
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV DOTNET_EnableDiagnostics=0
-EXPOSE 8080
+EXPOSE 8080 8443
 COPY --from=build /app/publish .
 RUN mkdir -p /app/community-keys /app/auth-public && chown -R "$APP_UID:$APP_UID" /app/community-keys /app/auth-public && chmod 700 /app/community-keys
 USER $APP_UID

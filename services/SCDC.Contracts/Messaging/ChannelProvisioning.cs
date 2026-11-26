@@ -1,7 +1,7 @@
 namespace SCDC.Contracts.Messaging;
 
-// Service-only contract. The in-process adapter is registered for Community;
-// no HTTP caller can supply the producer identity or an owner transaction.
+// Service-only contract. Messaging owns the local adapter; the separate Community
+// host uses gRPC. No HTTP caller supplies producer identity or an owner transaction.
 public sealed record PrepareChannel(Guid OperationId, Guid ChannelId, Guid ServerId, Guid ActorId,
     DateTimeOffset CreatedAt, byte[] Fingerprint, long RoutingGeneration = 1, long ChannelEpoch = 1);
 public sealed record ChannelDecision(Guid OperationId, Guid ChannelId, byte[] Fingerprint,

@@ -34,7 +34,13 @@ def sql(query, readonly=True):
         engine = os.environ.get('DM_MVP_ENGINE', 'podman')
         if engine not in ('podman', 'docker') or not re.fullmatch(r'scdc-gateway-[a-z0-9-]+[-_]postgres[-_]1', container):
             raise RuntimeError('Expected the PostgreSQL container of a dedicated gateway stack.')
-        command = [engine, 'exec', '-i', container, *command, '-U', 'scdc_gateway_test', '-d', 'scdc_gateway_test']
+        user, database = 'scdc_gateway_test', 'scdc_gateway_test'
+        if re.search(r'\bidentity\.', query):
+            container = os.environ.get('DM_MVP_IDENTITY_PG_CONTAINER', '')
+            if not re.fullmatch(r'scdc-gateway-[a-z0-9-]+[-_]identity-postgres[-_]1', container):
+                raise RuntimeError('Identity SQL requires the dedicated gateway Identity container.')
+            user, database = 'scdc_identity_admin', 'scdc_identity_gateway_test'
+        command = [engine, 'exec', '-i', container, *command, '-U', user, '-d', database]
     prefix = 'BEGIN READ ONLY;' if readonly else 'BEGIN;'
     result = subprocess.run(command, input=prefix + query + '\nCOMMIT;', text=True,
                             capture_output=True, timeout=30)

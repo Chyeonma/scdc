@@ -2,9 +2,9 @@
 
 Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc giữa các phần, và các quyết định v1 về worker, Hub, repository, chia project, thư viện dùng chung và mã sinh từ gRPC.
 
-**Trạng thái S3-02/S3-03:** Identity có bốn project, host API/worker và PostgreSQL riêng; Community/Messaging còn trong API cũ. Gọi Identity qua gRPC/mTLS; thư viện mã sinh theo owner, Shared.Core thuần .NET. [Hồ sơ](../records/verification/architecture/s3-03-2026-11-25.md) ghi kiểm chứng dev và lịch sử đồng bộ main; bốn service nghiệp vụ chưa tách đầy đủ.
+**Trạng thái dev:** Identity và Community chạy bằng host/database riêng; Messaging tiếp tục ở `SCDC.Api` với Community bị tắt đăng ký. Community dùng database `scdc_community` trên instance PostgreSQL chung với Messaging, runtime `scdc_community_service`; login nguồn `scdc_community` giữ `NOLOGIN`. [Bước 3 S3-10](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi chuyển dữ liệu, callback/gateway, kiểm chứng browser và rollback. Code Community đang trên nhánh review; main chưa hợp nhất các PR bước 1–3.
 
-**Bước 1 S3-10:** code Community đã chia bốn project; [host chuẩn bị](../../services/Community/README.md) chạy với database thử riêng, chặn lưu lượng nghiệp vụ và chưa bật worker. API chung tiếp tục dùng cùng code Community; chuyển dữ liệu dev và gateway thuộc bước sau.
+**Host Community:** chương trình mặc định ở chế độ chuẩn bị; Compose dev đặt `CommunityHost:Integrated=true` để bật worker, nhận Identity fence và gọi Messaging qua gRPC/mTLS. [Preview](../../services/Community/README.md) riêng vẫn preparation/503. Giới hạn và cấu trúc Identity xem [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); bốn service nghiệp vụ chưa tách đầy đủ.
 
 ## Cấu trúc hiện tại
 
@@ -17,14 +17,14 @@ services/
 │   ├── SCDC.Identity.Infrastructure/
 │   └── SCDC.Identity.Grpc/ # Mã sinh hợp đồng, không có nghiệp vụ
 ├── Community/
-│   ├── SCDC.Community.Api/ # Host chuẩn bị; controller dùng chung nguồn với API cũ
+│   ├── SCDC.Community.Api/ # Host chuẩn bị/tích hợp; controller cùng nguồn với API cũ
 │   ├── SCDC.Community.Application/
 │   ├── SCDC.Community.Domain/
 │   ├── SCDC.Community.Infrastructure/
 │   └── SCDC.Community.Grpc/
 ├── Messaging/SCDC.Messaging.Grpc/
 ├── Shared/SCDC.Shared.Core/ # Kiểu JWT trust, Result, văn bản thuần .NET
-├── SCDC.Api/               # HTTP/Hub Community-Messaging, consumer auth, fence RPC
+├── SCDC.Api/               # HTTP/Hub; có chế độ chỉ đăng ký Messaging, fence/provision RPC
 ├── SCDC.Contracts/         # Interface và DTO thuần giữa owner
 ├── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
 └── Modules/Messaging/
@@ -74,7 +74,9 @@ Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../ser
 | `IUserDirectory` batch, `IHistoricalUserSummaryReader` | 2 giây, ngoài transaction bên gọi | Lookup lại được; chỉ trả nhãn công khai, không cấp quyền ghi hoặc phát tin |
 | `IAuthenticatedSessionReader`, `ISessionStoreReadiness` | Redis connect và command 500 ms; hủy theo caller | Đọc lại trạng thái mới; lỗi hoặc chưa sẵn sàng không được cấp quyền |
 
-Timeout không chứng minh bên nhận đã rollback. Coordinator chỉ ACK khi receipt khớp owner, operation, batch, generation và scopes; khi chưa rõ kết quả, tiến trình đã lưu tiếp tục bằng cùng ID. ACK tương đương sau serialize/deserialize được chấp nhận, không phụ thuộc tham chiếu đối tượng trong process. GET trạng thái là đường đọc cục bộ của authority; `Get/Activate` và permit readiness cho tin phòng giữ lại trong hợp đồng nhưng chưa có caller production, caller mới phải dùng cùng deadline.
+Timeout không chứng minh bên nhận đã rollback. Coordinator chỉ ACK khi receipt khớp owner, operation, batch, generation và scopes; khi chưa rõ kết quả, tiến trình đã lưu tiếp tục bằng cùng ID. ACK tương đương sau serialize/deserialize được chấp nhận, không phụ thuộc tham chiếu đối tượng trong process. GET trạng thái là đường đọc cục bộ của authority; `Get/Activate` và permit readiness đã có transport gRPC và test tích hợp, nhưng chưa có caller production cho tin phòng, caller mới phải dùng cùng deadline.
+
+Ở host Community tích hợp, Identity fence được nhận bởi [CommunityIdentityFenceEndpoint](../../services/Community/SCDC.Community.Api/InternalRpc/CommunityIdentityFenceEndpoint.cs); adapter [RemoteMessaging](../../services/Community/SCDC.Community.Infrastructure/Transport/RemoteMessaging.cs) gửi provision và policy fence sang Messaging. [Các receiver Messaging](../../services/SCDC.Api/InternalRpc/MessagingControlEndpoints.cs) nằm trong API cũ ở giai đoạn này. Identity chỉ delegation `ChannelRead` cho Community xin permit owner Messaging; từng receiver xác thực đúng danh tính service, không chỉ dựa vào allowlist TLS.
 
 Đã bỏ bốn guard/lifecycle transaction cũ, `ISharedDatabaseSession` và `ISharedDatabaseTransaction`, cùng hai placeholder `IChannelAccessChecker`, `IRealtimeAccessRevoker` theo [bảng ranh giới](database.md#s2-01-boundaries). Luật ACL trong `CommunityChannelGuard` vẫn dùng nội bộ. `AccountActor`, reader hồ sơ, tra cứu công khai, Redis và các hợp đồng permit/fence/provision hiện hành được giữ. Host gRPC và mTLS thuộc STEP-3; [S2-11](../records/verification/architecture/s2-11-2026-11-25.md) thu hẹp grant tạm, sửa timeout trước advisory lock và kiểm chứng lỗi dưới tải.
 

@@ -17,6 +17,8 @@
     <PackageReference Include="Grpc.AspNetCore.Server" Version="2.85.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
     <ProjectReference Include="../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
+    <ProjectReference Include="../Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
+    <ProjectReference Include="../Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj" />
   </ItemGroup>
 
 </Project>

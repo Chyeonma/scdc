@@ -36,6 +36,7 @@
   <ItemGroup>
     <Compile Include="../Community/SCDC.Community.Api/Controllers/Community/*.cs" Link="Controllers/Community/%(Filename)%(Extension)" />
     <Compile Include="../Community/SCDC.Community.Api/OpenApi/Community*.cs" Link="OpenApi/%(Filename)%(Extension)" />
+    <Compile Include="../Community/SCDC.Community.Api/InternalRpc/CommunityIdentityFenceEndpoint.cs" Link="InternalRpc/CommunityIdentityFenceEndpoint.cs" />
   </ItemGroup>
 
 </Project>
