@@ -9,6 +9,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
+using SCDC.Api.Tests.Infrastructure;
 using SCDC.BuildingBlocks.Infrastructure.Authentication;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Identity.Infrastructure.Services;
@@ -18,9 +19,16 @@ using Xunit.Abstractions;
 namespace SCDC.Api.Tests.Messaging;
 
 [Collection("DM database")]
-public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper output) : IClassFixture<TextMessageFixture>
+public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper output)
+    : IClassFixture<TextMessageFixture>, IAsyncLifetime
 {
     private OutboxDispatcher Dispatcher => f.D.Inner.Factory.Services.GetRequiredService<OutboxDispatcher>();
+
+    // Fault hosts share the fixture's session store. After the 32-connection load,
+    // wait for its publisher heartbeat before arranging the next test. Requests
+    // and the five-second cutoff assertions inside each test are never retried.
+    public Task InitializeAsync() => SCDCWebApplicationFactory.WaitForAccessReadyAsync(f.D.Inner.Client);
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task Authenticated_websocket_repeat_subscribe_routes_current_DTO_once_and_outsider_is_private()
@@ -195,7 +203,7 @@ public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper out
         var fault = new AccessFault(actor.Id,
             f.D.Inner.Factory.Services.GetRequiredService<IAuthenticatedSessionReader>(),
             new RedisSessionReader(failedConnection, TimeProvider.System));
-        using var app = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        await using var app = f.D.Inner.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
         {
             services.Replace(ServiceDescriptor.Singleton<IAuthenticatedSessionReader>(fault));
             services.RemoveAllKeyed<IIdentityPermitIssuer>(AccessOwner.Messaging);

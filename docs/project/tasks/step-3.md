@@ -4,7 +4,7 @@ Thẻ Trello của [STEP-3](../planning.md#step-3). Cách đồng bộ xem [READ
 
 Đã công bố để đồng bộ lên Trello theo yêu cầu ngày 2026-11-25.
 
-Bản khung, chưa ước lượng chi tiết. [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12 ngày 2026-11-25](../../records/verification/environment/s2-12-2026-11-25.md). S3-01/S3-02/S3-03 đã hoàn tất phần kỹ thuật và kiểm chứng dev; mã nguồn S3-03 được hợp nhất vào main qua nhánh đồng bộ sau các PR gốc. Công bố 12 thẻ để theo dõi tiến độ; các task còn lại cần rà đầu ra, công sức và phụ thuộc trước khi bắt đầu. Nhánh Media vẫn cần đối chiếu nghiệm thu S1-07 và hợp đồng phiên hiện tại.
+Bản khung, chưa ước lượng chi tiết. [STEP-2 đã hoàn tất theo xác nhận của người dùng sau demo S2-12 ngày 2026-11-25](../../records/verification/environment/s2-12-2026-11-25.md). S3-01/S3-02/S3-03/S3-09/S3-10 đã hoàn tất, vào main và kiểm chứng dev; Identity và Community chạy host/database riêng. Công bố 12 thẻ để theo dõi tiến độ; các task còn lại cần rà đầu ra, công sức và phụ thuộc trước khi bắt đầu. Nhánh Media vẫn cần đối chiếu nghiệm thu S1-07 và hợp đồng phiên hiện tại.
 
 Thứ tự triển khai hiện tại: Identity → Community → Messaging; Media làm song song từ đầu bước. Giữ mã nhóm 3a/3b/3c/3d để truy vết task cũ. Community nối RPC sang Messaging trong API cũ trước khi tách host/database Messaging. Mỗi lần tách làm theo checklist S3-01.
 
@@ -73,7 +73,7 @@ Thứ tự triển khai hiện tại: Identity → Community → Messaging; Medi
 - Đầu ra: luồng chuẩn bị, xác nhận, hủy của S2-09 chạy qua mạng (D14–D19).
 - Xong khi: test mất phản hồi, gửi lại, hủy giữa chừng, khởi động lại giữa lúc dọn qua.
 - Phụ thuộc: S3-01, S3-02; cần cấu trúc/host Community ở bước 1 S3-10. Theo thứ tự Community trước đã chọn, Messaging có thể tiếp tục ở API cũ; không cần đợi S3-07.
-- Tiến độ: **Đã triển khai transport gRPC/mTLS và test tích hợp ở bước 2 S3-10; chờ review**. [Hồ sơ bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) ghi provision, hủy, mất phản hồi và tiếp tục journal sau restart trên ba host/database thử riêng. [Bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) đã đổi endpoint/gateway dev và kiểm chứng browser; code chờ review/merge.
+- Kết quả: **Hoàn tất và đã vào main — 2026-11-26** qua [PR #52](https://github.com/Chyeonma/scdc/pull/52), commit `425f170`, gồm cả phần RPC của bước 2. [Hồ sơ bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) ghi provision, hủy, mất phản hồi và tiếp tục journal sau restart trên ba host/database thử riêng. [Bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) đã đổi endpoint/gateway dev và kiểm chứng browser. Messaging tiếp tục ở API cũ tới S3-07/S3-08.
 
 ## S3-10 · 3d: Community thành service riêng
 - Nhãn: refactor
@@ -81,7 +81,7 @@ Thứ tự triển khai hiện tại: Identity → Community → Messaging; Medi
 - Đầu ra: host Community riêng không tham chiếu implementation Identity/Messaging; database Community riêng. Theo thứ tự Community trước đã chọn, Messaging tạm ở host API cũ tới S3-07/S3-08.
 - Xong khi: không còn code Identity, Messaging trong host Community; test Community và Playwright `community` qua.
 - Phụ thuộc: S3-03, S3-09; S3-08 không chặn cutover Community, vì Messaging vẫn có thể ở host/database hiện tại.
-- Tiến độ: **Đã kiểm chứng bước 1–3 và chuyển dev; chờ review/merge**. [Bước 1](../../records/verification/architecture/s3-10-phase-1-2026-11-25.md) tách project; [bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) nối RPC; [bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) chuyển 21 bảng/242 dòng, khóa writer cũ, đổi callback/gateway. Browser: 55 Community, 15 gateway và 14 DM MVP đạt; kiểm tra phiên/cursor/thao tác gửi lại và dữ liệu cũ trên dev đạt. Rollback trước ghi và chặn sau ghi đã diễn tập. Các PR chưa merge main; chưa đóng task hoặc toàn STEP-3.
+- Kết quả: **Hoàn tất, đã vào main và chuyển dev — 2026-11-26**. [PR #50](https://github.com/Chyeonma/scdc/pull/50) hợp nhất bước 1 (`c3e5f61`); [PR #52](https://github.com/Chyeonma/scdc/pull/52) hợp nhất bước 2–3 (`425f170`). PR #51 đã đóng vì nội dung nằm trong PR #52. [Bước 1](../../records/verification/architecture/s3-10-phase-1-2026-11-25.md) tách project; [bước 2](../../records/verification/architecture/s3-10-phase-2-2026-11-26.md) nối RPC; [bước 3](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) chuyển 21 bảng/242 dòng, khóa writer cũ, đổi callback/gateway. Browser: 55 Community, 15 gateway và 14 DM MVP đạt; kiểm tra phiên/cursor/thao tác gửi lại và dữ liệu cũ trên dev đạt. Rollback trước ghi và chặn sau ghi đã diễn tập. Toàn STEP-3 còn các task riêng chưa hoàn tất.
 
 
 ## S3-11 · 3e: Chuyển sang gRPC và mTLS

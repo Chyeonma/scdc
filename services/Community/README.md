@@ -1,6 +1,6 @@
 # Community service
 
-Community có bốn project ứng dụng và project hợp đồng gRPC riêng. Host riêng có chế độ chuẩn bị mặc định và chế độ tích hợp Identity/Messaging qua gRPC/mTLS. Dev đã chuyển Community sang host/database riêng qua [bước 3](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). Messaging tiếp tục ở API cũ; code đang trên nhánh review, chưa merge main.
+Community có bốn project ứng dụng và project hợp đồng gRPC riêng. Host riêng có chế độ chuẩn bị mặc định và chế độ tích hợp Identity/Messaging qua gRPC/mTLS. Dev đã chuyển Community sang host/database riêng qua [bước 3](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). Code bước 1–3 đã vào main qua PR #50 và PR #52; Messaging tiếp tục ở API cũ.
 
 | Project | Vai trò |
 |---|---|
@@ -89,6 +89,6 @@ Compose mặc định đã áp dụng đồng bộ các thiết lập này sau c
 
 `CommunityHostTests` kiểm tra chế độ chuẩn bị, database mới, quyền runtime, Swagger và chặn API. `CommunityNetworkTests` chạy ba Kestrel host thật qua mTLS với ba database riêng; kiểm tra provision, receipt, delegation, lỗi mạng, deadline/cancellation, thu hồi quyền, restart và đóng SignalR sau logout. Bộ test Community/DM/Identity hiện hành kiểm tra hồi quy host chung. Build cả solution bằng `dotnet build SCDC.slnx --configuration Release`; cách chuẩn bị PostgreSQL/Redis cho test xem [hướng dẫn](../../docs/guides/development.md#community).
 
-Baseline database thử nằm trong [database/postgres/community](../../database/postgres/community/README.md). Bước 3 đã chuyển dev và kiểm chứng theo [hồ sơ](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). S3-10 chờ review/merge; Messaging/Media còn task tách riêng. Readiness/Activate chưa có caller production cho tính năng chat phòng.
+Baseline database thử nằm trong [database/postgres/community](../../database/postgres/community/README.md). Bước 3 đã chuyển dev và kiểm chứng theo [hồ sơ](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). S3-09/S3-10 đã hoàn tất và vào main; Messaging/Media còn task tách riêng. Readiness/Activate chưa có caller production cho tính năng chat phòng.
 
 Nguồn: [task S3-10](../../docs/project/tasks/step-3.md), [cấu trúc backend](../../docs/system/backend.md#v1-code-layout), D12, D40, D43, D47.
