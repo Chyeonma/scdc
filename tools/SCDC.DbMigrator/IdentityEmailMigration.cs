@@ -7,10 +7,18 @@ namespace SCDC.DbMigrator;
 /// <summary>Owner-only upgrade for the extracted Identity database or isolated component fixtures.</summary>
 public static class IdentityEmailMigration
 {
-    public const string FileName = "20261126_e4-01_email_worker.sql";
-    public const int Version = 2026112601;
+    public const string LegacyFileName = "20261126_e4-01_email_worker.sql";
+    public const int LegacyVersion = 2026112601;
+    public const string FileName = "20261126_e4-01_email_upgrade.sql";
+    public const int Version = 2026112602;
 
-    public static async Task<bool> ApplyAsync(string connectionString, string sql, CancellationToken ct = default)
+    public static Task<bool> ApplyAsync(string connectionString, string sql, CancellationToken ct = default) =>
+        ApplyVersionAsync(connectionString, sql, Version, ct);
+
+    public static Task<bool> ApplyLegacyAsync(string connectionString, string sql, CancellationToken ct = default) =>
+        ApplyVersionAsync(connectionString, sql, LegacyVersion, ct);
+
+    private static async Task<bool> ApplyVersionAsync(string connectionString, string sql, int version, CancellationToken ct)
     {
         var checksum = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(sql)));
         await using var connection = new NpgsqlConnection(connectionString);
@@ -23,7 +31,7 @@ public static class IdentityEmailMigration
                 throw new MigrationPreflightException("Identity session/revocation baseline is required before E4-01.");
         await using (var lookup = new NpgsqlCommand("SELECT checksum FROM identity.schema_migrations WHERE module='identity' AND version=@v", connection, transaction))
         {
-            lookup.Parameters.AddWithValue("v", Version);
+            lookup.Parameters.AddWithValue("v", version);
             if (await lookup.ExecuteScalarAsync(ct) is string existing)
             {
                 if (existing != checksum) throw new MigrationPreflightException("E4-01 checksum differs from the applied migration.");
@@ -35,7 +43,7 @@ public static class IdentityEmailMigration
             await migrate.ExecuteNonQueryAsync(ct);
         await using (var ledger = new NpgsqlCommand("INSERT INTO identity.schema_migrations(module,version,checksum) VALUES('identity',@v,@c)", connection, transaction))
         {
-            ledger.Parameters.AddWithValue("v", Version);
+            ledger.Parameters.AddWithValue("v", version);
             ledger.Parameters.AddWithValue("c", checksum);
             await ledger.ExecuteNonQueryAsync(ct);
         }
