@@ -214,6 +214,7 @@ public sealed class NetworkFaults : Interceptor
 
 public sealed class IdentityNetworkFixture : IAsyncLifetime
 {
+    internal SCDC.Modules.Identity.Infrastructure.Email.IAccountEmailSender? EmailSender { get; init; }
     public WebApplicationFactory<ApiProgram> Monolith { get; private set; }=null!;
     public WebApplicationFactory<IdentityProgram> IdentityHost { get; private set; }=null!;
     public HttpClient Chat { get; private set; }=null!;
@@ -249,6 +250,7 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
             roles="BEGIN;\n"+roles[roles.IndexOf("REVOKE CREATE ON SCHEMA",StringComparison.Ordinal)..];
             await new NpgsqlCommand(roles,connection){CommandTimeout=30}.ExecuteNonQueryAsync();
         }
+        await IdentityEmailTestDatabase.UpgradeAsync(target);
         var prefix="scdc:auth:network:"+Guid.NewGuid().ToString("N")+":";
         Dictionary<string,string?> Settings(string peer,string allowed)
         {
@@ -269,6 +271,7 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
             values["Modules:Community:KeyRingPath"]=Path.Combine(directory,"community-keys");
             values["Modules:Identity:UserSearch:CursorKeyRingPath"]=Path.Combine(directory,"cursors");
             values["Modules:Identity:ExposeDevelopmentTokens"]="true";
+            values["Modules:Identity:Email:KeyRingPath"]=Path.Combine(directory,"email-keys");
             values["InternalRpc:Identity:Endpoint"]="https://127.0.0.1:1";
             return values;
         }
@@ -280,6 +283,16 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         Monolith.UseKestrel(0);Monolith.StartServer();
         MonolithRpc=Address(Monolith.Services,"https");Chat=new HttpClient{BaseAddress=new Uri(Address(Monolith.Services,"http"))};
         var identity=Settings("identity-service","chat-service");
+        if (EmailSender is not null)
+        {
+            identity["Modules:Identity:Email:Enabled"] = "true";
+            identity["Modules:Identity:Email:SenderAddress"] = "scdc@example.test";
+            var smtpSecret = Path.Combine(directory, "smtp-test.password");
+            await File.WriteAllTextAsync(smtpSecret, "test-only");
+            identity["Modules:Identity:Email:AppPasswordFile"] = smtpSecret;
+            identity["Modules:Identity:Email:PollSeconds"] = "1";
+            identity["Modules:Identity:ExposeDevelopmentTokens"] = "false";
+        }
         var identityDatabase = new NpgsqlConnectionStringBuilder(identity["ConnectionStrings:Identity"]!);
         var databasePasswordFile = Path.Combine(directory,"database.password");
         await File.WriteAllTextAsync(databasePasswordFile,identityDatabase.Password);
@@ -290,7 +303,12 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         identity["InternalRpc:Community:Endpoint"]=MonolithRpc;identity["InternalRpc:Messaging:Endpoint"]=MonolithRpc;
         IdentityHost=new WebApplicationFactory<IdentityProgram>().WithWebHostBuilder(builder=>
         { builder.UseEnvironment("Development");builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(identity));
-          builder.ConfigureServices(services => { services.AddSingleton(IdentityFaults); services.Configure<GrpcServiceOptions>(options => options.Interceptors.Add<NetworkFaults>()); }); });
+          builder.ConfigureServices(services =>
+          {
+              services.AddSingleton(IdentityFaults);
+              services.Configure<GrpcServiceOptions>(options => options.Interceptors.Add<NetworkFaults>());
+              if (EmailSender is not null) services.AddSingleton(EmailSender);
+          }); });
         IdentityHost.UseKestrel(0);IdentityHost.StartServer();
         IdentityRpc=Address(IdentityHost.Services,"https");Identity=new HttpClient{BaseAddress=new Uri(Address(IdentityHost.Services,"http"))};
         Monolith.Services.GetRequiredService<IConfiguration>()["InternalRpc:Identity:Endpoint"]=IdentityRpc;

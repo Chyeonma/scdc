@@ -8,7 +8,7 @@ Quy tắc khi nhận việc ở đây:
 - Giao diện làm với **dữ liệu giả** theo [hợp đồng](../../contracts/README.md); không viết backend. Hợp đồng đổi thì giao diện phải sửa theo.
 - Người review là người phụ trách service tương ứng; họ quyết định thẻ có còn đúng hướng không.
 
-**Rà khả năng bắt đầu — 2026-11-24:** cả sáu thẻ dưới đây đủ phụ thuộc để nhận việc trong phạm vi ghi trên thẻ. Chưa có kết quả nghiệm thu; việc cập nhật mô tả không tự gán người hoặc chuyển cột Trello.
+**Cập nhật — 2026-11-26:** E4-01 đã tích hợp worker vào Identity hiện tại; năm thẻ còn lại đủ phụ thuộc để nhận việc trong phạm vi ghi trên thẻ. S3-04 tiếp tục cấu hình và kiểm chứng Gmail thật trên dev.
 
 ## E4-01 · Ghép hoặc bỏ nhánh worker email
 - Nhãn: tech
@@ -16,7 +16,7 @@ Quy tắc khi nhận việc ở đây:
 - Đầu ra: đối chiếu nhánh `feat/identity` (worker gửi email, 1 commit, bỏ ngỏ từ 2026-10-05) với Identity hiện tại; tích hợp phần email còn phù hợp vào nhánh chính, hoặc ghi lý do bỏ và cách cung cấp worker mà S3-04 cần. Giữ các thay đổi phiên, permit và thu hồi của STEP-2; ưu tiên xử lý trước S3-04.
 - Xong khi: không còn nhánh treo; test Identity qua; [email](../../features/accounts/email-links.md) cập nhật hiện trạng.
 - Phụ thuộc: không.
-- Khả năng bắt đầu: **Có thể làm ngay — cập nhật 2026-11-25**. Đối chiếu nhánh email cũ với host Identity đã tách ở S3-02/S3-03; tích hợp phần còn phù hợp vào các project Identity hiện tại, giữ nguyên JWT, Redis, permit/fence và dữ liệu đã chuyển.
+- Kết quả: **Hoàn tất tích hợp và kiểm thử — 2026-11-26**. Chọn lọc queue, worker, SMTP adapter, policy/cooldown và API gửi lại từ `feat/identity@60f4db3` vào các project Identity hiện tại; reset mật khẩu dùng coordinator thu hồi bền hiện hành. Có migration owner, key ring riêng, App Password qua file và kiểm chứng host Identity độc lập bằng sender giả. [Hồ sơ E4-01](../../records/verification/authentication/e4-01-2026-11-26.md) ghi phần lấy/bỏ và kết quả. PR #28 được thay bằng bản tích hợp này; S3-04 còn bật và kiểm chứng Gmail thật trên dev, giao diện mở link còn riêng.
 
 ## E4-02 · Giao diện tin phòng với dữ liệu giả
 - Nhãn: UI/UX

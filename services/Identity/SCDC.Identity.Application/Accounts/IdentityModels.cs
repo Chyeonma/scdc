@@ -88,3 +88,6 @@ public sealed record SessionResponse(
     DateTimeOffset LastSeenAt,
     DateTimeOffset ExpiresAt,
     bool IsCurrent);
+
+public sealed record ResendVerificationCommand(string Email, RequestContext Context);
+public sealed record VerificationRequestedResponse(bool Accepted);

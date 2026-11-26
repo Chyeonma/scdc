@@ -224,6 +224,9 @@ services:
       Modules__Identity__SigningKeyId: identity-local-v1
       Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
       Modules__Identity__ExposeDevelopmentTokens: 'true'
+      Modules__Identity__Email__Enabled: 'false'
+      Modules__Identity__Email__PublicOrigin: http://localhost:3000
+      Modules__Identity__Email__KeyRingPath: /app/email-keys
       Authentication__Jwt__Issuer: SCDC
       Authentication__Jwt__Audience: SCDC.WebClient
       Authentication__Jwt__PublicKeyDirectory: /app/auth-public
@@ -256,6 +259,8 @@ services:
         condition: service_healthy
       identity-cutover-gate:
         condition: service_completed_successfully
+      identity-email-migration:
+        condition: service_completed_successfully
       community-cutover-gate:
         condition: service_completed_successfully
     secrets:
@@ -267,6 +272,7 @@ services:
     - identity_database_password
     volumes:
     - identity-user-search-keys:/app/.dm-keys/user-search
+    - scdc-identity-email-keys:/app/email-keys
     - scdc-identity-private-keys:/app/auth-private:ro
     - scdc-identity-public-keys:/app/auth-public:ro
     ports:
@@ -326,6 +332,20 @@ services:
         condition: service_healthy
       identity-postgres:
         condition: service_healthy
+  identity-email-migration:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint: [/bin/sh, /opt/scdc/identity/migrate-email.sh]
+    environment:
+      PGHOST: identity-postgres
+      PGUSER: scdc_identity_admin
+      PGDATABASE: scdc_identity
+    secrets:
+    - identity_database_admin_password
+    volumes:
+    - ./database/postgres/identity:/opt/scdc/identity:ro,z
+    depends_on:
+      identity-cutover-gate:
+        condition: service_completed_successfully
   community-database-init:
     image: docker.io/library/postgres:18-alpine
     entrypoint:
@@ -416,6 +436,7 @@ services:
     ports:
     - 127.0.0.1:5028:8080
 volumes:
+  scdc-identity-email-keys: null
   scdc-auth-redis: null
   scdc-postgres-data: null
   identity-user-search-keys: null

@@ -84,6 +84,12 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests
       - name: Build backend
         run: dotnet build SCDC.slnx --configuration Release --no-restore
+      - name: Exercise Identity email Compose upgrade
+        env:
+          SCDC_EMAIL_TEST_ADMIN_PASSWORD: ci-postgres-only
+        run: python3 scripts/test_identity_email_upgrade.py --engine docker --container "${{ job.services.postgres.id }}"
+      - name: Upgrade Identity email test schema
+        run: ConnectionStrings__Migration="$ConnectionStrings__TestDatabase" dotnet tools/SCDC.DbMigrator/bin/Release/net10.0/SCDC.DbMigrator.dll database/postgres/identity/20261126_e4-01_email_worker.sql
       - name: Test backend
         run: dotnet test SCDC.slnx --configuration Release --no-build --logger "trx;LogFileName=backend.trx" --results-directory artifacts/ci/backend
       - name: Upload backend test results

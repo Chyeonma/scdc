@@ -65,3 +65,6 @@ docker-compose.override.yml
 !/docs/**
 
 **/.dm-keys/
+
+# Local Identity email envelope key ring
+**/.identity-email-keys/

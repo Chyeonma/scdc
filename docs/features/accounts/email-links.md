@@ -4,10 +4,7 @@ Cơ chế dùng chung cho link xác minh email và link đặt lại mật khẩ
 
 Luồng người dùng xem [đăng ký và xác minh](registration-verification.md) và [mật khẩu](password-recovery.md).
 
-**Trạng thái:**
-
-- Nền MVP `900e226`: chưa có gửi lại xác minh, chưa có thời gian chờ đầy đủ, chưa có worker gửi email. Đăng ký trên máy dùng token Development.
-- Nhánh `feat/identity@60f4db3`: đã có đầy đủ (token, worker, Gmail SMTP) nhưng **chưa ghép** vào nền. Chi tiết ở [hiện trạng](#status).
+**Trạng thái:** E4-01 đã tích hợp hàng đợi, worker và adapter Gmail SMTP vào các project Identity hiện tại. Đã có gửi lại xác minh, thời gian chờ 60 giây, policy token và envelope mã hóa. Kiểm chứng dùng sender giả; gửi Gmail thật trên dev thuộc S3-04. Giao diện mở link xác minh/đặt lại từ email chưa được nối. [Hồ sơ E4-01](../../records/verification/authentication/e4-01-2026-11-26.md).
 
 **Người phụ trách:** Vg phụ trách nghiệp vụ tài khoản, cấp và dùng token; Thái phụ trách gửi email, mẫu thư, worker, thử lại và kiểm thử phần gửi thư. Dữ liệu và worker vẫn nằm trong Identity; không có service email riêng.
 
@@ -86,7 +83,7 @@ Backup key ring và khôi phục từ backup để [sau v1](../../project/overvi
 
 ## Gửi email
 
-Đây là thiết kế mục tiêu; nhánh `feat/identity` đã làm phần lớn ([hiện trạng](#status)).
+Các phần hàng đợi và worker đã triển khai trong Identity; phạm vi kiểm chứng và phần còn lại xem [hiện trạng](#status).
 
 1. **Tạo:** Identity tạo token, ghi hash, loại, hạn 30 phút vào `account_tokens`; cùng transaction tạo `EmailDelivery` và outbox (chỉ chứa ID delivery). Delivery giữ người nhận, phiên bản mẫu thư, ID token và một "phong bì" (envelope) chứa link đã mã hóa. Không ghi token thô vào outbox, audit hay log. Domain của link lấy từ cấu hình, không lấy từ header hay URL của request.
 2. **Gửi:** worker giành delivery bằng lease có hạn, để hai worker không gửi cùng một thư. Trước mỗi lần gửi, kiểm tra token còn hiệu lực và tài khoản đúng trạng thái. Giải mã envelope ngay trước khi gọi nhà cung cấp. Khóa mã hóa quản lý ngoài DB, có phiên bản, lưu bền qua khởi động lại.
@@ -182,41 +179,24 @@ Ngoài ra v1 cần thử: rollback không gửi thư; worker chết trước và
 
 ## Hiện trạng
 
-Đối chiếu ngày 2026-10-13, phân biệt ba nguồn:
+Cập nhật E4-01 ngày 2026-11-26 trên nền `main@7778a8f`, chọn lọc từ `feat/identity@60f4db3`.
 
-- **[Nền MVP `900e226`](../../releases/mvp.md):** chưa có gửi lại xác minh, chưa có thời gian chờ đặt lại đầy đủ, chưa có worker gửi email. Tích hợp DM không chứng minh gửi email thật.
-- **Commit cũ `main@f65408b70ba5f0dd5a09be2091ddba350f0e180c`:** nguồn của bảng thiếu sót dưới đây (trước khi ghép DM). Các thiếu sót vẫn còn ở `900e226`.
-- **Nhánh `feat/identity@60f4db3cfc72877c536829fa0a8495b6f957b085`:** đã có phần email; chưa ghép vào nền.
+| Phần | Hiện tại |
+|---|---|
+| Cấp và dùng link | Đăng ký/quên mật khẩu/gửi lại tạo token, policy, delivery và outbox cùng transaction; khóa user; hai loại token độc lập; thời gian chờ 60 giây; xác minh dùng một lần |
+| Đặt lại mật khẩu | Tiếp tục dùng coordinator thu hồi bền của Identity, Redis và fence Community/Messaging hiện hành |
+| Envelope | Key ring riêng, application `SCDC.Identity.Email`, purpose `Identity.EmailDelivery.v1`; ràng buộc vào delivery, user, token, loại, phiên bản mẫu và người nhận; outbox không chứa token hoặc email |
+| Worker | Chạy trong host Identity; lease ngắn, SMTP ngoài transaction; thử lại tối đa 5 lần; bỏ link bị thay, đã dùng hoặc không đủ thời gian gửi; xóa envelope khi kết thúc |
+| Bí mật | App Password có thể cấp qua file chỉ Identity được mount; Compose lưu key ring trong volume riêng; ngoài Development cần certificate bảo vệ key ring |
+| Database | Migration owner `20261126_e4-01_email_worker.sql`, có checksum, backfill policy/cooldown, chặn nâng cấp khi writer cũ còn kết nối; readiness chưa đạt khi thiếu bảng email |
 
-### Thiếu sót trong nền
+[Hồ sơ E4-01](../../records/verification/authentication/e4-01-2026-11-26.md) ghi các test đồng thời, rollback, lease, restart/key ring, timeout, token bị thay và host Identity độc lập. Sender giả không chứng minh Gmail hoặc hộp thư đã nhận. `ProviderAccepted` là trạng thái SMTP đã chấp nhận.
 
-| Mã | Yêu cầu | Trong `900e226` | Cần làm |
-|---|---|---|---|
-| ACC-GAP-02 | Gửi lại sau 60 giây, hủy link cũ (ACC-012) | Chưa có gửi lại xác minh hay thời gian chờ đặt lại; yêu cầu đặt lại mới đã hủy token cũ | Đối chiếu code nhánh Identity; kiểm thử thời gian chờ, cấp đồng thời, hai loại độc lập |
-| ACC-GAP-03 | Token xác minh dùng một lần (ACC-012) | Xác minh đọc và lưu token nhưng không khóa hay dùng có điều kiện như đặt lại | Đối chiếu code nhánh Identity; kiểm thử xác minh và đặt lại đồng thời, tranh khóa với gửi lại |
-| ACC-GAP-05 | Gửi được link qua email (ACC-012) | Outbox chỉ chứa email và ID token; DB chỉ có hash; chưa có worker | Đối chiếu worker và cấu hình v1; thử Gmail thật, lỗi gửi, worker chạy tiếp sau khởi động lại |
-| ACC-GAP-06 | Chống lạm dụng đăng ký, đăng nhập, đặt lại, gửi lại | Có khóa đăng nhập tạm; chưa có giới hạn theo nguồn | Ngưỡng vẫn là đề xuất (DEC-089); khi chọn cần cấu hình và kiểm thử 429 không lộ email |
-
-### Code trên nhánh `feat/identity`
-
-| Phần | Đã có | File |
-|---|---|---|
-| Cấp và dùng token | Policy theo người dùng và loại; thời gian chờ 60 giây; hủy token cũ cùng loại. Xác minh và đặt lại khóa người dùng rồi đọc lại token và policy; đặt lại kiểm tra mật khẩu trước, không tự xác minh tài khoản | `services/Identity/SCDC.Identity.Infrastructure/Accounts/RegistrationService.cs` |
-| Delivery và outbox | Cùng transaction với token và audit; outbox chỉ có ID và loại; token trong envelope Data Protection; key ring lưu trên đĩa, có cấu hình certificate bảo vệ ngoài Development | `services/Modules/Identity/Infrastructure/Email/AccountEmailQueue.cs`, `services/Identity/SCDC.Identity.Infrastructure/IdentityModule.cs` |
-| Worker và Gmail SMTP | Worker nền trong Identity; giành việc bằng lease và `FOR UPDATE SKIP LOCKED`; kiểm tra token trước khi gửi; gọi SMTP ngoài transaction; thử lại tối đa 5 lần có jitter; xóa envelope; trạng thái `ProviderAccepted`. Dùng `System.Net.Mail.SmtpClient`, cổng 587, TLS | `IdentityEmailWorker.cs`, `IdentityEmailProcessor.cs`, `GmailSmtpEmailSender.cs` trong `services/Modules/Identity/Infrastructure/Email/` |
-| Schema | Bảng policy và delivery; điền token hiện hành và mốc cấp để giữ thời gian chờ | `database/postgres/migrations/001_identity_email.sql` |
-
-`tests/SCDC.Api.Tests/Identity/IdentityCompletionTests.cs` trên nhánh có các ca: thời gian chờ 59 và 60 giây, gửi lại đồng thời, xác minh đồng thời, hết hạn, rollback, lease, hai worker, thử lại, timeout, lỗi cuối, xóa envelope. Các test thay SMTP bằng `RecordingSender`, nên không chứng minh Gmail hay hộp thư đã nhận. Lần rà soát này chỉ đọc code, không chạy test.
-
-### Chưa có bằng chứng
-
-- Gửi Gmail thật; dùng token và gửi lại đồng thời; đặt lại đồng thời; worker chết sau khi SMTP đã nhận; xoay khóa; dọn envelope trong 1 phút khi worker dừng hoặc tải lớn.
-- Callback đã giao hay bị trả về (schema mới có `ProviderAccepted`).
-- Hướng dẫn trên nhánh cấp mật khẩu qua biến môi trường; chưa đáp ứng cách cấp bí mật bằng file theo D36.
+Hướng dẫn chạy và bật SMTP: [Identity](../../../services/Identity/README.md#email-worker). S3-04 tiếp tục kiểm chứng Gmail thật trên dev; giao diện mở link và callback delivered/bounced chưa được nghiệm thu. Job dọn dữ liệu Identity tổng quát của nhánh cũ chưa được đưa vào worker mới; cần rà riêng với ledger thu hồi và quyền runtime hiện tại.
 
 ## Còn mở
 
-- Cấu hình v1, domain của link, bảo vệ và giữ key ring qua khởi động lại (OQ-002, OQ-008).
+- Cấp cấu hình SMTP và origin cụ thể cho dev, kiểm chứng Gmail thật và các trang mở link (S3-04, OQ-002). Xoay certificate/key ring và dọn dữ liệu Identity tổng quát còn cần kiểm chứng.
 - Nhà cung cấp email cho bản công khai; SDK, địa chỉ gửi, webhook, hạn mức ứng dụng; công cụ bắt thư khi chạy trên máy.
 - Gói triển khai cần đối chiếu giao diện xác thực và chứng minh token xác minh và đặt lại độc lập.
 

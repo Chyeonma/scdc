@@ -24,7 +24,7 @@ public sealed class RedisAccessDatabase : IAsyncLifetime
     public string Admin { get; private set; } = "";
     public Dictionary<string, string?> Configuration { get; } = [];
     private string root = "";
-    private readonly string name = "s206_" + Guid.NewGuid().ToString("N");
+    private readonly string name = "s206_" + Guid.NewGuid().ToString("N") + "_test";
     public async Task InitializeAsync()
     {
         var settings = new ConfigurationBuilder().AddEnvironmentVariables().Build();
@@ -39,6 +39,7 @@ public sealed class RedisAccessDatabase : IAsyncLifetime
         await Sql(string.Join('\n', bootstrap.Where(line => !line.StartsWith('\\'))));
         var roles = await File.ReadAllTextAsync(Path.Combine(Repo(), "database/postgres/module-roles.sql"));
         await Sql("BEGIN;\n" + roles[roles.IndexOf("REVOKE CREATE ON SCHEMA public FROM PUBLIC;", StringComparison.Ordinal)..]);
+        await IdentityEmailTestDatabase.UpgradeAsync(Admin);
         foreach (var owner in new[] { "Identity", "Community", "Messaging" })
         {
             var original = settings.GetConnectionString(owner) ?? root;
@@ -144,6 +145,43 @@ public sealed class RedisAccessTests(RedisAccessDatabase database) : IClassFixtu
         Assert.True(owner.Calls >= 2);
         await Assert.ThrowsAsync<PostgresException>(() => database.Sql("UPDATE identity.access_changes SET payload=payload||'{\"changed\":true}'::jsonb,version=version+1 WHERE user_id=@id", actor.UserId));
         await Assert.ThrowsAsync<PostgresException>(() => database.Sql("UPDATE identity.access_changes SET phase=0,version=version+1 WHERE user_id=@id", actor.UserId));
+    }
+
+    [Fact]
+    public async Task Revocation_does_not_return_success_when_final_Redis_publication_is_unavailable()
+    {
+        var auth = await Login(); var actor = Actor(auth);
+        // Revoke the publisher's read after the pending deny was published and
+        // in the same transaction that commits revocation. Owner ACKs and DB
+        // finalization still succeed; only the final Redis snapshot fails.
+        await database.Sql($"""
+            CREATE FUNCTION identity.e4_fail_final_publication() RETURNS trigger
+            LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+            BEGIN
+                IF NEW.user_id='{actor.UserId}' THEN
+                    REVOKE SELECT ON identity.user_emails FROM scdc_identity;
+                END IF;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER e4_fail_final_publication AFTER UPDATE OF phase ON identity.access_changes
+            FOR EACH ROW WHEN (OLD.phase=0 AND NEW.phase=1) EXECUTE FUNCTION identity.e4_fail_final_publication();
+            """);
+        try
+        {
+            using var response = await client.PostAsJsonAsync("/api/v1/auth/logout",
+                new { refreshToken = auth.GetProperty("refreshToken").GetString() });
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            Assert.Equal(true, await database.Sql("SELECT phase=1 FROM identity.access_changes WHERE user_id=@id", actor.UserId));
+            using var denied = await Me(auth);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, denied.StatusCode);
+        }
+        finally
+        {
+            await database.Sql("GRANT SELECT ON identity.user_emails TO scdc_identity; DROP TRIGGER e4_fail_final_publication ON identity.access_changes; DROP FUNCTION identity.e4_fail_final_publication();");
+        }
+        await app.Services.GetRequiredService<SessionPublisher>().SynchronizeAsync(default);
+        using var revoked = await Me(auth);
+        Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
     }
 
     [Fact]

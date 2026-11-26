@@ -2,7 +2,7 @@
 
 Người dùng đăng ký bằng email, xác minh, đăng nhập, quản lý hồ sơ, mật khẩu và các phiên đăng nhập. Module Identity sở hữu toàn bộ dữ liệu này.
 
-**Trạng thái:** nền MVP (`900e226`) đã có API Identity, kiểm tra trạng thái tài khoản và gắn phiên với Hub DM. Giao diện đăng ký vẫn dùng token Development thay cho email thật. Worker gửi email và gửi lại email nằm ở nhánh `feat/identity@60f4db3`, chưa tích hợp (xem [hiện trạng email](email-links.md#status)). v1 sẽ hoàn thiện vòng đời tài khoản.
+**Trạng thái:** Identity đã chạy host/database riêng, quản lý tài khoản, phiên, permit và thu hồi qua Redis/fence. E4-01 đã tích hợp worker email, gửi lại xác minh và thời gian chờ vào Identity hiện tại ([hồ sơ](../../records/verification/authentication/e4-01-2026-11-26.md)). Dev mặc định vẫn dùng token Development; bật và kiểm chứng Gmail thật thuộc S3-04. Giao diện mở link email còn cần nối. v1 tiếp tục hoàn thiện vòng đời tài khoản.
 
 **Người phụ trách:** Vg; Thái phụ trách phần gửi email (xem [phân công](../../project/planning.md#team)).
 
@@ -21,7 +21,7 @@ Mỗi trang gồm quy tắc, luồng, giao diện, API, dữ liệu, tiêu chí 
 
 ## Hiện trạng và bằng chứng
 
-- Hiện trạng lấy theo nền MVP ngày 2026-10-13. Một số bảng của Identity ghi rõ phần đối chiếu ngày 2026-10-04 và 05.
+- Các bảng ghi nền MVP là snapshot lịch sử. Hiện trạng host/database và email cập nhật theo S3-02/S3-03 và E4-01; xem hồ sơ tương ứng.
 - Kết quả kiểm thử được ghi trong hồ sơ của từng gói, kèm commit và môi trường. Danh sách ca kiểm thử hay fixture không tự có nghĩa là đã đạt.
 - [Hồ sơ tích hợp](../../records/verification/messaging/merge-2026-10-13.md) không thay cho nghiệm thu toàn bộ tài khoản hoặc gửi email thật.
 - Gói MVP-ID xem [hồ sơ MVP](../../releases/mvp.md#packages). Khi tách service ở v1, transaction và guard dùng chung phải được thiết kế và kiểm thử lại.

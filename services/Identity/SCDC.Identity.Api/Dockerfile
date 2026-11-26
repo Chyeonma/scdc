@@ -20,5 +20,6 @@ ENV DOTNET_EnableDiagnostics=0
 EXPOSE 8080 8443
 COPY --from=build /app/publish .
 RUN mkdir -p /app/.dm-keys/user-search /app/messaging-cursor-keys /app/community-keys /app/messaging-keys /app/auth-private /app/auth-public && chown -R "$APP_UID:$APP_UID" /app/.dm-keys/user-search /app/messaging-cursor-keys /app/community-keys /app/messaging-keys /app/auth-private /app/auth-public && chmod 700 /app/.dm-keys/user-search /app/messaging-cursor-keys /app/auth-private
+RUN mkdir -p /app/email-keys && chown "$APP_UID:$APP_UID" /app/email-keys && chmod 700 /app/email-keys
 USER $APP_UID
 ENTRYPOINT ["dotnet", "SCDC.Identity.Api.dll"]

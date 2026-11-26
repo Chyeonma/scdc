@@ -342,6 +342,7 @@ public sealed class CommunityNetworkFixture : IAsyncLifetime
                 baseline = baseline.Replace(":'baseline_checksum'", "'" + new string('0', 64) + "'", StringComparison.Ordinal);
                 await Execute(databases[owner], baseline);
                 await Execute(databases[owner], await File.ReadAllTextAsync(Path.Combine(Root, "database/postgres/identity/runtime-grants.sql")));
+                await IdentityEmailTestDatabase.UpgradeAsync(databases[owner]);
             }
             else
             {
@@ -384,6 +385,7 @@ public sealed class CommunityNetworkFixture : IAsyncLifetime
         values["InternalRpc:PermitDelegations:community-service:Messaging:0"] = "ChannelRead";
         values["Authentication:Sessions:KeyPrefix"] = "scdc:auth:community-rpc:" + suffix + ":";
         values["Modules:Identity:ExposeDevelopmentTokens"] = "true";
+        values["Modules:Identity:Email:KeyRingPath"] = Path.Combine(directory, "identity-email-keys");
         if (owner != "Identity") values["Modules:Identity:PrivateKeyPath"] = "";
         values["Modules:Identity:UserSearch:CursorKeyRingPath"] = Path.Combine(directory, "identity-cursors");
         values["Modules:Messaging:Dispatcher:Enabled"] = "true";

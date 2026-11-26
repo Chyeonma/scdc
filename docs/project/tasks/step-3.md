@@ -38,6 +38,7 @@ Thứ tự triển khai hiện tại: Identity → Community → Messaging; Medi
 - Đầu ra: worker gửi thư (đã ghép từ `feat/identity` ở E4-01) chạy trong service Identity (D12); cấu hình Gmail SMTP cho phát triển (D37).
 - Xong khi: đăng ký, xác minh, đặt lại mật khẩu gửi thư thật trên môi trường phát triển.
 - Phụ thuộc: S3-02, E4-01.
+- Hiện trạng: [E4-01](step-4-early.md) đã nối worker vào host Identity và kiểm chứng bằng sender giả. S3-04 tiếp tục cấu hình Gmail và gửi thư thật trên dev; chưa đánh dấu hoàn tất.
 
 ## S3-05 · 3b: Khung service Media control
 - Nhãn: tech

@@ -92,3 +92,40 @@ Identity v1. Nâng baseline service sau này cần migration owner được revi
 
 Nguồn: [D03 và D48–D52](../../../docs/system/database.md),
 [checklist](../../../docs/guides/operations.md#service-extraction).
+
+<a id="email-upgrade"></a>
+
+## Nâng cấp email — E4-01
+
+Giữ nguyên baseline `2026112503` và schema chuyển dữ liệu S3-03. Migration
+`20261126_e4-01_email_worker.sql` chạy sau bootstrap/transfer, chỉ thêm bảng
+policy và delivery trong Identity, giữ link mới nhất và mốc cooldown cũ.
+Token legacy chỉ còn hash không thể dựng lại email; yêu cầu gửi lại sẽ tạo
+một delivery mới.
+
+Dừng và drain Identity trước khi nâng cấp; giữ backup database và key ring.
+Cấp `ConnectionStrings__Migration` bằng credential admin tới database Identity,
+rồi chạy từ gốc repo:
+
+```bash
+dotnet build tools/SCDC.DbMigrator -c Release
+dotnet tools/SCDC.DbMigrator/bin/Release/net10.0/SCDC.DbMigrator.dll \
+  database/postgres/identity/20261126_e4-01_email_worker.sql
+```
+
+Công cụ dùng transaction, advisory lock có giới hạn chờ và ledger checksum.
+Chạy lại cùng checksum là no-op; checksum khác hoặc writer cũ còn kết nối bị
+từ chối. Runtime chỉ nhận DML trên hai bảng mới, vẫn không sửa ledger/audit/ACK.
+Readiness Identity kiểm tra hai bảng email. Compose có job tương đương
+`identity-email-migration`; chỉ job này nhận admin secret, API và worker dùng
+runtime credential.
+
+Kiểm chứng job trên container thử có POSTGRES_DB kết thúc `_test`, cấp
+`SCDC_EMAIL_TEST_ADMIN_PASSWORD` qua môi trường:
+
+```bash
+python3 scripts/test_identity_email_upgrade.py --engine podman --container <pg-thu>
+```
+
+Script tạo/xóa database fixture riêng, kiểm tra nâng mới, chạy lại và từ chối
+checksum khác. [Hồ sơ E4-01](../../../docs/records/verification/authentication/e4-01-2026-11-26.md).

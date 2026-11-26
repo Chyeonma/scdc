@@ -6,6 +6,7 @@ using SCDC.Contracts.Identity;
 namespace SCDC.Identity.Api.Controllers.Identity;
 
 [Route("api/v1/auth")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AuthController(
     IRegistrationService registrationService,
     IAuthenticationService authenticationService,
@@ -114,6 +115,17 @@ public sealed class AuthController(
         var result = await registrationService.ForgotPasswordAsync(
             new ForgotPasswordCommand(request.Email, CreateRequestContext()),
             cancellationToken);
+        return FromAcceptedResult(result);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("resend-verification")]
+    [ProducesResponseType<VerificationRequestedResponse>(StatusCodes.Status202Accepted)]
+    public async Task<ActionResult<VerificationRequestedResponse>> ResendVerification(
+        ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var result = await registrationService.ResendVerificationAsync(
+            new ResendVerificationCommand(request.Email, CreateRequestContext()), cancellationToken);
         return FromAcceptedResult(result);
     }
 

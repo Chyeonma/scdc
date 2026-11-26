@@ -73,11 +73,20 @@ internal sealed class IdentityRevocations(IConfiguration configuration, IService
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
             deadline.CancelAfter(TimeSpan.FromSeconds(5) - waiting.Elapsed);
-            try { await ProcessAsync(operation, deadline.Token); }
+            try
+            {
+                await ProcessAsync(operation, deadline.Token);
+                var status = await ReadAsync(operation, userId, deadline.Token);
+                if (status?.Phase == "committed")
+                {
+                    // Another worker may have committed before publishing its final
+                    // snapshot. Confirm that publication before reporting success.
+                    await publisher.PublishUserAsync(userId, deadline.Token);
+                    return;
+                }
+            }
             catch (Exception error) when (error is NpgsqlException or AccessCheckException or TimeoutException) { }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested) { break; }
-            var status = await ReadAsync(operation, userId, ct);
-            if (status?.Phase == "committed") return;
             await Task.Delay(50, ct);
         }
         throw new AccessCheckException("ACCESS_PENDING", operation);
