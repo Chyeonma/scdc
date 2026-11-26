@@ -10,6 +10,7 @@ namespace SCDC.Api.Tests.Infrastructure;
 
 public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram>
 {
+    internal static readonly string EmailKeyRingPath = Directory.CreateTempSubdirectory("scdc-email-tests-").FullName;
     private static readonly string CommunityKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     internal static readonly string CommunityKeyRingPath = Path.Combine(Path.GetTempPath(), $"scdc-test-keys-{Guid.NewGuid():N}");
 
@@ -30,6 +31,7 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
         builder.UseEnvironment("Development");
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(TestJwtKeys.Configuration().Concat(new Dictionary<string, string?>
         {
+            ["Modules:Identity:Email:KeyRingPath"] = EmailKeyRingPath,
             ["Modules:Community:Operations:ActiveKeyId"] = "test",
             ["Modules:Community:Operations:Keys:test"] = CommunityKey,
             ["Modules:Community:KeyRingPath"] = CommunityKeyRingPath
@@ -49,7 +51,8 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
             // Requests drive provisioning deterministically. Recovery tests explicitly
             // start the worker; unrelated factory instances must not steal fault fixtures.
             foreach (var descriptor in services.Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
-                && d.ImplementationType == typeof(SCDC.Modules.Community.Infrastructure.ChannelProvisionWorker)).ToArray())
+                && (d.ImplementationType == typeof(SCDC.Modules.Community.Infrastructure.ChannelProvisionWorker)
+                    || d.ImplementationType == typeof(SCDC.Modules.Identity.Infrastructure.Email.IdentityEmailWorker))).ToArray())
                 services.Remove(descriptor);
             services
                 .AddControllers()

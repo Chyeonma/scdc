@@ -12,19 +12,19 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 
 ## Task có thể bắt đầu
 
-Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất](../../records/verification/environment/s2-12-2026-11-25.md); [S3-01/S3-02/S3-03 đã có kết quả, Identity và PostgreSQL riêng đang chạy dev](../../records/verification/architecture/s3-03-2026-11-25.md). Phần S3-03 được đưa vào main bằng nhánh đồng bộ sau khi PR #46 merge vào nhánh S3-02. Có **7 việc đủ phụ thuộc để bắt đầu**: S3-07 và sáu việc làm sớm. Ước lượng các task tiếp theo chưa chốt; người nhận rà đầu ra, công sức và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
+Rà ngày **2026-11-26**: [STEP-2 đã hoàn tất](../../records/verification/environment/s2-12-2026-11-25.md); [S3-01/S3-02/S3-03 đã có kết quả, Identity và PostgreSQL riêng đang chạy dev](../../records/verification/architecture/s3-03-2026-11-25.md). Phần S3-03 được đưa vào main bằng nhánh đồng bộ sau khi PR #46 merge vào nhánh S3-02. E4-01 đã tích hợp worker email vào Identity. Có **7 việc đủ phụ thuộc để bắt đầu**: S3-07, S3-04 và năm việc làm sớm. Ước lượng các task tiếp theo chưa chốt; người nhận rà đầu ra, công sức và minh chứng theo [điều kiện bắt đầu](../workflow.md#readiness).
 
 | Task | Người làm đề xuất | Phần có thể làm ngay |
 |---|---|---|
 | S3-07 | Sáng | Tách host Messaging dựa trên Identity đã chạy qua mạng và [checklist đã áp dụng](../../records/verification/architecture/s3-01-2026-11-25.md) |
-| E4-01 | Thái | Đối chiếu, tích hợp hoặc ghi lý do bỏ nhánh worker email trước S3-04 |
+| S3-04 | Thái | Cấu hình Gmail và kiểm chứng thư thật trên dev từ worker đã tích hợp ở E4-01 |
 | E4-02 | Người còn công suất; Sáng kiểm tra | Giao diện tin phòng với dữ liệu giả |
 | E4-03 | Người còn công suất; Thái kiểm tra | Prototype gọi riêng, phòng thoại và thiết bị với dữ liệu giả |
 | E4-04 | Người còn công suất; Vg kiểm tra | Giao diện lời mời và duyệt tham gia với dữ liệu giả |
 | E4-05 | Người còn công suất; Thái kiểm tra | Đối chiếu hợp đồng và giao diện Media, ghi các chỗ thiếu |
 | E4-06 | Vg | Rà quy tắc Community theo các quyết định đã chốt; tách phần triển khai còn thiếu |
 
-Ưu tiên E4-01 trước S3-04 để hoàn thiện email Identity; S3-07 đã đủ phụ thuộc để bắt đầu. Theo yêu cầu ngày 2026-11-25, cả 12 thẻ STEP-3 và 15 thẻ STEP-4 được công bố để đồng bộ lên Trello. S3-01/S3-02/S3-03/S3-09/S3-10 có kết quả hoàn tất trong nguồn; các task còn lại giữ nguyên phụ thuộc và chưa tự chuyển sang đang làm. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng; lần công bố này dùng nguyên hai file hiện tại, không áp dụng cách tách file trong PR cũ.
+E4-01 đã tích hợp và kiểm thử; S3-04 tiếp tục hoàn thiện email thật trên dev. S3-07 đã đủ phụ thuộc để bắt đầu. Theo yêu cầu ngày 2026-11-25, cả 12 thẻ STEP-3 và 15 thẻ STEP-4 được công bố để đồng bộ lên Trello. S3-01/S3-02/S3-03/S3-09/S3-10 có kết quả hoàn tất trong nguồn; các task còn lại giữ nguyên phụ thuộc và chưa tự chuyển sang đang làm. Backend STEP-4 vẫn chờ các phần STEP-3 liên quan. [PR #39](https://github.com/Chyeonma/scdc/pull/39) đã đóng; lần công bố này dùng nguyên hai file hiện tại, không áp dụng cách tách file trong PR cũ.
 
 ## Nhánh tính năng chưa tích hợp
 
@@ -33,7 +33,9 @@ S3-09/S3-10 đã hoàn tất và vào main qua [PR #50](https://github.com/Chyeo
 | Nhánh | Bằng chứng đang có | Phần còn lại |
 |---|---|---|
 | `feat/media-direct-calls` (`adf6a61`, 2026-11-23) | [Hồ sơ trên nhánh Media](https://github.com/Chyeonma/scdc/blob/feat/media-direct-calls/docs/verification/media-direct-calls.md) ghi LiveKit thật, 16 unit test và 5 ca E2E; [CI đạt](https://github.com/Chyeonma/scdc/actions/runs/45049551943) | Chưa có PR vào main. Cần đối chiếu nghiệm thu S1-07, hợp đồng phiên/thu hồi hiện tại và S3-05/S3-06; chưa kết luận Media hoàn tất trên main |
-| `feat/identity` (`60f4db3`, 2026-10-05) | [PR #28](https://github.com/Chyeonma/scdc/pull/28) còn mở, chứa phần email cũ | E4-01 rà và tích hợp vào host Identity hiện tại trước S3-04 |
+
+
+E4-01 đã chọn lọc phần email từ `60f4db3` vào Identity hiện tại; PR #28 được thay bằng bản tích hợp này. [Hồ sơ E4-01](../../records/verification/authentication/e4-01-2026-11-26.md) ghi phần lấy/bỏ và giới hạn S3-04.
 
 ## Ai giữ phần nào
 

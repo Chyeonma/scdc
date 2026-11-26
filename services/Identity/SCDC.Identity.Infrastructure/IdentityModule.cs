@@ -18,6 +18,7 @@ using SCDC.Modules.Identity.Infrastructure.Services;
 using ModuleIdentityOptions = SCDC.Modules.Identity.Infrastructure.IdentityOptions;
 using SCDC.Shared.Core.Authentication;
 using SCDC.Modules.Identity.Infrastructure.Authentication;
+using SCDC.Modules.Identity.Infrastructure.Email;
 
 namespace SCDC.Modules.Identity;
 
@@ -53,8 +54,11 @@ public static class IdentityModule
             .Validate(options => options.AccessTokenMinutes > 0, "Access token lifetime must be positive.")
             .Validate(options => options.SessionDays > 0, "Session lifetime must be positive.")
             .Validate(options => options.MaxFailedLoginAttempts > 0, "Lockout threshold must be positive.")
+            .Validate(options => options.EmailVerificationTokenMinutes > 0 && options.PasswordResetTokenMinutes > 0
+                && options.AccountTokenCooldownSeconds >= 60, "Invalid account token lifetime or cooldown.")
             .ValidateOnStart();
 
+        services.AddIdentityEmail(configuration);
         services.AddDbContext<IdentityDbContext>((provider, options) =>
             options.UseNpgsql(ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(), "Identity")));
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

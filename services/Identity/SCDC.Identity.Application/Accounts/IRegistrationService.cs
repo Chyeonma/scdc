@@ -12,6 +12,10 @@ public interface IRegistrationService
         VerifyEmailCommand command,
         CancellationToken cancellationToken);
 
+    Task<Result<VerificationRequestedResponse>> ResendVerificationAsync(
+        ResendVerificationCommand command,
+        CancellationToken cancellationToken);
+
     Task<Result<PasswordResetRequestedResponse>> ForgotPasswordAsync(
         ForgotPasswordCommand command,
         CancellationToken cancellationToken);

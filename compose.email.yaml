@@ -1,0 +1,14 @@
+# Development/demo opt-in. Worker still runs inside identity-service.
+services:
+  identity-service:
+    environment:
+      Modules__Identity__Email__Enabled: 'true'
+      Modules__Identity__ExposeDevelopmentTokens: 'false'
+      Modules__Identity__Email__SenderAddress: ${SCDC_EMAIL_SENDER:?Set the Gmail sender address}
+      Modules__Identity__Email__PublicOrigin: ${SCDC_PUBLIC_ORIGIN:-http://localhost:3000}
+      Modules__Identity__Email__AppPasswordFile: /run/secrets/identity_smtp_app_password
+    secrets:
+    - identity_smtp_app_password
+secrets:
+  identity_smtp_app_password:
+    file: ${SCDC_EMAIL_SECRET_DIR:-${HOME}/.local/share/scdc/email-secrets}/gmail_app_password

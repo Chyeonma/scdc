@@ -24,7 +24,7 @@ public sealed class CommunityCoordinationTests(RedisAccessDatabase database):ICl
     private Guid server,membership,channel,otherChannel;
     private string ownerName="",memberName="";
     private BlockingDirectory? directory;
-    private WebApplicationFactory<ApiProgram> Start(bool blocked=false,bool blockDirectory=false)
+    private async Task<WebApplicationFactory<ApiProgram>> Start(bool blocked=false,bool blockDirectory=false)
     {
         root=new();
         app=root.WithWebHostBuilder(builder=>
@@ -38,12 +38,13 @@ public sealed class CommunityCoordinationTests(RedisAccessDatabase database):ICl
                 if(blockDirectory){services.RemoveAll<IUserDirectory>();directory=new BlockingDirectory();services.AddSingleton<IUserDirectory>(directory);}
             });
         });
-        client=app.CreateClient();return app;
+        client=app.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
+        return app;
     }
     public async Task InitializeAsync()
     {
-        Start();ownerName="policy_a_"+Guid.NewGuid().ToString("N")[..12];memberName="policy_b_"+Guid.NewGuid().ToString("N")[..12];
-        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(client);
+        await Start();ownerName="policy_a_"+Guid.NewGuid().ToString("N")[..12];memberName="policy_b_"+Guid.NewGuid().ToString("N")[..12];
         owner=await Register(ownerName);member=await Register(memberName);
         var created=await Request("/api/v1/servers",owner,new{clientOperationId=Guid.NewGuid(),name="Policy proof",visibility="public"},expected:201);
         server=created.GetProperty("id").GetGuid();membership=created.GetProperty("myMembership").GetProperty("membershipId").GetGuid();
@@ -114,7 +115,7 @@ public sealed class CommunityCoordinationTests(RedisAccessDatabase database):ICl
     public async Task Pending_policy_survives_community_restart_and_commits_once()
     {
         messaging.Blocked=true;var pending=await Hide(202);var operation=pending.GetProperty("operationId").GetGuid();
-        client.Dispose();await app.DisposeAsync();await root.DisposeAsync();Start();
+        client.Dispose();await app.DisposeAsync();await root.DisposeAsync();await Start();
         await Wait(async()=>await Sql($"SELECT phase=1 FROM community.access_changes WHERE operation_id='{operation}'") is true);
         Assert.Equal("committed",(await Request($"/api/v1/servers/{server}/access-operations/{operation}",owner)).GetProperty("phase").GetString());
         Assert.Equal(2,await Sql($"SELECT access_version FROM community.channels WHERE space_id='{channel}'"));
@@ -133,7 +134,7 @@ public sealed class CommunityCoordinationTests(RedisAccessDatabase database):ICl
     [Fact]
     public async Task Profile_lookup_does_not_retain_community_transaction_or_policy_lock()
     {
-        client.Dispose();await app.DisposeAsync();await root.DisposeAsync();Start(blockDirectory:true);
+        client.Dispose();await app.DisposeAsync();await root.DisposeAsync();await Start(blockDirectory:true);
         var reading=Request($"/api/v1/servers/{server}/members",owner);
         await directory!.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
         try

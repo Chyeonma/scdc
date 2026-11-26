@@ -1,6 +1,6 @@
 # Identity
 
-Identity chạy API tài khoản, phiên, permit và worker thu hồi trong host riêng.
+Identity chạy API tài khoản, phiên, permit, worker thu hồi và worker email trong host riêng.
 Các endpoint HTTP vẫn là `/api/v1/auth` và `/api/v1/users` qua gateway.
 
 | Project | Trách nhiệm |
@@ -30,3 +30,43 @@ S3-03 dùng [PostgreSQL Identity riêng](../../database/postgres/identity/README
 Source runtime cũ giữ `NOLOGIN`; startup gate yêu cầu transfer record khớp nguồn
 hoặc marker volume mới. Worker và EF/Npgsql đều đọc cùng runtime password file;
 API không có admin connection.
+
+<a id="email-worker"></a>
+
+## Email worker — E4-01
+
+Đăng ký, quên mật khẩu và `POST /api/v1/auth/resend-verification` ghi token,
+policy, delivery mã hóa và outbox cùng transaction. Worker dùng lease, kiểm
+tra token trước khi gửi, gọi Gmail SMTP ngoài transaction và thử lại tối đa
+5 lần. `ProviderAccepted` chỉ xác nhận SMTP đã chấp nhận thư. Reset mật khẩu
+vẫn dùng coordinator thu hồi bền hiện hành.
+
+Compose mặc định tắt gửi SMTP (`Modules:Identity:Email:Enabled=false`);
+worker vẫn dọn envelope không còn hiệu lực. Key ring email dùng volume riêng
+`scdc-identity-email-keys`. Ngoài Development cần `KeyCertificatePath`, có thể
+cấp password certificate bằng `KeyCertificatePasswordFile`.
+
+Lần nâng cấp đầu phải dừng và drain Identity. Job `identity-email-migration`
+chạy sau cutover gate và trước host, kiểm checksum và từ chối writer cũ còn
+kết nối. [Migration owner](../../database/postgres/identity/README.md#email-upgrade)
+cũng chạy được bằng DbMigrator với credential admin. Runtime không có DDL.
+
+```bash
+docker compose stop identity-service
+docker compose up --build -d identity-service
+```
+
+Gmail dev/demo dùng overlay `compose.email.yaml`. Cấp App Password qua file
+`gmail_app_password` trong `SCDC_EMAIL_SECRET_DIR` (mặc định ngoài repo tại
+`~/.local/share/scdc/email-secrets`), chỉ Identity được mount. Đặt
+`SCDC_EMAIL_SENDER` và `SCDC_PUBLIC_ORIGIN`, rồi chạy:
+
+```bash
+docker compose -f compose.yaml -f compose.email.yaml up --build -d identity-service
+```
+
+Overlay tắt token Development. Host ngoài Compose dùng
+`Modules:Identity:Email:AppPasswordFile`. Không đưa App Password vào repo,
+CLI argv hoặc log. S3-04 tiếp tục kiểm chứng Gmail thật; giao diện mở link
+xác minh/đặt lại chưa được nối trong E4-01.
+[Hồ sơ kiểm chứng](../../docs/records/verification/authentication/e4-01-2026-11-26.md).

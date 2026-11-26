@@ -24,7 +24,7 @@ public sealed class RedisAccessDatabase : IAsyncLifetime
     public string Admin { get; private set; } = "";
     public Dictionary<string, string?> Configuration { get; } = [];
     private string root = "";
-    private readonly string name = "s206_" + Guid.NewGuid().ToString("N");
+    private readonly string name = "s206_" + Guid.NewGuid().ToString("N") + "_test";
     public async Task InitializeAsync()
     {
         var settings = new ConfigurationBuilder().AddEnvironmentVariables().Build();
@@ -39,6 +39,7 @@ public sealed class RedisAccessDatabase : IAsyncLifetime
         await Sql(string.Join('\n', bootstrap.Where(line => !line.StartsWith('\\'))));
         var roles = await File.ReadAllTextAsync(Path.Combine(Repo(), "database/postgres/module-roles.sql"));
         await Sql("BEGIN;\n" + roles[roles.IndexOf("REVOKE CREATE ON SCHEMA public FROM PUBLIC;", StringComparison.Ordinal)..]);
+        await IdentityEmailTestDatabase.UpgradeAsync(Admin);
         foreach (var owner in new[] { "Identity", "Community", "Messaging" })
         {
             var original = settings.GetConnectionString(owner) ?? root;
