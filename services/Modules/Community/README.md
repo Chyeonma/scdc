@@ -1,6 +1,6 @@
 # Module Community
 
-Module sở hữu schema `community`: server, membership, invitation, channel và quyền. Messaging sở hữu tin phòng; Identity cung cấp tài khoản/phiên. Giao tiếp liên module qua [SCDC.Contracts](../../SCDC.Contracts); [CommunityModule.cs](CommunityModule.cs) đăng ký module và DI.
+Code đã chuyển sang [bốn project Community](../../Community/README.md). Community vẫn sở hữu schema `community`: server, membership, invitation, channel và quyền. Messaging sở hữu tin phòng; Identity cung cấp tài khoản/phiên. [CommunityModule](../../Community/SCDC.Community.Infrastructure/CommunityModule.cs) đăng ký module và DI; host chung tiếp tục dùng implementation này trong bước chuẩn bị.
 
 ## Tài liệu
 

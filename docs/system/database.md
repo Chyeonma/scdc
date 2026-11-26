@@ -99,7 +99,7 @@ Hiện tại [DbMigrator](../../tools/SCDC.DbMigrator/Program.cs) chỉ chạy m
 **Lý do:** kiểm soát trực tiếp DDL PostgreSQL; hợp với cách làm hiện tại (thiết kế database trước code) và tận dụng [migration SQL](../../database/postgres/migrations) và [runner](../../tools/SCDC.DbMigrator) đang có. **Đổi lại:** tự viết SQL và tự giữ mapping truy cập dữ liệu khớp schema. Migration EF Core tự sinh được nhiều thay đổi thông thường, nhưng phải duy trì model snapshot và công cụ sinh.
 
 - Code .NET vẫn được dùng cho bước kiểm tra trước, mapping hay chuyển dữ liệu, ví dụ [CommunityRoleMigration](../../tools/SCDC.DbMigrator/CommunityRoleMigration.cs).
-- [Community](../../services/Modules/Community/SCDC.Community.csproj) vẫn dùng EF Core để đọc ghi; model C# phải khớp SQL. Không chạy song song migration EF; không có hai lịch sử migration cho cùng một schema.
+- [Community](../../services/Community/SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj) vẫn dùng EF Core để đọc ghi; model C# phải khớp SQL. Không chạy song song migration EF; không có hai lịch sử migration cho cùng một schema.
 - File SQL đã áp thì không sửa. Code .NET đi kèm phải gắn với cùng phiên bản migration đã review; checksum SQL không chứng minh code .NET không đổi.
 - `schema.sql` là của MVP. Cách tạo database v1 mới phải cho ra schema giống như chạy hết chuỗi migration; không dùng file có DROP để nâng cấp database có dữ liệu.
 

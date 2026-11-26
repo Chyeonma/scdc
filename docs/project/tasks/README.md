@@ -28,6 +28,8 @@ Rà ngày **2026-11-25**: [STEP-2 đã hoàn tất](../../records/verification/e
 
 ## Nhánh tính năng chưa tích hợp
 
+S3-10 có [host Community chuẩn bị](../../../services/Community/README.md) và bốn project riêng. Preview giữ readiness 503, chưa chạy worker hoặc chuyển dữ liệu/gateway dev; phần hoàn thiện RPC và chuyển lưu lượng tiếp tục theo hai đợt sau. S3-10 chưa được đánh dấu hoàn tất.
+
 | Nhánh | Bằng chứng đang có | Phần còn lại |
 |---|---|---|
 | `feat/media-direct-calls` (`adf6a61`, 2026-11-23) | [Hồ sơ trên nhánh Media](https://github.com/Chyeonma/scdc/blob/feat/media-direct-calls/docs/verification/media-direct-calls.md) ghi LiveKit thật, 16 unit test và 5 ca E2E; [CI đạt](https://github.com/Chyeonma/scdc/actions/runs/45049551943) | Chưa có PR vào main. Cần đối chiếu nghiệm thu S1-07, hợp đồng phiên/thu hồi hiện tại và S3-05/S3-06; chưa kết luận Media hoàn tất trên main |

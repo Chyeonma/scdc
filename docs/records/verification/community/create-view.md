@@ -245,7 +245,7 @@ Bảng dưới đây ghi source tại thời điểm chốt thiết kế, trư�
 
 | Hiện có | Hệ quả cho gói |
 |---|---|
-| [CommunityModule](../../../../services/Modules/Community/CommunityModule.cs) chỉ đăng ký descriptor; project chưa có EF provider | Bổ sung DbContext, services/DI và controller trong bước 4; dùng cùng phiên bản provider với Identity, hiện là 10.0.3 |
+| [CommunityModule](../../../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs) chỉ đăng ký descriptor; project chưa có EF provider | Bổ sung DbContext, services/DI và controller trong bước 4; dùng cùng phiên bản provider với Identity, hiện là 10.0.3 |
 | [IdentityModule](../../../../services/Identity/SCDC.Identity.Infrastructure/IdentityModule.cs) kiểm tra session/stamp trong JWT middleware; [IUserDirectory](../../../../services/SCDC.Contracts/Identity/IUserDirectory.cs) chỉ trả user summary | Middleware và directory chưa giữ điều kiện tài khoản đến commit; bổ sung guard do Identity triển khai |
 | [IdentityDbContext.LockUserAsync](../../../../services/Identity/SCDC.Identity.Infrastructure/Accounts/IdentityDbContext.cs) dùng `FOR NO KEY UPDATE`; các mutation bảo mật hiện gọi khóa user trước khi sửa email/stamp/session | Guard lấy `FOR SHARE` trên cùng user, kiểm tra lại dưới khóa; mọi writer làm đổi điều kiện tài khoản phải giữ cùng quy ước |
 | [schema.sql](../../../../database/postgres/schema.sql) có server/member/role và trigger tăng server version; chưa có visibility, join mode, membership epoch hoặc operation | Migration bổ sung đúng phần gói cần; giữ trigger server làm nguồn tăng metadata version |

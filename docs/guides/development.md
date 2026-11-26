@@ -119,6 +119,10 @@ Chạy riêng `SCDC.Api` bằng `dotnet run` cần host Identity và cấu hình
 
 Nếu Chromium chạy bằng Playwright `launchServer` trên cùng máy, có thể đặt `SCDC_BROWSER_WS_ENDPOINT` cho runner E2E; phiên bản Playwright của server và client phải trùng. Mặc định runner vẫn dùng browser local.
 
+### Community preview — bước 1 S3-10
+
+[Community preview](../../services/Community/README.md#chạy-preview-riêng) có host và database thử riêng, bật bằng `compose.community-preview.yaml` với profile `community-preview`. Nó không thay stack dev hoặc gateway mặc định. Liveness/database trả 200 khi khỏe; readiness và API nghiệp vụ tiếp tục trả 503 tới khi hoàn thiện tích hợp service. Các secret thử do [script riêng](../../scripts/init_community_preview_secrets.py) cấp ngoài repo, không dùng khóa Identity thật.
+
 <a id="gateway"></a>
 
 ### Nginx trước API hiện tại — S1-02

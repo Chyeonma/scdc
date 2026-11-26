@@ -4,6 +4,8 @@ Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc 
 
 **Trạng thái S3-02/S3-03:** Identity có bốn project, host API/worker và PostgreSQL riêng; Community/Messaging còn trong API cũ. Gọi Identity qua gRPC/mTLS; thư viện mã sinh theo owner, Shared.Core thuần .NET. [Hồ sơ](../records/verification/architecture/s3-03-2026-11-25.md) ghi kiểm chứng dev và lịch sử đồng bộ main; bốn service nghiệp vụ chưa tách đầy đủ.
 
+**Bước 1 S3-10:** code Community đã chia bốn project; [host chuẩn bị](../../services/Community/README.md) chạy với database thử riêng, chặn lưu lượng nghiệp vụ và chưa bật worker. API chung tiếp tục dùng cùng code Community; chuyển dữ liệu dev và gateway thuộc bước sau.
+
 ## Cấu trúc hiện tại
 
 ```text
@@ -14,15 +16,18 @@ services/
 │   ├── SCDC.Identity.Domain/
 │   ├── SCDC.Identity.Infrastructure/
 │   └── SCDC.Identity.Grpc/ # Mã sinh hợp đồng, không có nghiệp vụ
-├── Community/SCDC.Community.Grpc/
+├── Community/
+│   ├── SCDC.Community.Api/ # Host chuẩn bị; controller dùng chung nguồn với API cũ
+│   ├── SCDC.Community.Application/
+│   ├── SCDC.Community.Domain/
+│   ├── SCDC.Community.Infrastructure/
+│   └── SCDC.Community.Grpc/
 ├── Messaging/SCDC.Messaging.Grpc/
 ├── Shared/SCDC.Shared.Core/ # Kiểu JWT trust, Result, văn bản thuần .NET
 ├── SCDC.Api/               # HTTP/Hub Community-Messaging, consumer auth, fence RPC
 ├── SCDC.Contracts/         # Interface và DTO thuần giữa owner
 ├── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
-└── Modules/
-    ├── Community/
-    └── Messaging/
+└── Modules/Messaging/
 tests/SCDC.Api.Tests/       # Test backend
 tools/SCDC.DbMigrator/      # Migration monolith và chuyển offline Identity riêng
 ```
@@ -38,7 +43,8 @@ tools/SCDC.DbMigrator/      # Migration monolith và chuyển offline Identity r
 Identity nhóm Accounts/Sessions/Access/Authentication trong project theo tầng,
 giữ namespace cũ để tương thích nhưng assembly riêng. Domain/Application không
 tham chiếu SQL, Redis, ASP.NET hoặc Protobuf; adapter framework nằm trong owner
-Infrastructure, chưa tạo thư viện Hosting chung. Community chia theo chức năng
+Infrastructure, chưa tạo thư viện Hosting chung. Community cũng có assembly riêng,
+giữ interface/DTO ở Application và implementation gắn SQL ở Infrastructure
 ([Community](../features/community/mechanics.md)); Messaging có API DM, ChatHub,
 outbox và vòng đời phòng trong module cũ tới các task tách tiếp theo.
 
@@ -52,7 +58,7 @@ outbox và vòng đời phòng trong module cũ tới các task tách tiếp the
 
 Mỗi trang tính năng ghi luồng API → Application → Domain và lưu trữ, dữ liệu sở hữu, hợp đồng với module khác, transaction, lỗi và tình huống đồng thời. Trang này chỉ giữ quy ước chung.
 
-Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../services/Modules/Community/CommunityModule.cs), [BuildingBlocks](../../services/SCDC.BuildingBlocks). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
+Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [BuildingBlocks](../../services/SCDC.BuildingBlocks). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
 
 <a id="s2-10-contracts"></a>
 
@@ -264,7 +270,7 @@ S1-06 đã tạo [project Core](../../services/Shared/SCDC.Shared.Core/SCDC.Shar
 - Core không phụ thuộc database, ASP.NET hay SDK nhà cung cấp; không tham chiếu code của service.
 - Mã lỗi và quy tắc nghiệp vụ vẫn ở service. Domain chỉ tham chiếu Core khi thật cần; không bắt mọi project tham chiếu Core.
 - Cấu hình và adapter cần framework (ví dụ telemetry) giữ trong Api hoặc Infrastructure của từng service. Chưa có thư viện Hosting chung.
-- Một số ca sử dụng Community hiện dùng thẳng code transaction, outbox ([Features](../../services/Modules/Community/Features)); phải tách khi chuyển v1, không đưa nguyên sang Core.
+- Một số ca sử dụng Community hiện dùng thẳng code transaction, outbox ([Features](../../services/Community/SCDC.Community.Infrastructure)); phải tách khi chuyển v1, không đưa nguyên sang Core.
 
 **Lý do:** bắt đầu với kiểu kết quả đã cần dùng chung; ít project. **Đổi lại:** có thể lặp một số cấu hình tích hợp giữa service. Phương án thêm `SCDC.Shared.Hosting` không được chọn ban đầu.
 

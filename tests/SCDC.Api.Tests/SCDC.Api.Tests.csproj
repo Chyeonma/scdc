@@ -37,6 +37,10 @@
     <ProjectReference Include="../../services/Identity/SCDC.Identity.Application/SCDC.Identity.Application.csproj" />
     <ProjectReference Include="../../services/Identity/SCDC.Identity.Domain/SCDC.Identity.Domain.csproj" />
     <ProjectReference Include="../../services/Identity/SCDC.Identity.Infrastructure/SCDC.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="../../services/Community/SCDC.Community.Api/SCDC.Community.Api.csproj" Aliases="CommunityApi" />
+    <ProjectReference Include="../../services/Community/SCDC.Community.Application/SCDC.Community.Application.csproj" />
+    <ProjectReference Include="../../services/Community/SCDC.Community.Domain/SCDC.Community.Domain.csproj" />
+    <ProjectReference Include="../../services/Community/SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
