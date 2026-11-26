@@ -45,13 +45,47 @@ def initialize(directory: Path, include_community: bool = False) -> None:
             (stage/name).chmod(0o600 if name=='ca.key' else 0o444)
             shutil.move(stage/name,directory/name)
 
+def add_community(directory: Path) -> None:
+    """Extend an existing local CA without rotating either existing service identity."""
+    initialize(directory)
+    names = ['community-service.crt', 'community-service.key']
+    if any((directory / name).is_symlink() for name in names):
+        raise ValueError('RPC secret files must not be symlinks')
+    existing = [name for name in names if (directory / name).exists()]
+    if existing:
+        initialize(directory, include_community=True)
+        return
+    cert = subprocess.check_output(['openssl', 'x509', '-in', str(directory/'ca.crt'), '-pubkey', '-noout'])
+    key = subprocess.check_output(['openssl', 'pkey', '-in', str(directory/'ca.key'), '-pubout'])
+    if cert != key:
+        raise ValueError('CA certificate and private key do not match')
+    with tempfile.TemporaryDirectory(prefix='scdc-community-rpc-', dir=directory) as temporary:
+        stage = Path(temporary)
+        def run(*args):
+            subprocess.run(['openssl', *args], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        run('req', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(stage/names[1]), '-out', str(stage/'peer.csr'), '-subj', '/CN=community-service')
+        (stage/'extensions').write_text('basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth,clientAuth\nsubjectAltName=DNS:community-service,DNS:localhost,IP:127.0.0.1\n')
+        run('x509', '-req', '-in', str(stage/'peer.csr'), '-CA', str(directory/'ca.crt'), '-CAkey', str(directory/'ca.key'),
+            '-set_serial', str(int.from_bytes(os.urandom(16), 'big')), '-out', str(stage/names[0]), '-days', '180', '-extfile', str(stage/'extensions'))
+        for name in names:
+            (stage/name).chmod(0o444)
+            shutil.move(stage/name, directory/name)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('directory',type=Path)
     parser.add_argument('--label-for-containers',action='store_true')
     parser.add_argument('--include-community', action='store_true', help='Create an isolated three-service identity set; existing partial sets are rejected')
-    args=parser.parse_args();initialize(args.directory, args.include_community)
+    parser.add_argument('--add-community', action='store_true', help='Add Community using the existing CA; preserve all existing identities')
+    args=parser.parse_args()
+    if args.include_community and args.add_community:
+        parser.error('Select --include-community or --add-community')
+    if args.add_community:
+        add_community(args.directory)
+    else:
+        initialize(args.directory, args.include_community)
     if args.label_for_containers and Path('/sys/fs/selinux/enforce').exists():
-        names = FILES + (['community-service.crt', 'community-service.key'] if args.include_community else [])
+        names = FILES + (['community-service.crt', 'community-service.key'] if args.include_community or args.add_community else [])
         subprocess.run(['chcon','-t','container_file_t',*[str(args.directory/name) for name in names if name!='ca.key']],check=True)
     print('RPC identities ready; existing keys preserved.')

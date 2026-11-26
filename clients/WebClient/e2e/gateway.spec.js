@@ -277,6 +277,47 @@ for (const [name, transport] of [['WebSockets', HttpTransportType.WebSockets],
   });
 }
 
+test('Community outage leaves DM available and its replacement IP recovers without restarting peers', async ({ request }) => {
+  const a = await actor(request), b = await actor(request);
+  const dm = await conversation(request, a, b);
+  const command = { clientOperationId: randomUUID(), name: 'Community extraction gateway', visibility: 'private' };
+  const created = await request.post('/api/v1/servers', { headers: headers(a), data: command });
+  expect(created.status()).toBe(201);
+  const server = await created.json();
+  const gatewayId = await compose('ps', '-q', 'web-client');
+  const messagingId = await compose('ps', '-q', 'chat-service');
+  const oldId = await compose('ps', '-q', 'community-service');
+  const old = JSON.parse(await engine('inspect', oldId))[0];
+  const [network, settings] = Object.entries(old.NetworkSettings.Networks)[0];
+  const holder = `${project}-community-old-ip`;
+  let held = false;
+  try {
+    await compose('stop', 'community-service');
+    expect([502, 504]).toContain((await request.get(`/api/v1/servers/${server.id}`, { headers: headers(a) })).status());
+    const sent = await request.post(`/api/v1/direct-conversations/${dm.id}/messages`, {
+      headers: headers(a), data: { clientMessageId: randomUUID(), content: 'DM while Community is stopped' },
+    });
+    expect(sent.status()).toBe(200);
+    await compose('rm', '-f', 'community-service');
+    await engine('run', '-d', '--name', holder, '--network', network, '--ip', settings.IPAddress,
+      'docker.io/library/nginx:alpine', 'sleep', '180');
+    held = true;
+    await compose('up', '-d', '--no-deps', 'community-service');
+    const replacement = JSON.parse(await engine('inspect', await compose('ps', '-q', 'community-service')))[0];
+    expect(replacement.NetworkSettings.Networks[network].IPAddress).not.toBe(settings.IPAddress);
+    await expect.poll(async () => (await request.get('/api/v1/health/community/access')).status(), { timeout: 30_000 }).toBe(200);
+    const replay = await request.post('/api/v1/servers', { headers: headers(a), data: command });
+    expect(replay.status()).toBe(200);
+    expect((await replay.json()).id).toBe(server.id);
+    expect(await compose('ps', '-q', 'web-client')).toBe(gatewayId);
+    expect(await compose('ps', '-q', 'chat-service')).toBe(messagingId);
+  } finally {
+    if (held) await engine('rm', '--force', '--volumes', holder);
+    await compose('up', '-d', '--no-deps', 'community-service');
+    await expect.poll(async () => (await request.get('/api/v1/health/community/access')).status(), { timeout: 30_000 }).toBe(200);
+  }
+});
+
 test('browser DM reconnects after API restart and a forced IP change without restarting Nginx', async ({ request, browser }) => {
   const a = await actor(request), b = await actor(request);
   await conversation(request, a, b);

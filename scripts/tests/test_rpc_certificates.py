@@ -56,6 +56,22 @@ class RpcCertificatesTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'symlink'):
                 rpc.initialize(linked)
 
+    def test_add_community_preserves_existing_ca_and_identities(self):
+        with tempfile.TemporaryDirectory() as parent:
+            directory = Path(parent) / 'rpc'
+            rpc.initialize(directory)
+            originals = {name: (directory/name).read_bytes() for name in rpc.FILES}
+            rpc.add_community(directory)
+            rpc.initialize(directory, include_community=True)
+            complete = {path.name: path.read_bytes() for path in directory.iterdir()}
+            rpc.add_community(directory)
+            self.assertEqual(complete, {path.name: path.read_bytes() for path in directory.iterdir()})
+            for name, value in originals.items():
+                self.assertEqual(value, (directory/name).read_bytes())
+            (directory/'community-service.crt').unlink()
+            with self.assertRaisesRegex(ValueError, 'Partial'):
+                rpc.add_community(directory)
+
     def test_mismatched_private_key_is_rejected(self):
         with tempfile.TemporaryDirectory() as parent:
             directory = Path(parent) / 'rpc'

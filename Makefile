@@ -13,6 +13,8 @@ SCDC_RPC_SECRET_DIR ?= $(HOME)/.local/share/scdc/rpc-secrets
 export SCDC_RPC_SECRET_DIR
 SCDC_IDENTITY_DB_SECRET_DIR ?= $(HOME)/.local/share/scdc/identity-database-secrets
 export SCDC_IDENTITY_DB_SECRET_DIR
+SCDC_COMMUNITY_DB_SECRET_DIR ?= $(HOME)/.local/share/scdc/community-database-secrets
+export SCDC_COMMUNITY_DB_SECRET_DIR
 
 export SCDC_ENV_FILE = $(ENV_FILE)
 export SCDC_DOCS_FROM = $(FROM)
@@ -44,7 +46,7 @@ help:
 
 init:
 	$(PYTHON) scripts/init_identity_database_secrets.py "$$SCDC_IDENTITY_DB_SECRET_DIR" --label-for-containers
-	$(PYTHON) scripts/init_rpc_certificates.py "$$SCDC_RPC_SECRET_DIR" --label-for-containers
+	$(PYTHON) scripts/init_rpc_certificates.py "$$SCDC_RPC_SECRET_DIR" --add-community --label-for-containers
 	$(PYTHON) scripts/init_redis_secrets.py "$$SCDC_REDIS_SECRET_DIR" --label-for-containers
 	@set -eu; \
 	  if [ -e "$$SCDC_ENV_FILE" ]; then \
@@ -54,6 +56,7 @@ init:
 	    (umask 077; set -C; printf 'COMMUNITY_OPERATION_KEY=%s\n' "$$scdc_operation_key" > "$$SCDC_ENV_FILE"); \
 	    printf 'Đã tạo cấu hình: %s\n' "$$SCDC_ENV_FILE"; \
 	  fi
+	$(PYTHON) scripts/init_community_database_secrets.py "$$SCDC_COMMUNITY_DB_SECRET_DIR" --env-file "$$SCDC_ENV_FILE" --label-for-containers
 
 setup: init
 	$(COMPOSE_COMMAND) config --quiet
@@ -74,6 +77,7 @@ check:
 	    http://localhost:3000/health \
 	    http://localhost:3000/api/v1/health \
 	    http://localhost:3000/api/v1/health/access \
+	    http://localhost:3000/api/v1/health/community/access \
 	    http://localhost:3000/api/v1/health/identity/access \
 	    http://localhost:5080/healthz; do \
 	    printf 'Kiểm tra %s\n' "$$scdc_url"; \
