@@ -10,7 +10,7 @@ $prefix='scdc_dm_p4_'+[guid]::NewGuid().ToString('N').Substring(0,8)
 $upgrade=$prefix+'_upgrade_test'; $fresh=$prefix+'_fresh_test'; $created=@()
 function Sql([string]$Database,[string]$Query){
  if($Database -notin @('scdc_dm_acceptance_test',$upgrade,$fresh)){throw 'Unexpected database'}
- $lines=$Query | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -qAt -U scdc_dm_test -d $Database -v ON_ERROR_STOP=1
+ $lines=$Query | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -qAt -U scdc_dm_test -d $Database -v ON_ERROR_STOP=1
  if($LASTEXITCODE -ne 0){throw 'Realtime migration proof failed'};return ($lines -join "`n")
 }
 $observe=@'

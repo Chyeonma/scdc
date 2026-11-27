@@ -13,10 +13,10 @@ services:
       - community_preview_password
     volumes:
       - community-preview-data:/var/lib/postgresql
-      - ./database/postgres/community/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
-      - ./database/postgres/community/baseline.sql:/docker-entrypoint-initdb.d/002-baseline.sql:ro,z
-      - ./database/postgres/community/init.sh:/docker-entrypoint-initdb.d/003-runtime.sh:ro,z
-      - ./database/postgres/community/runtime-grants.sql:/opt/scdc/community/runtime-grants.sql:ro,z
+      - ../../database/postgres/community/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+      - ../../database/postgres/community/baseline.sql:/docker-entrypoint-initdb.d/002-baseline.sql:ro,z
+      - ../../database/postgres/community/init.sh:/docker-entrypoint-initdb.d/003-runtime.sh:ro,z
+      - ../../database/postgres/community/runtime-grants.sql:/opt/scdc/community/runtime-grants.sql:ro,z
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U scdc_community_preview_admin -d scdc_community']
       interval: 2s
@@ -25,7 +25,7 @@ services:
   community-preview:
     profiles: [community-preview]
     build:
-      context: .
+      context: ../..
       dockerfile: services/Community/SCDC.Community.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development

@@ -1,4 +1,4 @@
-# Overlay for compose.gateway-test.yaml; all data belongs to the unique test project.
+# Overlay for tests/compose/compose.gateway-test.yaml; all data belongs to the unique test project.
 services:
   identity-service:
     environment:
@@ -22,7 +22,7 @@ services:
       OPENOBSERVE_ROOT_EMAIL: root@scdc-test.local
       OPENOBSERVE_ROOT_PASSWORD: ObserveTest!2026
     volumes:
-      - ./ops/observability/collector.yaml:/etc/otelcol/config.yaml:ro,z
+      - ../../ops/observability/collector.yaml:/etc/otelcol/config.yaml:ro,z
     mem_limit: 256m
   openobserve:
     image: public.ecr.aws/zinclabs/openobserve:v1.1.2

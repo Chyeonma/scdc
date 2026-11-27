@@ -56,13 +56,13 @@ docker compose stop identity-service
 docker compose up --build -d identity-service
 ```
 
-Gmail dev/demo dùng overlay `compose.email.yaml`. Cấp App Password qua file
+Gmail dev/demo dùng overlay `ops/compose/compose.email.yaml`. Cấp App Password qua file
 `gmail_app_password` trong `SCDC_EMAIL_SECRET_DIR` (mặc định ngoài repo tại
 `~/.local/share/scdc/email-secrets`), chỉ Identity được mount. Đặt
 `SCDC_EMAIL_SENDER` và `SCDC_PUBLIC_ORIGIN`, rồi chạy:
 
 ```bash
-docker compose -f compose.yaml -f compose.email.yaml up --build -d identity-service
+docker compose -f compose.yaml -f ops/compose/compose.email.yaml up --build -d identity-service
 ```
 
 Overlay tắt token Development. Host ngoài Compose dùng

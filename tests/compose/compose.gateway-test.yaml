@@ -23,7 +23,7 @@ services:
       retries: 30
   identity-keygen:
     build:
-      context: .
+      context: ../..
       dockerfile: services/Identity/SCDC.Identity.Api/Dockerfile
     entrypoint:
     - dotnet
@@ -57,17 +57,17 @@ services:
       retries: 30
     volumes:
     - gateway-postgres-data:/var/lib/postgresql
-    - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
-    - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
-    - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
-    - ./database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
-    - ./database/postgres/community:/opt/scdc/community:ro,z
-    - ./database/postgres/community/init-source.sh:/docker-entrypoint-initdb.d/005-community-database.sh:ro,z
+    - ../../database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+    - ../../database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
+    - ../../database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
+    - ../../database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
+    - ../../database/postgres/community:/opt/scdc/community:ro,z
+    - ../../database/postgres/community/init-source.sh:/docker-entrypoint-initdb.d/005-community-database.sh:ro,z
     secrets:
     - community_database_password
   chat-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
       Authentication__Jwt__Issuer: SCDC
@@ -111,7 +111,7 @@ services:
     - rpc_monolith_private_key
   sample-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/Sample/SCDC.Sample.Api/Dockerfile
     environment:
       Authentication__Jwt__Issuer: SCDC
@@ -125,7 +125,7 @@ services:
         condition: service_completed_successfully
   web-client:
     build:
-      context: ./clients/WebClient
+      context: ../../clients/WebClient
       dockerfile: Dockerfile
     ports:
     - 127.0.0.1:${GATEWAY_WEB_PORT:-15310}:80
@@ -142,7 +142,7 @@ services:
       SCDC_COMMUNITY_UPSTREAM: community-service:8080
   identity-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/Identity/SCDC.Identity.Api/Dockerfile
     environment:
       Authentication__Jwt__Issuer: SCDC
@@ -189,7 +189,7 @@ services:
     - gateway-public-keys:/app/auth-public:ro
   messaging-cursor-keygen:
     build:
-      context: .
+      context: ../..
       dockerfile: services/SCDC.Api/Dockerfile
     entrypoint:
     - /bin/sh
@@ -217,8 +217,8 @@ services:
       retries: 30
     volumes:
     - gateway-identity-postgres-data:/var/lib/postgresql
-    - ./database/postgres/identity/init.sh:/docker-entrypoint-initdb.d/001-identity.sh:ro,z
-    - ./database/postgres/identity:/opt/scdc/identity:ro,z
+    - ../../database/postgres/identity/init.sh:/docker-entrypoint-initdb.d/001-identity.sh:ro,z
+    - ../../database/postgres/identity:/opt/scdc/identity:ro,z
   identity-cutover-gate:
     image: docker.io/library/postgres:18-alpine
     entrypoint:
@@ -232,7 +232,7 @@ services:
     secrets:
     - identity_database_admin_password
     volumes:
-    - ./database/postgres/identity/cutover-gate.sh:/opt/scdc/cutover-gate.sh:ro,z
+    - ../../database/postgres/identity/cutover-gate.sh:/opt/scdc/cutover-gate.sh:ro,z
     depends_on:
       postgres:
         condition: service_healthy
@@ -252,7 +252,7 @@ services:
     secrets:
     - community_database_password
     volumes:
-    - ./database/postgres/community:/opt/scdc/community:ro,z
+    - ../../database/postgres/community:/opt/scdc/community:ro,z
     depends_on:
       postgres:
         condition: service_healthy
@@ -268,13 +268,13 @@ services:
       PGDATABASE: scdc_gateway_test
       COMMUNITY_DATABASE_NAME: scdc_community_gateway_test
     volumes:
-    - ./database/postgres/community:/opt/scdc/community:ro,z
+    - ../../database/postgres/community:/opt/scdc/community:ro,z
     depends_on:
       community-database-init:
         condition: service_completed_successfully
   community-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/Community/SCDC.Community.Api/Dockerfile
     environment:
       Authentication__Jwt__Issuer: SCDC

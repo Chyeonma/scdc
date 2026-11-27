@@ -23,7 +23,7 @@ if($Action -eq 'Fingerprint'){
 }
 $fixtureFile=Join-Path $folder 'sequence-fixtures.json'
 function Sql([string]$Query) {
- $Query | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -qAt -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+ $Query | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -qAt -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
  if($LASTEXITCODE -ne 0){throw 'Acceptance SQL failed.'}
 }
 function Logout($Session){$null=Invoke-DmRequest POST /auth/logout @{refreshToken=$Session.refreshToken}}
@@ -120,7 +120,7 @@ if($Action -in @('Hold','Inspect','Release')){
   if(Test-Path $stateFile){$previous=Get-Content $stateFile -Raw | ConvertFrom-Json; if($previous.held){throw 'Gate already held; Release first.'}}
   $count=(Invoke-DmReadSql "SELECT count(*) FROM messaging.messages WHERE space_id='$space' AND client_message_id='$($lane.X)';").Trim()
   if($count -ne '0'){throw 'X already committed; use a new run for a fresh barrier.'}
-  $config=@{run=$Run;space=$space;actor=$actor;operation=$lane.X;rollback=($Case -eq 'C02');gate=Get-Random -Minimum 1000000000 -Maximum 2000000000;trigger=('dm_p3_gate_'+[guid]::NewGuid().ToString('N'));nonce=[guid]::NewGuid().ToString();env=$paths.Env;compose=(Join-Path $paths.Repo 'compose.dm-test.yaml')}
+  $config=@{run=$Run;space=$space;actor=$actor;operation=$lane.X;rollback=($Case -eq 'C02');gate=Get-Random -Minimum 1000000000 -Maximum 2000000000;trigger=('dm_p3_gate_'+[guid]::NewGuid().ToString('N'));nonce=[guid]::NewGuid().ToString();env=$paths.Env;compose=(Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml')}
   Write-DmJson $configFile $config
   if(Test-Path $stateFile){Remove-Item -LiteralPath $stateFile}
   $python=Get-Command python.exe -ErrorAction Stop

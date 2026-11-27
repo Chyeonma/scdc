@@ -43,6 +43,8 @@ Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#tea
 | [services/Sample](services/Sample) | Service mẫu S1-03 theo cấu trúc bốn project v1; trả `/health` qua Nginx. |
 | [database/postgres](database/postgres) | Script SQL khởi tạo, cập nhật cấu trúc và tạo dữ liệu mẫu cho PostgreSQL. |
 | [compose.yaml](compose.yaml) | Cấu hình chạy giao diện, API và cơ sở dữ liệu bằng container trong môi trường phát triển. |
+| [tests/compose](tests/compose) | Các stack kiểm thử DM, gateway và giám sát, dùng dữ liệu thử riêng. |
+| [ops/compose](ops/compose) | Cấu hình bổ sung để bật email, chạy Community preview hoặc rollback Community. |
 | [Makefile](Makefile) | Dựng, chạy, kiểm tra và dừng môi trường phát triển. |
 | [CI](.github/workflows/ci.yml) | Build và chạy test backend, frontend trên mỗi pull request; [hướng dẫn](docs/guides/continuous-integration.md). |
 | [docs](docs/README.md) | Tài liệu sản phẩm, thiết kế hệ thống và hướng dẫn làm việc. |
@@ -58,3 +60,5 @@ make setup
 ```
 
 Podman dùng `make setup ENGINE=podman`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Compose tự khởi tạo khóa DM và JWT. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
+
+Các lệnh Compose chạy từ gốc repo. `make setup` dùng `compose.yaml`; script kiểm thử tự chọn file trong `tests/compose/`. Cách bật email và chạy các cấu hình bổ sung trong `ops/compose/` nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup) và README của từng service.

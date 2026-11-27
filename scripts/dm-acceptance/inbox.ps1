@@ -23,7 +23,7 @@ function Set-AuthorityFault {
  # Override this acceptance API only. No credentials or production config in the override.
  $yaml="services:`n  chat-service:`n    environment:`n      ConnectionStrings__Identity: Host=127.0.0.1;Port=1;Database=scdc_dm_acceptance_test;Username=scdc_dm_test;Password=unused;Timeout=1`n"
  [IO.File]::WriteAllText($faultFile,$yaml,[Text.UTF8Encoding]::new($false))
- & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') -f $faultFile up -d --no-deps --force-recreate chat-service
+ & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') -f $faultFile up -d --no-deps --force-recreate chat-service
  if ($LASTEXITCODE -ne 0) { throw 'Fault API recreation failed. Run FaultOff.' }
  Wait-Api
 }
@@ -38,7 +38,7 @@ if ($Action -eq 'FaultOn') { Set-AuthorityFault; Write-Host 'Acceptance API auth
 if ($Action -eq 'Upgrade') {
  foreach ($name in '20261009_dm_p1_open_conversation.sql','20261009_dm_p1_inbox.sql') {
   Get-Content (Join-Path $paths.Repo "database/postgres/migrations/$name") -Raw -Encoding UTF8 |
-   & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+   & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
   if ($LASTEXITCODE -ne 0) { throw 'Additive migration failed.' }
  }
  Invoke-DmCompose -Arguments @('build','chat-service','web-client')

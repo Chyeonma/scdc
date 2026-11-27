@@ -67,7 +67,7 @@ DO `$`$ BEGIN
  UPDATE messaging.spaces SET last_message_sequence=9007199254740991 WHERE id='$big';
 END `$`$;
 "@
-   $sql | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+   $sql | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
    if ($LASTEXITCODE -ne 0) { throw 'Scoped technical setup failed.' }
    $messages=@()
    foreach ($label in @('BIG-LOW','BIG-HIGH')) {

@@ -30,8 +30,8 @@ def main():
     artifact = ROOT / 'artifacts/observability' / project
     artifact.mkdir(parents=True, mode=0o700)
     env = dict(os.environ, GATEWAY_WEB_PORT=str(args.port), OBSERVE_TEST_PORT=str(args.observe_port))
-    compose = [args.engine, 'compose', '-p', project, '-f', str(ROOT / 'compose.gateway-test.yaml'),
-               '-f', str(ROOT / 'compose.observability-test.yaml')]
+    compose = [args.engine, 'compose', '-p', project, '-f', str(ROOT / 'tests/compose/compose.gateway-test.yaml'),
+               '-f', str(ROOT / 'tests/compose/compose.observability-test.yaml')]
     origin = f'http://127.0.0.1:{args.port}'
     observe = f'http://127.0.0.1:{args.observe_port}'
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))

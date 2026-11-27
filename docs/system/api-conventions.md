@@ -120,7 +120,7 @@ Nginx chuyển Host, địa chỉ client và giao thức tới API. Gateway khô
 
 #### Kiểm chứng
 
-[Stack nghiệm thu](../../compose.gateway-test.yaml) dùng database `scdc_gateway_test`, khóa và volume riêng; chỉ Nginx có cổng publish. [Script chạy](../../scripts/test_gateway.py) tạo project riêng cho mỗi lần, chạy test và dọn dữ liệu thử. Các ca đăng ký hoặc gửi tin không dùng database phát triển.
+[Stack nghiệm thu](../../tests/compose/compose.gateway-test.yaml) dùng database `scdc_gateway_test`, khóa và volume riêng; chỉ Nginx có cổng publish. [Script chạy](../../scripts/test_gateway.py) tạo project riêng cho mỗi lần, chạy test và dọn dữ liệu thử. Các ca đăng ký hoặc gửi tin không dùng database phát triển.
 
 ```bash
 npm --prefix clients/WebClient ci

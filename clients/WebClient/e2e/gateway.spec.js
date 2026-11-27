@@ -16,7 +16,7 @@ const headers = auth => ({ Authorization: `Bearer ${auth.accessToken}` });
 async function engine(...args) {
   return (await exec(engineName, args, { cwd: root, env: process.env, timeout: 90_000 })).stdout.trim();
 }
-const compose = (...args) => engine('compose', '-p', project, '-f', path.join(root, 'compose.gateway-test.yaml'), ...args);
+const compose = (...args) => engine('compose', '-p', project, '-f', path.join(root, 'tests/compose/compose.gateway-test.yaml'), ...args);
 
 async function actor(request) {
   const username = `g${randomUUID().replaceAll('-', '').slice(0, 18)}`;

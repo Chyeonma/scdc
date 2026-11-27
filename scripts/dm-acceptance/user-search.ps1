@@ -9,7 +9,7 @@ if ($Action -eq 'Upgrade') {
     Assert-DmApiTarget
     if (-not $NoBuild) { Invoke-DmCompose -Arguments @('build','chat-service','web-client') }
     $sql=Get-Content (Join-Path (Get-DmPaths).Repo 'database/postgres/migrations/20261007_dm_p1_user_search.sql') -Raw -Encoding UTF8
-    $sql | & docker compose --project-name scdc-dm-acceptance --env-file (Get-DmPaths).Env --file (Join-Path (Get-DmPaths).Repo 'compose.dm-test.yaml') exec -T postgres psql -X -v ON_ERROR_STOP=1 -U scdc_dm_test -d scdc_dm_acceptance_test
+    $sql | & docker compose --project-name scdc-dm-acceptance --env-file (Get-DmPaths).Env --file (Join-Path (Get-DmPaths).Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -v ON_ERROR_STOP=1 -U scdc_dm_test -d scdc_dm_acceptance_test
     if ($LASTEXITCODE -ne 0) { throw 'User-search additive migration failed.' }
     Invoke-DmCompose -Arguments @('run','--rm','--no-deps','chat-service','--initialize-user-search-keys')
     & (Join-Path (Get-DmPaths).Repo 'scripts/dm-acceptance.ps1') -Action Start -NoBuild

@@ -97,7 +97,7 @@ Nginx chuyển tiếp context W3C của request. Image Nginx hiện không tạo
 python3 scripts/test_observability.py --engine podman
 ```
 
-Lệnh dựng stack riêng bằng `compose.gateway-test.yaml` và `compose.observability-test.yaml`; gateway ở `127.0.0.1:15410`, OpenObserve thử ở `127.0.0.1:15480`. Script dừng PostgreSQL thử để tạo HTTP 500, tìm log và trace qua Search API của OpenObserve, kiểm tra canary nhạy cảm không lọt vào dữ liệu, rồi thử dừng và khởi động Collector. Stack thử và volume được dọn sau khi chạy. Log nằm trong `artifacts/observability/`.
+Lệnh dựng stack riêng bằng `tests/compose/compose.gateway-test.yaml` và `tests/compose/compose.observability-test.yaml`; gateway ở `127.0.0.1:15410`, OpenObserve thử ở `127.0.0.1:15480`. Script dừng PostgreSQL thử để tạo HTTP 500, tìm log và trace qua Search API của OpenObserve, kiểm tra canary nhạy cảm không lọt vào dữ liệu, rồi thử dừng và khởi động Collector. Stack thử và volume được dọn sau khi chạy. Log nằm trong `artifacts/observability/`.
 
 ## Còn mở
 

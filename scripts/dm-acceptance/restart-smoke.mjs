@@ -14,7 +14,7 @@ function keys(){const map={};for(const dir of ['cursor','hmac'])for(const name o
 const auth=await api(null,'POST','/auth/login',{login:actor.username,password:'DmDemo2026!Local',deviceName:'MVP-restart-readonly'});
 try{
  const keyBefore=keys(),url=`/direct-conversations/${p.conversationId}/messages`,before=await api(auth,'GET',url);
- await exec('docker',['compose','--project-name','scdc-dm-acceptance','--env-file','.env.dm-test','-f','compose.dm-test.yaml','restart','chat-service','web-client'],{cwd:root,timeout:120000});
+ await exec('docker',['compose','--project-name','scdc-dm-acceptance','--env-file','.env.dm-test','-f','tests/compose/compose.dm-test.yaml','restart','chat-service','web-client'],{cwd:root,timeout:120000});
  let ready=false;const end=Date.now()+30000;while(Date.now()<end){try{if((await fetch('http://localhost:15300/api/v1/health')).status===200){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}assert(ready);
  const after=await api(auth,'GET',url);assert.deepEqual(after.items.map(m=>[m.id,m.version,m.sequence]),before.items.map(m=>[m.id,m.version,m.sequence]));assert.deepEqual(keys(),keyBefore);
  const oldCursor=await api(auth,'GET',url+'?after='+encodeURIComponent(before.resumeCursor));assert.equal(oldCursor.items.length,0);assert.equal(oldCursor.throughSequence,before.throughSequence);
