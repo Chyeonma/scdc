@@ -13,7 +13,7 @@ if ($Action -notin @('FaultOff','Snapshot')) { Assert-DmApiTarget }
 function Invoke-TestSql([string]$Sql) {
     # Writes are restricted to the explicitly named acceptance database.
     $config=Get-DmConfig
-    $Sql | & docker compose --project-name scdc-dm-acceptance --env-file (Join-Path (Get-DmPaths).Repo '.env.dm-test') -f (Join-Path (Get-DmPaths).Repo 'compose.dm-test.yaml') exec -T postgres psql -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+    $Sql | & docker compose --project-name scdc-dm-acceptance --env-file (Join-Path (Get-DmPaths).Repo '.env.dm-test') -f (Join-Path (Get-DmPaths).Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw 'Acceptance SQL failed.' }
 }
 

@@ -236,7 +236,7 @@ Build riêng mà không cần dựng monolith:
 dotnet build services/Sample/SCDC.Sample.Api/SCDC.Sample.Api.csproj --configuration Release
 ```
 
-Bộ [kiểm thử gateway](../../clients/WebClient/e2e/gateway.spec.js) thêm các ca nhận diện JSON của service mẫu, monolith dừng và service mẫu đổi IP; các ca S1-02 tiếp tục chạy trong cùng [stack thử riêng](../../compose.gateway-test.yaml). Cách cài dependency và chạy `python3 scripts/test_gateway.py --engine podman` xem [hướng dẫn gateway](../guides/development.md#gateway). Việc đã có test không thay cho kết quả chạy ghi trong hồ sơ kiểm thử.
+Bộ [kiểm thử gateway](../../clients/WebClient/e2e/gateway.spec.js) thêm các ca nhận diện JSON của service mẫu, monolith dừng và service mẫu đổi IP; các ca S1-02 tiếp tục chạy trong cùng [stack thử riêng](../../tests/compose/compose.gateway-test.yaml). Cách cài dependency và chạy `python3 scripts/test_gateway.py --engine podman` xem [hướng dẫn gateway](../guides/development.md#gateway). Việc đã có test không thay cho kết quả chạy ghi trong hồ sơ kiểm thử.
 
 <a id="v1-shared-code"></a>
 

@@ -38,6 +38,8 @@ Backend và frontend được build trong image. .NET SDK 10 và Node.js 24 ch�
 
 ### Chạy bằng Compose
 
+File mặc định là [`compose.yaml`](../../compose.yaml). Các stack kiểm thử nằm trong [`tests/compose/`](../../tests/compose/); cấu hình email, Community preview và rollback nằm trong [`ops/compose/`](../../ops/compose/). Các lệnh trong hướng dẫn vẫn chạy từ gốc repo. Đường dẫn build và mount của các stack chạy riêng đã được tính theo vị trí file mới.
+
 **Lần đầu**, dựng môi trường bằng một lệnh:
 
 ```bash
@@ -121,7 +123,7 @@ Nếu Chromium chạy bằng Playwright `launchServer` trên cùng máy, có th�
 
 ### Community preview — bước 1 S3-10
 
-[Community preview](../../services/Community/README.md#chạy-preview-riêng) có host và database thử riêng, bật bằng `compose.community-preview.yaml` với profile `community-preview`. Nó không thay stack dev hoặc gateway mặc định. Liveness/database trả 200 khi khỏe; readiness và API nghiệp vụ tiếp tục trả 503 tới khi hoàn thiện tích hợp service. Các secret thử do [script riêng](../../scripts/init_community_preview_secrets.py) cấp ngoài repo, không dùng khóa Identity thật.
+[Community preview](../../services/Community/README.md#chạy-preview-riêng) có host và database thử riêng, bật bằng `ops/compose/compose.community-preview.yaml` với profile `community-preview`. Nó không thay stack dev hoặc gateway mặc định. Liveness/database trả 200 khi khỏe; readiness và API nghiệp vụ tiếp tục trả 503 tới khi hoàn thiện tích hợp service. Các secret thử do [script riêng](../../scripts/init_community_preview_secrets.py) cấp ngoài repo, không dùng khóa Identity thật.
 
 ### Community tích hợp — bước 2 S3-10
 
@@ -163,7 +165,7 @@ npm --prefix clients/WebClient ci
 python3 scripts/test_gateway.py --engine docker
 ```
 
-Bộ này cần thêm Python 3. Dùng `--engine podman` nếu chọn Podman. Script build [stack thử riêng](../../compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart, chủ động đổi IP container API và service mẫu, giữ nguyên container Nginx; kiểm tra service mẫu vẫn trả health khi monolith dừng. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
+Bộ này cần thêm Python 3. Dùng `--engine podman` nếu chọn Podman. Script build [stack thử riêng](../../tests/compose/compose.gateway-test.yaml), khởi tạo khóa DM và chạy project E2E `gateway`. Mỗi lần chạy có project `scdc-gateway-<mã-lần-chạy>`, database `scdc_gateway_test` và volume riêng; chỉ Nginx được publish ở `127.0.0.1:15310`. Bộ kiểm thử thử lại API sau restart, chủ động đổi IP container API và service mẫu, giữ nguyên container Nginx; kiểm tra service mẫu vẫn trả health khi monolith dừng. Kết quả nằm trong `artifacts/gateway/`; stack và volume thử được dọn khi kết thúc.
 
 Đổi cổng hoặc giữ stack để điều tra lỗi sau khi đã cài dependency:
 
@@ -171,7 +173,7 @@ Bộ này cần thêm Python 3. Dùng `--engine podman` nếu chọn Podman. Scr
 python3 scripts/test_gateway.py --engine podman --port 15311 --keep
 ```
 
-Script in tên project trong kết quả. Dọn đúng stack đã giữ bằng `podman compose -p <tên-project> -f compose.gateway-test.yaml down --volumes`; dùng cùng `GATEWAY_WEB_PORT` nếu đã đổi cổng. Chi tiết phạm vi xem [S1-02](../system/api-conventions.md#s1-02-preparation).
+Script in tên project trong kết quả. Dọn đúng stack đã giữ bằng `podman compose -p <tên-project> -f tests/compose/compose.gateway-test.yaml down --volumes`; dùng cùng `GATEWAY_WEB_PORT` nếu đã đổi cổng. Chi tiết phạm vi xem [S1-02](../system/api-conventions.md#s1-02-preparation).
 
 <a id="container-engines"></a>
 
@@ -826,7 +828,7 @@ Theo dõi `community.channel_provisions`: `phase` 0/1/2 là PREPARING/COMPLETED/
 
 S2-08 dùng các bảng Identity/fence hiện có của S2-06 và không thêm migration. Triển khai cùng baseline Community S2-07/S2-09 theo mục trên khi nâng cấp toàn ứng dụng. API tiếp tục cần ba connection string riêng, Redis và các key ring hiện hành. Script S2-11 thu hồi toàn bộ grant tạm sau khi các writer đã chuyển xong.
 
-Để chạy `dm-mvp` trên Linux/macOS, dùng stack `compose.gateway-test.yaml` riêng, web localhost 15300 và database `scdc_gateway_test`; cấp psql qua PATH và PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD trỏ đúng database thử. Chọn run mới tối đa 12 ký tự, xuất `DM_WEB_URL` và `DM_MVP_RUN`. Tạo tài khoản/hội thoại bằng `scripts/dm-acceptance/mvp-local.py -Action Setup -Run <run>` rồi `-Action Fixtures`. Setup trên host có thể dùng `DM_MVP_ENGINE=podman` cùng `DM_MVP_PG_CONTAINER=scdc-gateway-<project>-postgres-1` khi không cài psql. Không tái sử dụng/reset run đã có.
+Để chạy `dm-mvp` trên Linux/macOS, dùng stack `tests/compose/compose.gateway-test.yaml` riêng, web localhost 15300 và database `scdc_gateway_test`; cấp psql qua PATH và PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD trỏ đúng database thử. Chọn run mới tối đa 12 ký tự, xuất `DM_WEB_URL` và `DM_MVP_RUN`. Tạo tài khoản/hội thoại bằng `scripts/dm-acceptance/mvp-local.py -Action Setup -Run <run>` rồi `-Action Fixtures`. Setup trên host có thể dùng `DM_MVP_ENGINE=podman` cùng `DM_MVP_PG_CONTAINER=scdc-gateway-<project>-postgres-1` khi không cài psql. Không tái sử dụng/reset run đã có.
 
 Trong `clients/WebClient`, chạy `npm ci` rồi `npx playwright test --project dm-mvp`; Python 3 và psql phải có trong môi trường chạy browser test. Driver chỉ ghi trạng thái vào tài khoản thuộc manifest của run; tin thử được gửi bằng API thật. Windows vẫn dùng PowerShell driver cũ. [Hồ sơ S2-08](../records/verification/architecture/s2-08-2026-11-24.md) ghi cấu hình và kết quả thực tế.
 

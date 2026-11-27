@@ -27,7 +27,7 @@ Từ gốc repo, cần Python 3, OpenSSL và Docker Compose:
 ```bash
 export SCDC_COMMUNITY_PREVIEW_SECRET_DIR="$HOME/.local/share/scdc/community-preview-secrets"
 python3 scripts/init_community_preview_secrets.py "$SCDC_COMMUNITY_PREVIEW_SECRET_DIR" --label-for-containers
-docker compose -f compose.community-preview.yaml --profile community-preview up --build -d
+docker compose -f ops/compose/compose.community-preview.yaml --profile community-preview up --build -d
 ```
 
 Với Podman, dùng `podman-compose` thay cho `docker compose` trong lệnh trên. Các service chỉ bật khi chọn profile `community-preview`. Script tạo mật khẩu admin/runtime độc lập, HMAC và public key JWT thử; chạy lại giữ các giá trị cũ. Mật khẩu admin chỉ mount vào PostgreSQL, API chỉ nhận mật khẩu runtime và không có private key JWT.
@@ -45,7 +45,7 @@ Readiness 503 là trạng thái chuẩn bị; liveness và database khỏe chưa
 Dừng preview, giữ dữ liệu thử:
 
 ```bash
-docker compose -f compose.community-preview.yaml --profile community-preview down
+docker compose -f ops/compose/compose.community-preview.yaml --profile community-preview down
 ```
 
 ## Chế độ tích hợp qua mạng

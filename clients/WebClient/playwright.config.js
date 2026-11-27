@@ -18,7 +18,7 @@ const community = {
   use: { baseURL: process.env.SCDC_E2E_URL, viewport: { width: 1280, height: 800 }, trace: 'retain-on-failure' },
 };
 
-// Bộ DM chạy trên stack nghiệm thu DM (compose.dm-test.yaml). `evidence` giữ đúng
+// Bộ DM chạy trên stack nghiệm thu DM (tests/compose/compose.dm-test.yaml). `evidence` giữ đúng
 // thư mục bằng chứng cũ dưới .dm-acceptance/ vì spec và hồ sơ nghiệm thu tham chiếu tới.
 const dm = [
   { name: 'dm-mvp', dirs: ['dm-mvp'], evidence: 'e2e-mvp', timeout: 240_000 },

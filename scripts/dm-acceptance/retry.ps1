@@ -70,7 +70,7 @@ DO `$`$ BEGIN
  UPDATE messaging.messages SET $body WHERE id='$message' AND space_id='$space';
 END `$`$;
 "@
-  $sql | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+  $sql | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
   if ($LASTEXITCODE -ne 0) { throw 'Owned current-state technical fixture failed.' }
   Write-Host "Current-state fixture $State applied only to owned message $message. No edit/delete production endpoint added."
   exit

@@ -12,7 +12,7 @@ Assert-DmDatabase
 $paths=Get-DmPaths
 $OutputEncoding=[System.Text.UTF8Encoding]::new($false)
 function Invoke-TextSql([string]$Sql) {
- $Sql | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+ $Sql | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -q -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
  if ($LASTEXITCODE -ne 0) { throw 'Scoped acceptance SQL failed.' }
 }
 if ($Action -eq 'FaultOff') {

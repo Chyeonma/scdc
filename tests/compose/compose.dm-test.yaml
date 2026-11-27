@@ -12,7 +12,7 @@ services:
       retries: 30
   identity-keygen:
     build:
-      context: .
+      context: ../..
       dockerfile: services/SCDC.Api/Dockerfile
     entrypoint: ["dotnet", "SCDC.Api.dll", "--initialize-jwt-keys"]
     environment:
@@ -39,13 +39,13 @@ services:
       retries: 30
     volumes:
       - dm-postgres-data:/var/lib/postgresql
-      - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
-      - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro
-      - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro
+      - ../../database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ../../database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro
+      - ../../database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro
 
   chat-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/SCDC.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -77,16 +77,16 @@ services:
       identity-keygen:
         condition: service_completed_successfully
     volumes:
-      - ./.dm-acceptance/keyrings/cursor:/app/dm-keys/cursor
-      - ./.dm-acceptance/keyrings/hmac:/app/dm-keys/hmac:ro
-      - ./.dm-acceptance/dispatcher:/app/dm-dispatcher
+      - ../../.dm-acceptance/keyrings/cursor:/app/dm-keys/cursor
+      - ../../.dm-acceptance/keyrings/hmac:/app/dm-keys/hmac:ro
+      - ../../.dm-acceptance/dispatcher:/app/dm-dispatcher
       - dm-community-keys:/app/community-keys
       - dm-identity-private-keys:/app/auth-private:ro
       - dm-identity-public-keys:/app/auth-public:ro
 
   web-client:
     build:
-      context: ./clients/WebClient
+      context: ../../clients/WebClient
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${DM_WEB_PORT:-15300}:80"
@@ -97,7 +97,7 @@ services:
   backend-tests:
     profiles: ["tools"]
     build:
-      context: .
+      context: ../..
       dockerfile: tests/SCDC.Api.Tests/Dockerfile
     working_dir: /workspace
     environment:
@@ -114,9 +114,9 @@ services:
       # Integration cases explicitly drive the dispatcher; avoid global fixture races.
       Modules__Messaging__Dispatcher__Enabled: "false"
     volumes:
-      - .:/workspace:ro
-      - ./.dm-acceptance/keyrings/hmac:/test-hmac:ro
-      - ./.dm-acceptance/backend-artifacts:/artifacts
+      - ../..:/workspace:ro
+      - ../../.dm-acceptance/keyrings/hmac:/test-hmac:ro
+      - ../../.dm-acceptance/backend-artifacts:/artifacts
       - dm-test-nuget:/root/.nuget/packages
     depends_on:
       postgres:

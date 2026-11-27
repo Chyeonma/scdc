@@ -33,7 +33,7 @@ def main():
     env = dict(os.environ, GATEWAY_WEB_PORT=str(args.port), SCDC_GATEWAY_URL=origin,
                SCDC_GATEWAY_DATABASE='scdc_gateway_test', SCDC_GATEWAY_PROJECT=project,
                SCDC_GATEWAY_ENGINE=args.engine, SCDC_GATEWAY_ARTIFACTS=str(artifact))
-    compose = [args.engine, 'compose', '-p', project, '-f', str(ROOT / 'compose.gateway-test.yaml')]
+    compose = [args.engine, 'compose', '-p', project, '-f', str(ROOT / 'tests/compose/compose.gateway-test.yaml')]
 
     def run(command, name, timeout=600):
         print(name, flush=True)

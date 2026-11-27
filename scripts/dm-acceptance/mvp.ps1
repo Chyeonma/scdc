@@ -13,7 +13,7 @@ Import-Module (Join-Path $PSScriptRoot 'Common.psm1') -Force -DisableNameCheckin
 Assert-DmDatabase; $paths=Get-DmPaths; $folder=Get-DmRunPath $Run
 if($Run -eq 'baseline'){throw 'Use a dedicated MVP run'}
 function Sql([string]$Query){
- $result=$Query | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'compose.dm-test.yaml') exec -T postgres psql -X -qAt -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
+ $result=$Query | & docker compose --project-name scdc-dm-acceptance --env-file $paths.Env -f (Join-Path $paths.Repo 'tests/compose/compose.dm-test.yaml') exec -T postgres psql -X -qAt -U scdc_dm_test -d scdc_dm_acceptance_test -v ON_ERROR_STOP=1
  if($LASTEXITCODE -ne 0){throw 'Owned MVP SQL failed'}; return ($result -join "`n")
 }
 if($Action -eq 'Setup'){

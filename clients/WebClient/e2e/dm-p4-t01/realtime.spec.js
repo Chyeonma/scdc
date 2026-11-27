@@ -201,7 +201,7 @@ test('CURRENT pending outbox emits current tombstone and original writer replay 
 
 test('CRASH real SIGKILL after committed lease; restart waits expiry then publishes same event', async ({ page, browser, request }) => {
   const { pair, b, before } = await clients(page, browser, 'CRASH');
-  const compose = async args => exec('docker', ['compose', '--project-name', 'scdc-dm-acceptance', '--env-file', '.env.dm-test', '-f', 'compose.dm-test.yaml', ...args], { cwd: root, timeout: 90000 });
+  const compose = async args => exec('docker', ['compose', '--project-name', 'scdc-dm-acceptance', '--env-file', '.env.dm-test', '-f', 'tests/compose/compose.dm-test.yaml', ...args], { cwd: root, timeout: 90000 });
   let killed = false, eid;
   try {
     await ps('Pause', 'CRASH'); const sent = await send(page, pair, 'LEASE-CRASH-P4');
