@@ -1,9 +1,9 @@
 using Grpc.Core;
-using SCDC.BuildingBlocks.Infrastructure.Transport;
+using SCDC.Modules.Community.Infrastructure.Transport;
 using SCDC.Contracts.Identity;
 using W = SCDC.Identity.Grpc.V1;
 
-namespace SCDC.Api.InternalRpc;
+namespace SCDC.Community.Api.InternalRpc;
 
 public sealed class CommunityIdentityFenceEndpoint(IEnumerable<IIdentityFenceOwner> owners)
     : SCDC.Community.Grpc.V1.CommunityFence.CommunityFenceBase

@@ -20,6 +20,7 @@ public sealed class IdentityPermitTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _client = _factory.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(_client);
         _connectionString = _factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("TestDatabase")!;
         Assert.EndsWith("_test", new NpgsqlConnectionStringBuilder(_connectionString).Database);
         _source = NpgsqlDataSource.Create(_connectionString);

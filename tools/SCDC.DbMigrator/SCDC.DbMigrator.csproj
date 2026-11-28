@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
+    <ProjectReference Include="../../services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
   </ItemGroup>
 </Project>

@@ -8,7 +8,7 @@ Từ S3-03, Identity chạy trên instance `identity-postgres`, database
 `scdc_identity`. [Baseline, chuyển offline và phục hồi](identity/README.md)
 quy định lệnh thật và quyền nguồn/đích. Các script monolith trên trang này tiếp tục
 dùng cho baseline nguồn và fixture; không chạy chúng trên database Identity
-riêng. Community/Messaging vẫn ở instance `postgres` tới các task tương ứng.
+riêng. Community đã chuyển sang database `scdc_community` trên instance `postgres`; Messaging tiếp tục ở `scdc_chat` tới S3-08. Xem [Community](community/README.md) trước khi thao tác với database riêng.
 
 ## Mục lục
 
@@ -26,10 +26,10 @@ Thông số dưới đây dùng cho stack Compose Development:
 | Host / port | `localhost:5432` |
 | Database | `scdc_chat` |
 | Quản trị / migration | `scdc` / `scdc_dev` |
-| User API ở instance cũ | `scdc_community`, `scdc_messaging`; `scdc_identity` giữ `NOLOGIN` sau chuyển |
+| User API trên instance `postgres` | `scdc_messaging` dùng `scdc_chat`; `scdc_community_service` dùng `scdc_community`. Login nguồn `scdc_identity` và `scdc_community` giữ `NOLOGIN` sau chuyển |
 | SSL mode | `disable` |
 
-Trong DBeaver, mở `Schemas` và chọn `identity`, `community`, `messaging`. S2-05 chỉ loại Moderation khi cả hai bảng rỗng; gặp dữ liệu thì migration dừng và giữ nguyên database.
+Trong DBeaver, dùng connection đúng database owner. Các schema Identity/Community còn trong `scdc_chat` là nguồn lịch sử đã khóa writer; không phải database runtime mới. S2-05 chỉ loại Moderation khi cả hai bảng rỗng; gặp dữ liệu thì migration dừng và giữ nguyên database.
 
 ## SQL và migration
 

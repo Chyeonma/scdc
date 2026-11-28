@@ -9,7 +9,7 @@ using SCDC.Api.Tests.Infrastructure;
 using SCDC.Contracts.Community;
 using SCDC.Modules.Community.Features.Permissions.Infrastructure;
 using SCDC.Contracts.Identity;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Messaging;
 using SCDC.Modules.Community.Infrastructure;
 
@@ -26,6 +26,7 @@ public sealed partial class CommunityApiTests
         var channel = (await JsonAsync(await ChannelCreateAsync(server, operation: operation))).GetProperty("id").GetGuid();
         await using var restart = new SCDCWebApplicationFactory();
         using var restartedClient = restart.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(restartedClient);
         var replay = await ChannelCreateAsync(server, operation: operation, client: restartedClient);
         Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
         Assert.Equal(channel, (await JsonAsync(replay)).GetProperty("id").GetGuid());
@@ -43,6 +44,7 @@ public sealed partial class CommunityApiTests
         using var rotated = _factory.WithWebHostBuilder(b => b.ConfigureServices(s =>
             s.AddSingleton<IOptionsMonitor<CommunityOptions>>(new FixedMonitor(options))));
         using var rotatedClient = rotated.CreateClient();
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(rotatedClient);
         Assert.Equal(HttpStatusCode.OK, (await ChannelCreateAsync(server, operation: operation, client: rotatedClient)).StatusCode);
         options.Operations.Keys.Remove("test");
         await AssertErrorAsync(await ChannelCreateAsync(server, operation: operation, client: rotatedClient),

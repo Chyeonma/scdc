@@ -6,7 +6,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Community;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Features.Channels.Application;

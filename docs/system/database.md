@@ -2,9 +2,9 @@
 
 Trang này mô tả cách tổ chức dữ liệu trong PostgreSQL, quy ước chung, cách chạy migration, và các quyết định cho v1 (tách database theo service, công cụ migration, chuyển dữ liệu từ MVP).
 
-**Trạng thái source S3-03:** Identity có PostgreSQL 18 instance riêng, database `scdc_identity`; Community/Messaging còn ở `scdc_chat` trên instance cũ. [Công cụ chuyển offline](../../database/postgres/identity/README.md) giữ dữ liệu, ledger lineage và sequence, đối chiếu manifest trước mở runtime đích; source Identity giữ nguyên nhưng role `NOLOGIN`. Baseline quyền S2-11 tiếp tục áp dụng. Mốc chuyển dev và bằng chứng theo [hồ sơ S3-03](../records/verification/architecture/s3-03-2026-11-25.md).
+**Trạng thái cập nhật 2026-11-28:** Identity có PostgreSQL instance riêng và database `scdc_identity`. Community đã chuyển sang `scdc_community`, dùng cùng instance PostgreSQL với Messaging ở database nguồn `scdc_chat`. Runtime Community mới là `scdc_community_service`; login nguồn Identity/Community giữ `NOLOGIN`. Công cụ chuyển offline đối chiếu dữ liệu, DDL và lineage trước khi mở writer: [Identity](../../database/postgres/identity/README.md), [Community](../../database/postgres/community/README.md). Database Messaging riêng còn thuộc S3-08.
 
-## MVP hiện tại
+## Baseline nguồn MVP và migration
 
 - [schema.sql](../../database/postgres/schema.sql): tạo database mới từ đầu.
 - [migrations](../../database/postgres/migrations) và [DbMigrator](../../tools/SCDC.DbMigrator): nâng cấp database đang có.

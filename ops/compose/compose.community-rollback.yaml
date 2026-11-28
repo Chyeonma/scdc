@@ -5,7 +5,9 @@ services:
   community-service:
     profiles: [community-target-disabled]
   chat-service:
-    image: ${SCDC_COMMUNITY_ROLLBACK_IMAGE:?Set a verified pre-cutover image; rollback never builds a replacement}
+    # This image must already contain the pre-extraction Community compatibility host.
+    # Never rebuild the Messaging-only current host as a cutover rollback target.
+    image: ${SCDC_COMMUNITY_ROLLBACK_IMAGE:?Set a verified pre-extraction image tag or digest}
     build: !reset null
     environment:
       Hosting__CommunityEnabled: 'true'

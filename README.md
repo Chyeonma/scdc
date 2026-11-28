@@ -49,7 +49,7 @@ Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#tea
 | [CI](.github/workflows/ci.yml) | Build và chạy test backend, frontend trên mỗi pull request; [hướng dẫn](docs/guides/continuous-integration.md). |
 | [docs](docs/README.md) | Tài liệu sản phẩm, thiết kế hệ thống và hướng dẫn làm việc. |
 
-Backend hiện chạy trong một ứng dụng API. [Kiến trúc v1](docs/system/architecture.md#target) sẽ tách thành bốn dịch vụ: tài khoản, cộng đồng, nhắn tin và điều khiển cuộc gọi.
+Backend hiện có ba host nghiệp vụ: Identity, Community và `SCDC.Api` đang phục vụ Messaging. Identity và Community đã chuyển sang database riêng; Messaging tiếp tục dùng database nguồn `scdc_chat`. Media chưa tích hợp vào `main`. [Kiến trúc hiện tại](docs/system/architecture.md#current) phân biệt phần đã chạy với [mục tiêu bốn service v1](docs/system/architecture.md#target).
 
 ## Khởi chạy
 

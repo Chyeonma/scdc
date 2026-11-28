@@ -3,7 +3,6 @@ using SCDC.Api.Observability;
 using Microsoft.OpenApi;
 using SCDC.Api.Errors;
 using SCDC.Api.OpenApi;
-using SCDC.Modules.Community;
 using SCDC.Api.Authentication;
 using SCDC.Api.InternalRpc;
 using SCDC.BuildingBlocks.Infrastructure.Transport;
@@ -11,6 +10,7 @@ using SCDC.Modules.Messaging;
 using SCDC.Modules.Messaging.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
+// Keep the deployed telemetry identity stable until the Messaging extraction.
 builder.AddScdcTelemetry("scdc-monolith");
 // Query credentials in WebSocket handshakes must never reach request-start diagnostics.
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
@@ -20,12 +20,11 @@ builder.Services.AddConsumerAuthentication(builder.Configuration);
 builder.Services.AddRemoteIdentity(builder.Configuration);
 builder.Services.AddGrpc(options => { options.MaxReceiveMessageSize = 128 * 1024; options.Interceptors.Add<RpcPeerGuard>(); });
 RpcTransport.ConfigureServer(builder);
-var communityEnabled = builder.Configuration.GetValue("Hosting:CommunityEnabled", true);
-if (communityEnabled) builder.Services.AddCommunityModule(builder.Configuration, builder.Environment.EnvironmentName);
+if (builder.Configuration.GetValue("Hosting:CommunityEnabled", false))
+    throw new InvalidOperationException("This host serves Messaging only. Community rollback requires a verified pre-extraction image.");
 builder.Services.AddMessagingModule(builder.Configuration);
 
 var controllers = builder.Services.AddControllers();
-if (!communityEnabled) controllers.ConfigureApplicationPartManager(parts => parts.FeatureProviders.Add(new SCDC.Api.CommunityControllerFeature()));
 builder.Services.AddApiProblemDetails();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -49,7 +48,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SCDC API",
         Version = "v1",
-        Description = "SCDC modular monolith. Identity, Community management and direct messaging with text, history, edit/delete and authenticated SignalR are integrated."
+        Description = "SCDC Messaging host. Direct messaging, text history, edit/delete, outbox and authenticated SignalR; Identity and Community are separate services."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -63,8 +62,6 @@ builder.Services.AddSwaggerGen(options =>
         [new OpenApiSecuritySchemeReference("Bearer", document, null)] = []
     });
     options.OperationFilter<AuthenticationOperationFilter>();
-    options.OperationFilter<CommunityServerViewOperationFilter>();
-    options.SchemaFilter<CommunityResponseSchemaFilter>();
 });
 
 var app = builder.Build();
@@ -91,7 +88,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-if (communityEnabled) app.MapGrpcService<CommunityIdentityFenceEndpoint>();
 app.MapGrpcService<MessagingIdentityFenceEndpoint>();
 app.MapGrpcService<MessagingControlEndpoint>();
 app.MapGrpcService<MessagingCommunityFenceEndpoint>();

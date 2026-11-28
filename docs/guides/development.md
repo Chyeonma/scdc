@@ -71,7 +71,8 @@ Chín container runtime phải đang chạy: WebClient/Nginx, Identity, Communit
 | Swagger qua gateway (Development) | `http://localhost:3000/swagger` |
 | OpenAPI JSON qua gateway | `http://localhost:3000/swagger/v1/swagger.json` |
 | Swagger Identity (Development) | `http://localhost:3000/swagger/identity` |
-| Readiness Identity, Community/Messaging | `http://localhost:3000/api/v1/health/identity/access`, `/api/v1/health/access` |
+| Swagger Community (Development) | `http://localhost:3000/swagger/community` |
+| Readiness Identity, Community, Messaging | `http://localhost:3000/api/v1/health/identity/access`, `/api/v1/health/community/access`, `/api/v1/health/access` |
 | Health Nginx, alias API, API | `http://localhost:3000/healthz`, `/health`, `/api/v1/health` |
 | Endpoint thử JWT S1-06 (`SAMPLE=1`) | `http://localhost:3000/sample/protected`; cần bearer access token do Identity cấp |
 | OpenObserve local | `http://localhost:5080`; mặc định `root@scdc.local` / `ScdcObserve!2026Local` trên volume mới |
@@ -79,6 +80,7 @@ Chín container runtime phải đang chạy: WebClient/Nginx, Identity, Communit
 | PostgreSQL | `localhost:5432` |
 | PostgreSQL Identity riêng | `127.0.0.1:5433`, database `scdc_identity`; admin/runtime password qua Compose secrets |
 | Identity trực tiếp để debug | `http://127.0.0.1:5027`; các luồng ứng dụng đi qua gateway |
+| Community trực tiếp để debug | `http://127.0.0.1:5028`; các luồng ứng dụng đi qua gateway |
 
 `make check` kiểm tra hạ tầng và health; để kiểm tra nghiệp vụ, tạo và xác minh hai tài khoản theo [mục 3](#identity), rồi thử gửi DM qua hai cửa sổ trình duyệt. Tài khoản seed không có mật khẩu đăng nhập thực.
 
@@ -105,19 +107,19 @@ Database mới tự nạp schema và seed. Với database đã có dữ liệu, 
 
 ### Identity riêng — S3-02/S3-03
 
-[Identity](../../services/Identity/README.md) có bốn project Api/Application/Domain/Infrastructure và project mã sinh gRPC riêng. `identity-service` sở hữu API tài khoản, worker thu hồi, JWT private key và Redis writer. `chat-service` giữ Community/Messaging, chỉ nhận public key, Redis reader và hai connection của mình. S3-03 thêm `identity-postgres` riêng, database `scdc_identity`; source cũ giữ nguyên dữ liệu Identity nhưng role cũ `NOLOGIN` sau chuyển.
+[Identity](../../services/Identity/README.md) có bốn project Api/Application/Domain/Infrastructure và project mã sinh gRPC riêng. `identity-service` sở hữu API tài khoản, worker thu hồi/email, JWT private key và Redis writer. `chat-service` hiện chỉ giữ Messaging; Community đã có host riêng. Hai consumer chỉ nhận public key, Redis reader và connection của owner mình. S3-03 thêm `identity-postgres` riêng, database `scdc_identity`; source cũ giữ nguyên dữ liệu Identity nhưng role cũ `NOLOGIN` sau chuyển.
 
 `make init` tạo hai database password ở `SCDC_IDENTITY_DB_SECRET_DIR` (mặc định `~/.local/share/scdc/identity-database-secrets`). Admin secret chỉ cấp PostgreSQL/job kiểm tra; Identity nhận runtime secret bằng `ConnectionStrings:IdentityPasswordFile`. Không xoay credential hoặc khởi tạo lại volume có dữ liệu bằng entrypoint.
 
 **Volume MVP đã có dữ liệu:** hoàn tất [chuyển offline S3-03](../../database/postgres/identity/README.md) trước khi mở host mới. Job `identity-cutover-gate` chỉ đọc metadata, kiểm source role đã khóa và target transfer record khớp instance/OID/DB. Với volume tạo mới từ S3-03, marker khởi tạo cho phép baseline Identity mới. Gate từ chối source còn ghi hoặc đích rỗng chưa chuyển; `make up` không tự chuyển dữ liệu đang dùng. Các gate được gọi từ `ops/preflight.sh`; chỉ chạy `docker compose up` trực tiếp sẽ không thực hiện quy trình kiểm tra này. Job không phải API và không cấp credential admin cho consumer.
 
-Gateway chuyển `/api/v1/auth`, `/api/v1/users`, `/api/v1/health/identity` và Swagger Identity tới host mới. REST/Hub còn lại tới `chat-service`. Cả hai upstream được phân giải DNS lại sau đổi IP, mutation không tự retry.
+Gateway chuyển `/api/v1/auth`, `/api/v1/users`, `/api/v1/health/identity` và Swagger Identity tới Identity; `/api/v1/servers` và Swagger Community tới Community; DM/Hub tới `chat-service`. Các upstream được phân giải DNS lại sau đổi IP, mutation không tự retry.
 
 `make init` chạy [công cụ cấp chứng chỉ local](../../scripts/init_rpc_certificates.py) vào `SCDC_RPC_SECRET_DIR` (mặc định `~/.local/share/scdc/rpc-secrets`). Đây là CA phát triển; mỗi host chỉ mount certificate, private key của chính nó và CA public qua Compose secrets. CA private key không mount vào container. Chứng chỉ leaf hết hạn sau 180 ngày; không tự thay khóa/chứng chỉ khi chạy lại hoặc khi phát hiện bộ thiếu. Giữ bản sao và cấp lại có chủ đích trước khi hết hạn.
 
-RPC HTTP/2 TLS nghe cổng nội bộ 8443, bắt buộc mTLS hai chiều, peer allowlist và mapping `InternalRpc:PeerOwners:chat-service` gồm Community/Messaging. Client xác minh tên service và CA; mỗi lời gọi có deadline hai giây và truyền cancellation. Public HTTP 8080 không cho JWT người dùng thay chứng chỉ RPC.
+RPC HTTP/2 TLS nghe cổng nội bộ 8443, bắt buộc mTLS hai chiều và peer allowlist. Mapping `InternalRpc:PeerOwners:chat-service` chỉ có Messaging; `community-service` có Community và delegation `ChannelRead` giới hạn như cấu hình bên dưới. Client xác minh tên service và CA; mỗi lời gọi có deadline hai giây và truyền cancellation. Public HTTP 8080 không cho JWT người dùng thay chứng chỉ RPC.
 
-Chạy riêng `SCDC.Api` bằng `dotnet run` cần host Identity và cấu hình `InternalRpc` tương ứng; các ví dụ một host ở mục Community mô tả fixture monolith lịch sử. Để chạy ứng dụng hiện tại, dùng Compose. Backend test cũ vẫn ghép module trong TestServer để hồi quy; `IdentityNetworkTests` dùng hai Kestrel thật, gRPC/mTLS, PostgreSQL và Redis riêng để kiểm chứng mạng.
+Chạy riêng `SCDC.Api` cần host Identity và cấu hình `InternalRpc` tương ứng. Mục Community bên dưới cấu hình database cho test, không khởi động host ghép. Để chạy ứng dụng hiện tại, dùng Compose. Backend test component ghép module trong TestServer; `IdentityNetworkTests` và `CommunityNetworkTests` dùng ba Kestrel host thật, ba database thử và Redis để kiểm chứng mạng.
 
 Nếu Chromium chạy bằng Playwright `launchServer` trên cùng máy, có thể đặt `SCDC_BROWSER_WS_ENDPOINT` cho runner E2E; phiên bản Playwright của server và client phải trùng. Mặc định runner vẫn dùng browser local.
 
@@ -127,7 +129,7 @@ Nếu Chromium chạy bằng Playwright `launchServer` trên cùng máy, có th�
 
 ### Community tích hợp — bước 2 S3-10
 
-Host Community có chế độ `CommunityHost__Integrated=true` để chạy worker và gọi Identity/Messaging bằng gRPC/mTLS. Messaging vẫn có thể ở `SCDC.Api` với `Hosting__CommunityEnabled=false`; mỗi host chỉ nhận database của owner mình. [Cấu hình ba host](../../services/Community/README.md#chế-độ-tích-hợp-qua-mạng) ghi endpoint, allowlist, delegation `ChannelRead` và cách cấp bộ chứng chỉ ba peer vào thư mục thử mới. Profile preview mặc định phía trên vẫn ở chế độ chuẩn bị.
+Host Community có chế độ `CommunityHost__Integrated=true` để chạy worker và gọi Identity/Messaging bằng gRPC/mTLS. `SCDC.Api` chỉ chứa Messaging, không còn source hoặc đăng ký Community; mỗi host chỉ nhận database của owner mình. [Cấu hình ba host](../../services/Community/README.md#chế-độ-tích-hợp-qua-mạng) ghi endpoint, allowlist, delegation `ChannelRead` và cách cấp bộ chứng chỉ ba peer vào thư mục thử mới. Profile preview mặc định phía trên vẫn ở chế độ chuẩn bị.
 
 `CommunityNetworkTests` dựng ba Kestrel host thật và ba database thử riêng từ baseline, dùng PostgreSQL/Redis và các biến môi trường test backend hiện hành. Fixture cần tài khoản admin test được tạo database; từ chối database nguồn không có hậu tố `_test`, tự xóa database sinh ra khi kết thúc. Chạy riêng bằng `dotnet test SCDC.slnx --configuration Release --filter FullyQualifiedName~CommunityNetworkTests`. Chuyển dữ liệu, callback Identity và gateway dev thật thuộc bước 3, không thực hiện chỉ bằng việc bật flag trên stack đang dùng.
 
@@ -137,7 +139,7 @@ Compose mặc định chạy thêm `community-service`; PostgreSQL chứa hai da
 
 Với volume cũ, dừng writer và làm [runbook chuyển Community](../../database/postgres/community/README.md) trước khi `make up`. Job `community-database-init` chỉ tạo đích rỗng; `community-cutover-gate` trong preflight từ chối nguồn còn ghi hoặc transfer chưa khớp. Volume mới được entrypoint chép seed Community sang database riêng trước khi có request. Không chạy initializer này bằng tay trên dữ liệu cũ.
 
-Gateway `/api/v1/servers` và `/swagger/community` tới Community; `/api/v1/health/community/access` kiểm readiness thực. Debug `http://localhost:5028/swagger/community/`. `make check` kiểm cả ba host. Preview 5082 vẫn giữ trạng thái chuẩn bị. [Hồ sơ bước 3](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) phân biệt dev đang chạy với PR chưa merge.
+Gateway `/api/v1/servers` và `/swagger/community` tới Community; `/api/v1/health/community/access` kiểm readiness thực. Debug `http://localhost:5028/swagger/community/`. `make check` kiểm cả ba host. Preview 5082 vẫn giữ trạng thái chuẩn bị. [Hồ sơ bước 3](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi cutover lịch sử; [ranh giới nguồn hiện tại](../system/backend.md#source-isolation) ghi thay đổi sau đó.
 
 Chạy browser hồi quy trên stack thử riêng: `python3 scripts/test_gateway.py --engine podman --projects gateway community dm-mvp`. Cần Node/npm và Chromium/Chrome như các bộ E2E hiện hành; có thể đặt `SCDC_E2E_BROWSER_CHANNEL=chrome DM_BROWSER_CHANNEL=chrome`. Với Podman, dùng Docker Compose provider qua Podman socket; phiên diễn tập dùng Compose 5.6.0. Runner tự cấp secret, tạo dữ liệu thử và dọn stack; `--keep` giữ để điều tra, `--gateway-grep` chọn ca gateway khi kiểm tra sửa lỗi. DM fixture luôn xác minh database/container thử, không chạy trên dev.
 
@@ -199,32 +201,16 @@ Cả ba dùng chung [compose.yaml](../../compose.yaml) và Dockerfile. Chọn m�
 
 ### Debug backend local
 
-Phần này là tùy chọn; cần .NET SDK 10. API chạy trên máy không tự đọc `.env` của Compose. Cần cấu hình khóa JWT theo [mục dưới](#configuration), HMAC và keyring Community, cùng thư mục khóa fingerprint DM.
+Phần này là tùy chọn; cần .NET SDK 10. Mỗi host chạy trên máy chỉ nhận connection của owner mình, khóa và cấu hình RPC/mTLS tương ứng. API không tự đọc `.env` của Compose. Cấu hình [Identity](../../services/Identity/README.md) và [ba host](../../services/Community/README.md#chế-độ-tích-hợp-qua-mạng) là đầu vào bắt buộc; một lệnh chạy `SCDC.Api` không cung cấp API Identity hoặc Community.
 
-Giữ một bộ khóa riêng cho cách chạy local; không trộn với dữ liệu đã tạo bằng khóa Compose. Nếu cần môi trường thử có cấu hình đầy đủ, làm theo [database thử riêng](#local-environment) và [cấu hình API](#community-configuration) ở mục 8. Để gửi DM trên môi trường local đó, đặt thêm trong cùng terminal:
-
-```bash
-export Modules__Messaging__FingerprintKeyDirectory="$(pwd)/.local/messaging-keys"
-export Modules__Messaging__ActiveFingerprintKeyId=dm-local-v1
-mkdir -p "$Modules__Messaging__FingerprintKeyDirectory"
-if [ ! -e "$Modules__Messaging__FingerprintKeyDirectory/dm-local-v1.key" ]; then
-  (umask 077; openssl rand 32 > "$Modules__Messaging__FingerprintKeyDirectory/dm-local-v1.key")
-fi
-```
-
-Sau khi đã đặt kết nối và các khóa, build và chạy:
+Build từ gốc repo:
 
 ```bash
 dotnet restore SCDC.slnx
 dotnet build SCDC.slnx --no-restore
-dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
 ```
 
-Nếu API đã chạy từ Compose, dừng riêng container API trước khi dùng cổng 5026:
-
-```bash
-docker compose stop chat-service
-```
+Chỉ dừng container của host cần debug sau khi đã chuẩn bị cấu hình thay thế, rồi chạy project Api của đúng owner. Cập nhật endpoint và certificate peer của bên gọi nếu đổi địa chỉ RPC. Dùng Compose cho ứng dụng đầy đủ; [mục 8](#community) dành cho database thử và test, không phải cấu hình runtime dev.
 
 <a id="frontend-local--terminal-khác"></a>
 
@@ -233,10 +219,10 @@ docker compose stop chat-service
 ```bash
 cd clients/WebClient
 npm ci
-npm run dev
+SCDC_DEV_API_TARGET=http://localhost:3000 npm run dev -- --port 5173 --strictPort
 ```
 
-Phần này cần Node.js 24 và npm. Vite chạy ở cổng 3000 và chuyển tiếp `/api`, `/hubs`, `/swagger` tới API ở 5026. Nếu container web đang chiếm cổng 3000 thì chạy `docker compose stop web-client` trước. Khi dùng Vite, các kiểm tra Nginx và service mẫu vẫn phải thực hiện trên stack Compose.
+Phần này cần Node.js 24 và npm. Giữ gateway Compose ở cổng 3000; Vite ở 5173 chuyển tiếp `/api`, `/hubs` và `/swagger` qua gateway để tới đúng ba host. Các kiểm tra Nginx và service mẫu vẫn thực hiện trên stack Compose.
 
 <a id="short-commands"></a>
 
@@ -286,9 +272,9 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 
 | Khóa | Giá trị local / vai trò |
 |---|---|
-| `ConnectionStrings:Identity` | Database `scdc_chat`, user `scdc_identity`, mật khẩu local `scdc_identity_dev` |
-| `ConnectionStrings:Community` | Cùng database, user `scdc_community`, mật khẩu local `scdc_community_dev` |
-| `ConnectionStrings:Messaging` | Cùng database, user `scdc_messaging`, mật khẩu local `scdc_messaging_dev` |
+| `ConnectionStrings:Identity` | Host Identity: database `scdc_identity` trên instance riêng; password qua `IdentityPasswordFile` |
+| `ConnectionStrings:Community` | Host Community: database `scdc_community`, user `scdc_community_service`; password qua secret file |
+| `ConnectionStrings:Messaging` | Host Messaging: database nguồn `scdc_chat`, user `scdc_messaging`; password khớp role dev |
 | `Authentication:Jwt:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient`, dùng chung cho bên cấp và bên xác minh |
 | `Authentication:Jwt:PublicKeyDirectory` / `KeyIds` | Thư mục public key SPKI và danh sách ID tin cậy; file `<kid>.pub.pem`, nạp khi khởi động |
 | `Modules:Identity:PrivateKeyPath` / `SigningKeyId` | File private key PKCS#8 chỉ cấp cho Identity và key ID đang ký. Setup khởi tạo trong volume bền qua công cụ `identity-keygen` |
@@ -299,7 +285,7 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Setup tạo khóa qua công cụ `messaging-keygen`, giữ trong volume `scdc-messaging-keys` |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
-Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Identity`. Host là `localhost` khi chạy API trên máy, `postgres` trong Compose. Mỗi pool mặc định tối đa 20 kết nối; có thể đặt `Maximum Pool Size` trong connection string. Ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD` ghi đè mật khẩu local trong Compose; giữ đồng bộ với role đã cấp. Tài khoản `scdc` chỉ dùng quản trị/migration.
+Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Identity`. Host là địa chỉ publish của database khi chạy trên máy; Compose dùng `identity-postgres` cho Identity và `postgres` cho Community/Messaging. Mỗi pool mặc định tối đa 20 kết nối; có thể đặt `Maximum Pool Size`. Runtime Identity/Community mới đọc password file theo [runbook Identity](../../database/postgres/identity/README.md) và [Community](../../database/postgres/community/README.md); password nguồn trong `.env` không thay cho secret của đích sau cutover. Tài khoản `scdc` chỉ dùng quản trị/migration.
 
 Nguồn: [appsettings.json](../../services/SCDC.Api/appsettings.json), [cấu hình Development](../../services/SCDC.Api/appsettings.Development.json), [Vite config](../../clients/WebClient/vite.config.js).
 
@@ -314,7 +300,7 @@ export Modules__Identity__PrivateKeyPath="$(pwd)/.local/jwt/private/identity-loc
 export Modules__Identity__SigningKeyId=identity-local-v1
 export Authentication__Jwt__PublicKeyDirectory="$(pwd)/.local/jwt/public"
 export Authentication__Jwt__KeyIds__0=identity-local-v1
-dotnet run --project services/SCDC.Api --no-launch-profile -- --initialize-jwt-keys
+dotnet run --project services/Identity/SCDC.Identity.Api --no-launch-profile -- --initialize-jwt-keys
 ```
 
 Lệnh có thể chạy lại và không ghi đè khóa hiện hữu; private file tạo với quyền 0600 trên Unix. Giữ các biến trên trong terminal chạy API; khi chạy sample chỉ cấp các biến `Authentication__Jwt__*` và public key. Kiểm thử backend tự sinh RSA fixture riêng. Cách đổi khóa và giới hạn kiểm tra phiên của sample xem [D28–D29](../system/api-conventions.md#v1-user-token-signing).
@@ -462,13 +448,13 @@ docker compose logs chat-service postgres
 
 Hướng dẫn chạy Community trên máy với database thử riêng: build, test backend, chạy API, chạy WebClient và test trình duyệt, nâng cấp database đã có dữ liệu.
 
-**Cập nhật:** 2026-10-13, theo nền `900e226` (gồm tạo và xem server, tham gia, tìm kiếm, quyền, migration 001 đến 004). Các lệnh dưới đây để chạy lại, không phải kết quả mới. Phạm vi xem [Community](../features/community/README.md); bằng chứng xem [hồ sơ Community](../records/verification/community/README.md) và [hồ sơ hợp nhất](../records/verification/messaging/merge-2026-10-13.md).
+**Cập nhật 2026-11-28:** test component ghép owner trong TestServer; test mạng dựng ba host và ba database riêng. Database dưới đây chỉ là đầu vào thử, không phải database runtime dev. Chạy ứng dụng hoặc browser dùng Compose/gateway runner. Phạm vi xem [Community](../features/community/README.md), [ranh giới nguồn](../system/backend.md#source-isolation) và [hồ sơ lịch sử](../records/verification/community/README.md).
 
 <a id="chuẩn-bị"></a>
 
 ### Chuẩn bị
 
-Cần .NET SDK 10, Node 24/npm, Python 3, OpenSSL và PostgreSQL 18 qua Docker hoặc Podman. Chạy từ root repo trong Bash/zsh hoặc WSL; mở terminal riêng cho API và Vite. Dùng checkout chứa nền `900e226` và ghi revision của lần thử:
+Cần .NET SDK 10, Node 24/npm, Python 3, OpenSSL và PostgreSQL 18 qua Docker hoặc Podman. Chạy từ root repo trong Bash/zsh hoặc WSL. Dùng checkout hiện tại và ghi revision của lần thử:
 
 ```bash
 git status --short --branch
@@ -503,7 +489,7 @@ Chờ `pg_isready` báo "accepting connections" (gọi lại nếu chưa sẵn s
   < database/postgres/schema.sql
 ```
 
-Schema đã gồm ledger 001 đến 004 và S2-03. Cấp ba role cho database thử vừa tạo:
+Schema nguồn đã gồm các migration STEP-2; nâng email Identity sau khi build công cụ ở mục dưới. Cấp ba role cho database thử vừa tạo:
 
 ```bash
 "$SCDC_CONTAINER_ENGINE" exec -i \
@@ -521,36 +507,29 @@ Không cần seed; tài khoản thử tạo qua API. Role API không được t�
 
 <a id="cấu-hình-api-và-test"></a>
 
-### Cấu hình API và test
+### Cấu hình test
 
-Đặt trong terminal dùng để build/test/chạy API:
+Đặt trong terminal dùng để build/test. Redis thử riêng không dùng ACL hoặc dữ liệu dev:
 
 ```bash
+"$SCDC_CONTAINER_ENGINE" run --rm -d --name scdc-community-docs-redis \
+  -p 127.0.0.1:16379:6379 docker.io/library/redis:8.2.11-alpine
+"$SCDC_CONTAINER_ENGINE" exec scdc-community-docs-redis redis-cli ping
+export Authentication__Sessions__Endpoint=127.0.0.1:16379
 export ConnectionStrings__TestDatabase='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc;Password=scdc_docs_test_only'
 export ConnectionStrings__Identity='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc_identity;Password=scdc_identity_dev;Pooling=false'
 export ConnectionStrings__Community='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc_community;Password=scdc_community_dev'
 export ConnectionStrings__Messaging='Host=127.0.0.1;Port=15432;Database=scdc_community_docs_test;Username=scdc_messaging;Password=scdc_messaging_dev;Maximum Pool Size=50'
-export SCDC_TEST_JWT_DIR="$(mktemp -d /tmp/scdc-community-jwt.XXXXXX)"
-export Modules__Identity__PrivateKeyPath="$SCDC_TEST_JWT_DIR/private.pem"
-export Authentication__Jwt__PublicKeyDirectory="$SCDC_TEST_JWT_DIR/public"
-export Authentication__Jwt__KeyIds__0=identity-local-v1
-export Modules__Identity__SigningKeyId=identity-local-v1
-dotnet run --project services/SCDC.Api --no-launch-profile -- --initialize-jwt-keys
 export Modules__Identity__ExposeDevelopmentTokens=true
-export Modules__Community__Operations__ActiveKeyId=docs_test
-export Modules__Community__Operations__Keys__docs_test="$(openssl rand -base64 32)"
-export Modules__Community__KeyRingPath="$(mktemp -d /tmp/scdc-community-docs-keys.XXXXXX)"
+export Modules__Messaging__Dispatcher__Enabled=false
+export Modules__Messaging__FingerprintKeyDirectory="$(mktemp -d /tmp/scdc-test-messaging-keys.XXXXXX)"
+export Modules__Messaging__ActiveFingerprintKeyId=dm-local-v1
+(umask 077; openssl rand 32 > "$Modules__Messaging__FingerprintKeyDirectory/dm-local-v1.key")
 ```
 
-Lưu ý về khóa:
-
-- Các khóa trên chỉ dùng cho lần thử này. Không đưa khóa hay token vào commit hoặc file công khai.
-- Giữ nguyên cặp khóa RSA, HMAC key và thư mục keyring khi khởi động lại API trong cùng lần thử. Dùng thư mục khóa mới sẽ làm token, cursor và thao tác cũ không đọc được; lệnh `--initialize-jwt-keys` không ghi đè khóa hiện hữu.
-- Test tự tạo HMAC và keyring riêng, nhưng dùng cấu hình DB và Identity ở trên.
-- `KeyRingPath` phải là đường dẫn tuyệt đối; API cần quyền đọc ghi.
-- Ở môi trường cần giữ dữ liệu: lưu HMAC key và keyring bằng secret hoặc volume bền. Khi đổi khóa đang dùng, giữ lại khóa cũ để đối chiếu thao tác đã lưu. Mất khóa cũ thì API trả 503, không tạo lại tài nguyên.
-- Giữ nguyên `EnvironmentName`, vì Data Protection dùng tên `SCDC.Community.{EnvironmentName}`.
-- [Compose](../../compose.yaml) cần `COMMUNITY_OPERATION_KEY` (base64, ít nhất 32 byte) trong `.env` hoặc biến môi trường, và có volume keyring riêng.
+Chờ Redis trả `PONG`. Fixture tự cấp JWT, HMAC và keyring thử; không cần chạy
+lệnh khởi tạo khóa trên host Messaging. Test mạng tạo database riêng từ baseline
+cho từng owner rồi xóa khi kết thúc. Không dùng các biến test này để chạy stack dev.
 
 <a id="backend-tests"></a>
 
@@ -561,6 +540,9 @@ Lưu ý về khóa:
 ```bash
 dotnet restore SCDC.slnx
 dotnet build SCDC.slnx --configuration Release --no-restore -m:1
+ConnectionStrings__Migration="$ConnectionStrings__TestDatabase" \
+  dotnet tools/SCDC.DbMigrator/bin/Release/net10.0/SCDC.DbMigrator.dll \
+  database/postgres/identity/20261126_e4-01_email_upgrade.sql
 dotnet test SCDC.slnx --configuration Release --no-build --no-restore -m:1 \
   --logger 'trx;LogFileName=community-local.trx' \
   --results-directory artifacts/community-local/backend
@@ -571,15 +553,12 @@ dotnet test SCDC.slnx --configuration Release --no-build --no-restore -m:1 \
 - Test migration tự tạo và xóa database fixture (có kiểm tra trước, rollback, checksum). Chạy test không nâng cấp database ứng dụng.
 - File TRX là kết quả của lần chạy này, không thay số liệu trong hồ sơ cũ.
 
-Sau đó chạy API trong cùng terminal:
+Các fixture trên không cung cấp HTTP server để dùng bằng trình duyệt sau khi
+test kết thúc. Dừng hai container thử khi không còn dùng:
 
 ```bash
-ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:15026 \
-  dotnet run --project services/SCDC.Api --configuration Release \
-  --no-build --no-launch-profile
+"$SCDC_CONTAINER_ENGINE" stop scdc-community-docs-redis scdc-community-docs-db
 ```
-
-Swagger: `http://127.0.0.1:15026/swagger`. Health: `/api/v1/health` (không kiểm tra DB; muốn kiểm tra kết nối thì gọi một API nghiệp vụ). API không tự chạy migration.
 
 <a id="frontend-tests"></a>
 
@@ -587,32 +566,25 @@ Swagger: `http://127.0.0.1:15026/swagger`. Health: `/api/v1/health` (không ki�
 
 ### WebClient và browser tests
 
-Terminal thứ hai:
+Kiểm tra frontend từ gốc repo:
 
 ```bash
-cd clients/WebClient
-npm ci
-npm test
-npm run build
-npx playwright install chromium
-SCDC_DEV_API_TARGET=http://127.0.0.1:15026 \
-  npm run dev -- --host 127.0.0.1 --port 15300 --strictPort
+npm --prefix clients/WebClient ci
+npm --prefix clients/WebClient test
+npm --prefix clients/WebClient run build
 ```
 
-Vite chạy ở `http://127.0.0.1:15300` và chuyển tiếp `/api`, `/hubs` tới API. Nếu Linux thiếu thư viện cho Chromium, có thể chạy trong image `mcr.microsoft.com/playwright:v1.63.0-noble` (Node 24, Chromium).
-
-Terminal thứ ba (API và Vite vẫn chạy):
+Browser dùng runner dựng stack thử riêng với ba host, Nginx, PostgreSQL và Redis:
 
 ```bash
-cd clients/WebClient
-SCDC_E2E_URL=http://127.0.0.1:15300 \
-SCDC_E2E_DATABASE=scdc_community_docs_test \
-  npm run test:e2e -- community --output ../../artifacts/community-local/browser
+python3 scripts/test_gateway.py --engine "$SCDC_CONTAINER_ENGINE" \
+  --projects gateway community dm-mvp
 ```
 
-- `SCDC_E2E_DATABASE` chỉ là khai báo để bộ test tự bảo vệ, không đổi kết nối của API. Phải tự kiểm tra API đang trỏ đúng database `_test`.
-- Playwright không tự chạy API hay Vite, chỉ chấp nhận `localhost` hoặc `127.0.0.1`, chạy một worker, không thử lại.
-- Ghi vào hồ sơ: phiên bản Node, trình duyệt, hệ điều hành, commit, exit code, kết quả thực tế, trace hoặc ảnh cần thiết.
+Runner cấp secret và dữ liệu thử rồi dọn stack. Thêm `--keep` để giữ phục vụ
+điều tra; địa chỉ và tên stack nằm trong log. Cần Chromium/Chrome theo
+[cấu hình browser](#community). Không trỏ browser suite vào database dev.
+Ghi revision, exit code, bộ test thực tế và artifact vào hồ sơ của lần chạy.
 
 <a id="kiểm-tra-nhanh-bằng-tay"></a>
 
@@ -819,7 +791,7 @@ CLI dùng `ConnectionStrings__Migration` của đúng database, ghi checksum `20
 
 Chạy lại `database/postgres/module-roles.sql` để cấp quyền bảng/hàm mới và thu hồi toàn bộ quyền chéo tạm theo [S2-11](#s2-11-upgrade). Runtime không được DELETE hai bảng `channel_provisions`: dấu hủy phải còn sau cleanup. Build và chạy API/WebClient cùng phiên bản; giao diện cũ không có luồng đối chiếu và đổi khóa sau hủy. Không tự rollback về writer tạo phòng cũ hoặc chạy down migration; phải dừng writer và xác minh tương thích dữ liệu trước khi chọn phương án rollback.
 
-Community giữ tên phòng trong PREPARING, không đưa phòng vào list/detail. RPC adapter trong process có deadline 2 giây và chỉ chạy ngoài transaction Community; Messaging tự mở connection/transaction của mình. Sau 5 giây chưa hoàn tất, request/worker tranh chốt CANCELLED; chỉ báo `409 CHANNEL_CREATION_CANCELLED` khi quyết định hủy đã commit. Owner chưa dọn được thì `cleanupPending` vẫn còn và worker tiếp tục. Lease worker 6 giây, hết lease có thể nhận lại sau restart. Worker lấy theo `next_attempt_at`; Confirm/Cancel lỗi có backoff tối đa 30 giây để công việc cũ không chiếm hết lượt của thao tác mới.
+Community giữ tên phòng trong PREPARING, không đưa phòng vào list/detail. Adapter provision hiện gọi gRPC/mTLS với deadline 2 giây và chỉ chạy ngoài transaction Community; Messaging tự mở connection/transaction của mình. Sau 5 giây chưa hoàn tất, request/worker tranh chốt CANCELLED; chỉ báo `409 CHANNEL_CREATION_CANCELLED` khi quyết định hủy đã commit. Owner chưa dọn được thì `cleanupPending` vẫn còn và worker tiếp tục. Lease worker 6 giây, hết lease có thể nhận lại sau restart. Worker lấy theo `next_attempt_at`; Confirm/Cancel lỗi có backoff tối đa 30 giây để công việc cũ không chiếm hết lượt của thao tác mới.
 
 Khi POST mất phản hồi hoặc trả `503 OPERATION_OUTCOME_UNKNOWN`, giữ nguyên khóa/nội dung và GET `/api/v1/servers/{serverId}/channel-operations/{clientOperationId}`. GET chỉ đọc trạng thái, không tiếp tục công việc. COMPLETED thì đọc phòng hiện tại; CANCELLED thì thao tác thử lại dùng khóa mới; PREPARING thì tiếp tục đối chiếu. Không suy rằng 404 nghĩa POST chưa tới.
 

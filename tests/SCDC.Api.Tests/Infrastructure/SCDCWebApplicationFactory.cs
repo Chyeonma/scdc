@@ -1,4 +1,5 @@
 extern alias IdentityApi;
+extern alias CommunityApi;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -38,15 +39,21 @@ public sealed class SCDCWebApplicationFactory : WebApplicationFactory<ApiProgram
         })));
         builder.ConfigureServices((context, services) =>
         {
-            // Legacy component regressions compose Identity in TestServer only.
+            // Component regressions compose owner implementations in TestServer only.
             // Independent-host tests exercise the production gRPC path separately.
             SCDC.Modules.Identity.IdentityModule.AddIdentityModule(services, context.Configuration, configureAuthentication: false);
+            SCDC.Modules.Community.CommunityModule.AddCommunityModule(services, context.Configuration, "Development");
             services.AddControllers().AddApplicationPart(typeof(IdentityApi::SCDC.Identity.Api.Controllers.Identity.AuthController).Assembly);
+            services.AddControllers().AddApplicationPart(typeof(CommunityApi::SCDC.Community.Api.Controllers.Community.ServersController).Assembly);
             services.Configure<Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions>(options =>
             {
                 var original=options.SchemaGeneratorOptions.SchemaIdSelector;
                 options.CustomSchemaIds(type=>type.Namespace?.StartsWith("SCDC.Identity.Api",StringComparison.Ordinal)==true
-                    ? "Identity"+original(type) : original(type));
+                    ? "Identity"+original(type)
+                    : type.Namespace?.StartsWith("SCDC.Community.Api.Errors",StringComparison.Ordinal)==true
+                        ? "Community"+original(type) : original(type));
+                options.OperationFilter<CommunityApi::SCDC.Community.Api.OpenApi.CommunityServerViewOperationFilter>();
+                options.SchemaFilter<CommunityApi::SCDC.Community.Api.OpenApi.CommunityResponseSchemaFilter>();
             });
             // Requests drive provisioning deterministically. Recovery tests explicitly
             // start the worker; unrelated factory instances must not steal fault fixtures.

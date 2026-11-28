@@ -11,7 +11,6 @@
     <ProjectReference Include="../SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
     <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />
     <ProjectReference Include="../../SCDC.Contracts/SCDC.Contracts.csproj" />
-    <ProjectReference Include="../../SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
     <ProjectReference Include="../../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
@@ -20,14 +19,5 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
-  </ItemGroup>
-  <!-- Technical HTTP adapters are compiled into each host; neither host references the other. -->
-  <ItemGroup>
-    <Compile Include="../../SCDC.Api/Controllers/ApiControllerBase.cs" Link="Http/ApiControllerBase.cs" />
-    <Compile Include="../../SCDC.Api/Controllers/Identity/ClaimsPrincipalExtensions.cs" Link="Http/ClaimsPrincipalExtensions.cs" />
-    <Compile Include="../../SCDC.Api/Errors/*.cs" Link="Errors/%(Filename)%(Extension)" />
-    <Compile Include="../../SCDC.Api/Authentication/ConsumerAuthentication.cs" Link="Authentication/ConsumerAuthentication.cs" />
-    <Compile Include="../../SCDC.Api/OpenApi/AuthenticationOperationFilter.cs" Link="OpenApi/AuthenticationOperationFilter.cs" />
-    <Compile Include="../../SCDC.Api/Observability/ScdcTelemetry.cs" Link="Observability/ScdcTelemetry.cs" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,5 @@
 using SCDC.BuildingBlocks.Application.Results;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Features.Permissions.Application;
 using SCDC.Modules.Community.Features.Permissions.Domain;

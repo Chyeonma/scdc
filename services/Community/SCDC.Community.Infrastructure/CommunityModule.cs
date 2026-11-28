@@ -7,19 +7,17 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using SCDC.BuildingBlocks.Application;
-using SCDC.BuildingBlocks.Infrastructure;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
-using SCDC.BuildingBlocks.Infrastructure.Outbox;
+using SCDC.Modules.Community.Infrastructure;
+using SCDC.Modules.Community.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Outbox;
 using SCDC.Modules.Community.Features.Servers.Application;
 using SCDC.Modules.Community.Features.Memberships.Application;
 using SCDC.Modules.Community.Features.Permissions.Application;
 using SCDC.Modules.Community.Features.Permissions.Infrastructure;
 using SCDC.Modules.Community.Features.Channels.Application;
 using SCDC.Contracts.Community;
-using SCDC.Modules.Community.Infrastructure;
-using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Modules.Community.Infrastructure.Paging;
-using SCDC.BuildingBlocks.Infrastructure.Authentication;
+using SCDC.Modules.Community.Infrastructure.Authentication;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Infrastructure.Access;
 
@@ -33,9 +31,9 @@ public static class CommunityModule
         string environmentName,
         bool runWorkers = true)
     {
-        _ = ModuleDatabaseConnection.Get(configuration, "Community");
+        _ = ModuleDatabaseConnection.Get(configuration);
         var section = configuration.GetSection(CommunityOptions.SectionName);
-        services.AddSingleton<IIdentityFenceOwner>(new PostgresIdentityFenceOwner(configuration, AccessOwner.Community));
+        services.AddSingleton<IIdentityFenceOwner>(new PostgresIdentityFenceOwner(configuration));
         services.AddOptions<CommunityOptions>().Bind(section)
             .Validate(value => !string.IsNullOrWhiteSpace(value.KeyRingPath) && Path.IsPathFullyQualified(value.KeyRingPath), "Modules:Community:KeyRingPath must be an absolute persistent directory.")
             .Validate(value => value.Operations.IsValid(), "Community HMAC keys must be base64 secrets containing at least 32 bytes; configure an active key.")
@@ -44,9 +42,9 @@ public static class CommunityModule
         services.AddOptions<KeyManagementOptions>().Configure<IOptions<CommunityOptions>, ILoggerFactory>((keys, settings, logging) =>
             keys.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(settings.Value.KeyRingPath), logging));
         services.AddSingleton(provider => NpgsqlDataSource.Create(
-            ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>(), "Community")));
+            ModuleDatabaseConnection.Get(provider.GetRequiredService<IConfiguration>())));
         services.AddSingleton<RelationalWorkScopeFactory>();
-        services.AddSingleton(new TransactionalOutbox("community"));
+        services.AddSingleton(new TransactionalOutbox());
         services.AddSingleton<ServerReader>();
         services.AddSingleton<ServerCursorCodec>();
         services.AddSingleton<SearchCursorCodec>();
@@ -57,7 +55,7 @@ public static class CommunityModule
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<CommunityManagementGuard>();
         services.AddScoped<CommunityIdentityAccess>();
-        services.AddSingleton<ICommunityFenceOwner>(new PostgresCommunityFenceOwner(configuration,AccessOwner.Community));
+        services.AddSingleton<ICommunityFenceOwner>(new PostgresCommunityFenceOwner(configuration));
         services.AddSingleton<CommunityPolicyCoordinator>();
         services.AddSingleton<ICommunityChangeStatusReader>(p=>p.GetRequiredService<CommunityPolicyCoordinator>());
         if (runWorkers) services.AddHostedService<CommunityAccessWorker>();

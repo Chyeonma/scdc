@@ -1,18 +1,16 @@
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.OpenApi;
-using SCDC.Api.Authentication;
-using SCDC.Api.Errors;
-using SCDC.Api.Observability;
-using SCDC.Api.OpenApi;
-using SCDC.BuildingBlocks.Infrastructure.Transport;
+using SCDC.Community.Api.Authentication;
+using SCDC.Community.Api.Errors;
+using SCDC.Community.Api.Observability;
+using SCDC.Community.Api.OpenApi;
+using SCDC.Modules.Community.Infrastructure.Transport;
 using SCDC.Community.Api.Preparation;
 using SCDC.Contracts.Identity;
 using SCDC.Contracts.Messaging;
 using SCDC.Modules.Community;
 using SCDC.Modules.Community.Infrastructure;
-using SCDC.Modules.Community.Infrastructure.Transport;
 using SCDC.Community.Api;
-using SCDC.Api.InternalRpc;
 using SCDC.Community.Api.InternalRpc;
 
 var builder = WebApplication.CreateBuilder(args);

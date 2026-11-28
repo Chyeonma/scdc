@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using NpgsqlTypes;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Modules.Community.Features.Channels.Application;
 using SCDC.Modules.Community.Features.Permissions.Domain;
 using SCDC.Modules.Community.Features.Permissions.Infrastructure;

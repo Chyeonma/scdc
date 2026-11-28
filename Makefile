@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-ENGINE ?= docker
+ENGINE ?= podman
 COMPOSE ?= $(ENGINE) compose
 COMPOSE_ARGS ?=
 ENV_FILE ?= .env

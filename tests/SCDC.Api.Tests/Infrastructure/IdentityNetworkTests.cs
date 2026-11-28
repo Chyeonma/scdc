@@ -1,4 +1,5 @@
 extern alias IdentityApi;
+extern alias CommunityApi;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
@@ -21,6 +22,7 @@ using SCDC.BuildingBlocks.Infrastructure.Transport;
 using SCDC.Contracts.Identity;
 using W = SCDC.Identity.Grpc.V1;
 using IdentityProgram = IdentityApi::IdentityProgram;
+using CommunityProgram = CommunityApi::CommunityProgram;
 
 namespace SCDC.Api.Tests.Infrastructure;
 
@@ -59,7 +61,7 @@ public sealed class IdentityNetworkTests(IdentityNetworkFixture fixture) : IClas
         Assert.Equal(b.UserId,(await directory.FindByIdAsync(b.UserId,default))!.Id);
         var summaries=await scope.ServiceProvider.GetRequiredService<IHistoricalUserSummaryReader>().ReadAsync([a.UserId,b.UserId,Guid.NewGuid()],default);
         Assert.Equal(3,summaries.Count);Assert.Contains(summaries.Values,item=>item.Availability=="unavailable");
-        var server=await fixture.Post(fixture.Chat,"/api/v1/servers",new{clientOperationId=Guid.NewGuid(),name="Remote Identity",visibility="public"},a.Token,201);
+        var server=await fixture.Post(fixture.Community,"/api/v1/servers",new{clientOperationId=Guid.NewGuid(),name="Remote Identity",visibility="public"},a.Token,201);
         Assert.Equal(a.UserId.ToString(),server!["ownerUserId"]!.GetValue<string>());
         var conversation=await fixture.Post(fixture.Chat,"/api/v1/direct-conversations",new{peerUserId=b.UserId},a.Token,200);
         var space=conversation!["id"]!.GetValue<string>();
@@ -117,8 +119,8 @@ public sealed class IdentityNetworkTests(IdentityNetworkFixture fixture) : IClas
     public async Task Authenticated_peer_cannot_select_an_owner_outside_its_rpc_permissions()
     {
         var configuration=fixture.IdentityHost.Services.GetRequiredService<IConfiguration>();
-        var before=configuration["InternalRpc:PeerOwners:chat-service:1"];
-        configuration["InternalRpc:PeerOwners:chat-service:1"]="";
+        var before=configuration["InternalRpc:PeerOwners:chat-service:0"];
+        configuration["InternalRpc:PeerOwners:chat-service:0"]="";
         try
         {
             using var transport=new RpcTransport(fixture.ClientSettings("chat-service"));
@@ -126,7 +128,7 @@ public sealed class IdentityNetworkTests(IdentityNetworkFixture fixture) : IClas
             var error=await Assert.ThrowsAsync<RpcException>(async()=>await client.AcquirePermitAsync(new W.AccessRequest{Owner=W.Owner.Messaging},deadline:DateTime.UtcNow.AddSeconds(2)));
             Assert.Equal(StatusCode.PermissionDenied,error.StatusCode);
         }
-        finally{configuration["InternalRpc:PeerOwners:chat-service:1"]=before;}
+        finally{configuration["InternalRpc:PeerOwners:chat-service:0"]=before;}
     }
 
     [Fact]
@@ -217,6 +219,9 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
     internal SCDC.Modules.Identity.Infrastructure.Email.IAccountEmailSender? EmailSender { get; init; }
     public WebApplicationFactory<ApiProgram> Monolith { get; private set; }=null!;
     public WebApplicationFactory<IdentityProgram> IdentityHost { get; private set; }=null!;
+    public WebApplicationFactory<CommunityProgram> CommunityHost { get; private set; }=null!;
+    public HttpClient Community { get; private set; }=null!;
+    public string CommunityRpc { get; private set; }="";
     public HttpClient Chat { get; private set; }=null!;
     public HttpClient Identity { get; private set; }=null!;
     public string IdentityRpc { get; private set; }="";
@@ -224,7 +229,8 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
     public NetworkFaults IdentityFaults { get; } = new();
     public NetworkFaults OwnerFaults { get; } = new();
     private readonly string directory=Directory.CreateTempSubdirectory("scdc-rpc-test-").FullName;
-    private readonly string database="scdc_identity_network_"+Guid.NewGuid().ToString("N")+"_test";
+    private readonly string database="scdc_identity_net_"+Guid.NewGuid().ToString("N")[..12];
+    private readonly Dictionary<string,string> databases = new();
     private string admin="";
     private const string Password="NetworkIdentity!2026";
     public IConfiguration ClientSettings(string peer)=>new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>
@@ -234,37 +240,63 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         Certificates();
         admin=Environment.GetEnvironmentVariable("ConnectionStrings__TestDatabase") ?? throw new InvalidOperationException("Test database is required.");
         if(!new NpgsqlConnectionStringBuilder(admin).Database!.EndsWith("_test",StringComparison.Ordinal))throw new InvalidOperationException("An isolated test database is required.");
-        await using(var connection=new NpgsqlConnection(admin))
+        var root = SCDC.Api.Tests.Community.CommunityMigrationTests.RepoRoot;
+        foreach (var owner in new[] { "Identity", "Community", "Messaging" })
         {
-            await connection.OpenAsync();
-            await new NpgsqlCommand("CREATE DATABASE "+database,connection).ExecuteNonQueryAsync();
+            var name = database + "_" + owner.ToLowerInvariant() + "_test";
+            await using (var connection = new NpgsqlConnection(admin))
+            {
+                await connection.OpenAsync();
+                await new NpgsqlCommand("CREATE DATABASE " + name, connection).ExecuteNonQueryAsync();
+            }
+            var target = new NpgsqlConnectionStringBuilder(admin) { Database = name, Pooling = false }.ConnectionString;
+            databases[owner] = target;
+            await using var destination = new NpgsqlConnection(target);
+            await destination.OpenAsync();
+            async Task Execute(string sql) => await new NpgsqlCommand(sql, destination) { CommandTimeout = 30 }.ExecuteNonQueryAsync();
+            if (owner == "Community")
+            {
+                foreach (var file in new[] { "schema.sql", "baseline.sql", "runtime-grants.sql" })
+                    await Execute(await File.ReadAllTextAsync(Path.Combine(root, "database/postgres/community", file)));
+            }
+            else if (owner == "Identity")
+            {
+                await Execute("CREATE EXTENSION pg_trgm;");
+                await Execute(await File.ReadAllTextAsync(Path.Combine(root, "database/postgres/identity/schema.sql")));
+                var baseline = await File.ReadAllTextAsync(Path.Combine(root, "database/postgres/identity/baseline.sql"));
+                await Execute(baseline.Replace(":'baseline_checksum'", "'" + new string('0', 64) + "'", StringComparison.Ordinal));
+                await Execute(await File.ReadAllTextAsync(Path.Combine(root, "database/postgres/identity/runtime-grants.sql")));
+                await IdentityEmailTestDatabase.UpgradeAsync(target);
+            }
+            else
+            {
+                var schema = await File.ReadAllTextAsync(Path.Combine(root, "database/postgres/schema.sql"));
+                await Execute(string.Join('\n', schema.Split('\n').Where(line => !line.TrimStart().StartsWith('\\'))));
+                var roles = await File.ReadAllTextAsync(Path.Combine(root, "database/postgres/module-roles.sql"));
+                await Execute("BEGIN;\n" + roles[roles.IndexOf("REVOKE CREATE ON SCHEMA", StringComparison.Ordinal)..]);
+                await Execute("DROP SCHEMA identity CASCADE; DROP SCHEMA community CASCADE;");
+            }
         }
-        var target=new NpgsqlConnectionStringBuilder(admin){Database=database,Pooling=false}.ConnectionString;
-        await using(var connection=new NpgsqlConnection(target))
-        {
-            await connection.OpenAsync();
-            var schema=await File.ReadAllTextAsync(Path.Combine(SCDC.Api.Tests.Community.CommunityMigrationTests.RepoRoot,"database/postgres/schema.sql"));
-            schema=string.Join('\n',schema.Split('\n').Where(line=>!line.TrimStart().StartsWith('\\')));
-            await new NpgsqlCommand(schema,connection){CommandTimeout=30}.ExecuteNonQueryAsync();
-            var roles=await File.ReadAllTextAsync(Path.Combine(SCDC.Api.Tests.Community.CommunityMigrationTests.RepoRoot,"database/postgres/module-roles.sql"));
-            roles="BEGIN;\n"+roles[roles.IndexOf("REVOKE CREATE ON SCHEMA",StringComparison.Ordinal)..];
-            await new NpgsqlCommand(roles,connection){CommandTimeout=30}.ExecuteNonQueryAsync();
-        }
-        await IdentityEmailTestDatabase.UpgradeAsync(target);
         var prefix="scdc:auth:network:"+Guid.NewGuid().ToString("N")+":";
         Dictionary<string,string?> Settings(string peer,string allowed)
         {
             var values=TestJwtKeys.Configuration();
             foreach(var pair in ClientSettings(peer).AsEnumerable())values[pair.Key]=pair.Value;
             values["InternalRpc:AllowedPeers:0"]=allowed;values["InternalRpc:Port"]="0";values["InternalRpc:HttpPort"]="0";
-            values["InternalRpc:PeerOwners:chat-service:0"]="Community";
-            values["InternalRpc:PeerOwners:chat-service:1"]="Messaging";
+            values["InternalRpc:PeerOwners:chat-service:0"]="Messaging";
+            values["InternalRpc:PeerOwners:community-service:0"]="Community";
+            values["InternalRpc:PermitDelegations:community-service:Messaging:0"]="ChannelRead";
+            values["InternalRpc:Community:Peer"]="community-service";
             values["Authentication:Sessions:KeyPrefix"]=prefix;
             values["Modules:Messaging:Dispatcher:Enabled"]="true";
-            foreach(var owner in new[]{"Identity","Community","Messaging"})
+            var currentOwner = peer == "identity-service" ? "Identity" : peer == "community-service" ? "Community" : "Messaging";
+            foreach (var owner in new[] { "Identity", "Community", "Messaging" })
             {
-                var existing=Environment.GetEnvironmentVariable("ConnectionStrings__"+owner) ?? throw new InvalidOperationException("Runtime test role is required.");
-                values["ConnectionStrings:"+owner]=new NpgsqlConnectionStringBuilder(existing){Database=database,Pooling=false}.ConnectionString;
+                values["ConnectionStrings:" + owner] = "";
+                if (owner != currentOwner) continue;
+                var existing = Environment.GetEnvironmentVariable("ConnectionStrings__" + owner) ?? throw new InvalidOperationException("Runtime test role is required.");
+                values["ConnectionStrings:" + owner] = new NpgsqlConnectionStringBuilder(existing)
+                { Database = new NpgsqlConnectionStringBuilder(databases[owner]).Database, Pooling = false }.ConnectionString;
             }
             values["Modules:Community:Operations:ActiveKeyId"]="network";
             values["Modules:Community:Operations:Keys:network"]=Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
@@ -276,13 +308,28 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
             return values;
         }
         var mono=Settings("chat-service","identity-service");
+        mono["InternalRpc:AllowedPeers:1"]="community-service";
         mono["ConnectionStrings:Identity"]="";mono["Modules:Identity:PrivateKeyPath"]="";
         Monolith=new WebApplicationFactory<ApiProgram>().WithWebHostBuilder(builder=>
         { builder.UseEnvironment("Development");builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(mono));
           builder.ConfigureServices(services => { services.AddSingleton(OwnerFaults); services.Configure<GrpcServiceOptions>(options => options.Interceptors.Add<NetworkFaults>()); }); });
         Monolith.UseKestrel(0);Monolith.StartServer();
         MonolithRpc=Address(Monolith.Services,"https");Chat=new HttpClient{BaseAddress=new Uri(Address(Monolith.Services,"http"))};
+        var community = Settings("community-service", "identity-service");
+        community["CommunityHost:Integrated"] = "true";
+        community["InternalRpc:AllowedPeers:1"] = "chat-service";
+        community["InternalRpc:Messaging:Endpoint"] = MonolithRpc;
+        CommunityHost = new WebApplicationFactory<CommunityProgram>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+            builder.UseSetting("CommunityHost:Integrated", "true");
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(community));
+        });
+        CommunityHost.UseKestrel(0); CommunityHost.StartServer();
+        CommunityRpc = Address(CommunityHost.Services, "https");
+        Community = new HttpClient { BaseAddress = new Uri(Address(CommunityHost.Services, "http")) };
         var identity=Settings("identity-service","chat-service");
+        identity["InternalRpc:AllowedPeers:1"]="community-service";
         if (EmailSender is not null)
         {
             identity["Modules:Identity:Email:Enabled"] = "true";
@@ -300,7 +347,7 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         identityDatabase.Password="";
         identity["ConnectionStrings:Identity"]=identityDatabase.ConnectionString;
         identity["ConnectionStrings:IdentityPasswordFile"]=databasePasswordFile;
-        identity["InternalRpc:Community:Endpoint"]=MonolithRpc;identity["InternalRpc:Messaging:Endpoint"]=MonolithRpc;
+        identity["InternalRpc:Community:Endpoint"]=CommunityRpc;identity["InternalRpc:Messaging:Endpoint"]=MonolithRpc;
         IdentityHost=new WebApplicationFactory<IdentityProgram>().WithWebHostBuilder(builder=>
         { builder.UseEnvironment("Development");builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(identity));
           builder.ConfigureServices(services =>
@@ -312,8 +359,10 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         IdentityHost.UseKestrel(0);IdentityHost.StartServer();
         IdentityRpc=Address(IdentityHost.Services,"https");Identity=new HttpClient{BaseAddress=new Uri(Address(IdentityHost.Services,"http"))};
         Monolith.Services.GetRequiredService<IConfiguration>()["InternalRpc:Identity:Endpoint"]=IdentityRpc;
+        CommunityHost.Services.GetRequiredService<IConfiguration>()["InternalRpc:Identity:Endpoint"]=IdentityRpc;
         await SCDCWebApplicationFactory.WaitForAccessReadyAsync(Identity,"/api/v1/health/identity/access");
         await SCDCWebApplicationFactory.WaitForAccessReadyAsync(Chat);
+        await SCDCWebApplicationFactory.WaitForAccessReadyAsync(Community,"/health/ready");
     }
     private static string Address(IServiceProvider services,string scheme)=>services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses
         .First(value=>value.StartsWith(scheme+":",StringComparison.Ordinal)).Replace("[::]","127.0.0.1").TrimEnd('/')+"/";
@@ -343,7 +392,7 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
         caRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign|X509KeyUsageFlags.CrlSign,true));
         using var ca=caRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-7),DateTimeOffset.UtcNow.AddDays(7));
         File.WriteAllText(Path.Combine(directory,"ca.crt"),ca.ExportCertificatePem());
-        foreach(var peer in new[]{"identity-service","chat-service","other-service","expired","untrusted"})
+        foreach(var peer in new[]{"identity-service","chat-service","community-service","other-service","expired","untrusted"})
         {
             using var key=RSA.Create(2048);
             var name=peer=="expired"?"chat-service":peer;
@@ -360,8 +409,8 @@ public sealed class IdentityNetworkFixture : IAsyncLifetime
     }
     public async Task DisposeAsync()
     {
-        Chat?.Dispose();Identity?.Dispose();if(IdentityHost is not null)await IdentityHost.DisposeAsync();if(Monolith is not null)await Monolith.DisposeAsync();
-        if(admin.Length>0){await using var connection=new NpgsqlConnection(admin);await connection.OpenAsync();await new NpgsqlCommand("DROP DATABASE IF EXISTS "+database+" WITH (FORCE)",connection).ExecuteNonQueryAsync();}
+        Chat?.Dispose();Identity?.Dispose();Community?.Dispose();if(CommunityHost is not null)await CommunityHost.DisposeAsync();if(IdentityHost is not null)await IdentityHost.DisposeAsync();if(Monolith is not null)await Monolith.DisposeAsync();
+        if(admin.Length>0){await using var connection=new NpgsqlConnection(admin);await connection.OpenAsync();foreach(var target in databases.Values){var name=new NpgsqlConnectionStringBuilder(target).Database;await new NpgsqlCommand("DROP DATABASE IF EXISTS "+name+" WITH (FORCE)",connection).ExecuteNonQueryAsync();}}
         Directory.Delete(directory,true);
     }
 }

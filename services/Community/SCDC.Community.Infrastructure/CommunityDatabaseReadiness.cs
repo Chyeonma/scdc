@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using SCDC.BuildingBlocks.Infrastructure;
+using SCDC.Modules.Community.Infrastructure;
 
 namespace SCDC.Modules.Community.Infrastructure;
 
@@ -12,7 +12,7 @@ public sealed class CommunityDatabaseReadiness(IConfiguration configuration)
         deadline.CancelAfter(TimeSpan.FromSeconds(2));
         try
         {
-            await using var connection = new NpgsqlConnection(ModuleDatabaseConnection.Get(configuration, "Community"));
+            await using var connection = new NpgsqlConnection(ModuleDatabaseConnection.Get(configuration));
             await connection.OpenAsync(deadline.Token);
             await using var query = new NpgsqlCommand("""
                 SELECT to_regclass('community.servers') IS NOT NULL

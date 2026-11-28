@@ -1,6 +1,6 @@
 using System.Text.Json;
 using NpgsqlTypes;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Modules.Community.Features.Servers.Application;
 using SCDC.Modules.Community.Infrastructure.Paging;
 

@@ -38,13 +38,13 @@ Chỉ sau đối chiếu mới commit grant, record `ready` và mở login đíc
 
 Dừng và drain cả hai phía. Nếu đích còn đúng manifest đã chuyển, chạy lại CLI với `--rollback-before-writes` và artifact directory mới. Lệnh xác minh trước khi khóa runtime đích, ghi `rolled_back`, rồi mở runtime nguồn. Kiểm tra nguồn đọc được bằng role cũ. Không chạy rollback chỉ từ lỗi HTTP hoặc đổi connection string bằng tay.
 
-Sau khi CLI rollback thành công, cấu hình phục hồi gồm host cũ đăng ký Community, keyring/HMAC cũ, callback Identity về chat-service và gateway gửi Community về host đó:
+Sau khi CLI rollback thành công, cấu hình phục hồi gồm host cũ đăng ký Community, keyring/HMAC cũ, callback Identity về chat-service và gateway gửi Community về host đó. Đặt `SCDC_COMMUNITY_ROLLBACK_IMAGE` tới tag/digest của image host cũ đã build và kiểm chứng trước lần dọn nguồn ngày 2026-11-28. Overlay yêu cầu biến này và xóa cấu hình build; checkout hiện tại chỉ chứa host Messaging và từ chối bật lại Community:
 
 ```bash
 SCDC_COMMUNITY_ROLLBACK_IMAGE=<image-cu-da-kiem-chung> make up ROLLBACK=1
 ```
 
-Override cần Docker Compose 2.24.4+ cho `!override`; dùng cùng project/`.env` như dev. Target Community nằm ở profile tắt. Gate rollback vẫn yêu cầu record đã xác minh, nguồn `LOGIN`, đích `NOLOGIN` và không còn connection runtime đích; đổi manifest đơn thuần không vượt qua được gate.
+Override cần Docker Compose 2.24.4+ cho `!override` và `!reset`; dùng cùng project/`.env` như dev. Target Community nằm ở profile tắt. Image rollback phải có sẵn trước triển khai; thiếu biến thì Compose dừng, không dùng ngầm image hiện hành. Hồ sơ S3-10 là bằng chứng của cấu hình trước lần dọn nguồn này, không xác nhận image rollback mới được chọn. Gate rollback vẫn yêu cầu record đã xác minh, nguồn `LOGIN`, đích `NOLOGIN` và không còn connection runtime đích; đổi manifest đơn thuần không vượt qua được gate.
 
 Nếu đích đã ghi hoặc sequence/generation thay đổi, CLI rollback từ chối và giữ nguồn đóng. Ưu tiên sửa tiến. Quay lại sau ghi cần mapping chênh lệch cho dữ liệu/fence/journal/khóa và diễn tập riêng. Tách Community không đổi quy trình generation Redis của Identity. Sau rollback, có thể chạy lại cutover nếu nguồn chưa đổi; nguồn đã ghi mới thì cần đích mới hoặc đối chiếu có review.
 
