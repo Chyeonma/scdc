@@ -44,7 +44,7 @@ flowchart LR
 - Identity công bố phiên vào Redis; các consumer chỉ kiểm JWT bằng public key và đọc Redis. Permit/lookup và fence hai chiều đi qua gRPC HTTP/2 với mTLS, deadline hai giây và peer/owner allowlist. Telemetry đi qua Collector tới OpenObserve.
 - Identity readiness `/api/v1/health/identity/access` kiểm tra PostgreSQL và Redis. Chưa có worker email (đang ở nhánh `feat/identity`, xem [email](../features/accounts/email-links.md#status)) hoặc Media.
 
-Code: [Program.cs](../../services/SCDC.Api/Program.cs), [Compose](../../compose.yaml), [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs). Cấu hình xem [môi trường](environments.md); cách chạy xem [hướng dẫn phát triển](../guides/development.md).
+Code: [Program.cs](../../services/Messaging/SCDC.Messaging.Api/Program.cs), [Compose](../../compose.yaml), [HealthController](../../services/Messaging/SCDC.Messaging.Api/Controllers/HealthController.cs). Cấu hình xem [môi trường](environments.md); cách chạy xem [hướng dẫn phát triển](../guides/development.md).
 
 <a id="boundaries"></a>
 

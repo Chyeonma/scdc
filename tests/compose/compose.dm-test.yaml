@@ -13,7 +13,7 @@ services:
   identity-keygen:
     build:
       context: ../..
-      dockerfile: services/SCDC.Api/Dockerfile
+      dockerfile: services/Messaging/SCDC.Messaging.Api/Dockerfile
     entrypoint: ["dotnet", "SCDC.Api.dll", "--initialize-jwt-keys"]
     environment:
       Authentication__Jwt__PublicKeyDirectory: /app/auth-public
@@ -46,7 +46,7 @@ services:
   chat-service:
     build:
       context: ../..
-      dockerfile: services/SCDC.Api/Dockerfile
+      dockerfile: services/Messaging/SCDC.Messaging.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Authentication__Sessions__Endpoint: auth-redis:6379

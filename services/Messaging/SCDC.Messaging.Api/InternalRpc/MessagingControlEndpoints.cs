@@ -6,6 +6,7 @@ using SCDC.BuildingBlocks.Infrastructure.Transport;
 using SCDC.Contracts.Community;
 using SCDC.Contracts.Identity;
 using SCDC.Contracts.Messaging;
+using SCDC.Messaging.Grpc;
 using C = SCDC.Community.Grpc.V1;
 using M = SCDC.Messaging.Grpc.V1;
 
@@ -45,16 +46,16 @@ public sealed class MessagingChannelProvisionEndpoint(
     private static async Task<M.ProvisionStatus> Run(ServerCallContext context, Func<Task<ProvisionStatus?>> action)
     {
         RpcPeerGuard.RequirePeer(context, "community-service");
-        try { return CommunityWire.Write(await action()); }
+        try { return ChannelProvisioningWire.Write(await action()); }
         catch (ProvisionConflictException)
         { throw new RpcException(new Status(StatusCode.AlreadyExists, "The operation conflicts with existing channel state.")); }
     }
     public override Task<M.ProvisionStatus> Prepare(M.PrepareChannel request, ServerCallContext context) =>
-        Run(context, async () => await provision.PrepareAsync(CommunityWire.Read(request), context.CancellationToken));
+        Run(context, async () => await provision.PrepareAsync(ChannelProvisioningWire.Read(request), context.CancellationToken));
     public override Task<M.ProvisionStatus> Confirm(M.ChannelDecision request, ServerCallContext context) =>
-        Run(context, async () => await provision.ConfirmAsync(CommunityWire.Read(request), context.CancellationToken));
+        Run(context, async () => await provision.ConfirmAsync(ChannelProvisioningWire.Read(request), context.CancellationToken));
     public override Task<M.ProvisionStatus> Cancel(M.ChannelDecision request, ServerCallContext context) =>
-        Run(context, async () => await provision.CancelAsync(CommunityWire.Read(request), context.CancellationToken));
+        Run(context, async () => await provision.CancelAsync(ChannelProvisioningWire.Read(request), context.CancellationToken));
     public override Task<M.ProvisionStatus> Activate(C.ChannelReadyPermit request, ServerCallContext context) =>
         Run(context, async () => await provision.ActivateAsync(CommunityWire.Read(request), context.CancellationToken));
     public override Task<M.ProvisionStatus> Get(M.ProvisionQuery request, ServerCallContext context) => Run(context, async () =>

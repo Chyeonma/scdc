@@ -13,7 +13,7 @@ Trang này quy định cách viết API công khai (định dạng, mã lỗi) v
 - Tiền tố `/api/v1`.
 - ID là định danh cố định. Người thực hiện lấy từ phiên đăng nhập, không lấy từ request.
 - Thời gian theo UTC.
-- `sequence` và `version` của tin nhắn gửi dạng chuỗi số nguyên để client xử lý chính xác. [ConversationMessagesController](../../services/SCDC.Api/Controllers/Messaging/ConversationMessagesController.cs), [MessageResponse](../../services/Messaging/SCDC.Messaging/Application/Messages/ITextMessageSender.cs)
+- `sequence` và `version` của tin nhắn gửi dạng chuỗi số nguyên để client xử lý chính xác. [ConversationMessagesController](../../services/Messaging/SCDC.Messaging.Api/Controllers/Messaging/ConversationMessagesController.cs), [MessageResponse](../../services/Messaging/SCDC.Messaging/Application/Messages/ITextMessageSender.cs)
 
 ### Lỗi
 
@@ -51,7 +51,7 @@ Lỗi trả `application/problem+json` (DEC-061) với các trường `type`, `t
 - Endpoint chưa làm: ghi trong tài liệu tính năng với nhãn "đề xuất"; chưa gọi được.
 - Đổi schema thì sửa luôn frontend, backend, mock, tài liệu và dữ liệu thử liên quan.
 
-Code: [ApiProblemDetails](../../services/SCDC.Api/Errors/ApiProblemDetails.cs), [ApiErrorMapper](../../services/SCDC.Api/Errors/ApiErrorMapper.cs), [ApiErrorDefaults](../../services/SCDC.Api/Errors/ApiErrorDefaults.cs).
+Code: [ApiProblemDetails](../../services/Messaging/SCDC.Messaging.Api/Errors/ApiProblemDetails.cs), [ApiErrorMapper](../../services/Messaging/SCDC.Messaging.Api/Errors/ApiErrorMapper.cs), [ApiErrorDefaults](../../services/Messaging/SCDC.Messaging.Api/Errors/ApiErrorDefaults.cs).
 
 ---
 

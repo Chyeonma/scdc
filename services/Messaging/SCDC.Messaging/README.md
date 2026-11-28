@@ -2,7 +2,7 @@
 
 Module sở hữu schema `messaging`: space, participant, message và vòng đời tin. Community cung cấp quyền phòng; Identity cung cấp tài khoản/phiên qua [SCDC.Contracts](../../SCDC.Contracts).
 
-Project nghiệp vụ nằm cạnh project sinh hợp đồng gRPC nội bộ. [SCDC.Messaging.Grpc](../SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj)
+Hợp đồng cấp kênh nằm trong [SCDC.Messaging.Contracts](../SCDC.Messaging.Contracts). Mã gRPC và chuyển đổi payload cấp kênh nằm trong [SCDC.Messaging.Grpc](../SCDC.Messaging.Grpc).
 
 ## Cấu trúc mã
 
@@ -14,7 +14,7 @@ Project nghiệp vụ nằm cạnh project sinh hợp đồng gRPC nội bộ. [
 | `Realtime/` | SignalR, phát sự kiện từ outbox và kiểm tra lại quyền trước khi phát |
 | `MessagingModule.cs` | Nối cổng với adapter trong DI của host |
 
-REST nằm tại `services/SCDC.Api/Controllers/Messaging/`. Chat riêng và chat nhóm dùng chung các action gửi, đọc, sửa và xóa tin. Controller chỉ định loại hội thoại, còn kiểm tra thành viên diễn ra trong transaction Messaging.
+REST nằm tại `services/Messaging/SCDC.Messaging.Api/Controllers/Messaging/`. Chat riêng và chat nhóm dùng chung các action gửi, đọc, sửa và xóa tin. Controller chỉ định loại hội thoại, còn kiểm tra thành viên diễn ra trong transaction Messaging.
 
 ## Tài liệu
 

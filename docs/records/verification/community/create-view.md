@@ -250,7 +250,7 @@ Bảng dưới đây ghi source tại thời điểm chốt thiết kế, trư�
 | [IdentityDbContext.LockUserAsync](../../../../services/Identity/SCDC.Identity.Infrastructure/Accounts/IdentityDbContext.cs) dùng `FOR NO KEY UPDATE`; các mutation bảo mật hiện gọi khóa user trước khi sửa email/stamp/session | Guard lấy `FOR SHARE` trên cùng user, kiểm tra lại dưới khóa; mọi writer làm đổi điều kiện tài khoản phải giữ cùng quy ước |
 | [schema.sql](../../../../database/postgres/schema.sql) có server/member/role và trigger tăng server version; chưa có visibility, join mode, membership epoch hoặc operation | Migration bổ sung đúng phần gói cần; giữ trigger server làm nguồn tăng metadata version |
 | [seed.sql](../../../../database/postgres/seed.sql) dùng system role `Owner`/`Member` và mã permission legacy | Seed hiện tại chưa phải dữ liệu kiểm chứng gói mới; đồng bộ bootstrap/seed riêng cho DB Development mới, preflight dữ liệu cũ trước migration |
-| [ApiControllerBase](../../../../services/SCDC.Api/Controllers/ApiControllerBase.cs) và [ApiErrorMapper](../../../../services/SCDC.Api/Errors/ApiErrorMapper.cs) đã có Result/ProblemDetails | Dùng cơ chế lỗi hiện có; không tạo định dạng lỗi Community riêng |
+| [ApiControllerBase](../../../../services/Messaging/SCDC.Messaging.Api/Controllers/ApiControllerBase.cs) và [ApiErrorMapper](../../../../services/Messaging/SCDC.Messaging.Api/Errors/ApiErrorMapper.cs) đã có Result/ProblemDetails | Dùng cơ chế lỗi hiện có; không tạo định dạng lỗi Community riêng |
 
 
 ## Kế hoạch kiểm chứng ban đầu

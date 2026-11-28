@@ -12,7 +12,7 @@ Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/
 |---|---|---|
 | WebClient | React và Vite khi debug; Nginx phục vụ bản build trong container | [Vite](../../clients/WebClient/vite.config.js), [Nginx](../../clients/WebClient/nginx.conf), [Dockerfile](../../clients/WebClient/Dockerfile) |
 | Identity | API tài khoản, phiên và worker thu hồi/công bố Redis; gRPC/mTLS với consumer | [Service](../../services/Identity/README.md), [Program](../../services/Identity/SCDC.Identity.Api/Program.cs) |
-| SCDC.Api | Community/Messaging (ChatHub, outbox, reconciler DM); Identity permit/lookup qua mạng | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
+| SCDC.Api | Community/Messaging (ChatHub, outbox, reconciler DM); Identity permit/lookup qua mạng | [Program](../../services/Messaging/SCDC.Messaging.Api/Program.cs), [appsettings](../../services/Messaging/SCDC.Messaging.Api/appsettings.json), [Dockerfile](../../services/Messaging/SCDC.Messaging.Api/Dockerfile) |
 | PostgreSQL | Identity ở instance/database riêng; Community/Messaging còn trong `scdc_chat` | [Compose](../../compose.yaml), [baseline/chuyển Identity](../../database/postgres/identity/README.md) |
 | Volume `scdc-postgres-data` | Giữ dữ liệu DB qua khởi động lại | Compose |
 | Volume `scdc-community-keys` | Key ring cursor Community | Compose |

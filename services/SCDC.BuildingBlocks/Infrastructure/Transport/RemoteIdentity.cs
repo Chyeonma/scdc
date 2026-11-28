@@ -1,5 +1,4 @@
 using Grpc.Core;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SCDC.Contracts.Identity;
@@ -17,11 +16,6 @@ public static class RemoteIdentityRegistration
                 new GrpcIdentityPermits(provider.GetRequiredService<RpcTransport>(), configuration, owner));
         services.AddScoped<IUserDirectory, GrpcIdentityDirectory>();
         services.AddScoped<IHistoricalUserSummaryReader, GrpcIdentityDirectory>();
-        var ring = configuration["Modules:Messaging:CursorKeyRingPath"]
-            ?? configuration["Modules:Identity:UserSearch:CursorKeyRingPath"] ?? Path.Combine(AppContext.BaseDirectory, ".dm-keys", "user-search");
-        var application = configuration["Modules:Messaging:CursorApplicationName"]
-            ?? configuration["Modules:Identity:UserSearch:ApplicationName"] ?? "SCDC.UserSearch";
-        services.AddKeyedSingleton<IDataProtectionProvider>("Messaging.Cursors", (_, _) => DataProtectionProvider.Create(new DirectoryInfo(ring), builder => builder.SetApplicationName(application)));
         return services;
     }
 }

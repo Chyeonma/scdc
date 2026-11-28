@@ -217,7 +217,7 @@ Sau khi đã đặt kết nối và các khóa, build và chạy:
 ```bash
 dotnet restore SCDC.slnx
 dotnet build SCDC.slnx --no-restore
-dotnet run --project services/SCDC.Api/SCDC.Api.csproj --launch-profile http
+dotnet run --project services/Messaging/SCDC.Messaging.Api/SCDC.Messaging.Api.csproj --launch-profile http
 ```
 
 Nếu API đã chạy từ Compose, dừng riêng container API trước khi dùng cổng 5026:
@@ -298,7 +298,7 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 
 Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Identity`. Host là `localhost` khi chạy API trên máy, `postgres` trong Compose. Mỗi pool mặc định tối đa 20 kết nối; có thể đặt `Maximum Pool Size` trong connection string. Ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD` ghi đè mật khẩu local trong Compose; giữ đồng bộ với role đã cấp. Tài khoản `scdc` chỉ dùng quản trị/migration.
 
-Nguồn: [appsettings.json](../../services/SCDC.Api/appsettings.json), [cấu hình Development](../../services/SCDC.Api/appsettings.Development.json), [Vite config](../../clients/WebClient/vite.config.js).
+Nguồn: [appsettings.json](../../services/Messaging/SCDC.Messaging.Api/appsettings.json), [cấu hình Development](../../services/Messaging/SCDC.Messaging.Api/appsettings.Development.json), [Vite config](../../clients/WebClient/vite.config.js).
 
 ### Khóa JWT khi debug API trên máy
 
@@ -311,7 +311,7 @@ export Modules__Identity__PrivateKeyPath="$(pwd)/.local/jwt/private/identity-loc
 export Modules__Identity__SigningKeyId=identity-local-v1
 export Authentication__Jwt__PublicKeyDirectory="$(pwd)/.local/jwt/public"
 export Authentication__Jwt__KeyIds__0=identity-local-v1
-dotnet run --project services/SCDC.Api --no-launch-profile -- --initialize-jwt-keys
+dotnet run --project services/Messaging/SCDC.Messaging.Api --no-launch-profile -- --initialize-jwt-keys
 ```
 
 Lệnh có thể chạy lại và không ghi đè khóa hiện hữu; private file tạo với quyền 0600 trên Unix. Giữ các biến trên trong terminal chạy API; khi chạy sample chỉ cấp các biến `Authentication__Jwt__*` và public key. Kiểm thử backend tự sinh RSA fixture riêng. Cách đổi khóa và giới hạn kiểm tra phiên của sample xem [D28–D29](../system/api-conventions.md#v1-user-token-signing).
@@ -532,7 +532,7 @@ export Modules__Identity__PrivateKeyPath="$SCDC_TEST_JWT_DIR/private.pem"
 export Authentication__Jwt__PublicKeyDirectory="$SCDC_TEST_JWT_DIR/public"
 export Authentication__Jwt__KeyIds__0=identity-local-v1
 export Modules__Identity__SigningKeyId=identity-local-v1
-dotnet run --project services/SCDC.Api --no-launch-profile -- --initialize-jwt-keys
+dotnet run --project services/Messaging/SCDC.Messaging.Api --no-launch-profile -- --initialize-jwt-keys
 export Modules__Identity__ExposeDevelopmentTokens=true
 export Modules__Community__Operations__ActiveKeyId=docs_test
 export Modules__Community__Operations__Keys__docs_test="$(openssl rand -base64 32)"
@@ -572,7 +572,7 @@ Sau đó chạy API trong cùng terminal:
 
 ```bash
 ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:15026 \
-  dotnet run --project services/SCDC.Api --configuration Release \
+  dotnet run --project services/Messaging/SCDC.Messaging.Api --configuration Release \
   --no-build --no-launch-profile
 ```
 

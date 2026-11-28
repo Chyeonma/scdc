@@ -23,10 +23,11 @@ services/
 │   ├── SCDC.Community.Infrastructure/
 │   └── SCDC.Community.Grpc/
 ├── Messaging/
+│   ├── SCDC.Messaging.Api/  # HTTP/Hub; có chế độ chỉ đăng ký Messaging, fence/provision RPC
 │   ├── SCDC.Messaging/      # Nghiệp vụ hội thoại, PostgreSQL, SignalR
-│   └── SCDC.Messaging.Grpc/ # Mã sinh hợp đồng gRPC nội bộ
+│   ├── SCDC.Messaging.Contracts/ # Hợp đồng cấp kênh của Messaging
+│   └── SCDC.Messaging.Grpc/ # Mã sinh hợp đồng gRPC nội bộ và chuyển đổi payload cấp kênh
 ├── Shared/SCDC.Shared.Core/ # Kiểu JWT trust, Result, văn bản thuần .NET
-├── SCDC.Api/               # HTTP/Hub; có chế độ chỉ đăng ký Messaging, fence/provision RPC
 ├── SCDC.Contracts/         # Interface và DTO thuần giữa owner
 └── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
 tests/SCDC.Api.Tests/       # Test backend
@@ -59,7 +60,7 @@ outbox và vòng đời phòng trong module cũ tới các task tách tiếp the
 
 Mỗi trang tính năng ghi luồng API → Application → Domain và lưu trữ, dữ liệu sở hữu, hợp đồng với module khác, transaction, lỗi và tình huống đồng thời. Trang này chỉ giữ quy ước chung.
 
-Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [BuildingBlocks](../../services/SCDC.BuildingBlocks). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
+Code: [Program](../../services/Messaging/SCDC.Messaging.Api/Program.cs), [CommunityModule](../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [BuildingBlocks](../../services/SCDC.BuildingBlocks). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
 
 <a id="s2-10-contracts"></a>
 
@@ -77,7 +78,7 @@ Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../ser
 
 Timeout không chứng minh bên nhận đã rollback. Coordinator chỉ ACK khi receipt khớp owner, operation, batch, generation và scopes; khi chưa rõ kết quả, tiến trình đã lưu tiếp tục bằng cùng ID. ACK tương đương sau serialize/deserialize được chấp nhận, không phụ thuộc tham chiếu đối tượng trong process. GET trạng thái là đường đọc cục bộ của authority; `Get/Activate` và permit readiness đã có transport gRPC và test tích hợp, nhưng chưa có caller production cho tin phòng, caller mới phải dùng cùng deadline.
 
-Ở host Community tích hợp, Identity fence được nhận bởi [CommunityIdentityFenceEndpoint](../../services/Community/SCDC.Community.Api/InternalRpc/CommunityIdentityFenceEndpoint.cs); adapter [RemoteMessaging](../../services/Community/SCDC.Community.Infrastructure/Transport/RemoteMessaging.cs) gửi provision và policy fence sang Messaging. [Các receiver Messaging](../../services/SCDC.Api/InternalRpc/MessagingControlEndpoints.cs) nằm trong API cũ ở giai đoạn này. Identity chỉ delegation `ChannelRead` cho Community xin permit owner Messaging; từng receiver xác thực đúng danh tính service, không chỉ dựa vào allowlist TLS.
+Ở host Community tích hợp, Identity fence được nhận bởi [CommunityIdentityFenceEndpoint](../../services/Community/SCDC.Community.Api/InternalRpc/CommunityIdentityFenceEndpoint.cs); adapter [RemoteMessaging](../../services/Community/SCDC.Community.Infrastructure/Transport/RemoteMessaging.cs) gửi provision và policy fence sang Messaging. [Các receiver Messaging](../../services/Messaging/SCDC.Messaging.Api/InternalRpc/MessagingControlEndpoints.cs) nằm trong API cũ ở giai đoạn này. Identity chỉ delegation `ChannelRead` cho Community xin permit owner Messaging; từng receiver xác thực đúng danh tính service, không chỉ dựa vào allowlist TLS.
 
 Đã bỏ bốn guard/lifecycle transaction cũ, `ISharedDatabaseSession` và `ISharedDatabaseTransaction`, cùng hai placeholder `IChannelAccessChecker`, `IRealtimeAccessRevoker` theo [bảng ranh giới](database.md#s2-01-boundaries). Luật ACL trong `CommunityChannelGuard` vẫn dùng nội bộ. `AccountActor`, reader hồ sơ, tra cứu công khai, Redis và các hợp đồng permit/fence/provision hiện hành được giữ. Host gRPC và mTLS thuộc STEP-3; [S2-11](../records/verification/architecture/s2-11-2026-11-25.md) thu hẹp grant tạm, sửa timeout trước advisory lock và kiểm chứng lỗi dưới tải.
 

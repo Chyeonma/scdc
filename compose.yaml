@@ -35,7 +35,7 @@ services:
   messaging-keygen:
     build:
       context: .
-      dockerfile: services/SCDC.Api/Dockerfile
+      dockerfile: services/Messaging/SCDC.Messaging.Api/Dockerfile
     entrypoint:
     - /bin/sh
     - -ec
@@ -64,7 +64,7 @@ services:
   chat-service:
     build:
       context: .
-      dockerfile: services/SCDC.Api/Dockerfile
+      dockerfile: services/Messaging/SCDC.Messaging.Api/Dockerfile
     environment:
       Authentication__Jwt__Issuer: SCDC
       Authentication__Jwt__Audience: SCDC.WebClient
@@ -281,7 +281,7 @@ services:
   messaging-cursor-keygen:
     build:
       context: .
-      dockerfile: services/SCDC.Api/Dockerfile
+      dockerfile: services/Messaging/SCDC.Messaging.Api/Dockerfile
     entrypoint:
     - /bin/sh
     - -ec

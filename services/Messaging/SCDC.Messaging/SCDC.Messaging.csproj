@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../SCDC.Messaging.Contracts/SCDC.Messaging.Contracts.csproj" />
     <ProjectReference Include="../../SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
     <ProjectReference Include="../../SCDC.Contracts/SCDC.Contracts.csproj" />
     <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />

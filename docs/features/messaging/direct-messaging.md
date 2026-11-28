@@ -203,7 +203,7 @@ DM-S03 · Sửa tin                     DM-S04 · Xóa tin
 
 ## API và dữ liệu
 
-- Các endpoint DM văn bản đã có trong nền `900e226` ([controllers Messaging](../../../services/SCDC.Api/Controllers/Messaging), [tìm người](../../../services/Identity/SCDC.Identity.Api/Accounts/UsersController.cs)).
+- Các endpoint DM văn bản đã có trong nền `900e226` ([controllers Messaging](../../../services/Messaging/SCDC.Messaging.Api/Controllers/Messaging), [tìm người](../../../services/Identity/SCDC.Identity.Api/Accounts/UsersController.cs)).
 - [OpenAPI](../../contracts/direct-messaging.openapi.json) vẫn ghi `design-draft`; đó là trạng thái của file, không có nghĩa endpoint chưa làm. Giới hạn UTF-16 ghi bằng extension `x-scdc-utf16-length` (JSON Schema `minLength`, `maxLength` không đếm UTF-16).
 - [Baseline DM-P0-T01](../../archive/2026-10-planning/messaging/dm-p0-baseline-design.md): danh mục lỗi, thay hay dùng lại, migration theo lát cắt, transaction và guard.
 - Tiền tố `/api/v1`. Lỗi theo [ProblemDetails](../../system/api-conventions.md#contracts) (DEC-061). Tài khoản: [Tài khoản](../accounts/README.md).

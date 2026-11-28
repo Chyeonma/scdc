@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SCDC.BuildingBlocks.Application;
@@ -45,6 +46,13 @@ public static class MessagingModule
         services.AddScoped<IMessageMutator, MessageMutator>();
         services.AddScoped<IGroupMessageLikes, PostgresGroupMessageLikes>();
         services.AddSingleton<SCDC.Modules.Messaging.Infrastructure.Security.MessageFingerprint>();
+
+        var ring = configuration["Modules:Messaging:CursorKeyRingPath"]
+            ?? configuration["Modules:Identity:UserSearch:CursorKeyRingPath"] ?? Path.Combine(AppContext.BaseDirectory, ".dm-keys", "user-search");
+        var application = configuration["Modules:Messaging:CursorApplicationName"]
+            ?? configuration["Modules:Identity:UserSearch:ApplicationName"] ?? "SCDC.UserSearch";
+        services.AddKeyedSingleton<IDataProtectionProvider>("Messaging.Cursors", (_, _) => DataProtectionProvider.Create(new DirectoryInfo(ring), builder => builder.SetApplicationName(application)));
+
         services.AddSignalR(options => options.EnableDetailedErrors = false);
         services.AddSingleton<ConversationRegistry>();
         services.AddSingleton<GroupChatEvents>();

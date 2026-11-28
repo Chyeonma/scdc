@@ -6,6 +6,7 @@
     <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../SCDC.Messaging.Contracts/SCDC.Messaging.Contracts.csproj" />
     <ProjectReference Include="../../Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj" />
     <ProjectReference Include="../../Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />

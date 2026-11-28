@@ -4,18 +4,19 @@ WORKDIR /src
 COPY ["services/Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj", "services/Community/SCDC.Community.Grpc/"]
 COPY ["services/Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj", "services/Identity/SCDC.Identity.Grpc/"]
 COPY ["services/Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj", "services/Messaging/SCDC.Messaging.Grpc/"]
+COPY ["services/Messaging/SCDC.Messaging.Contracts/SCDC.Messaging.Contracts.csproj", "services/Messaging/SCDC.Messaging.Contracts/"]
 COPY ["services/Community/SCDC.Community.Application/SCDC.Community.Application.csproj", "services/Community/SCDC.Community.Application/"]
 COPY ["services/Community/SCDC.Community.Domain/SCDC.Community.Domain.csproj", "services/Community/SCDC.Community.Domain/"]
 COPY ["services/Community/SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj", "services/Community/SCDC.Community.Infrastructure/"]
 COPY ["services/Messaging/SCDC.Messaging/SCDC.Messaging.csproj", "services/Messaging/SCDC.Messaging/"]
-COPY ["services/SCDC.Api/SCDC.Api.csproj", "services/SCDC.Api/"]
+COPY ["services/Messaging/SCDC.Messaging.Api/SCDC.Messaging.Api.csproj", "services/Messaging/SCDC.Messaging.Api/"]
 COPY ["services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj", "services/SCDC.BuildingBlocks/"]
 COPY ["services/SCDC.Contracts/SCDC.Contracts.csproj", "services/SCDC.Contracts/"]
 COPY ["services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj", "services/Shared/SCDC.Shared.Core/"]
 COPY docs/contracts/grpc/ docs/contracts/grpc/
-RUN dotnet restore "services/SCDC.Api/SCDC.Api.csproj"
+RUN dotnet restore "services/Messaging/SCDC.Messaging.Api/SCDC.Messaging.Api.csproj"
 COPY . .
-RUN dotnet publish "services/SCDC.Api/SCDC.Api.csproj" -c Release --no-restore -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "services/Messaging/SCDC.Messaging.Api/SCDC.Messaging.Api.csproj" -c Release --no-restore -o /app/publish /p:UseAppHost=false
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV DOTNET_EnableDiagnostics=0

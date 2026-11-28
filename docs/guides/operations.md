@@ -36,8 +36,8 @@ Mỗi lần thao tác cần: người thực hiện đã được cấp quyền,
 | Hiện có | Giới hạn |
 |---|---|
 | [compose.yaml](../../compose.yaml): Web/Nginx, API monolith, service mẫu, PostgreSQL, Redis, OTel và OpenObserve | Stack phát triển; Identity, Community và Messaging chưa có host hoặc database vật lý riêng |
-| [Dockerfile API](../../services/SCDC.Api/Dockerfile), [Dockerfile Web](../../clients/WebClient/Dockerfile), [service mẫu](../../services/Sample/SCDC.Sample.Api/Dockerfile) | Service mẫu build riêng được; Dockerfile monolith chưa là Dockerfile cho từng service nghiệp vụ |
-| [HealthController](../../services/SCDC.Api/Controllers/HealthController.cs) và `make check` | Có probe access readiness cho Redis; liveness hay readiness 200 không thay kiểm tra dữ liệu, worker và hành trình |
+| [Dockerfile API](../../services/Messaging/SCDC.Messaging.Api/Dockerfile), [Dockerfile Web](../../clients/WebClient/Dockerfile), [service mẫu](../../services/Sample/SCDC.Sample.Api/Dockerfile) | Service mẫu build riêng được; Dockerfile monolith chưa là Dockerfile cho từng service nghiệp vụ |
+| [HealthController](../../services/Messaging/SCDC.Messaging.Api/Controllers/HealthController.cs) và `make check` | Có probe access readiness cho Redis; liveness hay readiness 200 không thay kiểm tra dữ liệu, worker và hành trình |
 | [Nginx](../../clients/WebClient/nginx.conf) phục vụ SPA, API, hub và service mẫu | Chưa tách route tới bốn service; phải giữ đường dẫn, query, mã lỗi, transport và lọc token trong log |
 | [IdentityModule](../../services/Identity/SCDC.Identity.Infrastructure/IdentityModule.cs) và [Shared.Core](../../services/Shared/SCDC.Shared.Core) | RS256, key ring và phiên Redis đã có; phải tách bootstrap xác thực khỏi module nghiệp vụ khi chuyển host |
 | Ba login database và [module-roles.sql](../../database/postgres/module-roles.sql) | Quyền chéo đã thu hồi ở S2-11; runner hiện hữu chưa phải công cụ chuyển dữ liệu giữa các database STEP-3 |

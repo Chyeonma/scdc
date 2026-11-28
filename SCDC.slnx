@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/services/">
-    <Project Path="services/SCDC.Api/SCDC.Api.csproj" />
     <Project Path="services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj" />
     <Project Path="services/SCDC.Contracts/SCDC.Contracts.csproj" />
   </Folder>
@@ -34,7 +33,9 @@
     <Project Path="services/Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj" />
   </Folder>
   <Folder Name="/services/Messaging/">
+    <Project Path="services/Messaging/SCDC.Messaging.Api/SCDC.Messaging.Api.csproj" />
     <Project Path="services/Messaging/SCDC.Messaging/SCDC.Messaging.csproj" />
     <Project Path="services/Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj" />
+    <Project Path="services/Messaging/SCDC.Messaging.Contracts/SCDC.Messaging.Contracts.csproj" />
   </Folder>
 </Solution>

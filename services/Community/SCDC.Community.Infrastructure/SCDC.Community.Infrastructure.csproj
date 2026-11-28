@@ -6,6 +6,7 @@
     <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Messaging/SCDC.Messaging.Contracts/SCDC.Messaging.Contracts.csproj" />
     <ProjectReference Include="../SCDC.Community.Application/SCDC.Community.Application.csproj" />
     <ProjectReference Include="../SCDC.Community.Domain/SCDC.Community.Domain.csproj" />
     <ProjectReference Include="../../Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj" />

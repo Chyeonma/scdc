@@ -1,18 +1,17 @@
 using Grpc.Core;
 using SCDC.Contracts.Identity;
-using SCDC.Contracts.Messaging;
 
 namespace SCDC.BuildingBlocks.Infrastructure.Transport;
 
 public static class ServiceRpc
 {
-    public static async Task<T> ReadAsync<T>(AsyncUnaryCall<T> call, CancellationToken ct)
+    public static async Task<T> ReadAsync<T>(AsyncUnaryCall<T> call, CancellationToken ct, Func<Exception>? onConflict = null)
     {
         using (call)
         {
             try { return await call.ResponseAsync.WaitAsync(ct); }
-            catch (RpcException error) when (error.StatusCode == StatusCode.AlreadyExists)
-            { throw new ProvisionConflictException("The channel operation conflicts with a committed decision."); }
+            catch (RpcException error) when (error.StatusCode == StatusCode.AlreadyExists && onConflict is not null)
+            { throw onConflict(); }
             catch (RpcException error)
             {
                 var code = error.StatusCode == StatusCode.FailedPrecondition
