@@ -1,0 +1,26 @@
+# Optional sample used for gateway/auth/telemetry demos: make setup SAMPLE=1.
+# Paths are relative to compose.yaml at the repository root.
+services:
+  sample-service:
+    build:
+      context: .
+      dockerfile: services/Sample/SCDC.Sample.Api/Dockerfile
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      Telemetry__Enabled: 'true'
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: '5000'
+    volumes:
+    - scdc-identity-public-keys:/app/auth-public:ro
+    restart: unless-stopped
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-sample-service:${SCDC_IMAGE_TAG:-latest}
+  web-client:
+    environment:
+      SCDC_SAMPLE_ENABLED: 'true'
+      SCDC_HEALTH_UPSTREAM: sample-service:8080/health
+    depends_on:
+      sample-service:
+        condition: service_started
