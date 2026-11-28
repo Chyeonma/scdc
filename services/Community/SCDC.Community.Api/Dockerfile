@@ -9,11 +9,15 @@ COPY ["services/Community/SCDC.Community.Grpc/SCDC.Community.Grpc.csproj", "serv
 COPY ["services/Identity/SCDC.Identity.Grpc/SCDC.Identity.Grpc.csproj", "services/Identity/SCDC.Identity.Grpc/"]
 COPY ["services/Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj", "services/Messaging/SCDC.Messaging.Grpc/"]
 COPY ["services/SCDC.Contracts/SCDC.Contracts.csproj", "services/SCDC.Contracts/"]
-COPY ["services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj", "services/SCDC.BuildingBlocks/"]
 COPY ["services/Shared/SCDC.Shared.Core/SCDC.Shared.Core.csproj", "services/Shared/SCDC.Shared.Core/"]
 COPY docs/contracts/grpc/ docs/contracts/grpc/
+COPY docs/fixtures/text-policy.json docs/fixtures/
 RUN dotnet restore services/Community/SCDC.Community.Api/SCDC.Community.Api.csproj
-COPY . .
+COPY services/Community/ services/Community/
+COPY services/SCDC.Contracts/ services/SCDC.Contracts/
+COPY services/Shared/SCDC.Shared.Core/ services/Shared/SCDC.Shared.Core/
+COPY services/Identity/SCDC.Identity.Grpc/ services/Identity/SCDC.Identity.Grpc/
+COPY services/Messaging/SCDC.Messaging.Grpc/ services/Messaging/SCDC.Messaging.Grpc/
 RUN dotnet publish services/Community/SCDC.Community.Api/SCDC.Community.Api.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app

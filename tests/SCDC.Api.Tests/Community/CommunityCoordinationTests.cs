@@ -228,7 +228,7 @@ public sealed class CommunityCoordinationTests(RedisAccessDatabase database):ICl
         var config=new ConfigurationBuilder().AddInMemoryCollection(database.Configuration).Build();
         var handler=new PostgresIdentityFenceOwner(config,AccessOwner.Community);
         await handler.ApplyAsync(new(Guid.NewGuid(),Guid.NewGuid(),1,permit.Scopes.Select(s=>s with {Epoch=s.Epoch+1}).ToArray()),default);
-        await using var local=await serviceScope.ServiceProvider.GetRequiredService<SCDC.BuildingBlocks.Infrastructure.Persistence.RelationalWorkScopeFactory>().OpenAsync(default);
+        await using var local=await serviceScope.ServiceProvider.GetRequiredService<SCDC.Modules.Community.Infrastructure.Persistence.RelationalWorkScopeFactory>().OpenAsync(default);
         var denied=await Assert.ThrowsAsync<AccessCheckException>(()=>access.AdmitAsync(local,permit,default));
         Assert.Equal("ACCESS_CHANGED",denied.Code);
     }

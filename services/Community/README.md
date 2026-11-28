@@ -10,7 +10,9 @@ Community có bốn project ứng dụng và project hợp đồng gRPC riêng. 
 | `SCDC.Community.Api` | HTTP Community, Swagger, health, nhận Identity fence và cấp channel readiness permit |
 | `SCDC.Community.Grpc` | Mã sinh hợp đồng fence và channel readiness; chỉ chứa message/client/server base |
 
-Namespace cũ được giữ để tương thích. Controller và bộ lọc OpenAPI Community nằm trong project API mới; `SCDC.Api` biên dịch các file này bằng liên kết nguồn trong giai đoạn chuyển tiếp. Các adapter HTTP kỹ thuật dùng chung cũng được biên dịch vào từng host; host Community không tham chiếu assembly `SCDC.Api` hoặc implementation Messaging/Identity.
+Domain/Application/Infrastructure giữ namespace cũ để tương thích. API, controller, lỗi, xác thực, telemetry và receiver dùng namespace `SCDC.Community.Api.*` và source của chính Community. Không có liên kết source tới `SCDC.Api`, không tham chiếu BuildingBlocks hoặc implementation Identity/Messaging. Chiều ngược lại cũng đã bỏ: host Messaging không tham chiếu implementation Community hoặc biên dịch controller Community.
+
+Infrastructure Community sở hữu connection/pool, transaction, outbox, ghi fence, Redis reader và client gRPC. Bộ ghi dữ liệu chỉ dùng schema `community`. Core, Contracts và các project `.Grpc` là dependency công khai; Protobuf và text policy tiếp tục ở `docs/` theo D44–D47. [Phân loại BuildingBlocks](../SCDC.BuildingBlocks/README.md) ghi phần theo owner và phần legacy Messaging còn lại.
 
 ## Dev sau cutover
 
@@ -40,7 +42,7 @@ Với Podman, dùng `podman-compose` thay cho `docker compose` trong lệnh trê
 | `http://localhost:5082/swagger/community/` | Swagger Community trong Development |
 | Các API nghiệp vụ Community | 503 trước khi xác thực, đọc hoặc ghi dữ liệu |
 
-Readiness 503 là trạng thái chuẩn bị; liveness và database khỏe chưa đủ điều kiện nhận lưu lượng. Host chưa bật `CommunityAccessWorker`/`ChannelProvisionWorker`; các adapter Messaging đang thiếu luôn báo không sẵn sàng, không trả kết quả provision hoặc receipt thành công. Host chung vẫn đăng ký worker và các adapter trong process như trước.
+Readiness 503 là trạng thái chuẩn bị; liveness và database khỏe chưa đủ điều kiện nhận lưu lượng. Host chưa bật worker; adapter Messaging chưa cấu hình luôn báo không sẵn sàng. Chỉ factory component test còn ghép các owner trong một process; production dùng host riêng.
 
 Dừng preview, giữ dữ liệu thử:
 
@@ -55,7 +57,7 @@ docker compose -f ops/compose/compose.community-preview.yaml --profile community
 | Host | Cấu hình cho stack tích hợp |
 |---|---|
 | Community | `CommunityHost__Integrated=true`; `ConnectionStrings__Community`; `Modules__Community__KeyRingPath` và HMAC keyring bền; endpoint Identity/Messaging HTTPS; TLS peer `community-service`, nhận `identity-service` và `chat-service` |
-| Messaging trong `SCDC.Api` | `Hosting__CommunityEnabled=false` bỏ đăng ký Community, controller và receiver fence Community; `ConnectionStrings__Messaging`; endpoint Identity HTTPS; TLS peer `chat-service`, nhận `identity-service` và `community-service` |
+| Messaging trong `SCDC.Api` | Chỉ chứa Messaging; cấu hình cũ `Hosting__CommunityEnabled=false` còn được chấp nhận, `true` bị từ chối. Dùng `ConnectionStrings__Messaging`, endpoint Identity HTTPS; peer `chat-service`, nhận `identity-service` và `community-service` |
 | Identity | `ConnectionStrings__Identity`; TLS peer `identity-service`, nhận `chat-service` và `community-service`; callback fence Community trỏ host Community, callback Messaging trỏ API cũ |
 
 Mỗi host cấu hình `InternalRpc__CertificatePath`, `InternalRpc__PrivateKeyPath`, `InternalRpc__CaPath`, `InternalRpc__AllowedPeers__0`/`__1`. HTTP mặc định cổng 8080, RPC HTTP/2 với mTLS cổng 8443. Endpoint gọi ra đặt bằng `InternalRpc__Identity__Endpoint`, `InternalRpc__Messaging__Endpoint`, `InternalRpc__Community__Endpoint` trên host tương ứng.
@@ -83,11 +85,15 @@ Các RPC provision `Prepare/Confirm/Cancel/Get/Activate` và fence giữ operati
 
 Trong chế độ tích hợp, `/health/ready` chỉ trả 200 khi database Community, Redis phiên và hai dependency qua mTLS đều sẵn sàng. Messaging mất kết nối làm readiness 503; các luồng độc lập như đọc server vẫn hoạt động. Thao tác cần Messaging giữ kết quả pending/lỗi theo hợp đồng và tiếp tục bằng journal khi service trở lại. Profile preview phía trên vẫn mặc định `preparation`, không tự nối sang dev.
 
-Compose mặc định đã áp dụng đồng bộ các thiết lập này sau cutover dev. Stack thử vẫn dùng database/secret riêng. Chạy lại hoặc rollback theo [runbook Community](../../database/postgres/community/README.md) và [checklist](../../docs/guides/operations.md#service-extraction).
+Compose mặc định đã áp dụng đồng bộ các thiết lập này sau cutover dev. Stack thử dùng database/secret riêng. Chạy lại hoặc rollback theo [runbook Community](../../database/postgres/community/README.md) và [checklist](../../docs/guides/operations.md#service-extraction). Rollback cutover về host ghép cũ yêu cầu `SCDC_COMMUNITY_ROLLBACK_IMAGE` là image đã phát hành trước lần dọn nguồn này; overlay không build host mới để làm đích rollback.
 
 ## Kiểm tra và phần tiếp theo
 
-`CommunityHostTests` kiểm tra chế độ chuẩn bị, database mới, quyền runtime, Swagger và chặn API. `CommunityNetworkTests` chạy ba Kestrel host thật qua mTLS với ba database riêng; kiểm tra provision, receipt, delegation, lỗi mạng, deadline/cancellation, thu hồi quyền, restart và đóng SignalR sau logout. Bộ test Community/DM/Identity hiện hành kiểm tra hồi quy host chung. Build cả solution bằng `dotnet build SCDC.slnx --configuration Release`; cách chuẩn bị PostgreSQL/Redis cho test xem [hướng dẫn](../../docs/guides/development.md#community).
+`CommunityHostTests` kiểm tra chuẩn bị, database, quyền runtime, Swagger, chặn API và assembly reference. `CommunityNetworkTests` chạy ba host thật qua mTLS và ba database riêng; kiểm tra provision, receipt, delegation, lỗi mạng, deadline/cancellation, thu hồi quyền, restart và ngắt SignalR. Test component ghép owner trong fixture, không phải host production. [Kiểm tra ranh giới nguồn](../../scripts/tests/test_service_boundaries.py) chặn dependency implementation hoặc source link ngoài owner.
+
+Build riêng bằng `dotnet build services/Community/SCDC.Community.Api/SCDC.Community.Api.csproj -c Release`. Dockerfile chỉ copy Community, Core, Contracts, project hợp đồng Identity/Messaging, Protobuf và text policy; không cần source API cũ, BuildingBlocks hoặc implementation hai service kia. Build toàn bộ bằng `dotnet build SCDC.slnx -c Release`; PostgreSQL/Redis cho test theo [hướng dẫn](../../docs/guides/development.md#community).
+
+[Hồ sơ dọn nguồn 2026-11-28](../../docs/records/verification/architecture/community-source-isolation-2026-11-28.md) ghi kết quả publish từ cây tối thiểu và hồi quy; chưa triển khai lại stack dev trong gói này.
 
 Baseline database thử nằm trong [database/postgres/community](../../database/postgres/community/README.md). Bước 3 đã chuyển dev và kiểm chứng theo [hồ sơ](../../docs/records/verification/architecture/s3-10-phase-3-2026-11-26.md). S3-09/S3-10 đã hoàn tất và vào main; Messaging/Media còn task tách riêng. Readiness/Activate chưa có caller production cho tính năng chat phòng.
 

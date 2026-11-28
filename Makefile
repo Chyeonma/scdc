@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-ENGINE ?= docker
+ENGINE ?= podman
 COMPOSE ?= $(ENGINE) compose
 COMPOSE_ARGS ?=
 ENV_FILE ?= .env
@@ -46,7 +46,7 @@ help:
 	  '  make logs        Xem 100 dòng log cuối; SERVICE=chat-service để chọn service' \
 	  '  make down        Dừng stack, giữ các volume' \
 	  '' \
-	  '  Docker là mặc định. Dùng ENGINE=podman cho mọi lệnh nếu chọn Podman.' \
+	  '  Podman là mặc định. Dùng ENGINE=docker cho mọi lệnh nếu chọn Docker.' \
 	  '  make init chỉ tạo .env khi chưa có; không ghi đè file hiện hữu.' \
 	  '  DEV=0 dùng image đã build; SAMPLE=1 bật service mẫu; ROLLBACK=1 dùng image rollback đã xác minh.' \
 	  '  ENV_FILE và COMPOSE_ARGS dùng khi cần stack riêng, ví dụ COMPOSE_ARGS="-p scdc-demo".' \

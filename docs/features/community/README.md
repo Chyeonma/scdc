@@ -2,7 +2,7 @@
 
 Người dùng tạo hoặc tham gia cộng đồng (server), mời thành viên, tạo phòng và phân quyền. Module Community sở hữu cộng đồng, thành viên, lời mời, phòng và quyền. Tin nhắn trong phòng thuộc Messaging; trạng thái tài khoản và phiên thuộc Identity.
 
-**Trạng thái:** trong nền `900e226`, Community và DM đã chạy chung một ứng dụng API. Còn chuyển sang v1: tin phòng, nhận realtime theo quyền phòng và ngắt kết nối khi đổi vai trò hoặc ACL.
+**Trạng thái:** Community đã có host và database riêng sau S3-09/S3-10, gọi Identity và Messaging qua gRPC/mTLS. Tạo, tìm, xem, tham gia server công khai; vai trò, gán vai trò, tạo/sửa phòng chữ và ACL đã có. Tin phòng, realtime phòng và các nhánh Community mở rộng còn ở STEP-4. [Hiện trạng source](../../../services/Community/README.md) và [hồ sơ cutover](../../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi phạm vi; bản monolith `900e226` là lịch sử MVP.
 
 **Người phụ trách:** Vg; Sáng làm phần tin phòng, Thái làm Media và file (xem [phân công](../../project/planning.md#team)).
 

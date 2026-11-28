@@ -1,5 +1,5 @@
 using Grpc.Core;
-using SCDC.BuildingBlocks.Infrastructure.Transport;
+using SCDC.Modules.Community.Infrastructure.Transport;
 using SCDC.Contracts.Community;
 using SCDC.Contracts.Identity;
 using C = SCDC.Community.Grpc.V1;

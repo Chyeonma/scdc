@@ -15,6 +15,7 @@ services:
     restart: unless-stopped
     environment:
       SCDC_COMMUNITY_UPSTREAM: community-service:8080
+      SCDC_COMMUNITY_HEALTH_UPSTREAM: community-service:8080/health/ready
     image: ${SCDC_IMAGE_PREFIX:-scdc}-web-client:${SCDC_IMAGE_TAG:-latest}
   identity-service:
     environment:

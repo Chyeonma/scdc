@@ -399,14 +399,14 @@ Các gói PREP thuộc giai đoạn chuẩn bị MVP, giữ lại để tham kh�
 
 ## Công việc Community
 
-**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); thẻ Trello tương ứng ở [step-4.md](tasks/step-4.md) (cùng mã), trạng thái theo dõi trên Trello. Cột "Phụ thuộc" và "Đầu ra" còn viết theo cơ chế transaction chung của MVP; phải cập nhật theo thiết kế của [STEP-2](#step-2) trước khi làm.
+**Trạng thái:** danh sách phần việc theo ca sử dụng, làm ở [STEP-4](#step-4); thẻ Trello tương ứng ở [step-4.md](tasks/step-4.md) (cùng mã), trạng thái theo dõi trên Trello. Thẻ task hiện hành dùng permit, fence và transaction cục bộ theo [STEP-2](#step-2); bảng gói phía dưới là phân rã kế hoạch, cần đối chiếu với [task STEP-4](tasks/step-4.md) trước khi nhận việc.
 
 COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ [MVP](../releases/mvp.md#community-scope) sang v1. COM-W08 đến 13 hoàn thiện các nhánh khác. Mã COM-W chỉ là tên công việc, không thay mã UC, AC, TC. Trạng thái thật xem [Community](../features/community/README.md) và [tin phòng](../features/messaging/channel-messaging.md). Người phụ trách tự chia nhiệm vụ Trello và làm khi đủ [điều kiện](workflow.md#readiness).
 
 | Mã | Ca sử dụng | Phụ thuộc | Phụ trách | Đầu ra và điều kiện xong |
 |---|---|---|---|---|
-| COM-W01 | UC-COM-17, nền tin dùng chung | Guard Identity và phòng, tạo phòng đã có; hợp đồng [Messaging](../features/messaging/README.md) | Sáng; Vg rà quyền | Migration và model tin, thứ tự theo không gian, cursor, đọc lịch sử có guard. Thử phân trang, phòng ẩn, khác server, phiên sai, epoch cũ trên DB thật |
-| COM-W02 | UC-COM-23 gửi, gửi lại | COM-W01; [transaction](../features/community/mechanics.md#transactions) | Sáng; Vg rà Community | Ghi tin có guard tới commit; chống trùng; tin, sequence, outbox nguyên tử. Thử gửi lại, đồng thời, khởi động lại, đổi quyền tranh commit |
+| COM-W01 | UC-COM-17, nền tin dùng chung | STEP-3; permit Identity/Community và readiness phòng qua hợp đồng [Messaging](../features/messaging/README.md) | Sáng; Vg rà quyền | Migration và model tin, thứ tự theo không gian, cursor, đọc lịch sử có kiểm tra quyền hiện tại. Thử phân trang, phòng ẩn, khác server, phiên sai, epoch cũ trên DB thật |
+| COM-W02 | UC-COM-23 gửi, gửi lại | COM-W01; [transaction](../features/community/mechanics.md#transactions) | Sáng; Vg rà Community | Ghi tin trong transaction Messaging với permit/fence được kiểm tới commit; chống trùng; tin, sequence, outbox nguyên tử. Thử gửi lại, đồng thời, khởi động lại, đổi quyền tranh commit |
 | COM-W03 | UC-COM-17, 23 giao diện | COM-W01, 02 | Sáng; Vg ghép khung | Mở phòng → lịch sử → gửi → tải lại với API thật; trạng thái đã lưu, lỗi rõ; gửi lại do người dùng bấm |
 | COM-W04 | UC-COM-25 nhận tin | COM-W02; hợp đồng realtime Messaging | Sáng | Worker outbox, Hub, đăng ký có kiểm soát; hai tài khoản nhận tin; loại trùng; đối chiếu sau kết nối lại; ghi bằng chứng mất kết nối |
 | COM-W05 | UC-COM-25 mất quyền; UC-COM-20, 21, 22 | COM-W04 | Sáng + Vg | HTTP, gửi, đăng ký, bù tin dùng quyền hiện tại; đo kết nối ngừng trong 5 giây từ commit (DEC-083) cho cả phiên và vai trò, ACL; có test tranh chấp và dừng khi lỗi |
@@ -415,7 +415,7 @@ COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ
 
 - Trước COM-W01, đối chiếu phần DM đã có và ranh giới service để chỉ làm phần còn thiếu.
 - COM-W03 và 04 làm song song được khi hợp đồng COM-W02 ổn định.
-- COM-W05 kiểm thử từ khi có Hub tin phòng, rồi lặp trong COM-W06. Guard hiện có chưa chứng minh thời hạn ngắt realtime hay giao thức giữa service.
+- COM-W05 kiểm thử từ khi có Hub tin phòng, rồi lặp trong COM-W06. Bằng chứng thu hồi DM hiện có không thay cho kiểm chứng tin phòng; phải đo riêng thời hạn ngắt và lỗi giữa service.
 
 <a id="community-plan-công-việc-mở-rộng-sau-phạm-vi-mvp-đã-chọn"></a>
 
@@ -423,7 +423,7 @@ COM-W01 đến 07 là phần tin phòng và realtime còn thiếu, chuyển từ
 
 | Mã | Ca sử dụng | Điều kiện xong | Phụ trách |
 |---|---|---|---|
-| COM-W08 | UC-COM-19 xóa phòng | Xóa phòng và không gian cùng transaction; chống trùng, outbox; chặn HTTP và Hub; chứng minh tranh gửi và xóa ([phòng](../features/community/channels.md)) | Vg + Sáng |
+| COM-W08 | UC-COM-19 xóa phòng | Community điều phối xóa phòng qua hợp đồng với Messaging; mỗi owner giữ transaction, journal/outbox và chống trùng; chặn HTTP và Hub; chứng minh tranh gửi và xóa ([phòng](../features/community/channels.md)) | Vg + Sáng |
 | COM-W09 | UC-COM-04, 05, 07, 08 thông tin server, cách tham gia, duyệt | Ghi server và yêu cầu nguyên tử; chuyển sang riêng tư kết thúc yêu cầu đang chờ; quyền người duyệt; chứng minh CAS, duyệt, hủy, tham gia đồng thời | Vg |
 | COM-W10 | UC-COM-09 đến 13 lời mời | Token, lượt dùng, hiệu lực theo người tạo, mời đích danh, epoch; chứng minh lượt cuối, thu hồi và nhận đồng thời | Vg |
 | COM-W11 | UC-COM-14, 15 chuyển chủ và rời | Chủ, tư cách, epoch, dọn ACL nguyên tử; chủ không tự rời; epoch cũ; thu hồi HTTP và realtime | Vg + Sáng |

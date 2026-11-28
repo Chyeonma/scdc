@@ -5,11 +5,13 @@ services:
   community-service:
     profiles: [community-target-disabled]
   chat-service:
-    image: ${SCDC_COMMUNITY_ROLLBACK_IMAGE:?Set a verified pre-cutover image; rollback never builds a replacement}
+    # This image must already contain the pre-extraction Community compatibility host.
+    # Never rebuild the Messaging-only current host as a cutover rollback target.
+    image: ${SCDC_COMMUNITY_ROLLBACK_IMAGE:?Set a verified pre-extraction image tag or digest}
     build: !reset null
     environment:
       Hosting__CommunityEnabled: 'true'
-      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=${SCDC_COMMUNITY_SOURCE_DATABASE:-scdc_chat};Username=scdc_community;Password=${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
       Modules__Community__Operations__ActiveKeyId: local1
       Modules__Community__Operations__Keys__local1: ${COMMUNITY_OPERATION_KEY:?Retain the existing operation key}
       Modules__Community__KeyRingPath: /app/community-keys
@@ -24,6 +26,7 @@ services:
   web-client:
     environment:
       SCDC_COMMUNITY_UPSTREAM: chat-service:8080
+      SCDC_COMMUNITY_HEALTH_UPSTREAM: chat-service:8080/api/v1/health/access
     depends_on: !override
       chat-service: {condition: service_started}
       identity-service: {condition: service_started}

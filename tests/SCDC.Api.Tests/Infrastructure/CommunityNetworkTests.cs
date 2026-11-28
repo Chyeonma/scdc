@@ -35,6 +35,17 @@ namespace SCDC.Api.Tests.Infrastructure;
 public sealed class CommunityNetworkTests(CommunityNetworkFixture fixture) : IClassFixture<CommunityNetworkFixture>
 {
     [Fact]
+    public async Task Community_REST_requires_bearer_header_and_does_not_accept_query_credentials()
+    {
+        var room = await fixture.Room();
+        using var query = await fixture.Community.GetAsync("/api/v1/servers?access_token=" + Uri.EscapeDataString(room.Owner.Token));
+        Assert.Equal(HttpStatusCode.Unauthorized, query.StatusCode);
+        await fixture.Send(fixture.Community, HttpMethod.Get, "/api/v1/servers", null, room.Owner.Token, 200);
+        Assert.DoesNotContain(typeof(ApiProgram).Assembly.GetReferencedAssemblies(), reference =>
+            reference.Name is "SCDC.Community.Api" or "SCDC.Community.Application" or "SCDC.Community.Infrastructure" or "SCDC.Community.Domain");
+    }
+
+    [Fact]
     public async Task Three_real_hosts_are_ready_with_separate_owner_databases_and_public_routes()
     {
         Assert.Equal(HttpStatusCode.OK, (await fixture.Community.GetAsync("/health/ready")).StatusCode);

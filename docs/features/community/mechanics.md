@@ -2,7 +2,7 @@
 
 Trang này mô tả phần kỹ thuật dùng chung của module Community: ai chịu trách nhiệm phần nào, tổ chức code, quy ước ID và phiên bản, transaction và guard, chống trùng khi tạo, phân trang, schema và migration, mã lỗi. Quy tắc và giao diện của từng chức năng nằm ở [các trang Community](README.md); tin trong phòng ở [Messaging](../messaging/channel-messaging.md).
 
-**Trạng thái:** áp dụng cho nền MVP (một ứng dụng, một database). Đã có: tạo, xem, tìm server; tham gia; vai trò; phòng chữ; ACL; migration 001 đến 004. Chưa có: yêu cầu tham gia, lời mời, xóa phòng, realtime Community.
+**Trạng thái cập nhật 2026-11-28:** Community có host/database riêng và giao tiếp liên service qua gRPC/mTLS. Đã có: tạo, xem, tìm server; tham gia công khai; vai trò; phòng chữ; ACL; permit/fence và journal provision. Yêu cầu tham gia, lời mời, xóa phòng, tin/realtime phòng còn ở STEP-4. Các mục MVP ghi rõ lịch sử; baseline và chuyển database theo [runbook Community](../../../database/postgres/community/README.md).
 
 <a id="responsibilities"></a>
 
@@ -60,18 +60,18 @@ UC-COM-23, 24 ([tin phòng](../messaging/channel-messaging.md#uc-com-23)) do Mes
 
 ### Cây thư mục
 
-Code nhóm theo chức năng trong bốn project riêng. Domain giữ model và bộ tính quyền; Application giữ interface/DTO; Infrastructure chứa implementation gắn SQL và transaction hiện hành. Schema vẫn thuộc Community. Host chung tiếp tục phục vụ cùng code; host mới đang ở [chế độ chuẩn bị](../../../services/Community/README.md).
+Code nhóm theo chức năng trong bốn project riêng. Domain giữ model và bộ tính quyền; Application giữ interface/DTO; Infrastructure chứa implementation gắn SQL và transaction hiện hành. Community sở hữu host/database riêng, giao tiếp với Identity và Messaging qua gRPC/mTLS. API cũ không còn ghép source Community; [ranh giới nguồn](../../system/backend.md#source-isolation) ghi các dependency được phép. [Preview](../../../services/Community/README.md#chạy-preview-riêng) vẫn có chế độ chuẩn bị riêng.
 
 ```text
 services/Community/
-├── SCDC.Community.Api/             # Controller, health, Swagger và host chuẩn bị
+├── SCDC.Community.Api/             # Controller, xác thực, lỗi, telemetry, health và RPC
 ├── SCDC.Community.Application/     # Servers, Memberships, Channels, Permissions
 ├── SCDC.Community.Domain/          # Servers, Memberships, Permissions
 ├── SCDC.Community.Infrastructure/  # SQL, coordinator, cursor và CommunityModule
 └── SCDC.Community.Grpc/            # Hợp đồng mã sinh
 ```
 
-Controller ở `services/Community/SCDC.Community.Api/Controllers/Community`; host cũ biên dịch cùng các file đó qua liên kết nguồn. Test hồi quy ở `tests/SCDC.Api.Tests/Community`, test host chuẩn bị ở `tests/SCDC.Api.Tests/Infrastructure/CommunityHostTests.cs`. `CommunityModule.cs` đăng ký DI và worker theo chế độ host.
+Controller chỉ được biên dịch tại `services/Community/SCDC.Community.Api/Controllers/Community`. Test component ở `tests/SCDC.Api.Tests/Community`; `CommunityHostTests` kiểm chế độ chuẩn bị, `CommunityNetworkTests` kiểm ba host/database thật. `CommunityModule.cs` đăng ký DI và worker theo chế độ host.
 
 <a id="ranh-giới-và-phụ-thuộc"></a>
 
@@ -80,7 +80,7 @@ Controller ở `services/Community/SCDC.Community.Api/Controllers/Community`; ho
 - **Chủ sở hữu:** chỉ lưu ở `servers.owner_user_id`. Memberships kiểm tra người nhận còn là thành viên khi chuyển chủ. Permissions đọc giá trị này để tính quyền, không lưu bản riêng.
 - **Tạo tư cách thành viên:** chỉ Memberships ghi. Tham gia, duyệt và nhận lời mời đều dùng chung hành vi này. Invitations dùng lời mời và trừ lượt trong cùng transaction.
 - **Tính quyền:** Domain của Permissions tính trên một bản chụp dữ liệu, không gọi service của phần khác. Tránh vòng gọi giữa Channels, Memberships và Permissions.
-- **Transaction:** các phần dùng chung transaction và DbContext. Tạo server ghi chủ, @everyone và thao tác trong một commit; nhận lời mời ghi thành viên, lượt, trạng thái trong một commit; xóa phòng phối hợp với Messaging.
+- **Transaction:** các phần Community dùng scope transaction cục bộ trong Infrastructure. Tạo server ghi chủ, @everyone và thao tác trong một commit. Mục tiêu nhận lời mời cũng giữ thành viên, lượt và trạng thái trong một commit Community; phối hợp tạo/xóa phòng với Messaging không dùng chung transaction.
 - **Module khác:** gọi Identity, Messaging, Media qua `SCDC.Contracts`; mỗi module chỉ đọc ghi dữ liệu của mình.
 
 <a id="contracts"></a>
@@ -330,7 +330,7 @@ Bảng dưới so sánh schema **trước** chuỗi migration Community với th
 | <a id="com-sql-09"></a> COM-SQL-09 | Danh mục quyền và ngoại lệ có thể chứa quyền ngoài v1 | Chuyển sang 5 mã quản lý + `channel_view`; chỉ `channel_view` có ngoại lệ allow hay deny; không coi quyền trong seed là tính năng |
 | <a id="com-sql-10"></a> COM-SQL-10 | Chưa có chống trùng thao tác hay worker realtime cho Community | Thêm khóa thao tác `(actor, kind, scope, client_id)` với scope không null (tạo server dùng UUID 0), fingerprint, khóa, version, ID tài nguyên; outbox có lease; bộ thu hồi, guard; key ring bền và thử khởi động lại |
 
-- Code hiện tại: [schema.sql](../../../database/postgres/schema.sql), [CommunityModule](../../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [CommunityChannelGuard](../../../services/Community/SCDC.Community.Infrastructure/Permissions/CommunityChannelGuard.cs). Schema trước migration còn trong `tests/SCDC.Api.Tests/Community/Fixtures/legacy-schema.sql`.
+- Code hiện tại: [schema Community](../../../database/postgres/community/schema.sql), [CommunityModule](../../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [CommunityChannelGuard](../../../services/Community/SCDC.Community.Infrastructure/Permissions/CommunityChannelGuard.cs). [Schema nguồn](../../../database/postgres/schema.sql) giữ nền trước tách; schema trước migration Community còn trong `tests/SCDC.Api.Tests/Community/Fixtures/legacy-schema.sql`.
 - Trước khi bật khóa duy nhất mới, dò trùng Unicode, hoa thường và kiểm tra mapping cũ đã review. Không tự đổi tên hay xóa dữ liệu thật.
 - Tin và phòng đã xóa giữ theo [vòng đời dữ liệu](../../system/data-lifecycle.md#deletion): tin không tự hết hạn (DEC-070); phòng đã xóa giữ nội dung, chưa có hạn xóa (DEC-105).
 - Vai trò và ngoại lệ của epoch cũ dọn theo quy tắc thành viên. Khôi phục từ backup (sau v1) không được phục hồi quyền cũ. Migration không tự xóa nội dung.

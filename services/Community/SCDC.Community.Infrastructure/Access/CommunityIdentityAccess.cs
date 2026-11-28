@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
 
 namespace SCDC.Modules.Community.Infrastructure.Access;

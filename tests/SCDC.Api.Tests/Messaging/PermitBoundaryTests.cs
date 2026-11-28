@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using SCDC.Api.Tests.Identity;
 using SCDC.Api.Tests.Infrastructure;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Infrastructure.Access;
 using SCDC.Modules.Identity.Infrastructure.Persistence;

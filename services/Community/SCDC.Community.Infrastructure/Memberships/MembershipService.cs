@@ -2,12 +2,11 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
-using SCDC.BuildingBlocks.Infrastructure.Outbox;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Outbox;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Infrastructure.Access;
 using SCDC.Modules.Community.Features.Servers.Application;
-using SCDC.Modules.Community.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Community.Features.Memberships.Application;
 

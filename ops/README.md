@@ -34,7 +34,8 @@ make up
 make check
 ```
 
-Make mặc định dùng Docker. Thêm `ENGINE=podman` cho mọi lệnh khi dùng Podman.
+Make và script mặc định dùng Podman. Thêm `ENGINE=docker` cho mọi lệnh Make
+hoặc đặt biến môi trường `ENGINE=docker` khi gọi script trực tiếp để dùng Docker.
 [`setup.sh`](setup.sh), [`migrate.sh`](migrate.sh), [`preflight.sh`](preflight.sh)
 gọi chung bộ điều phối [`compose.py`](compose.py); Make chuẩn bị `.env` và các
 file secret trước khi gọi script. `make preflight` chỉ kiểm trạng thái cutover
@@ -101,6 +102,9 @@ SCDC_COMMUNITY_ROLLBACK_IMAGE=<image-cu-da-kiem-chung> make up ROLLBACK=1
 
 Lệnh dùng gate Community với `--rollback`, giữ target Community tắt, đổi
 gateway/callback về host ghép cũ và không build lại image rollback. Giữ
-`ROLLBACK=1` cho các lệnh quản lý stack đó. `setup` và `migrate` từ chối chế độ
+`ROLLBACK=1` cho các lệnh quản lý stack đó. Readiness Community qua gateway
+chuyển sang `/api/v1/health/access` của host ghép cũ; Swagger của host cũ ở
+`/swagger`, không có trang Swagger Community riêng. `SCDC_COMMUNITY_SOURCE_DATABASE`
+chọn database nguồn khi khác tên mặc định `scdc_chat`. `setup` và `migrate` từ chối chế độ
 rollback. Gate chặn rollback sau ghi vẫn giữ nguyên; cấu hình Compose không
 tự phục hồi hoặc chuyển dữ liệu.

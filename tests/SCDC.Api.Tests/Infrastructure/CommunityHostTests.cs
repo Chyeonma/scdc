@@ -117,7 +117,9 @@ public sealed class CommunityHostTests(CommunityHostFixture fixture) : IClassFix
                 || reference.Name.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal)
                 || reference.Name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal));
         Assert.DoesNotContain(typeof(CommunityProgram).Assembly.GetReferencedAssemblies(), reference =>
-            reference.Name is "SCDC.Api" or "SCDC.Modules.Messaging" or "SCDC.Identity.Infrastructure" or "SCDC.Identity.Api");
+            reference.Name is "SCDC.Api" or "SCDC.BuildingBlocks" or "SCDC.Modules.Messaging" or "SCDC.Identity.Infrastructure" or "SCDC.Identity.Api");
+        Assert.DoesNotContain(typeof(SCDC.Modules.Community.CommunityModule).Assembly.GetReferencedAssemblies(), reference =>
+            reference.Name is "SCDC.Api" or "SCDC.BuildingBlocks" or "SCDC.Modules.Messaging" or "SCDC.Identity.Infrastructure");
     }
 
     private static async Task Unavailable(HttpResponseMessage response)

@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using SCDC.Contracts.Identity;
 
-namespace SCDC.Api.Controllers.Community;
+namespace SCDC.Community.Api.Controllers.Community;
 
 internal static class CommunityHttpActor
 {

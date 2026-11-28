@@ -1,7 +1,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SCDC.BuildingBlocks.Infrastructure.Transport;
+using SCDC.Modules.Community.Infrastructure.Transport;
 using SCDC.Contracts.Community;
 using SCDC.Contracts.Identity;
 using SCDC.Contracts.Messaging;

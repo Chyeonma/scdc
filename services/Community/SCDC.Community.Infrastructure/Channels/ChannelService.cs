@@ -4,14 +4,13 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.BuildingBlocks.Application.Text;
-using SCDC.BuildingBlocks.Infrastructure.Outbox;
-using SCDC.BuildingBlocks.Infrastructure.Persistence;
+using SCDC.Modules.Community.Infrastructure.Outbox;
+using SCDC.Modules.Community.Infrastructure.Persistence;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Features.Permissions.Application;
 using SCDC.Modules.Community.Features.Permissions.Infrastructure;
 using SCDC.Modules.Community.Infrastructure;
 using SCDC.Modules.Community.Infrastructure.Paging;
-using SCDC.Modules.Community.Infrastructure.Persistence;
 
 namespace SCDC.Modules.Community.Features.Channels.Application;
 

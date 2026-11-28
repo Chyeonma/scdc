@@ -2,7 +2,7 @@
 
 Người dùng có thể nhắn tin riêng với một người (DM) hoặc nhắn trong phòng của server. Cả hai dùng chung một cơ chế lưu và đồng bộ tin. DM không dùng vai trò hay quyền của cộng đồng.
 
-**Trạng thái:** nhắn tin riêng đã có trong nền MVP (commit `900e226`). Tin phòng mới có phần nền, chưa có ghi tin và realtime.
+**Trạng thái:** DM hiện chạy trong `SCDC.Api`, dùng Identity và Community qua hợp đồng mạng; ChatHub và outbox worker vẫn ở module Messaging cũ. S3-07/S3-08 còn tách host và database Messaging. Tin phòng mới có phần nền, chưa có ghi tin và realtime; xem [hiện trạng kiến trúc](../../system/architecture.md#current).
 
 **Người phụ trách:** Sáng (xem [phân công](../../project/planning.md#team)).
 
@@ -15,12 +15,13 @@ Người dùng có thể nhắn tin riêng với một người (DM) hoặc nh�
 | [Lưu và thay đổi tin](message-lifecycle.md) | Nhận tin, chống gửi trùng, sửa và xóa tin, trạng thái tin phía client |
 | [Lịch sử và đồng bộ](synchronization.md) | Tải lịch sử, outbox, Hub realtime, kết nối lại và thu hồi quyền |
 | [Nội dung văn bản](text-policy.md) | Kiểm tra Unicode, cách đếm độ dài và ca kiểm thử TC-TEXT |
+| [Phát hiện hình ảnh và tin nhắn nhạy cảm](sensitive-content-detection.md) | Đề xuất phạm vi, tích hợp detector, quyền, trạng thái, độ tin cậy và cách kiểm chứng; chưa triển khai |
 
 ## Đã có trong nền MVP
 
 Tìm người, mở DM, hộp thư, gửi tin, xem lịch sử, gửi lại khi lỗi, sửa và xóa tin, Hub realtime (`ChatHub`), outbox và kết nối lại. Tất cả chạy trong một ứng dụng API duy nhất.
 
-Chưa có: ghi tin và realtime cho tin phòng, cơ chế liên service của v1.
+Hiện đã có giao tiếp liên service cho permit, lookup, fence và provision. Phần còn thiếu gồm host/database Messaging riêng, ghi tin và realtime cho tin phòng.
 
 Kết quả kiểm thử nằm ở [hồ sơ DM](../../records/verification/messaging/README.md), [gói DM-MVP](../../records/verification/messaging/DM-MVP.md) và [kiểm tra hợp nhất 2026-10-13](../../records/verification/messaging/merge-2026-10-13.md). Mỗi hồ sơ chỉ chứng minh phạm vi của gói đó, không phải toàn bộ v1.
 
@@ -39,7 +40,7 @@ Kết quả kiểm thử nằm ở [hồ sơ DM](../../records/verification/mess
 - Cơ chế chung nằm ở [vòng đời tin](message-lifecycle.md), [đồng bộ](synchronization.md) và [nội dung văn bản](text-policy.md).
 - Điều kiện liên quan tới Community nằm ở [tích hợp Community](../community/mechanics.md).
 
-MVP dùng transaction trong cùng một ứng dụng. Khi tách service ở v1, phần này phải thiết kế lại.
+MVP từng dùng transaction chung trong một ứng dụng. STEP-2 đã thay bằng permit, fence và transaction cục bộ; các lời gọi Identity/Community hiện qua mạng. Việc tách host và database Messaging còn thuộc S3-07/S3-08.
 
 ---
 

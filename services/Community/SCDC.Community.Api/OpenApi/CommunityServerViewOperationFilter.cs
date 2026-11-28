@@ -1,9 +1,9 @@
 using Microsoft.OpenApi;
-using SCDC.Api.Controllers.Community;
+using SCDC.Community.Api.Controllers.Community;
 using SCDC.Modules.Community.Features.Servers.Application;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace SCDC.Api.OpenApi;
+namespace SCDC.Community.Api.OpenApi;
 
 internal sealed class CommunityServerViewOperationFilter : IOperationFilter
 {

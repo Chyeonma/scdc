@@ -49,7 +49,7 @@ Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#tea
 | [CI](.github/workflows/ci.yml) | Build và chạy test backend, frontend trên mỗi pull request; [hướng dẫn](docs/guides/continuous-integration.md). |
 | [docs](docs/README.md) | Tài liệu sản phẩm, thiết kế hệ thống và hướng dẫn làm việc. |
 
-Backend hiện chạy trong một ứng dụng API. [Kiến trúc v1](docs/system/architecture.md#target) sẽ tách thành bốn dịch vụ: tài khoản, cộng đồng, nhắn tin và điều khiển cuộc gọi.
+Backend hiện có ba host nghiệp vụ: Identity, Community và `SCDC.Api` đang phục vụ Messaging. Identity và Community đã chuyển sang database riêng; Messaging tiếp tục dùng database nguồn `scdc_chat`. Media chưa tích hợp vào `main`. [Kiến trúc hiện tại](docs/system/architecture.md#current) phân biệt phần đã chạy với [mục tiêu bốn service v1](docs/system/architecture.md#target).
 
 ## Khởi chạy
 
@@ -59,6 +59,6 @@ Cần Git, Make, Python 3, Docker hoặc Podman với Compose, OpenSSL và curl.
 make setup
 ```
 
-Podman dùng `make setup ENGINE=podman`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Luồng setup tạo khóa, chuẩn bị DB và kiểm tra cutover trước khi bật ứng dụng. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
+Mặc định dùng Podman; Docker dùng `make setup ENGINE=docker`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Luồng setup tạo khóa, chuẩn bị DB và kiểm tra cutover trước khi bật ứng dụng. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
 
 Các lệnh Compose chạy từ gốc repo. `make setup` ghép `compose.yaml` với `compose.dev.yaml`, gọi công cụ chuẩn bị riêng; `make up` chỉ mở ứng dụng sau preflight. Xem [cách tổ chức Compose](ops/README.md). Script kiểm thử tự chọn file trong `tests/compose/`. Cách bật email và chạy các cấu hình bổ sung trong `ops/compose/` nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup) và README của từng service.

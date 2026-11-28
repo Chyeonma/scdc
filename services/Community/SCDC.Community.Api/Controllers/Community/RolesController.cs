@@ -2,12 +2,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SCDC.Api.Errors;
+using SCDC.Community.Api.Errors;
 using SCDC.BuildingBlocks.Application.Results;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Features.Permissions.Application;
 
-namespace SCDC.Api.Controllers.Community;
+namespace SCDC.Community.Api.Controllers.Community;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record CreateRoleRequest(Guid ClientOperationId,string? Name,JsonElement Permissions=default);

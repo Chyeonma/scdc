@@ -4,16 +4,17 @@ Trang này mô tả các môi trường chạy SCDC: môi trường phát triể
 
 Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/development.md); thao tác phát hành xem [vận hành](../guides/operations.md).
 
-**Trạng thái 2026-11-25:** dev chạy Identity và PostgreSQL riêng theo [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); Community/Messaging còn chung host và database cũ. Mã nguồn main được đồng bộ đủ S3-03 sau các PR gốc. Media, việc tách hai owner còn lại và bố trí production tiếp tục theo lộ trình.
+**Trạng thái 2026-11-28:** dev có host/database riêng cho [Identity](../records/verification/architecture/s3-03-2026-11-25.md) và [Community](../records/verification/architecture/s3-10-phase-3-2026-11-26.md). Messaging còn ở `SCDC.Api` và database nguồn `scdc_chat`; Media chưa tích hợp vào `main`. Bố trí production và các task còn lại tiếp tục theo [lộ trình](../project/planning.md#roadmap).
 
 ## Môi trường phát triển hiện tại
 
 | Thành phần | Vai trò | Cấu hình |
 |---|---|---|
 | WebClient | React và Vite khi debug; Nginx phục vụ bản build trong container | [Vite](../../clients/WebClient/vite.config.js), [Nginx](../../clients/WebClient/nginx.conf), [Dockerfile](../../clients/WebClient/Dockerfile) |
-| Identity | API tài khoản, phiên và worker thu hồi/công bố Redis; gRPC/mTLS với consumer | [Service](../../services/Identity/README.md), [Program](../../services/Identity/SCDC.Identity.Api/Program.cs) |
-| SCDC.Api | Community/Messaging (ChatHub, outbox, reconciler DM); Identity permit/lookup qua mạng | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
-| PostgreSQL | Identity ở instance/database riêng; Community/Messaging còn trong `scdc_chat` | [Compose](../../compose.yaml), [baseline/chuyển Identity](../../database/postgres/identity/README.md) |
+| Identity | API tài khoản, phiên, worker thu hồi/công bố Redis và worker email tùy cấu hình | [Service](../../services/Identity/README.md), [Program](../../services/Identity/SCDC.Identity.Api/Program.cs) |
+| Community | API cộng đồng, worker quyền/tạo phòng; Identity và Messaging qua gRPC/mTLS | [Service](../../services/Community/README.md), [Program](../../services/Community/SCDC.Community.Api/Program.cs) |
+| SCDC.Api | Messaging: DM, ChatHub, outbox và reconciler; gọi Identity qua mạng | [Program](../../services/SCDC.Api/Program.cs), [appsettings](../../services/SCDC.Api/appsettings.json), [Dockerfile](../../services/SCDC.Api/Dockerfile) |
+| PostgreSQL | `scdc_identity` ở instance riêng; `scdc_community` và `scdc_chat` là hai database trên instance còn lại | [Compose](../../compose.yaml), [Identity](../../database/postgres/identity/README.md), [Community](../../database/postgres/community/README.md) |
 | Volume `scdc-postgres-data` | Giữ dữ liệu DB qua khởi động lại | Compose |
 | Volume `scdc-community-keys` | Key ring cursor Community | Compose |
 | Volume `identity-user-search-keys` | Key ring cursor tìm người của Identity, giữ khóa cũ | Compose |
@@ -21,7 +22,7 @@ Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/
 | Volume `scdc-identity-postgres-data` | Dữ liệu Identity đích; source Identity cũ giữ nguyên, runtime `NOLOGIN` | Compose |
 | Volume `scdc-messaging-keys` | Khóa fingerprint DM, tự tạo bởi job `messaging-keygen` | Compose |
 
-- WebClient chuyển auth/users và health/Swagger Identity tới host riêng; Community/DM và Hub tới API còn lại.
+- Nginx trong WebClient chuyển auth/users tới Identity, `/api/v1/servers` tới Community, DM và ChatHub tới `SCDC.Api`; health/Swagger đi theo từng host.
 - Runtime được khai báo trong `compose.yaml`; `compose.dev.yaml` thêm build và debug local. `make setup` chuẩn bị khóa/migration; `make up` dừng writer, chờ PostgreSQL/Redis, kiểm cutover và checksum rồi mới mở ứng dụng. Các công cụ nằm ngoài file runtime; xem [luồng Compose](../../ops/README.md).
 - Địa chỉ, công cụ, giá trị trên máy: [hướng dẫn](../guides/development.md#setup); danh sách khóa cấu hình: [cấu hình](../guides/development.md#configuration).
 - Không ghi bí mật production vào tài liệu. Hồ sơ chỉ ghi tên khóa, ID khóa và nguồn cấp.

@@ -102,6 +102,7 @@ services:
       community-cutover-gate:
         condition: service_completed_successfully
     volumes:
+    - gateway-identity-email-keys:/app/email-keys
     - gateway-messaging-keys:/app/messaging-keys
     - gateway-public-keys:/app/auth-public:ro
     - gateway-messaging-cursor-keys:/app/messaging-cursor-keys
@@ -155,6 +156,8 @@ services:
       Authentication__Sessions__Endpoint: auth-redis:6379
       ConnectionStrings__Identity: Host=identity-postgres;Port=5432;Database=scdc_identity_gateway_test;Username=scdc_identity
       Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Modules__Identity__Email__Enabled: 'false'
+      Modules__Identity__Email__KeyRingPath: /app/email-keys
       Modules__Identity__ExposeDevelopmentTokens: 'true'
       Modules__Identity__UserSearch__ApplicationName: SCDC.GatewayTest
       InternalRpc__CaPath: /run/secrets/rpc_ca
@@ -177,6 +180,8 @@ services:
       identity-postgres:
         condition: service_healthy
       identity-cutover-gate:
+        condition: service_completed_successfully
+      identity-email-migration:
         condition: service_completed_successfully
       community-cutover-gate:
         condition: service_completed_successfully
@@ -320,7 +325,22 @@ services:
       chat-service:
         condition: service_started
     restart: unless-stopped
+  identity-email-migration:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint: [/bin/sh, /opt/scdc/identity/migrate-email.sh]
+    environment:
+      PGHOST: identity-postgres
+      PGUSER: scdc_identity_admin
+      PGDATABASE: scdc_identity_gateway_test
+    secrets:
+    - identity_database_admin_password
+    volumes:
+    - ../../database/postgres/identity:/opt/scdc/identity:ro,z
+    depends_on:
+      identity-cutover-gate:
+        condition: service_completed_successfully
 volumes:
+  gateway-identity-email-keys: null
   gateway-postgres-data: null
   gateway-identity-keys: null
   gateway-community-keys: null

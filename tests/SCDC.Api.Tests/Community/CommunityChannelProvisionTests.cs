@@ -71,7 +71,8 @@ public sealed partial class CommunityApiTests
         try
         {
             var response = await ChannelCreateAsync(server, operation: operation, client: client);
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.True(response.StatusCode == HttpStatusCode.Created,
+                $"Expected 201, received {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
             var channel = (await JsonAsync(response)).GetProperty("id").GetGuid();
             Assert.True(calls >= 2);
             Assert.Equal(1L, await SqlAsync("SELECT count(*) FROM messaging.spaces WHERE id=@id AND provision_state=1", ("id", channel)));

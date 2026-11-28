@@ -2,7 +2,7 @@
 
 Trang này mô tả cấu trúc code backend (.NET 10), quy tắc phụ thuộc giữa các phần, và các quyết định v1 về worker, Hub, repository, chia project, thư viện dùng chung và mã sinh từ gRPC.
 
-**Trạng thái dev:** Identity và Community chạy bằng host/database riêng; Messaging tiếp tục ở `SCDC.Api` với Community bị tắt đăng ký. Community dùng database `scdc_community` trên instance PostgreSQL chung với Messaging, runtime `scdc_community_service`; login nguồn `scdc_community` giữ `NOLOGIN`. [Bước 3 S3-10](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) ghi chuyển dữ liệu, callback/gateway, kiểm chứng browser và rollback. Code Community bước 1–3 đã vào main qua PR #50 và PR #52; S3-09/S3-10 đã hoàn tất.
+**Trạng thái cập nhật 2026-11-28:** Identity và Community chạy bằng host/database riêng; `SCDC.Api` chỉ phục vụ Messaging. Community đã có adapter HTTP và hạ tầng cục bộ, không liên kết source từ API cũ hoặc tham chiếu BuildingBlocks. Community dùng `scdc_community` trên instance PostgreSQL chung với Messaging, runtime `scdc_community_service`; login nguồn `scdc_community` giữ `NOLOGIN`. [Bước 3 S3-10](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) là hồ sơ lịch sử cutover. Việc dọn nguồn hiện tại không tự xác nhận nghiệm thu bốn service hay đóng các task Messaging/Media còn lại.
 
 **Host Community:** chương trình mặc định ở chế độ chuẩn bị; Compose dev đặt `CommunityHost:Integrated=true` để bật worker, nhận Identity fence và gọi Messaging qua gRPC/mTLS. [Preview](../../services/Community/README.md) riêng vẫn preparation/503. Giới hạn và cấu trúc Identity xem [S3-02/S3-03](../records/verification/architecture/s3-03-2026-11-25.md); bốn service nghiệp vụ chưa tách đầy đủ.
 
@@ -17,19 +17,19 @@ services/
 │   ├── SCDC.Identity.Infrastructure/
 │   └── SCDC.Identity.Grpc/ # Mã sinh hợp đồng, không có nghiệp vụ
 ├── Community/
-│   ├── SCDC.Community.Api/ # Host chuẩn bị/tích hợp; controller cùng nguồn với API cũ
+│   ├── SCDC.Community.Api/ # HTTP, lỗi, xác thực, telemetry và receiver của Community
 │   ├── SCDC.Community.Application/
 │   ├── SCDC.Community.Domain/
 │   ├── SCDC.Community.Infrastructure/
 │   └── SCDC.Community.Grpc/
 ├── Messaging/SCDC.Messaging.Grpc/
 ├── Shared/SCDC.Shared.Core/ # Kiểu JWT trust, Result, văn bản thuần .NET
-├── SCDC.Api/               # HTTP/Hub; có chế độ chỉ đăng ký Messaging, fence/provision RPC
+├── SCDC.Api/               # Host Messaging: HTTP, ChatHub và fence/provision RPC
 ├── SCDC.Contracts/         # Interface và DTO thuần giữa owner
-├── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
+├── SCDC.BuildingBlocks/    # Hạ tầng legacy Messaging; Identity/Community không tham chiếu
 └── Modules/Messaging/
 tests/SCDC.Api.Tests/       # Test backend
-tools/SCDC.DbMigrator/      # Migration monolith và chuyển offline Identity riêng
+tools/SCDC.DbMigrator/      # Migration/chuyển dữ liệu; chỉ tham chiếu Core và Npgsql
 ```
 
 | Phần | Làm gì |
@@ -58,7 +58,23 @@ outbox và vòng đời phòng trong module cũ tới các task tách tiếp the
 
 Mỗi trang tính năng ghi luồng API → Application → Domain và lưu trữ, dữ liệu sở hữu, hợp đồng với module khác, transaction, lỗi và tình huống đồng thời. Trang này chỉ giữ quy ước chung.
 
-Code: [Program](../../services/SCDC.Api/Program.cs), [CommunityModule](../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [BuildingBlocks](../../services/SCDC.BuildingBlocks). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
+Code: [Messaging host](../../services/SCDC.Api/Program.cs), [CommunityModule](../../services/Community/SCDC.Community.Infrastructure/CommunityModule.cs), [phân loại BuildingBlocks](../../services/SCDC.BuildingBlocks/README.md). Các bước chuẩn bị xem [quy trình](../project/workflow.md#process).
+
+<a id="source-isolation"></a>
+
+### Ranh giới nguồn Community
+
+- `Community.Api` sở hữu controller, chuẩn lỗi, xác thực consumer, Swagger và telemetry; không có `Compile Include` lấy code từ host khác.
+- `Community.Infrastructure` sở hữu connection/pool Community, transaction, outbox, ghi fence, Redis reader và client gRPC. Các bộ ghi dữ liệu chỉ chọn schema `community`; không có nhánh ghi schema Messaging.
+- Community chỉ tham chiếu project của mình, `SCDC.Shared.Core`, `SCDC.Contracts` và các project hợp đồng `.Grpc`. Domain/Application không tham chiếu framework hay implementation bên ngoài.
+- Host Messaging không tham chiếu Application/Infrastructure/API Community và không ghép controller Community. Factory component test ghép các implementation một cách tường minh; test ba host thật tiếp tục kiểm chứng đường mạng.
+- Theo D42/D45, adapter cần framework được đặt trong owner. Có một số mã giao thức lặp giữa các owner; khi đổi giao thức cần chạy test tích hợp với producer/consumer thật và giữ tương thích, không đưa SQL, fence hoặc chính sách quyền vào Core để giảm lặp.
+- [Dockerfile Community](../../services/Community/SCDC.Community.Api/Dockerfile) chỉ copy nguồn Community, Core, Contracts, các project gRPC và tài nguyên hợp đồng. Build không cần source `SCDC.Api`, BuildingBlocks hoặc implementation Identity/Messaging.
+- Rollback cutover về host cũ cần image đã phát hành trước khi bỏ khả năng ghép Community. Overlay rollback yêu cầu `SCDC_COMMUNITY_ROLLBACK_IMAGE` và tắt build; host Messaging mới từ chối `Hosting:CommunityEnabled=true`.
+
+[Kiểm tra ranh giới nguồn](../../scripts/tests/test_service_boundaries.py) kiểm graph project và liên kết source trên CI. [CommunityHostTests](../../tests/SCDC.Api.Tests/Infrastructure/CommunityHostTests.cs) kiểm assembly reference; [CommunityNetworkTests](../../tests/SCDC.Api.Tests/Infrastructure/CommunityNetworkTests.cs) kiểm các host thật qua gRPC/mTLS. Build/test/deploy riêng là tiêu chí cần tiếp tục ghi bằng chứng, không suy ra chỉ từ cây thư mục.
+
+[Hồ sơ dọn nguồn 2026-11-28](../records/verification/architecture/community-source-isolation-2026-11-28.md) ghi build từ cây nguồn tối thiểu, test và giới hạn của lần thay đổi này.
 
 <a id="s2-10-contracts"></a>
 
@@ -249,7 +265,7 @@ Bộ [kiểm thử gateway](../../clients/WebClient/e2e/gateway.spec.js) thêm c
 - Thư viện **không** chứa nghiệp vụ, model nghiệp vụ, model lưu trữ, quy tắc quyền hay transaction của service.
 - Không tạo transaction giữa service, không thay gRPC.
 - Biên dịch cùng ứng dụng; không thêm service hay tiến trình.
-- [BuildingBlocks](../../services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj) hiện chứa cả `Result`, Npgsql và transaction, outbox; không giữ nguyên cho v1. [Contracts](../../services/SCDC.Contracts) hiện phục vụ MVP; không tự thành model chung của v1. Phải phân loại từng phần khi chuyển đổi.
+- `Result` và quy tắc văn bản đã ở `SCDC.Shared.Core`; namespace cũ `SCDC.BuildingBlocks.Application.*` được giữ để tương thích. [BuildingBlocks](../../services/SCDC.BuildingBlocks/README.md) còn là hạ tầng legacy của Messaging; Community đã có implementation hạ tầng theo owner. [Contracts](../../services/SCDC.Contracts) chứa DTO/interface công khai và không chứa transaction hay implementation.
 
 Không áp cho thư viện bên thứ ba, hợp đồng Protobuf, mã sinh hay tiện ích test. Tham khảo [Microsoft](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/multi-container-microservice-net-applications/integration-event-based-microservice-communications#integration-events).
 
@@ -272,7 +288,7 @@ S1-06 đã tạo [project Core](../../services/Shared/SCDC.Shared.Core/SCDC.Shar
 - Core không phụ thuộc database, ASP.NET hay SDK nhà cung cấp; không tham chiếu code của service.
 - Mã lỗi và quy tắc nghiệp vụ vẫn ở service. Domain chỉ tham chiếu Core khi thật cần; không bắt mọi project tham chiếu Core.
 - Cấu hình và adapter cần framework (ví dụ telemetry) giữ trong Api hoặc Infrastructure của từng service. Chưa có thư viện Hosting chung.
-- Một số ca sử dụng Community hiện dùng thẳng code transaction, outbox ([Features](../../services/Community/SCDC.Community.Infrastructure)); phải tách khi chuyển v1, không đưa nguyên sang Core.
+- Transaction và outbox Community nằm trong [Infrastructure của owner](../../services/Community/SCDC.Community.Infrastructure), không đưa sang Core. Application hiện khai báo interface/DTO; implementation gắn SQL tiếp tục ở Infrastructure. Việc chuyển điều phối nghiệp vụ giữa các tầng là công việc riêng với việc cô lập source.
 
 **Lý do:** bắt đầu với kiểu kết quả đã cần dùng chung; ít project. **Đổi lại:** có thể lặp một số cấu hình tích hợp giữa service. Phương án thêm `SCDC.Shared.Hosting` không được chọn ban đầu.
 
@@ -328,7 +344,7 @@ S1-06 đã tạo [project Core](../../services/Shared/SCDC.Shared.Core/SCDC.Shar
 
 ## Còn mở
 
-- **Cấu trúc:** số solution; cấu hình MSBuild hay công cụ kiểm tra kiến trúc; kế hoạch di chuyển code MVP; cách tách BuildingBlocks và Contracts; tiện ích test; CI/CD.
+- **Cấu trúc:** Messaging/Media còn các task tách riêng; tiếp tục xử lý [BuildingBlocks legacy](../../services/SCDC.BuildingBlocks/README.md), bộ test theo service và CI/deploy riêng. Kiểm tra ranh giới nguồn Community đã có; chưa chứng minh toàn bộ mục tiêu v1.
 - **D47:** tên và đường dẫn project hợp đồng; công cụ và phiên bản sinh mã; namespace; schema và import; quy tắc tương thích; thứ tự triển khai khi đổi hợp đồng.
 - **D12, D13:** số luồng xử lý; cách giành việc và thử lại; giới hạn tài nguyên; URL Hub Media; HA; xác thực Hub; hợp đồng tạo và xóa phòng giữa service.
 

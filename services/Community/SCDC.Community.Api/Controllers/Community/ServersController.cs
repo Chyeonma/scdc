@@ -1,11 +1,11 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SCDC.Api.Errors;
+using SCDC.Community.Api.Errors;
 using SCDC.Contracts.Identity;
 using SCDC.Modules.Community.Features.Servers.Application;
 
-namespace SCDC.Api.Controllers.Community;
+namespace SCDC.Community.Api.Controllers.Community;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record CreateServerRequest(Guid ClientOperationId, string? Name, string? Description, string? Visibility = "public");

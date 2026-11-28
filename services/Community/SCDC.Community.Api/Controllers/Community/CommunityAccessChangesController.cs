@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SCDC.Contracts.Community;
 
-namespace SCDC.Api.Controllers.Community;
+namespace SCDC.Community.Api.Controllers.Community;
 
 [Authorize]
 [Route("api/v1/servers/{serverId:guid}/access-operations")]
