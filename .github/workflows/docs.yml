@@ -1,31 +1,17 @@
 name: Documentation links
 
+# CI checks links for every PR and main push. Keep this workflow for manual use.
 on:
-  pull_request:
-    paths:
-      - 'README.md'
-      - 'docs/**'
-      - 'database/postgres/**/README.md'
-      - 'services/Modules/**/README.md'
-      - 'services/*/README.md'
-      - 'scripts/check_docs.py'
-      - '.github/workflows/docs.yml'
-  push:
-    paths:
-      - 'README.md'
-      - 'docs/**'
-      - 'database/postgres/**/README.md'
-      - 'services/Modules/**/README.md'
-      - 'services/*/README.md'
-      - 'scripts/check_docs.py'
-      - '.github/workflows/docs.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   links:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - run: python3 scripts/check_docs.py

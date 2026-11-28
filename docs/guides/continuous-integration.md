@@ -1,21 +1,34 @@
 # SCDC — CI build và kiểm thử
 
-Workflow [CI](../../.github/workflows/ci.yml) build backend và WebClient, chạy test trên mỗi pull request. Trang này hướng dẫn đọc kết quả và cấu hình check bắt buộc trước khi merge vào `main`.
+Workflow [CI](../../.github/workflows/ci.yml) chọn các bộ kiểm tra theo file thay đổi trên mỗi pull request và main push. Trang này giải thích khi nào cần chờ test backend, khi nào chỉ cần kiểm tra nhẹ và cách giữ check bắt buộc trước khi merge.
 
-**Trạng thái:** S1-04 đã có workflow; kết quả chạy local và phần nghiệm thu GitHub còn thiếu nằm trong [hồ sơ kiểm chứng](../records/verification/ci/s1-04-2026-11-13.md).
+**Trạng thái cập nhật 2026-11-28:** tối ưu chọn job để xử lý [ISSUE-001](../project/tasks/issues.md#issue-001--ci-chạy-test-quá-lâu-cho-thay-đổi-nhỏ). Bộ test backend giữ nguyên; chưa chia test dùng chung database để chạy song song.
 
 ## Các job
 
-Workflow chạy cho mọi pull request, khi push vào `main` và khi gọi thủ công bằng `workflow_dispatch`. Workflow không lọc đường dẫn để PR chỉ sửa tài liệu cũng có check `CI`. Lần chạy mới trên cùng PR thay thế lần chạy cũ.
+Workflow luôn chạy cho pull request và push vào `main`, nên check `CI` luôn xuất hiện. Bước đầu đọc Git diff đầy đủ để chọn job; không dùng `paths-ignore` để bỏ toàn bộ workflow bắt buộc. Lần chạy mới trên cùng PR thay thế lần chạy cũ. Chạy thủ công bằng `workflow_dispatch` luôn yêu cầu tất cả các job.
+
+| File thay đổi | Job nặng cần chạy |
+|---|---|
+| Chỉ Markdown hoặc công cụ đồng bộ Trello/kiểm tra docs đã nhận diện | Không có; vẫn chạy toàn bộ test Python và kiểm tra liên kết |
+| `clients/WebClient/` | Frontend |
+| Implementation trong `services/`, test C# | Backend |
+| `database/`, `tools/` | Backend và chuyển database |
+| Contracts, Shared.Core, BuildingBlocks, `.Grpc`, `.proto`, JSON/fixture trong `docs/`, workflow và cấu hình chưa nhận diện | Tất cả |
+
+Thay đổi trộn nhiều nhóm lấy hợp các job cần chạy. Dockerfile, Nginx và cấu hình vận hành dùng chế độ đầy đủ. `.md` là tài liệu thuần; không coi toàn bộ `docs/` là tài liệu vì Protobuf và fixture trong đó là đầu vào build/test.
 
 | Job | Công việc | Kết quả lưu 7 ngày |
 |---|---|---|
+| `Changes, docs and script checks` | Checkout đủ lịch sử, lập kế hoạch, chạy test Python và kiểm tra tài liệu | Kế hoạch nằm trong summary của workflow |
 | `Backend` | Cài SDK .NET 10, khởi tạo PostgreSQL 18 riêng, restore và build toàn `SCDC.slnx` ở Release, chạy toàn bộ test backend | `backend-test-results`: báo cáo TRX, kể cả khi test thất bại |
 | `Frontend` | Cài Node.js 24, `npm ci`, chạy test Node và build Vite | `web-client-build`: thư mục `dist` sau khi test và build đạt |
 | `Identity database transfer` | Hai PostgreSQL instance thử riêng; 14 ca dữ liệu/DDL/sequence, quyền, guard, restore ngắt, chạy lại và phục hồi | `identity-transfer-summary`: chỉ kết quả đã lọc |
-| `CI` | Chờ cả ba job trên; chỉ thành công khi mọi job thành công | Trạng thái check dùng cho quy tắc merge |
+| `CI` | Luôn chạy; kiểm tra kế hoạch và kết quả các job được yêu cầu | Trạng thái check dùng cho quy tắc merge |
 
-Ba job chạy độc lập. `CI` vẫn chạy khi một job thất bại, bị bỏ qua hoặc hủy, rồi trả lỗi nếu kết quả của một trong ba khác `success`. Các bước build và test không bỏ qua mã thoát lỗi.
+Các job nặng chạy độc lập sau khi bước lập kế hoạch và kiểm tra nhẹ đạt. `CI` chỉ chấp nhận job `skipped` khi kế hoạch nói rõ job đó không cần chạy. Job bắt buộc bị lỗi, hủy hoặc bỏ qua; kế hoạch thiếu/sai; hoặc kiểm tra nhẹ thất bại đều chặn merge. Không dùng `continue-on-error` để biến lỗi test thành đạt.
+
+[ci_plan.py](../../scripts/ci_plan.py) dùng Git diff, gồm các commit của PR và cả đường dẫn cũ/mới khi rename. Nếu không đọc được diff, gặp đường dẫn mới chưa biết hoặc payload không hợp lệ, hệ thống yêu cầu chạy đầy đủ. [Bộ test](../../scripts/tests/test_ci_plan.py) kiểm các trường hợp chọn job và từ chối kết quả lỗi. Workflow [Documentation links](../../.github/workflows/docs.yml) giữ để chạy thủ công; kiểm tra docs tự động đã nằm trong CI, tránh chạy hai workflow giống nhau khi vừa push vừa mở PR.
 
 SDK được giới hạn trong major 10 bởi [global.json](../../global.json). NuGet restore theo các project; npm dùng lockfile và cache tải package. Workflow chỉ cần quyền đọc mã nguồn và không dùng secrets của ứng dụng.
 
