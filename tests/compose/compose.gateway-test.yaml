@@ -139,6 +139,8 @@ services:
       community-service:
         condition: service_started
     environment:
+      SCDC_SAMPLE_ENABLED: 'true'
+      SCDC_HEALTH_UPSTREAM: sample-service:8080/health
       SCDC_COMMUNITY_UPSTREAM: community-service:8080
   identity-service:
     build:

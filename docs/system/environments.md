@@ -22,7 +22,7 @@ Cách cài đặt, chạy và test xem [hướng dẫn phát triển](../guides/
 | Volume `scdc-messaging-keys` | Khóa fingerprint DM, tự tạo bởi job `messaging-keygen` | Compose |
 
 - WebClient chuyển auth/users và health/Swagger Identity tới host riêng; Community/DM và Hub tới API còn lại.
-- API chờ PostgreSQL/Redis, job khóa và startup gate. Gate kiểm đúng source/target trước khi Identity chạy; thứ tự khởi động không thay cho kiểm thử hành trình.
+- Runtime được khai báo trong `compose.yaml`; `compose.dev.yaml` thêm build và debug local. `make setup` chuẩn bị khóa/migration; `make up` dừng writer, chờ PostgreSQL/Redis, kiểm cutover và checksum rồi mới mở ứng dụng. Các công cụ nằm ngoài file runtime; xem [luồng Compose](../../ops/README.md).
 - Địa chỉ, công cụ, giá trị trên máy: [hướng dẫn](../guides/development.md#setup); danh sách khóa cấu hình: [cấu hình](../guides/development.md#configuration).
 - Không ghi bí mật production vào tài liệu. Hồ sơ chỉ ghi tên khóa, ID khóa và nguồn cấp.
 

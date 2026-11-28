@@ -38,7 +38,7 @@ Backend và frontend được build trong image. .NET SDK 10 và Node.js 24 ch�
 
 ### Chạy bằng Compose
 
-File mặc định là [`compose.yaml`](../../compose.yaml). Các stack kiểm thử nằm trong [`tests/compose/`](../../tests/compose/); cấu hình email, Community preview và rollback nằm trong [`ops/compose/`](../../ops/compose/). Các lệnh trong hướng dẫn vẫn chạy từ gốc repo. Đường dẫn build và mount của các stack chạy riêng đã được tính theo vị trí file mới.
+File [`compose.yaml`](../../compose.yaml) chỉ chứa chín service chạy thường trực. [`compose.dev.yaml`](../../compose.dev.yaml) bổ sung build nguồn, môi trường Development và cổng debug; Make tự ghép hai file. Công cụ chạy một lần nằm ở [`compose.prepare.yaml`](../../ops/compose/compose.prepare.yaml), được script gọi riêng. Xem [cấu trúc và luồng vận hành](../../ops/README.md). Các stack kiểm thử nằm trong [`tests/compose/`](../../tests/compose/); cấu hình email, Community preview và rollback nằm trong [`ops/compose/`](../../ops/compose/). Các lệnh trong hướng dẫn vẫn chạy từ gốc repo. Đường dẫn build và mount của các stack chạy riêng đã được tính theo vị trí file mới.
 
 **Lần đầu**, dựng môi trường bằng một lệnh:
 
@@ -51,8 +51,8 @@ Nếu chọn Podman, dùng `make setup ENGINE=podman`, rồi thêm `ENGINE=podma
 `setup` thực hiện lần lượt:
 
 1. Tạo `.env` với khóa Community ngẫu nhiên nếu file chưa có; khởi tạo Redis ACL và chứng chỉ RPC ngoài repo. File và khóa hiện hữu được giữ nguyên; bí mật không in ra terminal.
-2. Kiểm tra cấu hình Compose, build image và khởi chạy stack.
-3. Compose tự tạo khóa DM và JWT bằng hai job `messaging-keygen`, `identity-keygen`; API chờ các job thành công rồi mới chạy. Các job không ghi đè khóa hiện hữu.
+2. Kiểm tra cấu hình, build image; dừng ứng dụng để cập nhật offline và khởi động PostgreSQL/Redis.
+3. Chạy riêng công cụ tạo khóa, chuẩn bị DB, kiểm cutover và migration email. Khóa hiện hữu được giữ nguyên. Chỉ bật ứng dụng sau khi preflight đạt; lỗi giữ các writer ở trạng thái dừng.
 4. Chạy `make check`: đợi giao diện và các endpoint health trả HTTP 200, kiểm tra PostgreSQL nhận kết nối và cấu hình Nginx hợp lệ. Lệnh thất bại nếu một bước không đạt.
 
 Nếu đã có `.env` nhưng thiếu `COMMUNITY_OPERATION_KEY`, tạo khóa bằng `openssl rand -base64 32`, thêm vào file dưới dạng `COMMUNITY_OPERATION_KEY=<khóa-vừa-tạo>`, rồi chạy lại. Giữ nguyên file này cùng volume dữ liệu qua những lần chạy.
@@ -63,7 +63,7 @@ Xem trạng thái sau khi dựng:
 make status
 ```
 
-Các job tạo khóa có trạng thái `Exited (0)` là bình thường; PostgreSQL, Identity API/worker, API Community/Messaging, Redis, service mẫu, WebClient/Nginx, Collector và OpenObserve phải đang chạy. Job `messaging-cursor-keygen` sao chép key ring cũ đúng một lần sang volume riêng để DM cursor tiếp tục giải mã được. LiveKit thuộc S1-07, chưa có trong stack này.
+Chín container runtime phải đang chạy: WebClient/Nginx, Identity, Community, Messaging (`chat-service`), hai PostgreSQL, Redis, Collector và OpenObserve. Các công cụ dùng `run --rm` nên không để lại container job đã thoát. Service mẫu chỉ bật khi dùng `SAMPLE=1`. Job `messaging-cursor-keygen` sao chép key ring cũ đúng một lần sang volume riêng để DM cursor tiếp tục giải mã được. LiveKit thuộc S1-07, chưa có trong stack này.
 
 | Dịch vụ | Địa chỉ |
 |---|---|
@@ -72,8 +72,8 @@ Các job tạo khóa có trạng thái `Exited (0)` là bình thường; Postgre
 | OpenAPI JSON qua gateway | `http://localhost:3000/swagger/v1/swagger.json` |
 | Swagger Identity (Development) | `http://localhost:3000/swagger/identity` |
 | Readiness Identity, Community/Messaging | `http://localhost:3000/api/v1/health/identity/access`, `/api/v1/health/access` |
-| Health Nginx, service mẫu, API | `http://localhost:3000/healthz`, `/health`, `/api/v1/health` |
-| Endpoint thử JWT S1-06 | `http://localhost:3000/sample/protected`; cần bearer access token do Identity cấp |
+| Health Nginx, alias API, API | `http://localhost:3000/healthz`, `/health`, `/api/v1/health` |
+| Endpoint thử JWT S1-06 (`SAMPLE=1`) | `http://localhost:3000/sample/protected`; cần bearer access token do Identity cấp |
 | OpenObserve local | `http://localhost:5080`; mặc định `root@scdc.local` / `ScdcObserve!2026Local` trên volume mới |
 | API trực tiếp để debug | `http://localhost:5026` |
 | PostgreSQL | `localhost:5432` |
@@ -89,7 +89,7 @@ curl --fail -H 'traceparent: 00-11111111111111111111111111111111-222222222222222
   http://localhost:3000/health
 ```
 
-Đăng nhập OpenObserve, chọn organization `default`; trong Logs và Traces chọn stream `scdc`, khoảng thời gian vừa chạy, tìm `trace_id = '11111111111111111111111111111111'`. Sau khi Collector gửi dữ liệu, kết quả phải có `service_name=scdc-sample`. Cách đổi tài khoản và tra cứu xem [giám sát](../system/observability.md#s1-05-implementation).
+Đăng nhập OpenObserve, chọn organization `default`; trong Logs và Traces chọn stream `scdc`, khoảng thời gian vừa chạy, tìm `trace_id = '11111111111111111111111111111111'`. Sau khi Collector gửi dữ liệu, kiểm tra trace của Messaging; khi dùng `SAMPLE=1`, `/health` chuyển sang service mẫu và trace có `service_name=scdc-sample`. Cách đổi tài khoản và tra cứu xem [giám sát](../system/observability.md#s1-05-implementation).
 
 **Dừng rồi chạy lại:**
 
@@ -99,7 +99,7 @@ make up
 make check
 ```
 
-`down` giữ volume; `up` dùng lại image, dữ liệu và khóa. Khi sửa code, chạy `make build` rồi `make up` để dùng image mới. Có thể chạy lại `make setup` để build và kiểm tra toàn bộ; khóa và cấu hình hiện hữu vẫn được giữ.
+`down` giữ volume; `up` dùng lại image, dữ liệu và khóa, dừng ứng dụng trong lúc kiểm tra offline rồi mới bật lại. `up` không chạy migration; nếu schema chưa đúng phiên bản, chạy `make migrate` rồi `make up`. Khi sửa code, chạy `make build` rồi `make up` để dùng image mới. Có thể chạy lại `make setup` để build và kiểm tra toàn bộ; khóa và cấu hình hiện hữu vẫn được giữ.
 
 Database mới tự nạp schema và seed. Với database đã có dữ liệu, dùng [hướng dẫn nâng cấp](#migration); script khởi tạo không tự chạy lại. Phạm vi tính năng hiện có xem [MVP](../releases/mvp.md); tin phòng và realtime Community chưa có.
 
@@ -109,7 +109,7 @@ Database mới tự nạp schema và seed. Với database đã có dữ liệu, 
 
 `make init` tạo hai database password ở `SCDC_IDENTITY_DB_SECRET_DIR` (mặc định `~/.local/share/scdc/identity-database-secrets`). Admin secret chỉ cấp PostgreSQL/job kiểm tra; Identity nhận runtime secret bằng `ConnectionStrings:IdentityPasswordFile`. Không xoay credential hoặc khởi tạo lại volume có dữ liệu bằng entrypoint.
 
-**Volume MVP đã có dữ liệu:** hoàn tất [chuyển offline S3-03](../../database/postgres/identity/README.md) trước khi mở host mới. Job `identity-cutover-gate` chỉ đọc metadata, kiểm source role đã khóa và target transfer record khớp instance/OID/DB. Với volume tạo mới từ S3-03, marker khởi tạo cho phép baseline Identity mới. Gate từ chối source còn ghi hoặc đích rỗng chưa chuyển; `compose up` không tự chuyển dữ liệu đang dùng. Job không phải API và không cấp credential admin cho consumer.
+**Volume MVP đã có dữ liệu:** hoàn tất [chuyển offline S3-03](../../database/postgres/identity/README.md) trước khi mở host mới. Job `identity-cutover-gate` chỉ đọc metadata, kiểm source role đã khóa và target transfer record khớp instance/OID/DB. Với volume tạo mới từ S3-03, marker khởi tạo cho phép baseline Identity mới. Gate từ chối source còn ghi hoặc đích rỗng chưa chuyển; `make up` không tự chuyển dữ liệu đang dùng. Các gate được gọi từ `ops/preflight.sh`; chỉ chạy `docker compose up` trực tiếp sẽ không thực hiện quy trình kiểm tra này. Job không phải API và không cấp credential admin cho consumer.
 
 Gateway chuyển `/api/v1/auth`, `/api/v1/users`, `/api/v1/health/identity` và Swagger Identity tới host mới. REST/Hub còn lại tới `chat-service`. Cả hai upstream được phân giải DNS lại sau đổi IP, mutation không tự retry.
 
@@ -135,7 +135,7 @@ Host Community có chế độ `CommunityHost__Integrated=true` để chạy wor
 
 Compose mặc định chạy thêm `community-service`; PostgreSQL chứa hai database `scdc_chat` (Messaging và bản lưu nguồn cũ) và `scdc_community` (Community). Identity tiếp tục dùng instance riêng. `make init` thêm chứng chỉ Community bằng CA hiện có, giữ các chứng chỉ cũ; password runtime và HMAC nhận từ `.env` nằm ngoài repo trong `SCDC_COMMUNITY_DB_SECRET_DIR`.
 
-Với volume cũ, dừng writer và làm [runbook chuyển Community](../../database/postgres/community/README.md) trước khi `make up`. Job `community-database-init` chỉ tạo đích rỗng; `community-cutover-gate` từ chối nguồn còn ghi hoặc transfer chưa khớp. Volume mới được entrypoint chép seed Community sang database riêng trước khi có request. Không chạy initializer này bằng tay trên dữ liệu cũ.
+Với volume cũ, dừng writer và làm [runbook chuyển Community](../../database/postgres/community/README.md) trước khi `make up`. Job `community-database-init` chỉ tạo đích rỗng; `community-cutover-gate` trong preflight từ chối nguồn còn ghi hoặc transfer chưa khớp. Volume mới được entrypoint chép seed Community sang database riêng trước khi có request. Không chạy initializer này bằng tay trên dữ liệu cũ.
 
 Gateway `/api/v1/servers` và `/swagger/community` tới Community; `/api/v1/health/community/access` kiểm readiness thực. Debug `http://localhost:5028/swagger/community/`. `make check` kiểm cả ba host. Preview 5082 vẫn giữ trạng thái chuẩn bị. [Hồ sơ bước 3](../records/verification/architecture/s3-10-phase-3-2026-11-26.md) phân biệt dev đang chạy với PR chưa merge.
 
@@ -156,7 +156,7 @@ curl --fail http://localhost:3000/health
 curl --fail http://localhost:3000/api/v1/health
 ```
 
-Dùng `docker compose` nếu chọn Docker. `/healthz` chỉ kiểm tra Nginx; `/health` kiểm tra tiến trình service mẫu; `/api/v1/health` hiện chưa kiểm tra database của monolith. Khi upstream chưa sẵn sàng, các đường dẫn tương ứng có thể trả lỗi gateway; file giao diện vẫn được phục vụ.
+Dùng `docker compose` nếu chọn Docker. `/healthz` chỉ kiểm tra Nginx; `/health` mặc định chuyển tới liveness Messaging, hoặc service mẫu khi bật `SAMPLE=1`; `/api/v1/health` hiện chưa kiểm tra database của monolith. Khi upstream chưa sẵn sàng, các đường dẫn tương ứng có thể trả lỗi gateway; file giao diện vẫn được phục vụ.
 
 Kiểm thử S1-02 cần Node.js 24, npm và trình duyệt Playwright. Cài Chromium bằng `npx playwright install chromium` trong `clients/WebClient`, hoặc đặt `SCDC_E2E_BROWSER_CHANNEL=chrome` nếu đã có Google Chrome.
 
@@ -251,7 +251,10 @@ Các lệnh trong [Makefile](../../Makefile) chạy từ gốc repo. Thêm `ENGI
 | Lệnh | Tác dụng |
 |---|---|
 | `make setup` | Tạo cấu hình khi chưa có, build, khởi chạy và kiểm tra toàn bộ stack |
-| `make up` | Chạy lại stack bằng image hiện có; không chủ động build lại |
+| `make up` | Dừng ứng dụng, kiểm preflight rồi bật runtime bằng image hiện có; không build/migrate |
+| `make migrate` | Dừng writer, kiểm cutover và áp migration owner; giữ ứng dụng dừng để đối chiếu |
+| `make preflight` | Kiểm cutover và checksum migration đã áp, không nâng cấp dữ liệu |
+| `make config` | Kiểm cấu hình runtime và công cụ |
 | `make build` | Build lại image; chạy `make up` sau đó để cập nhật container |
 | `make check` | Kiểm tra health, kết nối PostgreSQL và cấu hình Nginx |
 | `make status` | Xem container, gồm hai job tạo khóa đã thoát |
@@ -260,7 +263,7 @@ Các lệnh trong [Makefile](../../Makefile) chạy từ gốc repo. Thêm `ENGI
 | `make down` | Dừng stack, giữ volume |
 | `make docs-check` | Kiểm tra link và anchor tài liệu; cần Python 3 |
 
-Kiểm tra một stack khác trên cùng máy bằng `COMPOSE_ARGS="-p scdc-demo"` và `ENV_FILE=.env.demo`; dùng cùng giá trị cho mọi lệnh. `make check` dùng các cổng local trong bảng địa chỉ; tùy chọn project không tự đổi cổng. Makefile dành cho môi trường phát triển, không tự chạy kiểm thử trên database ứng dụng.
+Kiểm tra một stack khác trên cùng máy bằng `COMPOSE_ARGS="-p scdc-demo"` và `ENV_FILE=.env.demo`; dùng cùng giá trị cho mọi lệnh. `make check` dùng các cổng local trong bảng địa chỉ; tùy chọn project không tự đổi cổng. `SCDC_WEB_ORIGIN` và `SCDC_OBSERVE_ORIGIN` đổi địa chỉ health khi dùng cổng riêng. `DEV=0` dùng image đã build; `SAMPLE=1` bật demo mẫu. Makefile dành cho môi trường phát triển, không tự chạy kiểm thử trên database ứng dụng.
 
 <a id="docs-sync"></a>
 
@@ -288,12 +291,12 @@ Backend đọc `appsettings.json`; launch profile `http` bật Development và n
 | `ConnectionStrings:Messaging` | Cùng database, user `scdc_messaging`, mật khẩu local `scdc_messaging_dev` |
 | `Authentication:Jwt:Issuer` / `Audience` | `SCDC` / `SCDC.WebClient`, dùng chung cho bên cấp và bên xác minh |
 | `Authentication:Jwt:PublicKeyDirectory` / `KeyIds` | Thư mục public key SPKI và danh sách ID tin cậy; file `<kid>.pub.pem`, nạp khi khởi động |
-| `Modules:Identity:PrivateKeyPath` / `SigningKeyId` | File private key PKCS#8 chỉ cấp cho Identity và key ID đang ký. Compose tự khởi tạo trong volume bền qua `identity-keygen` |
+| `Modules:Identity:PrivateKeyPath` / `SigningKeyId` | File private key PKCS#8 chỉ cấp cho Identity và key ID đang ký. Setup khởi tạo trong volume bền qua công cụ `identity-keygen` |
 | `Modules:Identity:ExposeDevelopmentTokens` | `true` trong Development, dùng token trả về để thử xác minh/reset; giá trị mặc định `false` |
 | `Modules:Community:Operations:ActiveKeyId` / `Keys:<id>` | ID active và key base64 ít nhất 32 byte ngẫu nhiên; giữ key cũ cho operation còn lưu, xem [mục 8](#community-configuration) |
 | `Modules:Community:KeyRingPath` | Thư mục keyring bền, API đọc/ghi được; giữ qua restart để cursor vẫn đọc được |
 | `Modules:Identity:UserSearch:CursorKeyRingPath` / `ApplicationName` | Keyring bảo vệ cursor tìm người/inbox/lịch sử DM; provider riêng với Community, giữ qua restart. Compose lưu trong `identity-user-search-keys` |
-| `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Compose tự tạo khóa qua job `messaging-keygen`, giữ trong volume `scdc-messaging-keys` |
+| `Modules:Messaging:FingerprintKeyDirectory` / `ActiveFingerprintKeyId` | Thư mục chứa `<keyId>.key` dạng byte, tối thiểu 32 byte ngẫu nhiên; thiếu khóa chặn gửi/retry. Setup tạo khóa qua công cụ `messaging-keygen`, giữ trong volume `scdc-messaging-keys` |
 | `Cors:AllowedOrigins` | Local hiện có `http://localhost:3000`, `http://localhost:5173`; Vite của repo mặc định 3000 |
 
 Thời hạn token, phiên và khóa đăng nhập xem [Tài khoản](../features/accounts/README.md). Khi đặt bằng biến môi trường, thay `:` bằng `__`, ví dụ `ConnectionStrings__Identity`. Host là `localhost` khi chạy API trên máy, `postgres` trong Compose. Mỗi pool mặc định tối đa 20 kết nối; có thể đặt `Maximum Pool Size` trong connection string. Ba biến `IDENTITY_DB_PASSWORD`, `COMMUNITY_DB_PASSWORD`, `MESSAGING_DB_PASSWORD` ghi đè mật khẩu local trong Compose; giữ đồng bộ với role đã cấp. Tài khoản `scdc` chỉ dùng quản trị/migration.
@@ -434,9 +437,9 @@ Script kiểm tra link và anchor trong tài liệu hiện hành và các README
 |---|---|
 | API không khởi động | Kiểm tra connection string, cặp khóa RSA, key ID, môi trường và log; khởi động PostgreSQL trước |
 | Compose báo thiếu `COMMUNITY_OPERATION_KEY` | `make setup` chỉ tạo `.env` khi file chưa có; nếu file hiện hữu thiếu khóa thì bổ sung khóa, rồi chạy lại |
-| Job tạo khóa đã thoát | `Exited (0)` là thành công; mã khác 0 thì xem `make logs SERVICE=identity-keygen` hoặc `make logs SERVICE=messaging-keygen` |
+| Công cụ chuẩn bị báo lỗi | Xem log ngay trong lệnh `make setup`; công cụ dùng `run --rm`. Writer không được bật khi một bước thất bại |
 | Trùng cổng 3000/5026/5432 | Kiểm tra service Compose và tiến trình local, dừng thành phần trùng trước khi chạy |
-| Gateway trả 502 khi vừa khởi động | Chờ hai API sẵn sàng; xem `docker compose logs --tail=100 chat-service sample-service web-client` |
+| Gateway trả 502 khi vừa khởi động | Chờ hai API sẵn sàng; xem `docker compose logs --tail=100 chat-service identity-service community-service web-client` |
 | OpenObserve chưa có log hoặc trace | Kiểm tra khoảng thời gian, organization `default`, stream `scdc`; xem `make logs SERVICE=otel-collector` và `make logs SERVICE=openobserve` |
 | Login tài khoản seed thất bại | Seed không chứa password đăng nhập thực; tạo và xác minh tài khoản qua API |
 | Login trả 403 | Xem `errorCode`; chưa xác minh cần hoàn tất verify, không tự coi mọi 403 là phiên hết hạn |

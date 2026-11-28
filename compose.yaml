@@ -1,9 +1,212 @@
-x-jwt-trust:
-  Authentication__Jwt__Issuer: SCDC
-  Authentication__Jwt__Audience: SCDC.WebClient
-  Authentication__Jwt__PublicKeyDirectory: /app/auth-public
-  Authentication__Jwt__KeyIds__0: identity-local-v1
+# Long-running runtime only. Start with make setup / make up so preflight gates run first.
+# Image tags can be supplied by a deployment; compose.dev.yaml adds source builds.
+name: ${COMPOSE_PROJECT_NAME:-scdc}
 services:
+  web-client:
+    ports:
+    - 3000:80
+    depends_on:
+      chat-service:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      community-service:
+        condition: service_started
+    restart: unless-stopped
+    environment:
+      SCDC_COMMUNITY_UPSTREAM: community-service:8080
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-web-client:${SCDC_IMAGE_TAG:-latest}
+  identity-service:
+    environment:
+      Authentication__Sessions__WriterUser: scdc_writer
+      Authentication__Sessions__WriterPasswordFile: /run/secrets/redis_writer_password
+      ConnectionStrings__Identity: Host=identity-postgres;Port=5432;Database=scdc_identity;Username=scdc_identity
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Modules__Identity__SigningKeyId: identity-local-v1
+      Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
+      Modules__Identity__Email__Enabled: 'false'
+      Modules__Identity__Email__PublicOrigin: http://localhost:3000
+      Modules__Identity__Email__KeyRingPath: /app/email-keys
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      Authentication__Sessions__Endpoint: auth-redis:6379
+      Authentication__Sessions__ReaderUser: scdc_reader
+      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
+      Telemetry__Enabled: 'true'
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: '5000'
+      InternalRpc__CaPath: /run/secrets/rpc_ca
+      InternalRpc__CertificatePath: /run/secrets/rpc_identity_certificate
+      InternalRpc__PrivateKeyPath: /run/secrets/rpc_identity_private_key
+      InternalRpc__AllowedPeers__0: chat-service
+      InternalRpc__Community__Endpoint: https://community-service:8443
+      InternalRpc__Messaging__Endpoint: https://chat-service:8443
+      InternalRpc__PeerOwners__chat-service__0: Messaging
+      ConnectionStrings__IdentityPasswordFile: /run/secrets/identity_database_password
+      InternalRpc__AllowedPeers__1: community-service
+      InternalRpc__Community__Peer: community-service
+      InternalRpc__PeerOwners__community-service__0: Community
+      InternalRpc__PermitDelegations__community-service__Messaging__0: ChannelRead
+      Modules__Identity__ExposeDevelopmentTokens: 'false'
+    depends_on:
+      auth-redis:
+        condition: service_healthy
+      identity-postgres:
+        condition: service_healthy
+    secrets:
+    - redis_reader_password
+    - redis_writer_password
+    - rpc_ca
+    - rpc_identity_certificate
+    - rpc_identity_private_key
+    - identity_database_password
+    volumes:
+    - identity-user-search-keys:/app/.dm-keys/user-search
+    - scdc-identity-email-keys:/app/email-keys
+    - scdc-identity-private-keys:/app/auth-private:ro
+    - scdc-identity-public-keys:/app/auth-public:ro
+    restart: unless-stopped
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-identity-service:${SCDC_IMAGE_TAG:-latest}
+  community-service:
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      Authentication__Sessions__Endpoint: auth-redis:6379
+      Authentication__Sessions__ReaderUser: scdc_reader
+      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
+      Telemetry__Enabled: 'true'
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: '5000'
+      CommunityHost__Integrated: 'true'
+      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_community;Username=scdc_community_service
+      ConnectionStrings__CommunityPasswordFile: /run/secrets/community_database_password
+      Modules__Community__Operations__ActiveKeyId: local1
+      Modules__Community__KeyRingPath: /app/community-keys
+      InternalRpc__CaPath: /run/secrets/rpc_ca
+      InternalRpc__CertificatePath: /run/secrets/rpc_community_certificate
+      InternalRpc__PrivateKeyPath: /run/secrets/rpc_community_private_key
+      InternalRpc__AllowedPeers__0: identity-service
+      InternalRpc__AllowedPeers__1: chat-service
+      InternalRpc__Identity__Endpoint: https://identity-service:8443
+      InternalRpc__Messaging__Endpoint: https://chat-service:8443
+      Modules__Community__Operations__KeyFiles__local1: /run/secrets/community_operation_key
+    secrets:
+    - community_database_password
+    - rpc_ca
+    - rpc_community_certificate
+    - rpc_community_private_key
+    - community_operation_key
+    - redis_reader_password
+    volumes:
+    - scdc-community-keys:/app/community-keys
+    - scdc-identity-public-keys:/app/auth-public:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+    restart: unless-stopped
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-community-service:${SCDC_IMAGE_TAG:-latest}
+  chat-service:
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      Authentication__Sessions__Endpoint: auth-redis:6379
+      Authentication__Sessions__ReaderUser: scdc_reader
+      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
+      Telemetry__Enabled: 'true'
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: '5000'
+      ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
+      Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
+      Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
+      InternalRpc__CaPath: /run/secrets/rpc_ca
+      InternalRpc__CertificatePath: /run/secrets/rpc_monolith_certificate
+      InternalRpc__PrivateKeyPath: /run/secrets/rpc_monolith_private_key
+      InternalRpc__AllowedPeers__0: identity-service
+      InternalRpc__Identity__Endpoint: https://identity-service:8443
+      Modules__Messaging__CursorKeyRingPath: /app/messaging-cursor-keys
+      Modules__Messaging__CursorApplicationName: SCDC.UserSearch.local
+      Hosting__CommunityEnabled: 'false'
+      InternalRpc__AllowedPeers__1: community-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+    restart: unless-stopped
+    secrets:
+    - redis_reader_password
+    - rpc_ca
+    - rpc_monolith_certificate
+    - rpc_monolith_private_key
+    volumes:
+    - scdc-messaging-keys:/app/messaging-keys
+    - scdc-identity-public-keys:/app/auth-public:ro
+    - scdc-messaging-cursor-keys:/app/messaging-cursor-keys
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-chat-service:${SCDC_IMAGE_TAG:-latest}
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_chat
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
+      COMMUNITY_DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
+      MESSAGING_DB_PASSWORD: ${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
+      POSTGRES_USER: scdc
+      POSTGRES_PASSWORD: scdc_dev
+      COMMUNITY_DATABASE_NAME: scdc_community
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -h 127.0.0.1 -U scdc -d scdc_chat
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+    - scdc-postgres-data:/var/lib/postgresql
+    - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
+    - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
+    - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
+    - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro,z
+    - ./database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
+    - ./database/postgres/community:/opt/scdc/community:ro,z
+    - ./database/postgres/community/init-source.sh:/docker-entrypoint-initdb.d/005-community-database.sh:ro,z
+    secrets:
+    - community_database_password
+    restart: unless-stopped
+  identity-postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: scdc_identity
+      POSTGRES_USER: scdc_identity_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/identity_database_admin_password
+    secrets:
+    - identity_database_admin_password
+    - identity_database_password
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -h 127.0.0.1 -U scdc_identity_admin -d scdc_identity
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+    - scdc-identity-postgres-data:/var/lib/postgresql
+    - ./database/postgres/identity/init.sh:/docker-entrypoint-initdb.d/001-identity.sh:ro,z
+    - ./database/postgres/identity:/opt/scdc/identity:ro,z
+    restart: unless-stopped
   auth-redis:
     image: docker.io/library/redis:8.2.11-alpine
     command:
@@ -31,108 +234,6 @@ services:
       timeout: 2s
       retries: 20
     mem_limit: 256m
-    restart: unless-stopped
-  messaging-keygen:
-    build:
-      context: .
-      dockerfile: services/SCDC.Api/Dockerfile
-    entrypoint:
-    - /bin/sh
-    - -ec
-    - "umask 077\nif [ ! -e /app/messaging-keys/dm-local-v1.key ]; then\n  head -c 32 /dev/urandom > /app/messaging-keys/dm-local-v1.key\nfi\n\
-      test \"$$(wc -c < /app/messaging-keys/dm-local-v1.key)\" -ge 32\n"
-    volumes:
-    - scdc-messaging-keys:/app/messaging-keys
-  identity-keygen:
-    build:
-      context: .
-      dockerfile: services/Identity/SCDC.Identity.Api/Dockerfile
-    entrypoint:
-    - dotnet
-    - SCDC.Identity.Api.dll
-    - --initialize-jwt-keys
-    environment:
-      Authentication__Jwt__Issuer: SCDC
-      Authentication__Jwt__Audience: SCDC.WebClient
-      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
-      Authentication__Jwt__KeyIds__0: identity-local-v1
-      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
-      Modules__Identity__SigningKeyId: identity-local-v1
-    volumes:
-    - scdc-identity-private-keys:/app/auth-private
-    - scdc-identity-public-keys:/app/auth-public
-  chat-service:
-    build:
-      context: .
-      dockerfile: services/SCDC.Api/Dockerfile
-    environment:
-      Authentication__Jwt__Issuer: SCDC
-      Authentication__Jwt__Audience: SCDC.WebClient
-      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
-      Authentication__Jwt__KeyIds__0: identity-local-v1
-      ASPNETCORE_ENVIRONMENT: Development
-      Authentication__Sessions__Endpoint: auth-redis:6379
-      Authentication__Sessions__ReaderUser: scdc_reader
-      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
-      Telemetry__Enabled: 'true'
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_METRIC_EXPORT_INTERVAL: '5000'
-      ConnectionStrings__Messaging: Host=postgres;Port=5432;Database=scdc_chat;Username=scdc_messaging;Password=${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
-      Modules__Messaging__FingerprintKeyDirectory: /app/messaging-keys
-      Modules__Messaging__ActiveFingerprintKeyId: dm-local-v1
-      InternalRpc__CaPath: /run/secrets/rpc_ca
-      InternalRpc__CertificatePath: /run/secrets/rpc_monolith_certificate
-      InternalRpc__PrivateKeyPath: /run/secrets/rpc_monolith_private_key
-      InternalRpc__AllowedPeers__0: identity-service
-      InternalRpc__Identity__Endpoint: https://identity-service:8443
-      Modules__Messaging__CursorKeyRingPath: /app/messaging-cursor-keys
-      Modules__Messaging__CursorApplicationName: SCDC.UserSearch.local
-      Hosting__CommunityEnabled: 'false'
-      InternalRpc__AllowedPeers__1: community-service
-    ports:
-    - 5026:8080
-    depends_on:
-      messaging-keygen:
-        condition: service_completed_successfully
-      identity-keygen:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      auth-redis:
-        condition: service_healthy
-      identity-service:
-        condition: service_started
-      messaging-cursor-keygen:
-        condition: service_completed_successfully
-      community-cutover-gate:
-        condition: service_completed_successfully
-    restart: unless-stopped
-    secrets:
-    - redis_reader_password
-    - rpc_ca
-    - rpc_monolith_certificate
-    - rpc_monolith_private_key
-    volumes:
-    - scdc-messaging-keys:/app/messaging-keys
-    - scdc-identity-public-keys:/app/auth-public:ro
-    - scdc-messaging-cursor-keys:/app/messaging-cursor-keys
-  sample-service:
-    build:
-      context: .
-      dockerfile: services/Sample/SCDC.Sample.Api/Dockerfile
-    environment:
-      Authentication__Jwt__Issuer: SCDC
-      Authentication__Jwt__Audience: SCDC.WebClient
-      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
-      Authentication__Jwt__KeyIds__0: identity-local-v1
-      Telemetry__Enabled: 'true'
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_METRIC_EXPORT_INTERVAL: '5000'
-    volumes:
-    - scdc-identity-public-keys:/app/auth-public:ro
-    depends_on:
-      identity-keygen:
-        condition: service_completed_successfully
     restart: unless-stopped
   otel-collector:
     image: docker.io/otel/opentelemetry-collector-contrib:0.165.0
@@ -164,277 +265,6 @@ services:
     - scdc-openobserve-data:/data
     mem_limit: 1g
     restart: unless-stopped
-  web-client:
-    build:
-      context: ./clients/WebClient
-      dockerfile: Dockerfile
-    ports:
-    - 3000:80
-    depends_on:
-      chat-service:
-        condition: service_started
-      sample-service:
-        condition: service_started
-      identity-service:
-        condition: service_started
-      community-service:
-        condition: service_started
-    restart: unless-stopped
-    environment:
-      SCDC_COMMUNITY_UPSTREAM: community-service:8080
-  postgres:
-    image: docker.io/library/postgres:18-alpine
-    environment:
-      POSTGRES_DB: scdc_chat
-      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-scdc_identity_dev}
-      COMMUNITY_DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:-scdc_community_dev}
-      MESSAGING_DB_PASSWORD: ${MESSAGING_DB_PASSWORD:-scdc_messaging_dev}
-      POSTGRES_USER: scdc
-      POSTGRES_PASSWORD: scdc_dev
-      COMMUNITY_DATABASE_NAME: scdc_community
-    ports:
-    - 5432:5432
-    healthcheck:
-      test:
-      - CMD-SHELL
-      - pg_isready -h 127.0.0.1 -U scdc -d scdc_chat
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    volumes:
-    - scdc-postgres-data:/var/lib/postgresql
-    - ./database/postgres/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro,z
-    - ./database/postgres/init-module-roles.sh:/docker-entrypoint-initdb.d/003-module-roles.sh:ro,z
-    - ./database/postgres/module-roles.sql:/opt/scdc/module-roles.sql:ro,z
-    - ./database/postgres/seed.sql:/docker-entrypoint-initdb.d/002-seed.sql:ro,z
-    - ./database/postgres/init-identity-source-freeze.sh:/docker-entrypoint-initdb.d/004-freeze-identity.sh:ro,z
-    - ./database/postgres/community:/opt/scdc/community:ro,z
-    - ./database/postgres/community/init-source.sh:/docker-entrypoint-initdb.d/005-community-database.sh:ro,z
-    secrets:
-    - community_database_password
-  identity-service:
-    build:
-      context: .
-      dockerfile: services/Identity/SCDC.Identity.Api/Dockerfile
-    environment:
-      Authentication__Sessions__WriterUser: scdc_writer
-      Authentication__Sessions__WriterPasswordFile: /run/secrets/redis_writer_password
-      ConnectionStrings__Identity: Host=identity-postgres;Port=5432;Database=scdc_identity;Username=scdc_identity
-      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
-      Modules__Identity__SigningKeyId: identity-local-v1
-      Modules__Identity__UserSearch__ApplicationName: SCDC.UserSearch.local
-      Modules__Identity__ExposeDevelopmentTokens: 'true'
-      Modules__Identity__Email__Enabled: 'false'
-      Modules__Identity__Email__PublicOrigin: http://localhost:3000
-      Modules__Identity__Email__KeyRingPath: /app/email-keys
-      Authentication__Jwt__Issuer: SCDC
-      Authentication__Jwt__Audience: SCDC.WebClient
-      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
-      Authentication__Jwt__KeyIds__0: identity-local-v1
-      ASPNETCORE_ENVIRONMENT: Development
-      Authentication__Sessions__Endpoint: auth-redis:6379
-      Authentication__Sessions__ReaderUser: scdc_reader
-      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
-      Telemetry__Enabled: 'true'
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_METRIC_EXPORT_INTERVAL: '5000'
-      InternalRpc__CaPath: /run/secrets/rpc_ca
-      InternalRpc__CertificatePath: /run/secrets/rpc_identity_certificate
-      InternalRpc__PrivateKeyPath: /run/secrets/rpc_identity_private_key
-      InternalRpc__AllowedPeers__0: chat-service
-      InternalRpc__Community__Endpoint: https://community-service:8443
-      InternalRpc__Messaging__Endpoint: https://chat-service:8443
-      InternalRpc__PeerOwners__chat-service__0: Messaging
-      ConnectionStrings__IdentityPasswordFile: /run/secrets/identity_database_password
-      InternalRpc__AllowedPeers__1: community-service
-      InternalRpc__Community__Peer: community-service
-      InternalRpc__PeerOwners__community-service__0: Community
-      InternalRpc__PermitDelegations__community-service__Messaging__0: ChannelRead
-    depends_on:
-      identity-keygen:
-        condition: service_completed_successfully
-      auth-redis:
-        condition: service_healthy
-      identity-postgres:
-        condition: service_healthy
-      identity-cutover-gate:
-        condition: service_completed_successfully
-      identity-email-migration:
-        condition: service_completed_successfully
-      community-cutover-gate:
-        condition: service_completed_successfully
-    secrets:
-    - redis_reader_password
-    - redis_writer_password
-    - rpc_ca
-    - rpc_identity_certificate
-    - rpc_identity_private_key
-    - identity_database_password
-    volumes:
-    - identity-user-search-keys:/app/.dm-keys/user-search
-    - scdc-identity-email-keys:/app/email-keys
-    - scdc-identity-private-keys:/app/auth-private:ro
-    - scdc-identity-public-keys:/app/auth-public:ro
-    ports:
-    - 127.0.0.1:5027:8080
-    restart: unless-stopped
-  messaging-cursor-keygen:
-    build:
-      context: .
-      dockerfile: services/SCDC.Api/Dockerfile
-    entrypoint:
-    - /bin/sh
-    - -ec
-    - umask 077; if ! find /app/messaging-cursor-keys -name 'key-*.xml' | grep -q .; then cp -a /app/legacy-cursors/. /app/messaging-cursor-keys/;
-      fi
-    volumes:
-    - identity-user-search-keys:/app/legacy-cursors:ro
-    - scdc-messaging-cursor-keys:/app/messaging-cursor-keys
-  identity-postgres:
-    image: docker.io/library/postgres:18-alpine
-    environment:
-      POSTGRES_DB: scdc_identity
-      POSTGRES_USER: scdc_identity_admin
-      POSTGRES_PASSWORD_FILE: /run/secrets/identity_database_admin_password
-    secrets:
-    - identity_database_admin_password
-    - identity_database_password
-    healthcheck:
-      test:
-      - CMD-SHELL
-      - pg_isready -h 127.0.0.1 -U scdc_identity_admin -d scdc_identity
-      interval: 5s
-      timeout: 3s
-      retries: 30
-    volumes:
-    - scdc-identity-postgres-data:/var/lib/postgresql
-    - ./database/postgres/identity/init.sh:/docker-entrypoint-initdb.d/001-identity.sh:ro,z
-    - ./database/postgres/identity:/opt/scdc/identity:ro,z
-    ports:
-    - 127.0.0.1:5433:5432
-    restart: unless-stopped
-  identity-cutover-gate:
-    image: docker.io/library/postgres:18-alpine
-    entrypoint:
-    - /bin/sh
-    - /opt/scdc/cutover-gate.sh
-    environment:
-      SOURCE_DATABASE_USER: scdc
-      SOURCE_DATABASE_NAME: scdc_chat
-      SOURCE_DATABASE_PASSWORD: scdc_dev
-      TARGET_DATABASE_NAME: scdc_identity
-    secrets:
-    - identity_database_admin_password
-    volumes:
-    - ./database/postgres/identity/cutover-gate.sh:/opt/scdc/cutover-gate.sh:ro,z
-    depends_on:
-      postgres:
-        condition: service_healthy
-      identity-postgres:
-        condition: service_healthy
-  identity-email-migration:
-    image: docker.io/library/postgres:18-alpine
-    entrypoint: [/bin/sh, /opt/scdc/identity/migrate-email.sh]
-    environment:
-      PGHOST: identity-postgres
-      PGUSER: scdc_identity_admin
-      PGDATABASE: scdc_identity
-    secrets:
-    - identity_database_admin_password
-    volumes:
-    - ./database/postgres/identity:/opt/scdc/identity:ro,z
-    depends_on:
-      identity-cutover-gate:
-        condition: service_completed_successfully
-  community-database-init:
-    image: docker.io/library/postgres:18-alpine
-    entrypoint:
-    - /bin/sh
-    - /opt/scdc/community/bootstrap-target.sh
-    environment:
-      PGHOST: postgres
-      PGUSER: scdc
-      PGPASSWORD: scdc_dev
-      PGDATABASE: scdc_chat
-      COMMUNITY_DATABASE_NAME: scdc_community
-    secrets:
-    - community_database_password
-    volumes:
-    - ./database/postgres/community:/opt/scdc/community:ro,z
-    depends_on:
-      postgres:
-        condition: service_healthy
-  community-cutover-gate:
-    image: docker.io/library/postgres:18-alpine
-    entrypoint:
-    - /bin/sh
-    - /opt/scdc/community/cutover-gate.sh
-    environment:
-      PGHOST: postgres
-      PGUSER: scdc
-      PGPASSWORD: scdc_dev
-      PGDATABASE: scdc_chat
-      COMMUNITY_DATABASE_NAME: scdc_community
-    volumes:
-    - ./database/postgres/community:/opt/scdc/community:ro,z
-    depends_on:
-      community-database-init:
-        condition: service_completed_successfully
-  community-service:
-    build:
-      context: .
-      dockerfile: services/Community/SCDC.Community.Api/Dockerfile
-    environment:
-      Authentication__Jwt__Issuer: SCDC
-      Authentication__Jwt__Audience: SCDC.WebClient
-      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
-      Authentication__Jwt__KeyIds__0: identity-local-v1
-      Authentication__Sessions__Endpoint: auth-redis:6379
-      Authentication__Sessions__ReaderUser: scdc_reader
-      Authentication__Sessions__ReaderPasswordFile: /run/secrets/redis_reader_password
-      Telemetry__Enabled: 'true'
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_METRIC_EXPORT_INTERVAL: '5000'
-      ASPNETCORE_ENVIRONMENT: Development
-      CommunityHost__Integrated: 'true'
-      ConnectionStrings__Community: Host=postgres;Port=5432;Database=scdc_community;Username=scdc_community_service
-      ConnectionStrings__CommunityPasswordFile: /run/secrets/community_database_password
-      Modules__Community__Operations__ActiveKeyId: local1
-      Modules__Community__KeyRingPath: /app/community-keys
-      InternalRpc__CaPath: /run/secrets/rpc_ca
-      InternalRpc__CertificatePath: /run/secrets/rpc_community_certificate
-      InternalRpc__PrivateKeyPath: /run/secrets/rpc_community_private_key
-      InternalRpc__AllowedPeers__0: identity-service
-      InternalRpc__AllowedPeers__1: chat-service
-      InternalRpc__Identity__Endpoint: https://identity-service:8443
-      InternalRpc__Messaging__Endpoint: https://chat-service:8443
-      Modules__Community__Operations__KeyFiles__local1: /run/secrets/community_operation_key
-    secrets:
-    - community_database_password
-    - rpc_ca
-    - rpc_community_certificate
-    - rpc_community_private_key
-    - community_operation_key
-    - redis_reader_password
-    volumes:
-    - scdc-community-keys:/app/community-keys
-    - scdc-identity-public-keys:/app/auth-public:ro
-    depends_on:
-      community-cutover-gate:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      auth-redis:
-        condition: service_healthy
-      identity-keygen:
-        condition: service_completed_successfully
-      identity-service:
-        condition: service_started
-      chat-service:
-        condition: service_started
-    restart: unless-stopped
-    ports:
-    - 127.0.0.1:5028:8080
 volumes:
   scdc-identity-email-keys: null
   scdc-auth-redis: null

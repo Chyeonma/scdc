@@ -41,7 +41,7 @@ Dừng và drain cả hai phía. Nếu đích còn đúng manifest đã chuyển
 Sau khi CLI rollback thành công, cấu hình phục hồi gồm host cũ đăng ký Community, keyring/HMAC cũ, callback Identity về chat-service và gateway gửi Community về host đó:
 
 ```bash
-docker compose -f compose.yaml -f ops/compose/compose.community-rollback.yaml up -d --no-build
+SCDC_COMMUNITY_ROLLBACK_IMAGE=<image-cu-da-kiem-chung> make up ROLLBACK=1
 ```
 
 Override cần Docker Compose 2.24.4+ cho `!override`; dùng cùng project/`.env` như dev. Target Community nằm ở profile tắt. Gate rollback vẫn yêu cầu record đã xác minh, nguồn `LOGIN`, đích `NOLOGIN` và không còn connection runtime đích; đổi manifest đơn thuần không vượt qua được gate.

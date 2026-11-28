@@ -120,7 +120,8 @@ Công cụ dùng transaction, advisory lock có giới hạn chờ và ledger ch
 Chạy lại cùng checksum là no-op; checksum khác hoặc writer cũ còn kết nối bị
 từ chối. Runtime chỉ nhận DML trên hai bảng mới, vẫn không sửa ledger/audit/ACK.
 Readiness Identity kiểm tra hai bảng email. Compose có job tương đương
-`identity-email-migration`; chỉ job này nhận admin secret, API và worker dùng
+`identity-email-migration` trong `ops/compose/compose.prepare.yaml`; `make setup` /
+`make migrate` áp migration, `make up` chỉ kiểm checksum bằng `--check`. Chỉ công cụ này nhận admin secret, API và worker dùng
 runtime credential.
 
 Kiểm chứng job trên container thử có POSTGRES_DB kết thúc `_test`, cấp

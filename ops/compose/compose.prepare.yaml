@@ -1,0 +1,105 @@
+# One-shot tools. Merge after compose.yaml; paths are relative to the repository root.
+# ops scripts run these explicitly with run --rm --no-deps; never part of runtime up.
+services:
+  messaging-keygen:
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/initialize-messaging-key.sh
+    volumes:
+    - scdc-messaging-keys:/app/messaging-keys
+    - ./ops/initialize-messaging-key.sh:/opt/scdc/initialize-messaging-key.sh:ro,z
+    profiles:
+    - tools
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-chat-service:${SCDC_IMAGE_TAG:-latest}
+  identity-keygen:
+    entrypoint:
+    - dotnet
+    - SCDC.Identity.Api.dll
+    - --initialize-jwt-keys
+    environment:
+      Authentication__Jwt__Issuer: SCDC
+      Authentication__Jwt__Audience: SCDC.WebClient
+      Authentication__Jwt__PublicKeyDirectory: /app/auth-public
+      Authentication__Jwt__KeyIds__0: identity-local-v1
+      Modules__Identity__PrivateKeyPath: /app/auth-private/identity-local-v1.pem
+      Modules__Identity__SigningKeyId: identity-local-v1
+    volumes:
+    - scdc-identity-private-keys:/app/auth-private
+    - scdc-identity-public-keys:/app/auth-public
+    profiles:
+    - tools
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-identity-service:${SCDC_IMAGE_TAG:-latest}
+  messaging-cursor-keygen:
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/initialize-messaging-cursors.sh
+    volumes:
+    - identity-user-search-keys:/app/legacy-cursors:ro
+    - scdc-messaging-cursor-keys:/app/messaging-cursor-keys
+    - ./ops/initialize-messaging-cursors.sh:/opt/scdc/initialize-messaging-cursors.sh:ro,z
+    profiles:
+    - tools
+    image: ${SCDC_IMAGE_PREFIX:-scdc}-chat-service:${SCDC_IMAGE_TAG:-latest}
+  identity-cutover-gate:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/cutover-gate.sh
+    environment:
+      SOURCE_DATABASE_USER: scdc
+      SOURCE_DATABASE_NAME: scdc_chat
+      SOURCE_DATABASE_PASSWORD: scdc_dev
+      TARGET_DATABASE_NAME: scdc_identity
+    secrets:
+    - identity_database_admin_password
+    volumes:
+    - ./database/postgres/identity/cutover-gate.sh:/opt/scdc/cutover-gate.sh:ro,z
+    profiles:
+    - tools
+  identity-email-migration:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/identity/migrate-email.sh
+    environment:
+      PGHOST: identity-postgres
+      PGUSER: scdc_identity_admin
+      PGDATABASE: scdc_identity
+    secrets:
+    - identity_database_admin_password
+    volumes:
+    - ./database/postgres/identity:/opt/scdc/identity:ro,z
+    profiles:
+    - tools
+  community-database-init:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/community/bootstrap-target.sh
+    environment:
+      PGHOST: postgres
+      PGUSER: scdc
+      PGPASSWORD: scdc_dev
+      PGDATABASE: scdc_chat
+      COMMUNITY_DATABASE_NAME: scdc_community
+    secrets:
+    - community_database_password
+    volumes:
+    - ./database/postgres/community:/opt/scdc/community:ro,z
+    profiles:
+    - tools
+  community-cutover-gate:
+    image: docker.io/library/postgres:18-alpine
+    entrypoint:
+    - /bin/sh
+    - /opt/scdc/community/cutover-gate.sh
+    environment:
+      PGHOST: postgres
+      PGUSER: scdc
+      PGPASSWORD: scdc_dev
+      PGDATABASE: scdc_chat
+      COMMUNITY_DATABASE_NAME: scdc_community
+    volumes:
+    - ./database/postgres/community:/opt/scdc/community:ro,z
+    profiles:
+    - tools

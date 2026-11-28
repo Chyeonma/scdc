@@ -40,9 +40,9 @@ Phân công hiện hành nằm tại [kế hoạch](docs/project/planning.md#tea
 |---|---|
 | [clients/WebClient](clients/WebClient) | Giao diện web, dùng React và Vite. |
 | [services](services) | Backend xử lý nghiệp vụ, cung cấp API và cập nhật thời gian thực. Dùng .NET. |
-| [services/Sample](services/Sample) | Service mẫu S1-03 theo cấu trúc bốn project v1; trả `/health` qua Nginx. |
+| [services/Sample](services/Sample) | Service mẫu S1-03 theo cấu trúc bốn project v1; bật bằng `SAMPLE=1` để demo qua Nginx. |
 | [database/postgres](database/postgres) | Script SQL khởi tạo, cập nhật cấu trúc và tạo dữ liệu mẫu cho PostgreSQL. |
-| [compose.yaml](compose.yaml) | Cấu hình chạy giao diện, API và cơ sở dữ liệu bằng container trong môi trường phát triển. |
+| [compose.yaml](compose.yaml) | Các thành phần chạy thường trực; [compose.dev.yaml](compose.dev.yaml) bổ sung build/debug local. |
 | [tests/compose](tests/compose) | Các stack kiểm thử DM, gateway và giám sát, dùng dữ liệu thử riêng. |
 | [ops/compose](ops/compose) | Cấu hình bổ sung để bật email, chạy Community preview hoặc rollback Community. |
 | [Makefile](Makefile) | Dựng, chạy, kiểm tra và dừng môi trường phát triển. |
@@ -59,6 +59,6 @@ Cần Git, Make, Python 3, Docker hoặc Podman với Compose, OpenSSL và curl.
 make setup
 ```
 
-Podman dùng `make setup ENGINE=podman`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Compose tự khởi tạo khóa DM và JWT. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
+Podman dùng `make setup ENGINE=podman`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Luồng setup tạo khóa, chuẩn bị DB và kiểm tra cutover trước khi bật ứng dụng. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
 
-Các lệnh Compose chạy từ gốc repo. `make setup` dùng `compose.yaml`; script kiểm thử tự chọn file trong `tests/compose/`. Cách bật email và chạy các cấu hình bổ sung trong `ops/compose/` nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup) và README của từng service.
+Các lệnh Compose chạy từ gốc repo. `make setup` ghép `compose.yaml` với `compose.dev.yaml`, gọi công cụ chuẩn bị riêng; `make up` chỉ mở ứng dụng sau preflight. Xem [cách tổ chức Compose](ops/README.md). Script kiểm thử tự chọn file trong `tests/compose/`. Cách bật email và chạy các cấu hình bổ sung trong `ops/compose/` nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup) và README của từng service.

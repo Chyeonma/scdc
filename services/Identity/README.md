@@ -52,8 +52,9 @@ kết nối. [Migration owner](../../database/postgres/identity/README.md#email-
 cũng chạy được bằng DbMigrator với credential admin. Runtime không có DDL.
 
 ```bash
-docker compose stop identity-service
-docker compose up --build -d identity-service
+make build
+make migrate
+make up
 ```
 
 Gmail dev/demo dùng overlay `ops/compose/compose.email.yaml`. Cấp App Password qua file
@@ -62,7 +63,7 @@ Gmail dev/demo dùng overlay `ops/compose/compose.email.yaml`. Cấp App Passwor
 `SCDC_EMAIL_SENDER` và `SCDC_PUBLIC_ORIGIN`, rồi chạy:
 
 ```bash
-docker compose -f compose.yaml -f ops/compose/compose.email.yaml up --build -d identity-service
+make up COMPOSE_ARGS="-f ops/compose/compose.email.yaml"
 ```
 
 Overlay tắt token Development. Host ngoài Compose dùng
