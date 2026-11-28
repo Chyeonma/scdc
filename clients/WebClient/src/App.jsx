@@ -1,3 +1,4 @@
+// Temporary frontend-only CI selection probe; this PR is closed without merging.
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { sessionStore, getMe } from './api.js';
 import { ServerRail } from './components/ServerRail.jsx';
