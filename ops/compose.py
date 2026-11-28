@@ -20,7 +20,7 @@ class Stack:
         self.development = self.environment.get("SCDC_DEV", "1") == "1"
         self.sample = self.environment.get("SCDC_SAMPLE", "0") == "1"
         env_file = Path(self.environment.get("SCDC_ENV_FILE", ".env")).expanduser()
-        self.command = shlex.split(self.environment.get("COMPOSE", "docker compose"))
+        self.command = shlex.split(self.environment.get("COMPOSE", self.environment.get("ENGINE", "podman") + " compose"))
         if not self.command:
             raise ValueError("COMPOSE must name a Compose command")
         self.command += ["--project-directory", str(ROOT), "--env-file", str(env_file),

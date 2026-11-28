@@ -1,8 +1,12 @@
 """The supported startup commands must fail closed before enabling any writer."""
 
 import importlib.util
+import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -136,6 +140,29 @@ class ComposeOperationsTests(unittest.TestCase):
     def test_main_returns_nonzero_for_a_failed_operation(self):
         with patch.object(operations.Stack, "execute", side_effect=subprocess.CalledProcessError(17, "gate")):
             self.assertEqual(operations.main(["up"]), 17)
+
+    @unittest.skipUnless(shutil.which("docker"), "Docker Compose CLI is needed to resolve deployment configuration")
+    def test_rollback_uses_the_old_hosts_available_readiness_endpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory) / "compose.env"
+            env_file.write_text("")
+            environment = dict(os.environ, COMMUNITY_OPERATION_KEY="Y29tcG9zZS10ZXN0LW9ubHkta2V5LWF0LWxlYXN0LTMyLWJ5dGVz",
+                               SCDC_COMMUNITY_ROLLBACK_IMAGE="example.invalid/verified-legacy:test",
+                               SCDC_COMMUNITY_SOURCE_DATABASE="scdc_rollback_source_test")
+            base = ["docker", "compose", "--project-directory", str(ROOT), "--env-file", str(env_file),
+                    "-f", str(ROOT / "compose.yaml")]
+            for rollback in (False, True):
+                command = base + (["-f", str(ROOT / "ops/compose/compose.community-rollback.yaml")] if rollback else [])
+                result = subprocess.run(command + ["config", "--format", "json"], env=environment,
+                                        text=True, capture_output=True, check=True)
+                services = json.loads(result.stdout)["services"]
+                expected = "chat-service:8080/api/v1/health/access" if rollback else "community-service:8080/health/ready"
+                self.assertEqual(services["web-client"]["environment"]["SCDC_COMMUNITY_HEALTH_UPSTREAM"], expected)
+                if rollback:
+                    self.assertIn("scdc_rollback_source_test", services["chat-service"]["environment"]["ConnectionStrings__Community"])
+                    self.assertEqual(services["chat-service"]["image"], environment["SCDC_COMMUNITY_ROLLBACK_IMAGE"])
+                    self.assertNotIn("build", services["chat-service"])
+                    self.assertNotIn("community-service", services)
 
 
 if __name__ == "__main__":

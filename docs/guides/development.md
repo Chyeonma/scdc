@@ -4,7 +4,7 @@
 
 Cách cài đặt, chạy, cấu hình và kiểm thử SCDC trên máy phát triển.
 
-**Cập nhật:** 2026-11-25, S3-02 tách host Identity và gRPC/mTLS. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
+**Cập nhật:** 2026-11-28, Identity/Community có host/database riêng; Messaging trong `SCDC.Api`, Compose runtime và công cụ chuẩn bị đã tách. Riêng Community (database thử, kiểm thử, migration) xem [mục 8](#community).
 
 Các lệnh chạy từ thư mục gốc repo, trừ khi ghi khác. Cấu hình và dữ liệu mẫu chỉ dùng cho môi trường phát triển.
 
@@ -46,7 +46,7 @@ File [`compose.yaml`](../../compose.yaml) chỉ chứa chín service chạy thư
 make setup
 ```
 
-Nếu chọn Podman, dùng `make setup ENGINE=podman`, rồi thêm `ENGINE=podman` vào mọi lệnh Make bên dưới. Kiểm tra engine theo [mục công cụ container](#container-engines) nếu không kết nối được.
+Make mặc định dùng Podman. Nếu chọn Docker, dùng `make setup ENGINE=docker`, rồi thêm `ENGINE=docker` vào mọi lệnh Make bên dưới. Kiểm tra engine theo [mục công cụ container](#container-engines) nếu không kết nối được.
 
 `setup` thực hiện lần lượt:
 

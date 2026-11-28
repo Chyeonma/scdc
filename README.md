@@ -59,6 +59,6 @@ Cần Git, Make, Python 3, Docker hoặc Podman với Compose, OpenSSL và curl.
 make setup
 ```
 
-Podman dùng `make setup ENGINE=podman`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Luồng setup tạo khóa, chuẩn bị DB và kiểm tra cutover trước khi bật ứng dụng. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
+Mặc định dùng Podman; Docker dùng `make setup ENGINE=docker`. Lệnh tự tạo `.env` khi chưa có, build, khởi chạy và kiểm tra stack; Luồng setup tạo khóa, chuẩn bị DB và kiểm tra cutover trước khi bật ứng dụng. Các lần sau dùng `make up`; `make down` giữ dữ liệu. Chi tiết tại [hướng dẫn dựng môi trường tối thiểu](docs/guides/development.md#setup).
 
 Các lệnh Compose chạy từ gốc repo. `make setup` ghép `compose.yaml` với `compose.dev.yaml`, gọi công cụ chuẩn bị riêng; `make up` chỉ mở ứng dụng sau preflight. Xem [cách tổ chức Compose](ops/README.md). Script kiểm thử tự chọn file trong `tests/compose/`. Cách bật email và chạy các cấu hình bổ sung trong `ops/compose/` nằm trong [hướng dẫn phát triển](docs/guides/development.md#setup) và README của từng service.

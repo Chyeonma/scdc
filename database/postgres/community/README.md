@@ -44,7 +44,7 @@ Sau khi CLI rollback thành công, cấu hình phục hồi gồm host cũ đăn
 SCDC_COMMUNITY_ROLLBACK_IMAGE=<image-cu-da-kiem-chung> make up ROLLBACK=1
 ```
 
-Override cần Docker Compose 2.24.4+ cho `!override` và `!reset`; dùng cùng project/`.env` như dev. Target Community nằm ở profile tắt. Image rollback phải có sẵn trước triển khai; thiếu biến thì Compose dừng, không dùng ngầm image hiện hành. Hồ sơ S3-10 là bằng chứng của cấu hình trước lần dọn nguồn này, không xác nhận image rollback mới được chọn. Gate rollback vẫn yêu cầu record đã xác minh, nguồn `LOGIN`, đích `NOLOGIN` và không còn connection runtime đích; đổi manifest đơn thuần không vượt qua được gate.
+Override cần Docker Compose 2.24.4+ cho `!override` và `!reset`; dùng cùng project/`.env` như dev. Target Community nằm ở profile tắt. Image rollback phải có sẵn trước triển khai; thiếu biến thì Compose dừng, không dùng ngầm image hiện hành. Hồ sơ S3-10 là bằng chứng của cấu hình trước lần dọn nguồn này; [hồ sơ dọn nguồn](../../../docs/records/verification/architecture/community-source-isolation-2026-11-28.md) ghi image compatibility và thử nghiệm sau đó. Gate rollback vẫn yêu cầu record đã xác minh, nguồn `LOGIN`, đích `NOLOGIN` và không còn connection runtime đích; đổi manifest đơn thuần không vượt qua được gate.
 
 Nếu đích đã ghi hoặc sequence/generation thay đổi, CLI rollback từ chối và giữ nguồn đóng. Ưu tiên sửa tiến. Quay lại sau ghi cần mapping chênh lệch cho dữ liệu/fence/journal/khóa và diễn tập riêng. Tách Community không đổi quy trình generation Redis của Identity. Sau rollback, có thể chạy lại cutover nếu nguồn chưa đổi; nguồn đã ghi mới thì cần đích mới hoặc đối chiếu có review.
 

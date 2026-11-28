@@ -6,7 +6,7 @@ Thẻ Trello của [STEP-4](../planning.md#step-4). Cách đồng bộ xem [READ
 
 Mã thẻ dùng lại mã COM-W và V1-MEDIA trong [kế hoạch](../planning.md#community-work-items); chi tiết đầu ra và tiêu chí đầy đủ nằm ở đó, thẻ chỉ tóm tắt. Phần backend của các thẻ này chờ STEP-3; phần làm được ngay (giao diện với dữ liệu giả, review hợp đồng, câu hỏi còn mở) đã tách sang [việc làm sớm](step-4-early.md). Mobile, thông báo, gửi file chưa vào đây vì chưa chốt thuộc v1.
 
-Rà lại ở buổi S3-12: cột "Phụ thuộc" trong kế hoạch còn viết theo transaction chung của MVP, phải đổi theo thiết kế STEP-2.
+Rà lại ở buổi S3-12: đối chiếu phụ thuộc trong [kế hoạch](../planning.md#step-4) với các task hiện hành, dùng permit, fence và transaction cục bộ theo STEP-2; không khôi phục transaction xuyên service.
 
 ## COM-W01 · Tin phòng: nền dữ liệu và đọc lịch sử
 - Nhãn: feat
