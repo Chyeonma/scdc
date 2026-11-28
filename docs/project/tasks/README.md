@@ -1,6 +1,6 @@
 # Thẻ Trello theo bước
 
-Mỗi file trong thư mục này chứa các thẻ Trello của một bước trong [lộ trình](../planning.md#roadmap). Khi file được push lên `main`, GitHub Actions tự tạo hoặc cập nhật thẻ trên bảng Trello của nhóm.
+Các file trong thư mục này chứa task theo [lộ trình](../planning.md#roadmap) và vấn đề phát sinh. Khi file được push lên `main`, GitHub Actions tự tạo hoặc cập nhật nội dung thẻ trên bảng Trello của nhóm.
 
 | File | Bước |
 |---|---|
@@ -9,6 +9,7 @@ Mỗi file trong thư mục này chứa các thẻ Trello của một bước tr
 | [step-3.md](step-3.md) | STEP-3 — Tách từng service (12 thẻ đã công bố) |
 | [step-4.md](step-4.md) | STEP-4 — Tính năng trên kiến trúc mới (15 thẻ đã công bố) |
 | [step-4-early.md](step-4-early.md) | Việc của STEP-4 làm được ngay, ai rảnh nhận (đồng bộ) |
+| [issues.md](issues.md) | Vấn đề phát sinh; mã `ISSUE-…`, thẻ mới vào cột Issue |
 
 ## Task có thể bắt đầu
 
@@ -46,6 +47,7 @@ E4-01 đã chọn lọc phần email từ `60f4db3` vào Identity hiện tại; 
 - Đồng bộ **một chiều** từ repo lên Trello. Sửa mô tả thẻ trên Trello sẽ bị ghi đè ở lần đồng bộ sau; muốn đổi nội dung thì sửa file và push.
 - Mặc định script **không** chuyển cột; không gán người, không đổi hạn, không xóa hay lưu trữ thẻ. Chỉ thao tác thủ công với danh sách `complete` mới chuyển các task đã có kết quả hoàn tất trong repo. Thẻ bị bỏ khỏi file chỉ được liệt kê trong log.
 - Thẻ mới vào cột cấu hình ở `TRELLO_LIST_ID` (nên là cột "Backlog"), có nhãn theo bước (ví dụ `STEP-1`).
+- Riêng thẻ `ISSUE-…` mới vào `TRELLO_ISSUE_LIST_ID`, hiện là cột **Issue (Vấn đề phát sinh)**, ID `6ac4d5f0da5bb6adcf1a78f2`. Script kiểm cột còn mở và thuộc đúng bảng trước khi ghi. Thẻ issue đã có giữ cột do người dùng chọn; không tự kéo về Issue khi đồng bộ lại.
 - Thẻ được nhận ra bằng tiền tố `[S1-01]` trong tên. **Không xóa tiền tố này trên Trello**, nếu không lần sau sẽ tạo thẻ mới.
 
 ## Định dạng
@@ -72,7 +74,7 @@ Mô tả chung (không đồng bộ).
 - Mỗi dòng `## <mã> · <tiêu đề>` là một thẻ; mọi dòng tới thẻ tiếp theo thành mô tả. Mã không được trùng, kể cả giữa các file.
 - File có dòng `Trạng thái: nháp` trước thẻ đầu tiên thì **không đồng bộ**. Dùng để viết trước thẻ của bước sau; xóa dòng đó và push để đưa thẻ lên Trello.
 - Một dòng `## ` không theo dạng `<mã> · <tiêu đề>` (ví dụ `## Hiện trạng`) không phải thẻ; nội dung dưới nó không đồng bộ.
-- Thẻ việc phát sinh, nhỏ (sửa lỗi, việc vặt) tạo thẳng trên Trello, không cần đưa vào đây. Thư mục này chỉ giữ các thẻ thuộc lộ trình.
+- Vấn đề cần đồng bộ từ repo được ghi ở `issues.md`, dùng mã `ISSUE-001`, `ISSUE-002`… và không có H1 dạng STEP để tránh tạo nhãn bước. Việc vặt vẫn có thể tạo thủ công trên Trello; chỉ thẻ có nguồn trong repo mới được công cụ đồng bộ.
 
 Chạy thử trên máy, không gọi Trello:
 
@@ -96,6 +98,14 @@ gh workflow run sync-trello.yml --ref main \
 
 Script từ chối task chưa hoàn tất trong nguồn, task bị loại trừ, mã thẻ trùng trên Trello hoặc tên cột không duy nhất. Sau khi ghi, script đọc lại để xác nhận các mã yêu cầu đã ở cột hoàn tất và S1-07 giữ nguyên. Chạy lại không tạo thẻ trùng hoặc di chuyển lại thẻ đã đúng cột. Không thay người được gán, hạn, bình luận hoặc trạng thái lưu trữ.
 
+Chỉ đồng bộ một issue bằng cùng workflow:
+
+```bash
+gh workflow run sync-trello.yml --ref main -f only=ISSUE-001 -f preview=true
+```
+
+Đối chiếu kế hoạch rồi dùng `preview=false` để ghi. Không truyền `complete` thì giữ nguyên cột của thẻ đã có. Khi chạy thủ công từ nhánh khác, footer nguồn trỏ đúng nhánh đó; lần sync main sau merge cập nhật lại link main. `--only` cũng dùng được khi chạy script local; `--dry-run --only ISSUE-001` không gọi Trello.
+
 Kiểm tra công cụ bằng `python3 -m unittest discover -s scripts/tests -p 'test_sync_trello.py'`. Cách cập nhật thẻ dựa trên [API Trello chính thức](https://developer.atlassian.com/cloud/trello/rest/api-group-cards/).
 
 ## Cài đặt một lần (người quản trị repo)
@@ -103,6 +113,6 @@ Kiểm tra công cụ bằng `python3 -m unittest discover -s scripts/tests -p '
 1. Lấy API key và token Trello tại trang Power-Up admin của Trello. Token chỉ cần quyền đọc, ghi trên bảng của nhóm.
 2. GitHub repo → Settings → Secrets and variables → Actions:
    - **Secrets:** `TRELLO_KEY`, `TRELLO_TOKEN` (có thể đã có từ workflow cũ).
-   - **Variables:** `TRELLO_BOARD_ID` (đoạn mã sau `trello.com/b/` trong link bảng) và `TRELLO_LIST_ID` (ID cột nhận thẻ mới).
+   - **Variables:** `TRELLO_BOARD_ID` (đoạn mã sau `trello.com/b/` trong link bảng), `TRELLO_LIST_ID` (cột nhận task mới) và `TRELLO_ISSUE_LIST_ID` (cột nhận issue mới).
 3. Lấy ID cột: mở `https://trello.com/b/<board>.json` khi đã đăng nhập, tìm tên cột trong mục `lists`; hoặc gọi API `GET /1/boards/<board>/lists`.
 4. Chạy lần đầu: tab Actions → "Sync tasks to Trello" → Run workflow. Xem log để biết thẻ nào được tạo.

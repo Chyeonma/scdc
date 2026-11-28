@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: 'Hoàn tất'
+      only:
+        description: 'Chỉ đồng bộ các mã này, ví dụ ISSUE-001; để trống để đồng bộ tất cả'
+        required: false
+        type: string
+        default: ''
       preview:
         description: 'Chỉ đọc bảng và xem trước, không ghi Trello'
         required: false
@@ -49,10 +54,13 @@ jobs:
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           TRELLO_BOARD_ID: ${{ vars.TRELLO_BOARD_ID || secrets.TRELLO_BOARD_ID }}
           TRELLO_LIST_ID: ${{ vars.TRELLO_LIST_ID || secrets.TRELLO_LIST_ID }}
+          TRELLO_ISSUE_LIST_ID: ${{ vars.TRELLO_ISSUE_LIST_ID }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          REPO_REF: ${{ github.ref_name }}
           TRELLO_COMPLETE_CODES: ${{ inputs.complete }}
           TRELLO_DONE_LIST: ${{ inputs.done_list || 'Hoàn tất' }}
           TRELLO_PREVIEW: ${{ inputs.preview && 'true' || 'false' }}
+          TRELLO_ONLY_CODES: ${{ inputs.only }}
           # S1-07 được giữ riêng cho Media theo chỉ đạo ngày 2026-11-22.
           TRELLO_EXCLUDE_CODES: S1-07
         run: python3 scripts/sync_trello.py

@@ -14,8 +14,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Changes, docs and script checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      transfer: ${{ steps.changes.outputs.transfer }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select required checks
+        id: changes
+        run: python3 scripts/ci_plan.py plan
+      - name: Test repository scripts
+        run: python3 -m unittest discover -s scripts/tests
+      - name: Check documentation
+        run: python3 scripts/check_docs.py
+
   backend:
     name: Backend
+    needs: plan
+    if: needs.plan.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -80,8 +103,6 @@ jobs:
           docker exec -e IDENTITY_DB_PASSWORD=scdc_identity_dev -e COMMUNITY_DB_PASSWORD=scdc_community_dev -e MESSAGING_DB_PASSWORD=scdc_messaging_dev "$POSTGRES_CONTAINER" psql -X -U scdc_ci -d scdc_ci_test -f /tmp/module-roles.sql
       - name: Restore backend
         run: dotnet restore SCDC.slnx
-      - name: Test local secret provisioning
-        run: python3 -m unittest discover -s scripts/tests
       - name: Build backend
         run: dotnet build SCDC.slnx --configuration Release --no-restore
       - name: Exercise Identity email Compose upgrade
@@ -103,6 +124,8 @@ jobs:
 
   frontend:
     name: Frontend
+    needs: plan
+    if: needs.plan.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -130,6 +153,8 @@ jobs:
 
   identity-transfer:
     name: Identity database transfer
+    needs: plan
+    if: needs.plan.outputs.transfer == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -197,17 +222,14 @@ jobs:
   ci:
     name: CI
     if: always()
-    needs: [backend, frontend, identity-transfer]
+    needs: [plan, backend, frontend, identity-transfer]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require successful backend and frontend
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Require every planned check to succeed
         env:
-          BACKEND_RESULT: ${{ needs.backend.result }}
-          FRONTEND_RESULT: ${{ needs.frontend.result }}
-          TRANSFER_RESULT: ${{ needs.identity-transfer.result }}
-        run: |
-          printf 'Backend: %s\nFrontend: %s\n' "$BACKEND_RESULT" "$FRONTEND_RESULT"
-          test "$BACKEND_RESULT" = success
-          test "$FRONTEND_RESULT" = success
-          test "$TRANSFER_RESULT" = success
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci_plan.py gate
