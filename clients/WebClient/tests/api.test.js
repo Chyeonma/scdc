@@ -288,6 +288,30 @@ test('inbox cannot continue with another actor after a401 refresh', async () => 
   await assert.rejects(tab.listDirectConversations(), e => e.status === 401);
 });
 
+test('group creation, inbox and all message operations select the group routes', async () => {
+  const calls = [];
+  const tab = await browser(rotatedSession).openTab(async (url, options) => {
+    calls.push([options.method, url, options.body && JSON.parse(options.body)]);
+    return response(200, {});
+  });
+  const group = { id: 'group', name: 'Release', memberIds: ['a', 'b'] };
+  const options = { group: true, expectedActorId: 'user-1' };
+  await tab.createGroupConversation(group, options);
+  await tab.listGroupConversations({ cursor: 'next', ...options });
+  await tab.getDirectMessages('group', options);
+  await tab.sendDirectMessage('group', 'first', 'hello', options);
+  await tab.editDirectMessage('group', 'message', 'updated', '1', options);
+  await tab.deleteDirectMessage('group', 'message', '2', options);
+  assert.deepEqual(calls, [
+    ['POST', '/api/v1/group-conversations', group],
+    ['GET', '/api/v1/group-conversations?limit=20&cursor=next', undefined],
+    ['GET', '/api/v1/group-conversations/group/messages?limit=50', undefined],
+    ['POST', '/api/v1/group-conversations/group/messages', { clientMessageId: 'first', content: 'hello' }],
+    ['PATCH', '/api/v1/group-conversations/group/messages/message', { content: 'updated', expectedVersion: '1' }],
+    ['DELETE', '/api/v1/group-conversations/group/messages/message?expectedVersion=2', undefined],
+  ]);
+});
+
 test('text POST preserves original UUID/body and never replays on401 or503', async () => {
   for (const status of [401, 503]) {
     let requests = 0; const signal = new AbortController().signal;

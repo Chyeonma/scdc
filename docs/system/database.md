@@ -245,7 +245,7 @@ S2-10 đã gỡ bốn hợp đồng guard/lifecycle cũ, cặp session/transacti
 
 ### Outbox, inbox, audit và hạ tầng chung
 
-Tại baseline S2-01, `integration.outbox_events` là **một bảng dùng bởi cả Identity, Community và Messaging**. S2-03 đã đổi các mapping trong [IdentityDbContext](../../services/Identity/SCDC.Identity.Infrastructure/Accounts/IdentityDbContext.cs), [MessagingDbContext](../../services/Modules/Messaging/Infrastructure/Persistence/MessagingDbContext.cs) và writer [TransactionalOutbox](../../services/SCDC.BuildingBlocks/Infrastructure/Outbox/TransactionalOutbox.cs) của Community. [OutboxStore](../../services/Modules/Messaging/Realtime/OutboxStore.cs) chỉ nhận `Messaging.MessageChanged`; nó không phát sự kiện Identity hoặc Community.
+Tại baseline S2-01, `integration.outbox_events` là **một bảng dùng bởi cả Identity, Community và Messaging**. S2-03 đã đổi các mapping trong [IdentityDbContext](../../services/Identity/SCDC.Identity.Infrastructure/Accounts/IdentityDbContext.cs), [MessagingDbContext](../../services/Messaging/SCDC.Messaging/Infrastructure/Persistence/MessagingDbContext.cs) và writer [TransactionalOutbox](../../services/SCDC.BuildingBlocks/Infrastructure/Outbox/TransactionalOutbox.cs) của Community. [OutboxStore](../../services/Messaging/SCDC.Messaging/Realtime/OutboxStore.cs) chỉ nhận `Messaging.MessageChanged`; nó không phát sự kiện Identity hoặc Community.
 
 | Đối tượng | Owner và cách tách | Thẻ |
 |---|---|---|

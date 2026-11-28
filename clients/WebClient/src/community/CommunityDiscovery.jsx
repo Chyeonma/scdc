@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCommunitySearch } from './useCommunitySearch.js';
 import { validateSearchQuery } from './text.js';
+import { CommunityCard } from './CommunityViews.jsx';
 
 export function CommunityDiscovery({ actorId, query, onSearch, onSelect, onBack }) {
   const [input, setInput] = useState(query);
@@ -16,7 +17,7 @@ export function CommunityDiscovery({ actorId, query, onSearch, onSelect, onBack 
   }
   return <main className="community-stage" aria-busy={results.loading}>
     <button className="btn btn--secondary" onClick={onBack}>← Cộng đồng của tôi</button>
-    <header className="community-heading"><div><p className="eyebrow">KHÔNG GIAN CÔNG KHAI</p><h1>Khám phá cộng đồng</h1>
+    <header className="community-heading"><div><h1>Khám phá cộng đồng</h1>
       <p>Tìm theo tên, xem giới thiệu và chọn cộng đồng để tham gia.</p></div></header>
     <form className="community-search" onSubmit={submit} noValidate>
       <label htmlFor="community-search-query">Tìm cộng đồng</label>
@@ -39,11 +40,7 @@ export function CommunityDiscovery({ actorId, query, onSearch, onSelect, onBack 
     {results.searched && !results.loading && !results.error && !results.items.length &&
       <div className="community-empty"><h2>Không tìm thấy cộng đồng</h2><p>Thử tên khác hoặc kiểm tra lại dấu trong từ khóa.</p></div>}
     <div className="community-grid">
-      {results.items.map((server) => <article className="community-card" key={server.id}>
-        <div className="community-badges"><span>Công khai</span><span>{server.joinMode === 'approval' ? 'Chờ duyệt tham gia' : 'Tham gia ngay'}</span></div>
-        <h2>{server.name}</h2><p className="community-description">{server.description || 'Chưa có mô tả.'}</p>
-        <button className="btn btn--secondary" onClick={() => onSelect(server.id)} aria-label={`Xem ${server.name}`}>Xem cộng đồng →</button>
-      </article>)}
+      {results.items.map(server => <CommunityCard key={server.id} server={server} onSelect={onSelect} />)}
     </div>
     {results.nextCursor && <button className="btn btn--secondary community-more" onClick={results.loadMore} disabled={results.loading}>Xem thêm kết quả</button>}
   </main>;

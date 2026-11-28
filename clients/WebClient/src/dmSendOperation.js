@@ -1,7 +1,7 @@
 export const DM_SEND_TIMEOUT_MS = 15_000;
 
-export function createDmOperation(actorId, conversationId, content, draftRevision) {
-  return Object.freeze({ actorId, conversationId, content, draftRevision, clientMessageId: crypto.randomUUID() });
+export function createDmOperation(actorId, conversationId, content, draftRevision, replyToMessageId) {
+  return Object.freeze({ actorId, conversationId, content, draftRevision, replyToMessageId, clientMessageId: crypto.randomUUID() });
 }
 
 // A deadline means unknown outcome, not rollback. A late result never starts a replay.
@@ -25,10 +25,11 @@ export async function sendDmOperation(operation, send, { signal, timeoutMs = DM_
       Promise.resolve().then(() => {
         controller.signal.throwIfAborted();
         return send(operation.conversationId, operation.clientMessageId, operation.content,
-          { signal: controller.signal, expectedActorId: operation.actorId });
+          { signal: controller.signal, expectedActorId: operation.actorId, replyToMessageId: operation.replyToMessageId });
       }).then(message => {
+        const replyMismatch = !message?.deletedAt && (message?.reply?.id ?? undefined) !== operation.replyToMessageId;
         if (!message || !message.id || message.conversationId !== operation.conversationId || message.clientMessageId !== operation.clientMessageId
-          || message.author?.id !== operation.actorId) {
+          || message.author?.id !== operation.actorId || replyMismatch) {
           reject(Object.assign(new Error('The response does not confirm this operation.'), { errorCode: 'OPERATION_RESPONSE_MISMATCH' }));
         } else resolve(message);
       }, reject).catch(reject);

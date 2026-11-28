@@ -13,6 +13,7 @@ const contexts=[], sessions=[];
 const button=(page,name)=>page.getByRole('button',{name,exact:true});
 const draft=page=>page.getByRole('textbox',{name:'Nội dung tin nhắn',exact:true});
 const rows=page=>page.locator('.dm-text-message');
+async function messageAction(row, name) { await row.locator('.dm-text-content').hover(); await button(row, name).click(); }
 const source=name=>fs.readFileSync(path.join(root,'scripts/dm-acceptance',name),'utf8');
 const script=async(action,id,extras=[])=> {
  const windows=process.platform==='win32';
@@ -51,7 +52,7 @@ async function send(page,p,text){
  await draft(page).fill(text);await button(page,'Gửi').click();const r=await pending;expect(r.status()).toBe(200);return await r.json();
 }
 async function edit(page,mid,text,status=200){
- const row=page.locator(`[data-message-id="${mid}"]`);await button(row,'Sửa').click();await page.getByLabel('Sửa nội dung tin nhắn',{exact:true}).fill(text);
+ const row=page.locator(`[data-message-id="${mid}"]`);await messageAction(row,'Sửa');await page.getByLabel('Sửa nội dung tin nhắn',{exact:true}).fill(text);
  const pending=page.waitForResponse(r=>r.request().method()==='PATCH'&&new URL(r.url()).pathname.endsWith('/'+mid));
  await button(row,'Lưu thay đổi').click();const r=await pending;expect(r.status()).toBe(status);return await r.json();
 }
@@ -107,15 +108,15 @@ test('C03 actual UI edit twice/no-op/cancel/bound validation, recipient gets cur
  const{p,b,before}=await clients(page,browser,'C03');const dto=await send(page,p,'EDIT-ORIGINAL');await expect(rows(b)).toHaveCount(1);
  await edit(page,dto.id,'EDIT-V2');await expect(rows(b)).toHaveAttribute('data-version','2');await edit(page,dto.id,'EDIT-V3');await expect(rows(b)).toContainText('EDIT-V3');await expect(rows(b)).toContainText('Đã sửa');
  const beforeNoop=await snap('C03');await edit(page,dto.id,'EDIT-V3');expect(await snap('C03')).toEqual(beforeNoop);
- await button(rows(page),'Sửa').click();await page.getByLabel('Sửa nội dung tin nhắn').fill('CANCELLED');await button(page,'Hủy sửa').click();await expect(rows(page)).toContainText('EDIT-V3');
- await button(rows(page),'Sửa').click();await page.getByLabel('Sửa nội dung tin nhắn').fill('a'.repeat(2001));await button(page,'Lưu thay đổi').click();await expect(page.getByRole('alert').filter({hasText:'2.000'})).toBeVisible();await button(page,'Hủy sửa').click();
+ await messageAction(rows(page),'Sửa');await page.getByLabel('Sửa nội dung tin nhắn').fill('CANCELLED');await button(page,'Hủy sửa').click();await expect(rows(page)).toContainText('EDIT-V3');
+ await messageAction(rows(page),'Sửa');await page.getByLabel('Sửa nội dung tin nhắn').fill('a'.repeat(2001));await button(page,'Lưu thay đổi').click();await expect(page.getByRole('alert').filter({hasText:'2.000'})).toBeVisible();await button(page,'Hủy sửa').click();
  expect(await snap('C03')).toEqual(beforeNoop);await expect(button(rows(b),'Sửa')).toHaveCount(0);proof('C03',{p,before,after:await snap('C03'),noopAndValidationUnchanged:true});
 });
 
 test('C04 actual delete confirmation/cancel/repeated delete/original-send replay never resurrect',async({page,browser,request})=>{
  const{p,b,aa,before}=await clients(page,browser,'C04');const dto=await send(page,p,'DELETE-ORIGINAL');await expect(rows(b)).toHaveCount(1);
- await button(rows(page),'Xóa').click();await button(page,'Hủy xóa').click();await expect(rows(page)).toContainText('DELETE-ORIGINAL');
- await button(rows(page),'Xóa').click();await button(page,'Xác nhận xóa').click();await expect(rows(b)).toContainText('Tin nhắn đã bị xóa');await expect(rows(page)).toHaveAttribute('data-version','2');
+ await messageAction(rows(page),'Xóa');await button(page,'Hủy xóa').click();await expect(rows(page)).toContainText('DELETE-ORIGINAL');
+ await messageAction(rows(page),'Xóa');await button(page,'Xác nhận xóa').click();await expect(rows(b)).toContainText('Tin nhắn đã bị xóa');await expect(rows(page)).toHaveAttribute('data-version','2');
  const first=await snap('C04');const repeat=await requestApi(request,aa,'DELETE',`/direct-conversations/${p.conversationId}/messages/${dto.id}?expectedVersion=1`);expect(repeat.status).toBe(200);
  const replay=await requestApi(request,aa,'POST',`/direct-conversations/${p.conversationId}/messages`,{clientMessageId:dto.clientMessageId,content:'DELETE-ORIGINAL'});expect(replay.status).toBe(200);expect(replay.body.id).toBe(dto.id);expect(replay.body.content).toBeNull();
  expect(await snap('C04')).toEqual(first);await b.reload();await expect(rows(b)).toHaveCount(1);await expect(rows(b)).not.toContainText('DELETE-ORIGINAL');proof('C04',{p,before,after:first,replayStatus:200,deleted:true});
@@ -123,7 +124,7 @@ test('C04 actual delete confirmation/cancel/repeated delete/original-send replay
 
 for(const id of ['EDITOLD','DELETEOLD'])test(`${id} offline old message changes through production API then101 recovery refreshes old window`,async({page,browser})=>{
  const{p,b,before}=await clients(page,browser,id);const dto=await send(page,p,'OLD-M01');await expect(rows(b)).toHaveCount(1);await offline(b);
- if(id==='EDITOLD')await edit(page,dto.id,'CURRENT-OLD-M01');else{await button(rows(page),'Xóa').click();await button(page,'Xác nhận xóa').click();}
+ if(id==='EDITOLD')await edit(page,dto.id,'CURRENT-OLD-M01');else{await messageAction(rows(page),'Xóa');await button(page,'Xác nhận xóa').click();}
  await script('Seed101',id);await online(b);await expect(rows(b)).toHaveCount(102);const old=b.locator(`[data-message-id="${dto.id}"]`);
  await expect(old).toHaveAttribute('data-version','2');await expect(old).toContainText(id==='EDITOLD'?'CURRENT-OLD-M01':'Tin nhắn đã bị xóa');
  const all=read('seed-'+id+'.json');expect(await rows(b).evaluateAll(n=>n.map(x=>x.dataset.messageId))).toEqual([dto.id,...all.receipts.map(x=>x.id)]);
@@ -134,9 +135,9 @@ test('C05 two actual A sessions submit stale edit and stale delete, conflict rel
  const{p,before}=await clients(page,browser,'C05');const dto=await send(page,p,'RACE-ORIGINAL');
  const c=await browser.newContext({baseURL:process.env.DM_WEB_URL||'http://localhost:15300'});contexts.push(c);const a2=await c.newPage();await login(a2,'A');await open(a2,p.peerAlias,p.conversationId);
  await a2.evaluate(id=>window.dmHubFixture.on({conversationId:id,dropEvents:true}),p.conversationId);
- await button(rows(a2),'Sửa').click();await a2.getByLabel('Sửa nội dung tin nhắn').fill('RACE-LOSER');await edit(page,dto.id,'RACE-WINNER');
+ await messageAction(rows(a2),'Sửa');await a2.getByLabel('Sửa nội dung tin nhắn').fill('RACE-LOSER');await edit(page,dto.id,'RACE-WINNER');
  const pending=a2.waitForResponse(r=>r.request().method()==='PATCH');await button(a2,'Lưu thay đổi').click();expect((await pending).status()).toBe(409);await expect(rows(a2)).toContainText('RACE-WINNER');
- await button(rows(a2),'Xóa').click();await edit(page,dto.id,'RACE-WINNER-3');const staleDelete=a2.waitForResponse(r=>r.request().method()==='DELETE');await button(a2,'Xác nhận xóa').click();expect((await staleDelete).status()).toBe(409);await expect(rows(a2)).toContainText('RACE-WINNER-3');
+ await messageAction(rows(a2),'Xóa');await edit(page,dto.id,'RACE-WINNER-3');const staleDelete=a2.waitForResponse(r=>r.request().method()==='DELETE');await button(a2,'Xác nhận xóa').click();expect((await staleDelete).status()).toBe(409);await expect(rows(a2)).toContainText('RACE-WINNER-3');
  const after=await snap('C05');expect(after.messages).toBe(1);expect(after.outbox).toBe(3);proof('C05',{p,before,after,staleEditStatus:409,staleDeleteStatus:409});
 });
 
@@ -171,7 +172,7 @@ test('C10 disabled K cannot receive/send; A still reads/edits/deletes and origin
  const{p,b,aa,bb,before}=await clients(page,browser,'C10');const dto=await send(page,p,'K-ORIGINAL');await expect(rows(b)).toHaveCount(1);
  try{
   await script('State','C10',['-Alias','K','-State','Disabled']);await expect(b.locator('input[name="login"]')).toBeVisible({timeout:5000});await button(page,'Làm mới hội thoại').click();await expect(button(page,'Gửi')).toBeDisabled();
-  await edit(page,dto.id,'K-CURRENT');await button(rows(page),'Xóa').click();await button(page,'Xác nhận xóa').click();await expect(rows(page)).toContainText('Tin nhắn đã bị xóa');
+  await edit(page,dto.id,'K-CURRENT');await messageAction(rows(page),'Xóa');await button(page,'Xác nhận xóa').click();await expect(rows(page)).toContainText('Tin nhắn đã bị xóa');
   const replay=await requestApi(request,aa,'POST',`/direct-conversations/${p.conversationId}/messages`,{clientMessageId:dto.clientMessageId,content:'K-ORIGINAL'});expect(replay.status).toBe(200);expect(replay.body.content).toBeNull();
   const denied=await requestApi(request,aa,'POST',`/direct-conversations/${p.conversationId}/messages`,{clientMessageId:p.Y,content:'NEW-BLOCKED'});expect(denied.status).toBe(404);
   await script('State','C10',['-Alias','K','-State','Unlock']);const old=await request.get('/api/v1/users/me',{headers:{Authorization:'Bearer '+bb.accessToken}});expect(old.status()).toBe(401);

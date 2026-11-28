@@ -365,7 +365,7 @@ Schema và seed có cả bảng cho tính năng chưa làm. Dữ liệu thử ch
 
 ## 5. Quy ước code và Git
 
-- Nghiệp vụ đặt tại `services/Modules/<Module>`; hợp đồng liên module nằm trong `SCDC.Contracts`.
+- Nghiệp vụ nằm trong `services/Identity`, `services/Community` và `services/Messaging`. Các hợp đồng dùng chung giữa service nằm trong `services/SCDC.Contracts`.
 - Mỗi module sở hữu dữ liệu riêng. Không tham chiếu implementation hoặc truy vấn trực tiếp dữ liệu module khác.
 - Lỗi nghiệp vụ trả `Result` / `Result<T>` tại `SCDC.BuildingBlocks`; dùng `Success` hoặc `Failure`, không ném exception cho lỗi dự kiến.
 - Controllers ánh xạ lỗi theo [hợp đồng lỗi chung](../system/api-conventions.md#contracts). JSON lỗi phải khớp schema và hành vi frontend.

@@ -344,26 +344,50 @@ export function listDirectConversations({ cursor = null, limit = 20, signal,
   return api(`/direct-conversations?${parameters}`, { signal, expectedActorId });
 }
 
-export function sendDirectMessage(conversationId, clientMessageId, content, { signal, expectedActorId = session?.user?.id ?? null } = {}) {
-  return api(`/direct-conversations/${conversationId}/messages`, {
-    method: 'POST', body: { clientMessageId, content }, retry: false, signal, expectedActorId,
+export function createGroupConversation(body, { signal, expectedActorId } = {}) {
+  return api('/group-conversations', { method: 'POST', body, retry: false, signal, expectedActorId });
+}
+
+export function listGroupConversations({ cursor = null, limit = 20, signal, expectedActorId } = {}) {
+  const parameters = new URLSearchParams({ limit: String(limit) });
+  if (cursor !== null) parameters.set('cursor', cursor);
+  return api(`/group-conversations?${parameters}`, { signal, expectedActorId });
+}
+
+function messagesPath(id, group) {
+  return `/${group ? 'group-conversations' : 'direct-conversations'}/${id}/messages`;
+}
+
+export function sendDirectMessage(conversationId, clientMessageId, content, { signal, group = false, replyToMessageId, expectedActorId = session?.user?.id ?? null } = {}) {
+  return api(messagesPath(conversationId, group), {
+    method: 'POST', body: { clientMessageId, content, replyToMessageId }, retry: false, signal, expectedActorId,
   });
 }
 
 export function getDirectMessages(conversationId, { before = null, after = null, through = null, limit = 50,
-  signal, expectedActorId = session?.user?.id ?? null } = {}) {
+  signal, group = false, expectedActorId = session?.user?.id ?? null } = {}) {
   const parameters = new URLSearchParams({ limit: String(limit) });
   for (const [key, value] of Object.entries({ before, after, through })) if (value !== null) parameters.set(key, value);
-  return api(`/direct-conversations/${conversationId}/messages?${parameters}`, { signal, expectedActorId });
+  return api(`${messagesPath(conversationId, group)}?${parameters}`, { signal, expectedActorId });
 }
 
-export function editDirectMessage(conversationId, messageId, content, expectedVersion, { signal, expectedActorId = session?.user?.id ?? null } = {}) {
-  return api(`/direct-conversations/${conversationId}/messages/${messageId}`, {
+export function editDirectMessage(conversationId, messageId, content, expectedVersion, { signal, group = false, expectedActorId = session?.user?.id ?? null } = {}) {
+  return api(`${messagesPath(conversationId, group)}/${messageId}`, {
     method: 'PATCH', body: { content, expectedVersion }, retry: false, signal, expectedActorId,
   });
 }
-export function deleteDirectMessage(conversationId, messageId, expectedVersion, { signal, expectedActorId = session?.user?.id ?? null } = {}) {
-  return api(`/direct-conversations/${conversationId}/messages/${messageId}?expectedVersion=${encodeURIComponent(expectedVersion)}`, {
+export function deleteDirectMessage(conversationId, messageId, expectedVersion, { signal, group = false, expectedActorId = session?.user?.id ?? null } = {}) {
+  return api(`${messagesPath(conversationId, group)}/${messageId}?expectedVersion=${encodeURIComponent(expectedVersion)}`, {
     method: 'DELETE', retry: false, signal, expectedActorId,
+  });
+}
+
+export function getGroupMessageLikes(conversationId, messageId, { signal, expectedActorId } = {}) {
+  return api(`${messagesPath(conversationId, true)}/${messageId}/like`, { signal, expectedActorId });
+}
+
+export function setGroupMessageLike(conversationId, messageId, liked, { signal, expectedActorId } = {}) {
+  return api(`${messagesPath(conversationId, true)}/${messageId}/like`, {
+    method: liked ? 'PUT' : 'DELETE', retry: false, signal, expectedActorId,
   });
 }

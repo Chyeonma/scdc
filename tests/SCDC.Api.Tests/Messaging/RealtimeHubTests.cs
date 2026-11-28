@@ -31,6 +31,39 @@ public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper out
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
+    public async Task Group_message_is_delivered_to_members_after_an_outsider_is_denied()
+    {
+        var api = f.D.Inner;
+        var second = api.Users["bao"];
+        var third = api.Users["chi"];
+        var outsider = api.Users["search01"];
+        var id = Guid.NewGuid();
+        const string groups = "/api/v1/group-conversations";
+        using var created = await api.Send(groups, api.Actor, new { id, name = "Group realtime", memberIds = new[] { second.Id, third.Id } });
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        await using var member = await SocketClient.Connect(f, third.AccessToken);
+        await using var denied = await SocketClient.Connect(f, outsider.AccessToken);
+        await member.Subscribe(id);
+        var rejection = await denied.Invoke("SubscribeConversation", id);
+        Assert.Contains("RESOURCE_NOT_FOUND", rejection.GetProperty("error").GetString());
+        await using var sender = await SocketClient.Connect(f, second.AccessToken);
+        await sender.Subscribe(id);
+        var typingAck = await sender.Invoke("ReportGroupTyping", id);
+        Assert.False(typingAck.TryGetProperty("error", out _));
+        var typing = await member.Typing();
+        Assert.Equal(id, typing.GetProperty("conversationId").GetGuid());
+        Assert.Equal(second.Id, typing.GetProperty("userId").GetGuid());
+
+        using var saved = await api.Send($"{groups}/{id}/messages", second, new { clientMessageId = Guid.NewGuid(), content = "Live group" });
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        Assert.True(await Dispatcher.DispatchOnceAsync(conversationId: id));
+        var message = (await member.Message()).GetProperty("message");
+        Assert.Equal("Live group", message.GetProperty("content").GetString());
+        Assert.Equal(second.Id, message.GetProperty("author").GetProperty("id").GetGuid());
+        Assert.Empty(denied.Events);
+    }
+
+    [Fact]
     public async Task Authenticated_websocket_repeat_subscribe_routes_current_DTO_once_and_outsider_is_private()
     {
         var space = await f.Open("bao");
@@ -289,6 +322,7 @@ public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper out
         private readonly ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> pending = new();
         private readonly Channel<JsonElement> messages = Channel.CreateUnbounded<JsonElement>();
         private readonly Channel<JsonElement> revocations = Channel.CreateUnbounded<JsonElement>();
+        private readonly Channel<JsonElement> typing = Channel.CreateUnbounded<JsonElement>();
         private readonly TaskCompletionSource handshake = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task Closed => closed.Task;
@@ -320,6 +354,7 @@ public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper out
             var item = await messages.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)); Events.TryDequeue(out _); return item;
         }
         public async Task<JsonElement> Revoked() => await revocations.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        public async Task<JsonElement> Typing() => await typing.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
         private async Task Pump()
         {
             var buffer = new byte[16384]; using var data = new MemoryStream();
@@ -340,6 +375,7 @@ public sealed class RealtimeHubTests(TextMessageFixture f, ITestOutputHelper out
                         var payload = root.GetProperty("arguments")[0].Clone();
                         if (root.GetProperty("target").GetString() == "MessageChanged") { Events.Enqueue(payload); await messages.Writer.WriteAsync(payload); }
                         if (root.GetProperty("target").GetString() == "AccessRevoked") await revocations.Writer.WriteAsync(payload);
+                        if (root.GetProperty("target").GetString() == "GroupTyping") await typing.Writer.WriteAsync(payload);
                     }
                 }
             }

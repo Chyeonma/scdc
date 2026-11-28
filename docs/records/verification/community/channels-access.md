@@ -96,7 +96,7 @@ CRUD/conflict/quyền dùng API thật. 401/503/cursor error/storage failure đ�
 
 ### Chạy lại và giới hạn
 
-Checkout feat/community-channels. DB mới bootstrap 001–004. DB cần giữ dữ liệu: drain writer cũ → runner 004 kèm reviewed channel map → deploy writer mới theo [README module](../../../../services/Modules/Community/README.md) **của nhánh code**. API không tự migrate; 001–003/checksum giữ nguyên. Mapping từng channel gồm kind text/voice và defaultView allow/deny; không tự suy từ visibility legacy hoặc repair read-only/archived. Không chạy schema.sql có DROP SCHEMA trên DB cần giữ dữ liệu.
+Checkout feat/community-channels. DB mới bootstrap 001–004. DB cần giữ dữ liệu: drain writer cũ → runner 004 kèm reviewed channel map → deploy writer mới theo [README module](../../../../services/Community/README.md) **của nhánh code**. API không tự migrate; 001–003/checksum giữ nguyên. Mapping từng channel gồm kind text/voice và defaultView allow/deny; không tự suy từ visibility legacy hoặc repair read-only/archived. Không chạy schema.sql có DROP SCHEMA trên DB cần giữ dữ liệu.
 
 ```bash
 cd clients/WebClient

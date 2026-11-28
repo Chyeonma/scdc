@@ -22,12 +22,13 @@ services/
 │   ├── SCDC.Community.Domain/
 │   ├── SCDC.Community.Infrastructure/
 │   └── SCDC.Community.Grpc/
-├── Messaging/SCDC.Messaging.Grpc/
+├── Messaging/
+│   ├── SCDC.Messaging/      # Nghiệp vụ hội thoại, PostgreSQL, SignalR
+│   └── SCDC.Messaging.Grpc/ # Mã sinh hợp đồng gRPC nội bộ
 ├── Shared/SCDC.Shared.Core/ # Kiểu JWT trust, Result, văn bản thuần .NET
 ├── SCDC.Api/               # HTTP/Hub; có chế độ chỉ đăng ký Messaging, fence/provision RPC
 ├── SCDC.Contracts/         # Interface và DTO thuần giữa owner
-├── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
-└── Modules/Messaging/
+└── SCDC.BuildingBlocks/    # Hạ tầng còn dùng trong monolith, không kéo vào Identity
 tests/SCDC.Api.Tests/       # Test backend
 tools/SCDC.DbMigrator/      # Migration monolith và chuyển offline Identity riêng
 ```

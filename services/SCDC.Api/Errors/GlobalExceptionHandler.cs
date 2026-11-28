@@ -20,6 +20,9 @@ internal sealed class GlobalExceptionHandler(
             && parts[2].Equals("direct-conversations", StringComparison.OrdinalIgnoreCase)
             && Guid.TryParse(parts[3], out _) && parts[4].Equals("messages", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsGroupConversationRoute(PathString path) =>
+        path.StartsWithSegments("/api/v1/group-conversations", StringComparison.OrdinalIgnoreCase);
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
         Exception exception,
@@ -74,10 +77,12 @@ internal sealed class GlobalExceptionHandler(
             httpContext.Request.Method,
             httpContext.Request.Path);
 
-        // Authentication also consults Identity before the DM controller runs.
-        var authorityUnavailable = (HttpMethods.IsPost(httpContext.Request.Method) || HttpMethods.IsGet(httpContext.Request.Method))
-            && (string.Equals(httpContext.Request.Path.Value?.TrimEnd('/'), "/api/v1/direct-conversations", StringComparison.OrdinalIgnoreCase)
-                || IsMessageRoute(httpContext.Request.Path.Value))
+        // Authentication can fail before the conversation controller runs.
+        var request = httpContext.Request;
+        var authorityUnavailable = (IsGroupConversationRoute(request.Path)
+            || (HttpMethods.IsPost(request.Method) || HttpMethods.IsGet(request.Method))
+                && (string.Equals(request.Path.Value?.TrimEnd('/'), "/api/v1/direct-conversations", StringComparison.OrdinalIgnoreCase)
+                    || IsMessageRoute(request.Path.Value)))
             && DatabaseAvailability.IsUnavailable(exception);
         var detail = authorityUnavailable
             ? "The service cannot confirm this request. Please try again."

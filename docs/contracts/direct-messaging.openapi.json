@@ -1008,6 +1008,18 @@
             ],
             "format": "date-time"
           },
+          "reply": {
+            "type": "object",
+            "description": "Preview of the current reply target in this conversation. Deleted targets contain a null content preview.",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "authorUserId": { "type": "string", "format": "uuid" },
+              "content": { "type": ["string", "null"] },
+              "isDeleted": { "type": "boolean" }
+            },
+            "required": ["id", "authorUserId", "content", "isDeleted"],
+            "additionalProperties": false
+          },
           "contentState": {
             "type": "string",
             "enum": [
@@ -1103,6 +1115,11 @@
       "SendMessageRequest": {
         "type": "object",
         "properties": {
+          "replyToMessageId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Optional ID of a visible message in the same conversation. Keep it when retrying the same send."
+          },
           "clientMessageId": {
             "type": "string",
             "format": "uuid",

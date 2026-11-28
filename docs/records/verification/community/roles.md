@@ -94,7 +94,7 @@ TRX và browser output ở artifacts/community-roles/; ảnh roles-mobile.png đ
 
 ### Chạy lại và phạm vi đạt
 
-Checkout feat/community-permissions. DB mới dùng bootstrap 001/002/003; DB cần giữ dữ liệu drain writer cũ → runner 003 → deploy writer mới theo [README module](../../../../services/Modules/Community/README.md) của nhánh code. Không chạy schema.sql có DROP SCHEMA trên DB cần giữ dữ liệu. API không tự migrate; 001/002/checksum giữ nguyên.
+Checkout feat/community-permissions. DB mới dùng bootstrap 001/002/003; DB cần giữ dữ liệu drain writer cũ → runner 003 → deploy writer mới theo [README module](../../../../services/Community/README.md) của nhánh code. Không chạy schema.sql có DROP SCHEMA trên DB cần giữ dữ liệu. API không tự migrate; 001/002/checksum giữ nguyên.
 
 ```bash
 cd clients/WebClient

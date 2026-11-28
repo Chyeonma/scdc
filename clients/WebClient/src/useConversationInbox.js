@@ -12,31 +12,45 @@ export function mergeConversations(previous, incoming) {
 }
 const empty = actorId => ({ actorId, items: [], nextCursor: null, status: 'idle', error: null, retryCursor: null });
 
-export function useConversationInbox(actorId) {
+export function useConversationInbox(actorId, listConversations = listDirectConversations) {
   const [state, setState] = useState(() => empty(actorId));
   const generation = useRef(0);
   const controller = useRef(null);
-  const load = useCallback(async (cursor = null, extra = []) => {
+  const load = useCallback(async (cursor = null, extra = [], refresh = null) => {
+    const background = refresh !== null;
+    if (!actorId || background && controller.current) return;
     const ticket = ++generation.current;
     controller.current?.abort();
     const request = new AbortController(); controller.current = request;
-    setState(previous => ({ ...(previous.actorId === actorId ? previous : empty(actorId)),
+    if (!background) setState(previous => ({ ...(previous.actorId === actorId ? previous : empty(actorId)),
       status: 'loading', error: null, retryCursor: cursor }));
     try {
-      const page = await listDirectConversations({ cursor, signal: request.signal, expectedActorId: actorId });
-      if (request.signal.aborted || ticket !== generation.current || sessionStore.getSnapshot()?.user?.id !== actorId) return;
+      const current = () => !request.signal.aborted && ticket === generation.current
+        && sessionStore.getSnapshot()?.user?.id === actorId;
+      const readPage = cursor => listConversations({ cursor, signal: request.signal, expectedActorId: actorId });
+      let page = await readPage(cursor);
+      const items = [...page.items];
+      // Refresh the loaded portion and include the selected group, even if it was just opened.
+      while (background && current() && page.nextCursor
+        && (items.length < refresh.count || refresh.selectedId && !items.some(item => item.id === refresh.selectedId))) {
+        page = await readPage(page.nextCursor);
+        items.push(...page.items);
+      }
+      if (!current()) return;
       setState(previous => ({ actorId,
-        items: mergeConversations(cursor && previous.actorId === actorId ? previous.items : [], [...page.items, ...extra]),
+        items: mergeConversations(cursor && previous.actorId === actorId ? previous.items : [], [...items, ...extra]),
         nextCursor: page.nextCursor, status: 'success', error: null, retryCursor: null }));
     } catch (error) {
-      if (request.signal.aborted || ticket !== generation.current || sessionStore.getSnapshot()?.user?.id !== actorId) return;
+      if (background || request.signal.aborted || ticket !== generation.current || sessionStore.getSnapshot()?.user?.id !== actorId) return;
       setState(previous => ({ ...previous, status: 'error', error, retryCursor: cursor }));
+    } finally {
+      if (controller.current === request) controller.current = null;
     }
-  }, [actorId]);
+  }, [actorId, listConversations]);
   useEffect(() => {
     setState(empty(actorId));
     if (actorId) load();
-    return () => { generation.current++; controller.current?.abort(); };
+    return () => { generation.current++; controller.current?.abort(); controller.current = null; };
   }, [actorId, load]);
   const visible = state.actorId === actorId ? state : empty(actorId);
   const opened = useCallback(conversation => {
@@ -44,6 +58,7 @@ export function useConversationInbox(actorId) {
       items: mergeConversations(previous.actorId === actorId ? previous.items : [], [conversation]) }));
     load(null, [conversation]);
   }, [actorId, load]);
+  const refreshInBackground = useCallback((count, selectedId) => load(null, [], { count, selectedId }), [load]);
   return { ...visible, refresh: () => load(), loadMore: () => load(visible.nextCursor),
-    retry: () => load(visible.retryCursor), opened };
+    retry: () => load(visible.retryCursor), opened, refreshInBackground };
 }

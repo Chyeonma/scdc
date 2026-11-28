@@ -13,7 +13,7 @@ Trang này quy định cách viết API công khai (định dạng, mã lỗi) v
 - Tiền tố `/api/v1`.
 - ID là định danh cố định. Người thực hiện lấy từ phiên đăng nhập, không lấy từ request.
 - Thời gian theo UTC.
-- `sequence` và `version` của DM gửi dạng chuỗi số nguyên để client xử lý chính xác ([DirectConversationsController](../../services/SCDC.Api/Controllers/Messaging/DirectConversationsController.cs), [MessageResponse](../../services/Modules/Messaging/Application/ITextMessageSender.cs)).
+- `sequence` và `version` của tin nhắn gửi dạng chuỗi số nguyên để client xử lý chính xác. [ConversationMessagesController](../../services/SCDC.Api/Controllers/Messaging/ConversationMessagesController.cs), [MessageResponse](../../services/Messaging/SCDC.Messaging/Application/Messages/ITextMessageSender.cs)
 
 ### Lỗi
 

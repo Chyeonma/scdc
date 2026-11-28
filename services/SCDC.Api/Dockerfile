@@ -7,7 +7,7 @@ COPY ["services/Messaging/SCDC.Messaging.Grpc/SCDC.Messaging.Grpc.csproj", "serv
 COPY ["services/Community/SCDC.Community.Application/SCDC.Community.Application.csproj", "services/Community/SCDC.Community.Application/"]
 COPY ["services/Community/SCDC.Community.Domain/SCDC.Community.Domain.csproj", "services/Community/SCDC.Community.Domain/"]
 COPY ["services/Community/SCDC.Community.Infrastructure/SCDC.Community.Infrastructure.csproj", "services/Community/SCDC.Community.Infrastructure/"]
-COPY ["services/Modules/Messaging/SCDC.Messaging.csproj", "services/Modules/Messaging/"]
+COPY ["services/Messaging/SCDC.Messaging/SCDC.Messaging.csproj", "services/Messaging/SCDC.Messaging/"]
 COPY ["services/SCDC.Api/SCDC.Api.csproj", "services/SCDC.Api/"]
 COPY ["services/SCDC.BuildingBlocks/SCDC.BuildingBlocks.csproj", "services/SCDC.BuildingBlocks/"]
 COPY ["services/SCDC.Contracts/SCDC.Contracts.csproj", "services/SCDC.Contracts/"]

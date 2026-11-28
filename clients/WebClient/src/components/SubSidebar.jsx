@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { initials } from './ServerRail.jsx';
 import { UserDock } from './UserDock.jsx';
 
+const activityFormat = new Intl.DateTimeFormat('vi-VN', { day: 'numeric', month: 'numeric' });
+
 export function SubSidebar({
   isHomeActive,
   activeServer,
@@ -9,6 +11,8 @@ export function SubSidebar({
   onSelectChannel,
   dms,
   inbox,
+  groupMode,
+  onSelectInbox,
   activeDmId,
   onSelectDm,
   onOpenCreateDm,
@@ -139,50 +143,50 @@ export function SubSidebar({
 
   // Render Home / Direct Messages view
   return (
-    <aside className="sub-sidebar">
-      {/* Home Header / Quick Search */}
-      <div className="sub-sidebar__top">
+    <aside className="sub-sidebar chat-inbox">
+      <div className="chat-inbox__top">
+        <h2>Tin nhắn</h2>
         <button type="button" className="quick-search-btn" onClick={onOpenCreateDm}>
-          <span>🔍 Tìm hoặc bắt đầu cuộc trò chuyện</span>
+          <span>Tìm hoặc bắt đầu cuộc trò chuyện</span>
           <kbd>Ctrl+K</kbd>
         </button>
       </div>
 
       <div className="sub-sidebar__scroll">
-        {/* Friends & Activity */}
-        <div className="nav-items-group">
-          <button type="button" className="nav-item is-active">
-            <span className="nav-item__icon">👥</span>
-            <span>Bạn bè</span>
-          </button>
+        <div className="chat-inbox__tabs" role="group" aria-label="Loại hội thoại">
+          <button type="button"
+            aria-pressed={!groupMode} onClick={() => onSelectInbox(false)}>Trực tiếp</button>
+          <button type="button"
+            aria-pressed={groupMode} onClick={() => onSelectInbox(true)}>Chat nhóm</button>
+        </div>
+        <div className="chat-inbox__tools">
+          <span>Hội thoại</span>
+          <div>
+            <button className="chat-tool" type="button" title="Làm mới hội thoại" aria-label="Làm mới hội thoại"
+              disabled={inbox.status === 'loading'} onClick={inbox.refresh}>↻</button>
+            <button className="chat-tool chat-tool--accent" type="button" onClick={onOpenCreateDm}
+              title={groupMode ? 'Tạo nhóm chat' : 'Tạo cuộc trò chuyện trực tiếp (DM)'}
+              aria-label={groupMode ? 'Tạo nhóm chat' : 'Tạo cuộc trò chuyện trực tiếp (DM)'}>+</button>
+          </div>
         </div>
 
-        {/* Direct Messages Section */}
-        <div className="channel-category">
-          <span className="channel-category__title">TIN NHẮN TRỰC TIẾP</span>
-          <button
-            type="button"
-            className="channel-category__add"
-            onClick={onOpenCreateDm}
-            title="Tạo cuộc trò chuyện trực tiếp (DM)"
-          >
-            +
-          </button>
-        </div>
-
-        {/* DM List */}
         <div className="dm-inbox-controls">
-          <button type="button" className="btn btn--secondary" disabled={inbox.status === 'loading'} onClick={inbox.refresh}>Làm mới hội thoại</button>
-          {inbox.status === 'loading' && <p role="status">Đang tải hội thoại…</p>}
-          {inbox.status === 'success' && dms.length === 0 && <p role="status">Chưa có hội thoại. Nhấn + để tìm người nhận.</p>}
+          {inbox.status === 'loading' && dms.length === 0 && <p role="status">Đang tải hội thoại…</p>}
+          {inbox.status === 'success' && dms.length === 0 && <p role="status">
+            {groupMode ? 'Chưa có nhóm chat.' : 'Chưa có hội thoại. Nhấn + để tìm người nhận.'}
+          </p>}
+          {groupMode && inbox.status === 'success' && dms.length === 0 &&
+            <p>Bấm <strong>+</strong>, nhập tên nhóm và chọn ít nhất hai người khác.</p>}
           {inbox.status === 'error' && <div role="alert">
             <p>{inbox.error?.status === 400 ? 'Danh sách đã hết hạn. Hãy làm mới hội thoại.' : 'Không tải được hội thoại. Hãy thử lại.'}</p>
             {inbox.error?.status !== 400 && <button type="button" className="btn btn--secondary" onClick={inbox.retry}>Thử lại hội thoại</button>}
           </div>}
         </div>
-        <nav className="dm-list" aria-label="Danh sách tin nhắn trực tiếp">
+        <nav className="dm-list" aria-label={groupMode ? 'Danh sách nhóm chat' : 'Danh sách tin nhắn trực tiếp'}>
           {dms.map((dm) => {
             const isActive = dm.spaceId === activeDmId;
+            const name = dm.name || dm.user?.displayName || dm.user?.username || 'Hội thoại';
+            const activity = Date.parse(dm.lastActivityAt);
             const statusColor =
               dm.user?.status === 'online'
                 ? '#23a55a'
@@ -194,23 +198,21 @@ export function SubSidebar({
               <button
                 type="button"
                 key={dm.spaceId}
-                title={dm.user ? `${dm.user.displayName} (@${dm.user.username})` : dm.name}
+                title={dm.user ? `${name} (@${dm.user.username})` : name}
+                aria-current={isActive ? 'true' : undefined}
                 className={`dm-item ${isActive ? 'is-active' : ''}`}
                 onClick={() => onSelectDm(dm.spaceId)}
               >
                 <div className="avatar-wrapper">
-                  <span className="avatar avatar--sm">
-                    {initials(dm.name || dm.user?.displayName || dm.user?.username)}
-                  </span>
+                  <span className={`chat-avatar${dm.spaceType === 2 ? ' chat-avatar--group' : ''}`} aria-hidden="true">{initials(name)}</span>
                   {dm.spaceType === 1 && dm.user?.status && (
                     <span className="status-dot status-dot--sm" style={{ backgroundColor: statusColor }} />
                   )}
                 </div>
                 <div className="dm-item__info">
                   <div className="dm-item__top">
-                    <strong className="dm-item__name">
-                      {dm.name || dm.user?.displayName || dm.user?.username}
-                    </strong>
+                    <strong className="dm-item__name">{name}</strong>
+                    {Number.isFinite(activity) && <time dateTime={dm.lastActivityAt}>{activityFormat.format(activity)}</time>}
                     {dm.unreadCount > 0 && (
                       <span className="dm-item__badge">{dm.unreadCount}</span>
                     )}
@@ -219,6 +221,7 @@ export function SubSidebar({
                     <p className="dm-item__preview">{dm.lastMessage}</p>
                   )}
                   {dm.user?.username && <p className="dm-item__preview">@{dm.user.username}</p>}
+                  {dm.spaceType === 2 && <p className="dm-item__preview">{dm.memberCount} thành viên</p>}
                 </div>
               </button>
             );

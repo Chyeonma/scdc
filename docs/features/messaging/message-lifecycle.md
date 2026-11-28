@@ -107,9 +107,9 @@ Cặp người dùng được sắp bằng cách so từng byte UUID (không d�
 
 Messaging lấy permit Identity trước transaction cục bộ. Trong transaction Messaging, thứ tự là fence Identity → không gian chat → tin và thao tác → outbox.
 
-- [IIdentityPermitIssuer](../../../services/SCDC.Contracts/Identity/AccessCoordination.cs) kiểm tra tài khoản, phiên, security stamp và phạm vi cần cho hành động; [MessagingIdentityAccess](../../../services/Modules/Messaging/Infrastructure/Access/MessagingIdentityAccess.cs) kiểm permit và fence tới commit.
-- [MessagingSession](../../../services/Modules/Messaging/Infrastructure/Persistence/MessagingSession.cs) quản lý connection và transaction riêng. Các hợp đồng guard và session dùng chung đã bỏ ở S2-10; Messaging không JOIN bảng Identity.
-- [TextMessageSender](../../../services/Modules/Messaging/Infrastructure/Services/TextMessageSender.cs) chỉ đòi người kia đủ điều kiện khi tạo tin mới. Đọc, gửi lại tin đã lưu, tác giả sửa hoặc xóa thì không cần người kia còn hoạt động.
+- [IIdentityPermitIssuer](../../../services/SCDC.Contracts/Identity/AccessCoordination.cs) kiểm tra tài khoản, phiên, security stamp và phạm vi cần cho hành động; [MessagingIdentityAccess](../../../services/Messaging/SCDC.Messaging/Infrastructure/Access/MessagingIdentityAccess.cs) kiểm permit và fence tới commit.
+- [MessagingSession](../../../services/Messaging/SCDC.Messaging/Infrastructure/Persistence/MessagingSession.cs) quản lý connection và transaction riêng. Các hợp đồng guard và session dùng chung đã bỏ ở S2-10; Messaging không JOIN bảng Identity.
+- Khi tạo tin mới trong DM, Messaging kiểm tra cả tài khoản người nhận. Khi đọc, gửi lại tin đã lưu, sửa hoặc xóa, Messaging kiểm tra phiên của người gọi và quyền hội thoại. [TextMessageSender](../../../services/Messaging/SCDC.Messaging/Infrastructure/Messages/TextMessageSender.cs)
 - Bên gọi giữ guard tới commit và kiểm tra hạn phiên ngay trước commit.
 
 **Luồng gửi:** dưới khóa người gửi và không gian, tra thao tác. Gửi lại đúng thì trả tin hiện tại. Khóa mới thì kiểm tra người kia, tăng counter của không gian, ghi tin, thao tác, outbox và cập nhật danh sách cuộc trò chuyện trong cùng transaction. Rollback thì mọi thứ biến mất; người ghi sau chỉ lấy counter khi người trước xong. Mức cô lập read-committed là đủ khi đã có khóa.

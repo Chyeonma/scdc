@@ -37,6 +37,16 @@ test('response must confirm the exact actor, conversation and UUID', async () =>
     await assert.rejects(sendDmOperation(op, async () => ({ ...dto(op), ...patch })), e => e.errorCode === 'OPERATION_RESPONSE_MISMATCH');
 });
 
+test('send retries keep the original reply target and check the acknowledgement', async () => {
+  const operation = createDmOperation('A', 'group', 'reply', 1, 'parent');
+  await assert.rejects(sendDmOperation(operation, async (_, __, ___, options) => {
+    assert.equal(options.replyToMessageId, 'parent');
+    return { ...dto(operation), reply: { id: 'different' } };
+  }), error => error.errorCode === 'OPERATION_RESPONSE_MISMATCH');
+  const confirmed = await sendDmOperation(operation, async () => ({ ...dto(operation), reply: { id: 'parent' } }));
+  assert.equal(confirmed.reply.id, 'parent');
+});
+
 test('logout abort cancels promptly, including a transport that ignores abort', async () => {
   const abort = new AbortController(); let calls = 0;
   const result = sendDmOperation(createDmOperation('A', 'AB', 'a', 0), async () => { calls++; return new Promise(() => {}); }, { signal: abort.signal });

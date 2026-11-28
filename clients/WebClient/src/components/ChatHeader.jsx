@@ -15,12 +15,17 @@ export function ChatHeader({
   onSearchChange,
   isDirectMessage = false,
   statusDot = null,
+  onBack,
+  onOpenProfile,
 }) {
   return (
     <header className="chat-header">
       {/* Title & Topic */}
       <div className="chat-header__title-group">
-        <span className="chat-header__icon">{icon}</span>
+        {onBack && <button type="button" className="chat-back" aria-label="Về danh sách hội thoại" onClick={onBack}>←</button>}
+        {onOpenProfile
+          ? <button className="chat-header__icon chat-avatar-button" type="button" aria-label={`Xem hồ sơ ${title}`} onClick={onOpenProfile}>{icon}</button>
+          : <span className="chat-header__icon" aria-hidden="true">{icon}</span>}
         <div className="chat-header__title-wrapper">
           <h1 className="chat-header__title">
             {title}

@@ -54,7 +54,7 @@ Cursor Data Protection purpose riêng, gắn actor/query đã chuẩn hóa/limit
 
 WebClient có khu vực Khám phá từ own list. Submit hợp lệ lưu q trong hash URL, tải/empty/error/pagination; mở kết quả → preview → join trực tiếp đã có. Sau join có thể quay lại cùng từ khóa hoặc own list đã cập nhật. Đổi actor/query/route bỏ phản hồi cũ; lỗi trang/cursor cho tải lại từ đầu. Reload URL chỉ đọc GET, không tự join.
 
-Migration 002 lưu search_name và backfill bằng runner .NET theo batch 500; giữ tên hiển thị/version/accessVersion/epoch. Chỉ trigger version/timestamp được tắt tạm trong transaction; owner/@everyone invariant vẫn được kiểm tra trước ALTER tiếp theo. Deploy cần drain writer cũ, migrate 002 rồi chạy writer mới theo [README module](../../../../services/Modules/Community/README.md) trên nhánh code. API không tự migrate; migration/checksum 001 giữ nguyên.
+Migration 002 lưu search_name và backfill bằng runner .NET theo batch 500; giữ tên hiển thị/version/accessVersion/epoch. Chỉ trigger version/timestamp được tắt tạm trong transaction; owner/@everyone invariant vẫn được kiểm tra trước ALTER tiếp theo. Deploy cần drain writer cũ, migrate 002 rồi chạy writer mới theo [README module](../../../../services/Community/README.md) trên nhánh code. API không tự migrate; migration/checksum 001 giữ nguyên.
 
 <a id="results-kiểm-chứng-backend"></a>
 

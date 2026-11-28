@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getServer, getOwnMembership, joinServer } from './api.js';
 import { permissionLabels } from './permissionConfig.js';
+import { initials } from '../components/ServerRail.jsx';
 
 export { permissionLabels } from './permissionConfig.js';
 function Badges({ server }) {
@@ -9,13 +10,24 @@ function Badges({ server }) {
     {server.visibility === 'public' && <span>{server.joinMode === 'approval' ? 'Chờ duyệt tham gia' : 'Tham gia ngay'}</span>}
   </div>;
 }
+export function CommunityCard({ server, onSelect }) {
+  return <article className="community-card">
+    <div className="community-card__identity">
+      <span className="community-emblem" aria-hidden="true">{initials(server.name)}</span>
+      <div><h2>{server.name}</h2><Badges server={server} /></div>
+    </div>
+    <p className="community-description">{server.description || 'Chưa có mô tả.'}</p>
+    <button className="btn btn--secondary community-card__open" onClick={() => onSelect(server.id)}
+      aria-label={`Xem ${server.name}`}>Xem cộng đồng <span aria-hidden="true">→</span></button>
+  </article>;
+}
+
 export function CommunityList({ list, onSelect, onCreate, onDiscover }) {
-  return <main className="community-stage">
+  return <main className="community-stage" aria-busy={list.loading}>
     <header className="community-heading">
-      <div><p className="eyebrow">KHÔNG GIAN CỦA BẠN</p><h1>Cộng đồng của tôi</h1>
-        <p>Các cộng đồng bạn đang tham gia.</p></div>
+      <div><h1>Cộng đồng của tôi</h1><p>Các cộng đồng bạn đang tham gia.</p></div>
       <div className="community-actions">
-        <button className="btn btn--secondary" onClick={onDiscover}>Khám phá cộng đồng</button>
+        <button className="btn btn--secondary community-discover-shortcut" onClick={onDiscover}>Khám phá cộng đồng</button>
         <button className="btn btn--secondary" onClick={list.reload} disabled={list.loading}>Tải lại danh sách</button>
         <button className="btn btn--primary" onClick={onCreate}>Tạo cộng đồng</button>
       </div>
@@ -31,11 +43,7 @@ export function CommunityList({ list, onSelect, onCreate, onDiscover }) {
       <button className="btn btn--primary" onClick={onCreate}>Tạo cộng đồng đầu tiên</button>
     </div>}
     <div className="community-grid">
-      {list.items.map((server) => <article className="community-card" key={server.id}>
-        <Badges server={server} /><h2>{server.name}</h2>
-        <p className="community-description">{server.description || 'Chưa có mô tả.'}</p>
-        <button className="btn btn--secondary" onClick={() => onSelect(server.id)} aria-label={`Xem ${server.name}`}>Xem cộng đồng →</button>
-      </article>)}
+      {list.items.map(server => <CommunityCard key={server.id} server={server} onSelect={onSelect} />)}
     </div>
     {list.nextCursor && <button className="btn btn--secondary community-more" onClick={list.loadMore} disabled={list.loading}>Xem thêm cộng đồng</button>}
   </main>;
@@ -136,7 +144,12 @@ export function CommunityDetail({ actorId, serverId, onBack, onJoined, onManage,
       <button className="btn btn--secondary" onClick={reload}>Kiểm tra kết quả</button>
     </div>}
     {server && <>
-      <header className="community-heading"><div><Badges server={server} /><h1>{server.name}</h1></div></header>
+      <header className="community-heading">
+        <div className="community-card__identity">
+          <span className="community-emblem community-emblem--large" aria-hidden="true">{initials(server.name)}</span>
+          <div><h1>{server.name}</h1><Badges server={server} /></div>
+        </div>
+      </header>
       <section className="community-section"><h2>Giới thiệu</h2><p className="community-description">{server.description || 'Chưa có mô tả.'}</p></section>
     </>}
     {!loading && !error && <section className="community-section">

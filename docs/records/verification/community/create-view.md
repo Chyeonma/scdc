@@ -163,7 +163,7 @@ Kết quả: **63 passed, 0 failed, 0 skipped**. Build Release không warning/er
 
 #### Cấu hình thử nghiệm backend
 
-Chuyển sang nhánh backend để đọc hướng dẫn runtime trong `services/Modules/Community/README.md`. HMAC cần key ID và base64 secret ít nhất 32 byte; key ring cần thư mục bền đọc/ghi được. Compose dùng `COMMUNITY_OPERATION_KEY` từ `.env` local và volume `scdc-community-keys`. Giữ HMAC key cũ khi rotation để đọc operation còn lưu; giữ key ring và ApplicationName theo môi trường qua restart.
+Chuyển sang nhánh backend để đọc hướng dẫn runtime trong `services/Community/README.md`. HMAC cần key ID và base64 secret ít nhất 32 byte; key ring cần thư mục bền đọc/ghi được. Compose dùng `COMMUNITY_OPERATION_KEY` từ `.env` local và volume `scdc-community-keys`. Giữ HMAC key cũ khi rotation để đọc operation còn lưu; giữ key ring và ApplicationName theo môi trường qua restart.
 
 <a id="results-frontend"></a>
 

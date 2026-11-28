@@ -122,9 +122,9 @@ Ghi tối thiểu: request ID, mã lỗi, thời lượng, ID thao tác hoặc I
 
 ## Ranh giới module
 
-- Messaging không đọc bảng của Identity. Từ S2-08, DM dùng [permit Identity](../../../services/SCDC.Contracts/Identity/AccessCoordination.cs), [IAuthenticatedSessionReader](../../../services/SCDC.Contracts/Identity/IAuthenticatedSessionReader.cs) qua Redis và [reader hồ sơ lịch sử](../../../services/SCDC.Contracts/Identity/IHistoricalUserSummaryReader.cs) ngoài transaction Messaging. [ConversationAccess](../../../services/Modules/Messaging/Realtime/ConversationAccess.cs) kiểm lại quyền sau lookup trước khi phát. API tìm người dùng qua [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs); S2-10 đã bỏ guard/session transaction chung.
+- Messaging không đọc bảng của Identity. Từ S2-08, DM dùng [permit Identity](../../../services/SCDC.Contracts/Identity/AccessCoordination.cs), [IAuthenticatedSessionReader](../../../services/SCDC.Contracts/Identity/IAuthenticatedSessionReader.cs) qua Redis và [reader hồ sơ lịch sử](../../../services/SCDC.Contracts/Identity/IHistoricalUserSummaryReader.cs) ngoài transaction Messaging. [ConversationAccess](../../../services/Messaging/SCDC.Messaging/Realtime/ConversationAccess.cs) kiểm lại quyền sau lookup trước khi phát. API tìm người dùng qua [IUserSearchDirectory](../../../services/SCDC.Contracts/Identity/IUserSearchDirectory.cs); S2-10 đã bỏ guard/session transaction chung.
 - `IUserDirectory` chỉ trả người dùng đang hoạt động, không chứng minh đã xác minh hay phiên còn hiệu lực; DM dùng guard và bộ đọc phiên riêng.
-- Identity giữ dữ liệu bảo mật; Messaging giữ registry và Hub chat. Trong MVP, [ChatHub và các worker](../../../services/Modules/Messaging/MessagingModule.cs) đăng ký trong ứng dụng API chung.
+- Identity giữ dữ liệu bảo mật; Messaging giữ registry và Hub chat. Trong MVP, [ChatHub và các worker](../../../services/Messaging/SCDC.Messaging/MessagingModule.cs) đăng ký trong ứng dụng API chung.
 - v1: Media control có Hub riêng ([D11](../media/participation-lifecycle.md#v1-media-realtime)). Hub và worker chạy trong API của service sở hữu, mỗi service một bản ([D12, D13](../../system/backend.md#v1-realtime-hosting), [D21](../../system/environments.md#v1-service-replicas)). Không thêm backplane; mở rộng nhiều bản cần quyết định riêng.
 
 ### Xác thực SignalR
@@ -135,7 +135,7 @@ SignalR giữ danh tính của lúc kết nối và không tự biết khi phiê
 - Token trong query của WebSocket chỉ được nhận ở đúng route Hub, và bị loại khỏi log của proxy và API.
 - Định tuyến theo người dùng dùng claim `sub` (cố định), không dùng tên hiển thị.
 
-Trong MVP, Hub, worker và [SubscriptionReconciler](../../../services/Modules/Messaging/Realtime/SubscriptionReconciler.cs) dùng `IAuthenticatedSessionReader` để kiểm tra phiên, bỏ định tuyến và đóng kết nối khi mất quyền hoặc không xác nhận được. `IRealtimeAccessRevoker` hiện chỉ nhận người dùng và không gian, chưa phải hợp đồng thu hồi theo phiên.
+Trong MVP, Hub, worker và [SubscriptionReconciler](../../../services/Messaging/SCDC.Messaging/Realtime/SubscriptionReconciler.cs) dùng `IAuthenticatedSessionReader` để kiểm tra phiên, bỏ định tuyến và đóng kết nối khi mất quyền hoặc không xác nhận được. `IRealtimeAccessRevoker` hiện chỉ nhận người dùng và không gian, chưa phải hợp đồng thu hồi theo phiên.
 
 ## Kiểm thử
 

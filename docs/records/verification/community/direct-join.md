@@ -106,7 +106,7 @@ API Release tại `127.0.0.1:15026`, Vite tại `127.0.0.1:15300` proxy về API
 
 ### Chạy lại và giới hạn
 
-Trên `feat/community-join`, chuẩn bị PostgreSQL thử nghiệm đã bootstrap/migrate 001. Theo [README module](../../../../services/Modules/Community/README.md) trên nhánh code để cấu hình HMAC, key ring và Identity. API Development cần ExposeDevelopmentTokens để tạo tài khoản tổng hợp.
+Trên `feat/community-join`, chuẩn bị PostgreSQL thử nghiệm đã bootstrap/migrate 001. Theo [README module](../../../../services/Community/README.md) trên nhánh code để cấu hình HMAC, key ring và Identity. API Development cần ExposeDevelopmentTokens để tạo tài khoản tổng hợp.
 
 ```bash
 cd clients/WebClient

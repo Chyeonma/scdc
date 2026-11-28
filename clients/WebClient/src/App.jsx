@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { sessionStore, getMe } from './api.js';
-import { ServerRail } from './components/ServerRail.jsx';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { sessionStore, getMe, listGroupConversations } from './api.js';
+import { initials, ServerRail } from './components/ServerRail.jsx';
 import { SubSidebar } from './components/SubSidebar.jsx';
 import { ChatHeader } from './components/ChatHeader.jsx';
+import { ChatMemberProfile } from './components/ChatMemberProfile.jsx';
+import { ChatSidebarResize, minInboxWidth, maxInboxWidth } from './components/ChatSidebarResize.jsx';
 import { UserSettingsModal } from './components/UserSettingsModal.jsx';
 import { CreateServerModal } from './components/CreateServerModal.jsx';
 import { CreateDmModal } from './components/CreateDmModal.jsx';
@@ -15,6 +17,8 @@ import { CommunityDiscovery } from './community/CommunityDiscovery.jsx';
 import { CommunityRoles } from './community/CommunityRoles.jsx';
 import { CommunityChannels } from './community/CommunityChannels.jsx';
 import { readPending } from './community/pendingCreate.js';
+import './chat.css';
+import './community/community.css';
 
 export default function App() {
   const session = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
@@ -26,6 +30,11 @@ function Application({ session }) {
   const actorId = session?.user?.id;
   const list = useCommunityList(actorId);
   const inbox = useConversationInbox(actorId);
+  const [groupMode, setGroupMode] = useState(false);
+  const [groupsOpened, setGroupsOpened] = useState(false);
+  const groupInbox = useConversationInbox(groupsOpened ? actorId : null, listGroupConversations);
+  const refreshGroups = groupInbox.refreshInBackground;
+  const loadedGroupCount = groupInbox.items.length;
   const [route, setRoute] = useState(window.location.hash);
   const communityRoute = /^#community\/([^/]+)(\/(?:roles|channels))?$/.exec(route);
   const activeServerId = communityRoute?.[1] || null;
@@ -60,15 +69,89 @@ function Application({ session }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userStatus, setUserStatus] = useState('online');
   const [activeDmId, setActiveDmId] = useState(null);
+  const [activeGroupId, setActiveGroupId] = useState(null);
   const [connectionState, setConnectionState] = useState('offline');
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [showCreateServer, setShowCreateServer] = useState(false);
   const [showCreateDm, setShowCreateDm] = useState(false);
+  const [threadOpen, setThreadOpen] = useState(false);
+  const [memberProfile, setMemberProfile] = useState(null);
+  const [inboxWidth, setInboxWidth] = useState(() => {
+    try {
+      const stored = Number(localStorage.getItem('scdc.chat.inboxWidth'));
+      if (stored >= minInboxWidth && stored <= maxInboxWidth) return stored;
+    } catch { /* Storage may be unavailable in a private context. */ }
+    return 300;
+  });
+  const searchTrigger = useRef(null);
   const dms = useMemo(() => inbox.items.map(conversation => ({ ...conversation,
     spaceId: conversation.id, spaceType: 1,
     user: conversation.participants.find(user => user.id !== actorId),
   })), [inbox.items, actorId]);
   const activeDm = dms.find(dm => dm.spaceId === activeDmId) || dms[0];
+  const groups = useMemo(() => groupInbox.items.map(group => ({ ...group, spaceId: group.id, spaceType: 2 })), [groupInbox.items]);
+  const activeGroup = groups.find(group => group.id === activeGroupId) || groups[0];
+  const selectedGroupId = activeGroup?.id;
+  const conversation = groupMode ? activeGroup : activeDm;
+  const conversationTitle = conversation?.name || conversation?.user?.displayName || conversation?.user?.username;
+
+  const openConversationSearch = useCallback(() => {
+    searchTrigger.current = document.activeElement;
+    setShowCreateDm(true);
+  }, []);
+
+  function closeConversationSearch() {
+    setShowCreateDm(false);
+    requestAnimationFrame(() => searchTrigger.current?.focus());
+  }
+
+  useEffect(() => {
+    if (!actorId || !isHomeActive || showCreateDm || showUserSettings || showCreateServer || memberProfile) return;
+    const openSearch = event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        openConversationSearch();
+      }
+    };
+    window.addEventListener('keydown', openSearch);
+    return () => window.removeEventListener('keydown', openSearch);
+  }, [actorId, isHomeActive, showCreateDm, showUserSettings, showCreateServer, memberProfile, openConversationSearch]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try { localStorage.setItem('scdc.chat.inboxWidth', String(inboxWidth)); } catch { /* Size stays in memory. */ }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [inboxWidth]);
+
+  useEffect(() => {
+    if (!actorId || !isHomeActive || !groupMode) return;
+    const checkGroups = () => {
+      if (document.visibilityState === 'visible') refreshGroups(loadedGroupCount, selectedGroupId);
+    };
+    const timer = window.setInterval(checkGroups, 8000);
+    window.addEventListener('focus', checkGroups);
+    document.addEventListener('visibilitychange', checkGroups);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', checkGroups);
+      document.removeEventListener('visibilitychange', checkGroups);
+    };
+  }, [actorId, isHomeActive, groupMode, refreshGroups, loadedGroupCount, selectedGroupId]);
+
+  function selectInbox(showGroups) {
+    if (showGroups) {
+      if (groupsOpened) refreshGroups(loadedGroupCount, selectedGroupId);
+      else setGroupsOpened(true);
+    }
+    setGroupMode(showGroups);
+  }
+
+  function selectConversation(id) {
+    if (groupMode) setActiveGroupId(id);
+    else setActiveDmId(id);
+    setThreadOpen(true);
+  }
 
   useEffect(() => {
     if (!actorId) return;
@@ -81,10 +164,14 @@ function Application({ session }) {
     setActiveDmId(previous => dms.some(dm => dm.spaceId === previous) ? previous : dms[0]?.spaceId ?? null);
   }, [dms]);
 
-  function handleOpenedDm(conversation) {
+  function handleOpenedConversation(conversation) {
     if (sessionStore.getSnapshot()?.user?.id !== actorId) return;
-    inbox.opened(conversation);
-    setActiveDmId(conversation.id);
+    if (groupMode) {
+      groupInbox.opened(conversation);
+    } else {
+      inbox.opened(conversation);
+    }
+    selectConversation(conversation.id);
     setIsHomeActive(true);
     setShowCreateDm(false);
   }
@@ -101,18 +188,28 @@ function Application({ session }) {
   </div>;
   if (!session) return <><AuthScreen notify={notify} />{toastView}</>;
 
-  return <div className="app-shell">
+  return <div className={`app-shell ${isHomeActive ? 'chat-shell' : 'community-shell'}${isHomeActive && threadOpen && conversation ? ' is-thread-open' : ''}`}
+    style={isHomeActive ? { '--chat-inbox-width': `${inboxWidth}px` } : undefined}>
     <ServerRail servers={list.items} activeServerId={activeServerId} isHomeActive={isHomeActive}
-      onSelectHome={() => setIsHomeActive(true)} onSelectOverview={() => setIsHomeActive(false)}
+      onSelectHome={() => { setThreadOpen(false); setIsHomeActive(true); }} onSelectOverview={() => setIsHomeActive(false)}
       onSelectServer={selectServer} onOpenCreateServer={() => setShowCreateServer(true)} />
-    {isHomeActive && <SubSidebar isHomeActive={true} dms={dms} inbox={inbox}
-      activeDmId={activeDmId} onSelectDm={setActiveDmId} onOpenCreateDm={() => setShowCreateDm(true)}
+    {isHomeActive && <SubSidebar isHomeActive={true} dms={groupMode ? groups : dms} inbox={groupMode ? groupInbox : inbox}
+      groupMode={groupMode} onSelectInbox={selectInbox}
+      activeDmId={conversation?.id} onSelectDm={selectConversation} onOpenCreateDm={openConversationSearch}
       currentUser={currentUser} onOpenUserSettings={() => setShowUserSettings(true)}
       userStatus={userStatus} onChangeStatus={setUserStatus} />}
+    {isHomeActive && <ChatSidebarResize width={inboxWidth} onChange={setInboxWidth} />}
       {!isHomeActive && <div className="community-workspace">
         <div className="community-toolbar">
-          <span>{currentUser?.displayName || session.user.username}</span>
-          <button className="btn btn--secondary" onClick={() => setShowUserSettings(true)}>Cài đặt tài khoản</button>
+          <nav className="community-tabs" aria-label="Điều hướng cộng đồng">
+            <a href="#communities" aria-current={!isDiscovery ? 'page' : undefined}>Của tôi</a>
+            <a href="#discover" aria-current={isDiscovery ? 'page' : undefined}>Khám phá</a>
+          </nav>
+          <button className="community-account" type="button" aria-label="Cài đặt tài khoản" title="Cài đặt tài khoản"
+            onClick={() => setShowUserSettings(true)}>
+            <span className="chat-avatar" aria-hidden="true">{initials(currentUser?.displayName || session.user.username)}</span>
+            <span>{currentUser?.displayName || session.user.username}</span>
+          </button>
         </div>
         {hasPending && <div className="community-pending" role="status">
           <span>Có yêu cầu tạo chưa được xác nhận.</span>
@@ -140,11 +237,15 @@ function Application({ session }) {
 
 
     {isHomeActive && <main className="main-chat">
-      <ChatHeader title={activeDm?.user?.displayName || 'Tin nhắn trực tiếp'}
-        topic={activeDm?.user ? `@${activeDm.user.username}` : ''} icon="@"
+      <ChatHeader title={conversationTitle || (groupMode ? 'Chat nhóm' : 'Tin nhắn trực tiếp')}
+        topic={groupMode ? activeGroup && `${activeGroup.memberCount} thành viên` : activeDm?.user && `@${activeDm.user.username}`}
+        icon={conversationTitle ? initials(conversationTitle) : groupMode ? '#' : '@'}
+        onOpenProfile={!groupMode && activeDm?.user ? () => setMemberProfile(activeDm.user) : undefined}
+        onBack={threadOpen ? () => setThreadOpen(false) : undefined}
         connectionState={connectionState} isDirectMessage={true} />
       <DmChat key={actorId} actorId={actorId} author={currentUser || session.user}
-        conversation={activeDm} onCommitted={inbox.refresh} onConnectionState={setConnectionState} />
+        conversation={conversation} groupMode={groupMode} threadOpen={threadOpen} onStart={openConversationSearch} onOpenProfile={setMemberProfile}
+        onCommitted={groupMode ? undefined : inbox.refresh} onConnectionState={setConnectionState} />
     </main>}
       {/* USER SETTINGS MODAL */}
       {showUserSettings && (
@@ -164,7 +265,18 @@ function Application({ session }) {
       />}
 
 
-    {showCreateDm && <CreateDmModal onClose={() => setShowCreateDm(false)} onOpened={handleOpenedDm} />}
+    {showCreateDm && <CreateDmModal group={groupMode} onClose={closeConversationSearch} onOpened={handleOpenedConversation} />}
+    {memberProfile && <ChatMemberProfile person={memberProfile} ownProfile={memberProfile.id === actorId}
+      onClose={() => setMemberProfile(null)}
+      onSettings={() => { setMemberProfile(null); setShowUserSettings(true); }}
+      onOpened={conversation => {
+        if (sessionStore.getSnapshot()?.user?.id !== actorId) return;
+        inbox.opened(conversation);
+        setActiveDmId(conversation.id);
+        setGroupMode(false);
+        setThreadOpen(true);
+        setMemberProfile(null);
+      }} />}
     {toastView}
   </div>;
 }

@@ -50,3 +50,24 @@ test('session revoke clears subscription state and stops connection; malformed f
   s.hub.handlers.get('AccessRevoked')({scope:'session',conversationId:null,reason:'session_revoked'});
   assert.equal(s.revoked.length,1);assert.equal(s.hub.state,'Disconnected');s.hub.event(event());assert.equal(s.rows()[0].status,'sending');await s.rt.stop();
 });
+
+test('group presence and like notifications stay in the selected subscription', async () => {
+  const s = setup();
+  const typing = [];
+  const likes = [];
+  const options = { onMessage: s.onMessage, loadHistory: async () => true,
+    onTyping: event => typing.push(event.userId), onLikesChanged: event => likes.push(event.messageId) };
+  await s.rt.select('group', options);
+  s.rt.reportTyping('other');
+  s.rt.reportTyping('group');
+  s.rt.reportTyping('group');
+  assert.deepEqual(s.hub.calls.filter(call => call[0] === 'ReportGroupTyping'), [['ReportGroupTyping','group']]);
+  s.hub.handlers.get('GroupTyping')({ conversationId: 'group', userId: 'member' });
+  s.hub.handlers.get('GroupLikesChanged')({ conversationId: 'other', messageId: 'excluded' });
+  s.hub.handlers.get('GroupLikesChanged')({ conversationId: 'group', messageId: 'included' });
+  await s.rt.select('next', options);
+  s.hub.handlers.get('GroupTyping')({ conversationId: 'group', userId: 'late' });
+  assert.deepEqual(typing, ['member']);
+  assert.deepEqual(likes, ['included']);
+  await s.rt.stop();
+});

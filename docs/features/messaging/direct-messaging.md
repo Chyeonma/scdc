@@ -261,7 +261,7 @@ Truy vết từ schema ngày 2026-10-04 tới nền `900e226`. Khi chuyển data
 | DM-SQL-05 | Có `message_edits.previous_content` | Writer không ghi nội dung cũ (DEC-052); bảng cũ còn trong bootstrap; dữ liệu thật phải rà soát |
 | DM-SQL-06 | Có outbox chung, chưa có worker Messaging | Đã có transaction tin, khóa, outbox; worker có lease. Bằng chứng: [DM-MVP](../../records/verification/messaging/DM-MVP.md). Truyền giữa service v1 còn phải làm |
 
-Code: [schema.sql](../../../database/postgres/schema.sql), [migration](../../../database/postgres/migrations), [MessagingModule](../../../services/Modules/Messaging/MessagingModule.cs). Bảng cho nhóm chat, file, reaction, trạng thái đã đọc trong seed không mở rộng phạm vi DM.
+Code: [schema.sql](../../../database/postgres/schema.sql), [migration](../../../database/postgres/migrations), [MessagingModule](../../../services/Messaging/SCDC.Messaging/MessagingModule.cs). Bảng cho nhóm chat, file, reaction, trạng thái đã đọc trong seed không mở rộng phạm vi DM.
 
 <a id="contract-10"></a>
 
@@ -269,7 +269,7 @@ Code: [schema.sql](../../../database/postgres/schema.sql), [migration](../../../
 
 ### Mã lỗi
 
-Đã có trong backend: [kiểm tra nội dung](../../../services/Modules/Messaging/Application/TextContent.cs), [gửi và gửi lại](../../../services/Modules/Messaging/Infrastructure/Services/TextMessageSender.cs), [sửa và xóa](../../../services/Modules/Messaging/Infrastructure/Services/MessageMutator.cs), [cursor](../../../services/Modules/Messaging/Infrastructure/Services/MessageHistory.cs). Có mã lỗi không có nghĩa mọi nhánh giao diện đã kiểm thử.
+Backend thực hiện kiểm tra nội dung, gửi và gửi lại, sửa và xóa, và quản lý cursor lịch sử. Phạm vi kiểm thử giao diện nằm trong hồ sơ nghiệm thu. [Kiểm tra nội dung](../../../services/Messaging/SCDC.Messaging/Application/Messages/TextContent.cs), [gửi và gửi lại](../../../services/Messaging/SCDC.Messaging/Infrastructure/Messages/TextMessageSender.cs), [sửa và xóa](../../../services/Messaging/SCDC.Messaging/Infrastructure/Messages/MessageMutator.cs), [cursor](../../../services/Messaging/SCDC.Messaging/Infrastructure/Messages/MessageHistory.cs)
 
 | HTTP và mã | Giao diện |
 |---|---|

@@ -31,6 +31,7 @@ export function createDmRealtime({ getToken, isCurrent, onState, onRevoked, onPr
     .configureLogging(LogLevel.None).build();
   let selected = null, subscribed = null, closed = false, transition = Promise.resolve();
   let retry;
+  let lastTypingAt = 0;
   const schedule = target => {
     clearTimeout(retry);
     retry = setTimeout(() => { if (target && current(target)) void select(target.id, target); }, 1000);
@@ -53,6 +54,16 @@ export function createDmRealtime({ getToken, isCurrent, onState, onRevoked, onPr
       if (target.buffer.size > 1000) { target.buffer.clear(); selected = null; onState('offline'); void hub.stop(); }
     }
   });
+  hub.on('GroupTyping', event => {
+    const target = selected;
+    if (target && current(target) && subscribed === target.id && event?.conversationId === target.id && event.userId)
+      target.onTyping?.(event);
+  });
+  hub.on('GroupLikesChanged', event => {
+    const target = selected;
+    if (target && current(target) && subscribed === target.id && event?.conversationId === target.id && event.messageId)
+      target.onLikesChanged?.(event);
+  });
   hub.on('AccessRevoked', event => {
     if (closed || !isCurrent() || !event || !['session','user','conversation'].includes(event.scope)) return;
     if (event.scope === 'conversation' && event.conversationId !== selected?.id) return;
@@ -73,8 +84,9 @@ export function createDmRealtime({ getToken, isCurrent, onState, onRevoked, onPr
     subscribed = null;
     if (selected && !closed && isCurrent()) void select(selected.id, selected);
   });
-  function select(id, { onMessage, loadHistory } = {}) {
-    const target = id ? { id, onMessage, loadHistory, ready: false, buffer: new Map() } : null;
+  function select(id, { onMessage, loadHistory, onTyping, onLikesChanged } = {}) {
+    if (id !== selected?.id) lastTypingAt = 0;
+    const target = id ? { id, onMessage, loadHistory, onTyping, onLikesChanged, ready: false, buffer: new Map() } : null;
     selected = target;
     transition = transition.catch(() => {}).then(async () => {
       if (closed || !isCurrent() || selected !== target) return;
@@ -108,5 +120,12 @@ export function createDmRealtime({ getToken, isCurrent, onState, onRevoked, onPr
     });
     return transition;
   }
-  return { select, flush, stop() { closed = true; clearTimeout(retry); selected = null; subscribed = null; return hub.stop(); } };
+  function reportTyping(id) {
+    const now = Date.now();
+    if (!selected || !current(selected) || selected.id !== id || subscribed !== id
+      || hub.state !== HubConnectionState.Connected || now - lastTypingAt < 2200) return;
+    lastTypingAt = now;
+    void hub.invoke('ReportGroupTyping', { conversationId: id }).catch(() => {});
+  }
+  return { select, flush, reportTyping, stop() { closed = true; clearTimeout(retry); selected = null; subscribed = null; return hub.stop(); } };
 }

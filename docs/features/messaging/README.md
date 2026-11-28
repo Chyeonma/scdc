@@ -1,8 +1,8 @@
 # SCDC — Nhắn tin
 
-Người dùng có thể nhắn tin riêng với một người (DM) hoặc nhắn trong phòng của server. Cả hai dùng chung một cơ chế lưu và đồng bộ tin. DM không dùng vai trò hay quyền của cộng đồng.
+Người dùng có thể nhắn riêng với một người (DM), nhắn trong nhóm riêng hoặc nhắn trong phòng của server. Chat riêng và chat nhóm dùng chung cơ chế lưu và đồng bộ tin. Quyền truy cập hội thoại riêng dựa trên thành viên của hội thoại.
 
-**Trạng thái:** nhắn tin riêng đã có trong nền MVP (commit `900e226`). Tin phòng mới có phần nền, chưa có ghi tin và realtime.
+**Trạng thái** — Chat riêng và chat nhóm có luồng gửi tin và realtime. Tin phòng đang ở giai đoạn chuẩn bị.
 
 **Người phụ trách:** Sáng (xem [phân công](../../project/planning.md#team)).
 
@@ -11,6 +11,7 @@ Người dùng có thể nhắn tin riêng với một người (DM) hoặc nh�
 | Trang | Nội dung |
 |---|---|
 | [Nhắn tin riêng](direct-messaging.md) | Tìm người, mở cuộc trò chuyện, quyền, giao diện, API và ca kiểm thử |
+| [Chat nhóm](group-messaging.md) | Tạo nhóm riêng, danh sách nhóm, quyền thành viên và API |
 | [Tin phòng](channel-messaging.md) | Nhắn trong phòng của server, quyền phòng, API và Hub realtime |
 | [Lưu và thay đổi tin](message-lifecycle.md) | Nhận tin, chống gửi trùng, sửa và xóa tin, trạng thái tin phía client |
 | [Lịch sử và đồng bộ](synchronization.md) | Tải lịch sử, outbox, Hub realtime, kết nối lại và thu hồi quyền |

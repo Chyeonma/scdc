@@ -6,6 +6,57 @@
     {
       "type": "object",
       "properties": {
+        "name": { "const": "ReportGroupTyping" },
+        "kind": { "const": "invoke" },
+        "payload": {
+          "type": "object",
+          "properties": { "conversationId": { "type": "string", "format": "uuid" } },
+          "required": ["conversationId"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["name", "kind", "payload"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": { "const": "GroupTyping" },
+        "kind": { "const": "event" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "conversationId": { "type": "string", "format": "uuid" },
+            "userId": { "type": "string", "format": "uuid" }
+          },
+          "required": ["conversationId", "userId"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["name", "kind", "payload"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": { "const": "GroupLikesChanged" },
+        "kind": { "const": "event" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "conversationId": { "type": "string", "format": "uuid" },
+            "messageId": { "type": "string", "format": "uuid" }
+          },
+          "required": ["conversationId", "messageId"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["name", "kind", "payload"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
         "name": {
           "const": "SubscribeConversation"
         },
@@ -238,7 +289,7 @@
   "x-scdc-runtime": {
     "task": "DM-P4-T01",
     "hub": "/hubs/chat",
-    "implemented": ["SubscribeConversation", "UnsubscribeConversation", "SubscriptionAcknowledgement", "MessageChanged", "HubProblem", "AccessRevoked-core"],
+    "implemented": ["SubscribeConversation", "UnsubscribeConversation", "SubscriptionAcknowledgement", "MessageChanged", "HubProblem", "AccessRevoked-core", "ReportGroupTyping", "GroupTyping", "GroupLikesChanged"],
     "remaining": "MVP reconnect/recovery/author mutations/session guards implemented; full-system load and v1 release gates remain separate. This catalogue is not the SignalR wire frame."
   },
   "x-scdc-decisions": [
